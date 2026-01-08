@@ -27,6 +27,7 @@ struct DashboardView: View {
     @EnvironmentObject private var regionSettings: RegionSettingsManager
     @StateObject private var viewModel: DashboardViewModel
     @StateObject private var expenseEntryViewModel: ExpenseViewModel
+    @ObservedObject private var permissionService = PermissionService.shared
 
     @State private var selectedRange: DashboardTimeRange = .week
     @State private var showingAddExpense: Bool = false
@@ -117,6 +118,10 @@ struct DashboardView: View {
             Task { await refreshOfflineQueueCount() }
         }
         .task {
+            // Re-fetch credentials/permissions on load
+            if case .signedIn(let user) = sessionStore.status {
+                 await PermissionService.shared.fetchPermissions(dealerId: user.id)
+            }
             await refreshOfflineQueueCount()
         }
     }
@@ -334,84 +339,116 @@ private extension DashboardView {
         Section {
             VStack(spacing: 12) {
                 // First row: Assets, Cash, Bank
-                HStack(spacing: 12) {
-                    Button {
-                        navPath.append(.assets)
-                    } label: {
-                        FinancialCard(
-                            title: "total_assets".localizedString,
-                            amount: viewModel.totalAssets,
-                            icon: "building.columns.fill",
-                            color: .blue,
-                            isHero: true
-                        )
+                if PermissionService.shared.can(.viewFinancials) {
+                    HStack(spacing: 12) {
+                        Button {
+                            navPath.append(.assets)
+                        } label: {
+                            FinancialCard(
+                                title: "total_assets".localizedString,
+                                amount: viewModel.totalAssets,
+                                icon: "building.columns.fill",
+                                color: .blue,
+                                isHero: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button {
+                            navPath.append(.cashAccounts)
+                        } label: {
+                            FinancialCard(
+                                title: "payment_method_cash".localizedString,
+                                amount: viewModel.totalCash,
+                                icon: "banknote.fill",
+                                color: .green
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button {
+                            navPath.append(.bankAccounts)
+                        } label: {
+                            FinancialCard(
+                                title: "bank".localizedString,
+                                amount: viewModel.totalBank,
+                                icon: "creditcard.fill",
+                                color: .purple
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                     
-                    Button {
-                        navPath.append(.cashAccounts)
-                    } label: {
-                        FinancialCard(
-                            title: "payment_method_cash".localizedString,
-                            amount: viewModel.totalCash,
-                            icon: "banknote.fill",
-                            color: .green
-                        )
+                    // Second row: Income and Profit from Sales
+                    HStack(spacing: 12) {
+                        Button {
+                            navPath.append(.revenue)
+                        } label: {
+                            FinancialCard(
+                                title: "total_revenue".localizedString,
+                                amount: viewModel.totalSalesIncome,
+                                icon: "chart.line.uptrend.xyaxis",
+                                color: .orange
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button {
+                            navPath.append(.profit)
+                        } label: {
+                            FinancialCard(
+                                title: "net_profit".localizedString,
+                                amount: viewModel.totalSalesProfit,
+                                icon: "dollarsign.circle.fill",
+                                color: viewModel.totalSalesProfit >= 0 ? .green : .red,
+                                isHero: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button {
+                            navPath.append(.sold)
+                        } label: {
+                            FinancialCard(
+                                title: "sold".localizedString,
+                                amount: Decimal(viewModel.soldCount), // Match the Sold list count to avoid Sales-vs-Status mismatch
+                                icon: "checkmark.circle.fill",
+                                color: .cyan,
+                                isCount: true
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                    
-                    Button {
-                        navPath.append(.bankAccounts)
-                    } label: {
-                        FinancialCard(
-                            title: "bank".localizedString,
-                            amount: viewModel.totalBank,
-                            icon: "creditcard.fill",
-                            color: .purple
-                        )
+                } else {
+                    // Non-Financial View (Sales Person Mode)
+                     HStack(spacing: 12) {
+                         Button {
+                            navPath.append(.assets)
+                        } label: {
+                            FinancialCard(
+                                title: "vehicles".localizedString.capitalized,
+                                amount: Decimal(viewModel.totalAssetsCount), // Use count
+                                icon: "car.2.fill",
+                                color: .blue,
+                                isCount: true,
+                                isHero: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                         Button {
+                            navPath.append(.sold)
+                        } label: {
+                            FinancialCard(
+                                title: "sold".localizedString,
+                                amount: Decimal(viewModel.soldCount),
+                                icon: "checkmark.circle.fill",
+                                color: .cyan,
+                                isCount: true
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
-                }
-                
-                // Second row: Income and Profit from Sales
-                HStack(spacing: 12) {
-                    Button {
-                        navPath.append(.revenue)
-                    } label: {
-                        FinancialCard(
-                            title: "total_revenue".localizedString,
-                            amount: viewModel.totalSalesIncome,
-                            icon: "chart.line.uptrend.xyaxis",
-                            color: .orange
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button {
-                        navPath.append(.profit)
-                    } label: {
-                        FinancialCard(
-                            title: "net_profit".localizedString,
-                            amount: viewModel.totalSalesProfit,
-                            icon: "dollarsign.circle.fill",
-                            color: viewModel.totalSalesProfit >= 0 ? .green : .red,
-                            isHero: true
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    
-                    Button {
-                        navPath.append(.sold)
-                    } label: {
-                        FinancialCard(
-                            title: "sold".localizedString,
-                            amount: Decimal(viewModel.soldCount), // Match the Sold list count to avoid Sales-vs-Status mismatch
-                            icon: "checkmark.circle.fill",
-                            color: .cyan,
-                            isCount: true
-                        )
-                    }
-                    .buttonStyle(.plain)
                 }
             }
             .padding(.horizontal, 20)
@@ -422,7 +459,7 @@ private extension DashboardView {
     }
     var todaysExpensesSection: some View {
         Group {
-            if !viewModel.todaysExpenses.isEmpty {
+            if PermissionService.shared.can(.viewExpenses) && !viewModel.todaysExpenses.isEmpty {
                 Section {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
@@ -462,23 +499,40 @@ private extension DashboardView {
 
     var summarySection: some View {
         Section {
-            VStack(spacing: 16) {
-                SummaryOverviewCard(
-                    totalSpent: viewModel.totalExpenses,
-                    changePercent: viewModel.periodChangePercent,
-                    trendPoints: viewModel.trendPoints,
-                    range: selectedRange
-                )
+            if PermissionService.shared.can(.viewFinancials) {
+                VStack(spacing: 16) {
+                    SummaryOverviewCard(
+                        totalSpent: viewModel.totalExpenses,
+                        changePercent: viewModel.periodChangePercent,
+                        trendPoints: viewModel.trendPoints,
+                        range: selectedRange
+                    )
 
-                ProfitOverviewCard(
-                    totalProfit: selectedRange == .week ? viewModel.monthlyNetProfit : viewModel.periodSalesProfit,
-                    trendPoints: selectedRange == .week ? viewModel.monthlyProfitTrendPoints : viewModel.profitTrendPoints,
-                    range: selectedRange == .week ? .month : selectedRange
-                )
+                    ProfitOverviewCard(
+                        totalProfit: selectedRange == .week ? viewModel.monthlyNetProfit : viewModel.periodSalesProfit,
+                        trendPoints: selectedRange == .week ? viewModel.monthlyProfitTrendPoints : viewModel.profitTrendPoints,
+                        range: selectedRange == .week ? .month : selectedRange
+                    )
 
-                CategoryBreakdownCard(stats: viewModel.categoryStats)
+                    CategoryBreakdownCard(stats: viewModel.categoryStats)
+                }
+                .padding(.vertical, 4)
+            } else {
+                 // Non-Financial Summary (Sales/Inv Only)
+                 VStack(spacing: 16) {
+                     HStack {
+                        Text("active_vehicles".localizedString)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Spacer()
+                        Text("\(viewModel.totalAssetsCount)")
+                            .fontWeight(.bold)
+                            .foregroundColor(ColorTheme.primaryText)
+                    }
+                    .padding()
+                    .cardStyle()
+                 }
+                 .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
         }
         .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
         .listRowSeparator(.hidden)
@@ -488,42 +542,50 @@ private extension DashboardView {
     var recentExpensesSection: some View {
         Group {
             Section {
-                if viewModel.recentExpenses.isEmpty {
-                    Text("no_recent_expenses".localizedString)
+                 if PermissionService.shared.can(.viewExpenses) {
+                    if viewModel.recentExpenses.isEmpty {
+                        Text("no_recent_expenses".localizedString)
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .padding(.vertical, 12)
+                    } else {
+                        ForEach(Array(viewModel.recentExpenses.enumerated()), id: \.element.objectID) { _, expense in
+                            RecentExpenseRow(expense: expense)
+                                .onTapGesture {
+                                    selectedExpense = expense
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                    Button(role: .destructive) {
+                                        do {
+                                            let deletedId = try expenseEntryViewModel.deleteExpense(expense)
+                                            viewModel.fetchFinancialData(range: selectedRange)
+                                            if let id = deletedId, case .signedIn(let user) = sessionStore.status {
+                                                Task {
+                                                    await cloudSyncManager.deleteExpense(id: id, dealerId: user.id)
+                                                }
+                                            }
+                                        } catch {
+                                            print("Failed to delete expense: \(error)")
+                                        }
+                                    } label: {
+                                        Label("delete".localizedString, systemImage: "trash")
+                                    }
+    
+                                    Button {
+                                        editingExpense = expense
+                                    } label: {
+                                        Label("edit".localizedString, systemImage: "pencil")
+                                    }
+                                    .tint(ColorTheme.accent)
+                                }
+                        }
+                    }
+                 } else {
+                     Text("access_restricted".localizedString)
+                        .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                         .padding(.vertical, 12)
-                } else {
-                    ForEach(Array(viewModel.recentExpenses.enumerated()), id: \.element.objectID) { _, expense in
-                        RecentExpenseRow(expense: expense)
-                            .onTapGesture {
-                                selectedExpense = expense
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                Button(role: .destructive) {
-                                    do {
-                                        let deletedId = try expenseEntryViewModel.deleteExpense(expense)
-                                        viewModel.fetchFinancialData(range: selectedRange)
-                                        if let id = deletedId, case .signedIn(let user) = sessionStore.status {
-                                            Task {
-                                                await cloudSyncManager.deleteExpense(id: id, dealerId: user.id)
-                                            }
-                                        }
-                                    } catch {
-                                        print("Failed to delete expense: \(error)")
-                                    }
-                                } label: {
-                                    Label("delete".localizedString, systemImage: "trash")
-                                }
-
-                                Button {
-                                    editingExpense = expense
-                                } label: {
-                                    Label("edit".localizedString, systemImage: "pencil")
-                                }
-                                .tint(ColorTheme.accent)
-                            }
-                    }
-                }
+                        .frame(maxWidth: .infinity, alignment: .center)
+                 }
             } header: {
                 HStack {
                     Text("recent_expenses".localizedString)
@@ -555,29 +617,25 @@ private extension DashboardView {
                     }
                 }
             } footer: {
-                HStack(spacing: 8) {
-                    Text(recentSummaryText)
-                        .font(.subheadline)
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.9)
-                    
-                    Spacer()
-                    
-                    trendBadge
+                if PermissionService.shared.can(.viewExpenses) {
+                    HStack(spacing: 8) {
+                        Text(recentSummaryText)
+                            .font(.subheadline)
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.9)
+                        
+                        Spacer()
+                        
+                        trendBadge
+                    }
+                    .padding(.top, 6)
                 }
-                .padding(.top, 6)
             }
             .textCase(nil)
                     .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
-            
-            // Bottom Spacer for Tab Bar
-            Section {
-                Color.clear.frame(height: 100)
-                    .listRowBackground(Color.clear)
-            }
         }
     }
 }

@@ -49,11 +49,13 @@
 		E100000A /* Client+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000005 /* Client+CoreDataClass.swift */; };
 		E100000B /* Client+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000008 /* Client+CoreDataProperties.swift */; };
 		E100000C /* ClientCRMModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000009 /* ClientCRMModels.swift */; };
-		E20653B82EED8B0500C1002F /* AppStoreVersionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20653B72EED8B0500C1002F /* AppStoreVersionChecker.swift */; };
 		E20653BA2EED8B6F00C1002F /* ForceUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */; };
 		E20700012F1234567890ABCD /* LocalNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20700002F1234567890ABCD /* LocalNotificationManager.swift */; };
 		E29C0AEF2F0B92620087CEB6 /* String+Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */; };
 		E29C0AF12F0B92BA0087CEB6 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */; };
+		E2A08AAF2F10532C0071352E /* RemoteConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */; };
+		E2A08AB12F1056F00071352E /* PermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AB02F1056F00071352E /* PermissionService.swift */; };
+		E2A08AB32F105B580071352E /* TeamManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AB22F105B580071352E /* TeamManagementView.swift */; };
 		E2C37EE62F06A39E00EA13C1 /* AppReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */; };
 		E2C37EE82F06A77C00EA13C1 /* VehicleSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */; };
 		F0000002 /* FinancialAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000001 /* FinancialAccountsView.swift */; };
@@ -121,11 +123,13 @@
 		E0000005 /* Client+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Client+CoreDataClass.swift"; sourceTree = "<group>"; };
 		E0000008 /* Client+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Client+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		E0000009 /* ClientCRMModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientCRMModels.swift; sourceTree = "<group>"; };
-		E20653B72EED8B0500C1002F /* AppStoreVersionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreVersionChecker.swift; sourceTree = "<group>"; };
 		E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceUpdateView.swift; sourceTree = "<group>"; };
 		E20700002F1234567890ABCD /* LocalNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNotificationManager.swift; sourceTree = "<group>"; };
 		E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Localization.swift"; sourceTree = "<group>"; };
 		E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigService.swift; sourceTree = "<group>"; };
+		E2A08AB02F1056F00071352E /* PermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionService.swift; sourceTree = "<group>"; };
+		E2A08AB22F105B580071352E /* TeamManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamManagementView.swift; sourceTree = "<group>"; };
 		E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReviewManager.swift; sourceTree = "<group>"; };
 		E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleSelectionSheet.swift; sourceTree = "<group>"; };
 		F0000001 /* FinancialAccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsView.swift; sourceTree = "<group>"; };
@@ -241,6 +245,7 @@
 		A1000029 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E2A08AB22F105B580071352E /* TeamManagementView.swift */,
 				E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */,
 				E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */,
 				10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */,
@@ -300,8 +305,9 @@
 		D0000000 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				E2A08AB02F1056F00071352E /* PermissionService.swift */,
+				E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */,
 				E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */,
-				E20653B72EED8B0500C1002F /* AppStoreVersionChecker.swift */,
 				10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */,
 				D0000001 /* CloudSyncManager.swift */,
 				D0000002 /* CloudSyncEnvironment.swift */,
@@ -392,7 +398,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E20653B82EED8B0500C1002F /* AppStoreVersionChecker.swift in Sources */,
 				E20700012F1234567890ABCD /* LocalNotificationManager.swift in Sources */,
 				A1000001 /* Ezcar24BusinessApp.swift in Sources */,
 				A1000003 /* ContentView.swift in Sources */,
@@ -445,11 +450,14 @@
 				F2000104 /* DebtDetailView.swift in Sources */,
 				F2000105 /* AddDebtView.swift in Sources */,
 				F2000106 /* AddDebtPaymentView.swift in Sources */,
+				E2A08AAF2F10532C0071352E /* RemoteConfigService.swift in Sources */,
 				F3000101 /* AccountTransaction+Extensions.swift in Sources */,
 				F3000102 /* AccountTransactionsViewModel.swift in Sources */,
 				F3000103 /* AddAccountTransactionView.swift in Sources */,
+				E2A08AB32F105B580071352E /* TeamManagementView.swift in Sources */,
 				10FA8DDF2ECF7ED400ECC6F9 /* SubscriptionManager.swift in Sources */,
 				G0000101 /* BackupExportManager.swift in Sources */,
+				E2A08AB12F1056F00071352E /* PermissionService.swift in Sources */,
 				G0000102 /* ShareSheet.swift in Sources */,
 				E20653BA2EED8B6F00C1002F /* ForceUpdateView.swift in Sources */,
 				G0000103 /* BackupCenterView.swift in Sources */,

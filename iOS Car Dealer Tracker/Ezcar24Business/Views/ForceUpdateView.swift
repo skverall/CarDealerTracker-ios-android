@@ -2,11 +2,7 @@ import SwiftUI
 
 /// Full-screen blocking view that requires user to update the app
 struct ForceUpdateView: View {
-    @ObservedObject var versionChecker: AppStoreVersionChecker
-    
-    private var canOpenAppStore: Bool {
-        versionChecker.appStoreURL != nil || versionChecker.appStoreTrackId != nil
-    }
+    @ObservedObject var remoteConfig: RemoteConfigService
     
     var body: some View {
         ZStack {
@@ -18,11 +14,11 @@ struct ForceUpdateView: View {
                 Spacer()
                 
                 // Icon
-                Image(systemName: "arrow.down.app.fill")
+                Image(systemName: remoteConfig.isMaintenanceMode ? "cone.fill" : "arrow.down.app.fill")
                     .font(.system(size: 80))
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.blue, .purple],
+                            colors: remoteConfig.isMaintenanceMode ? [.orange, .red] : [.blue, .purple],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         )
@@ -31,11 +27,11 @@ struct ForceUpdateView: View {
                 
                 // Title
                 VStack(spacing: 12) {
-                    Text("Update Required")
+                    Text(remoteConfig.isMaintenanceMode ? "Maintenance Break" : "Update Required")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
-                    Text("A new version of Car Dealer Tracker is available. Please update to continue using the app.")
+                    Text(remoteConfig.configMessage ?? (remoteConfig.isMaintenanceMode ? "We are performing scheduled maintenance. Please check back later." : "A new version of Car Dealer Tracker is available. Please update to continue using the app."))
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -43,13 +39,13 @@ struct ForceUpdateView: View {
                 }
                 
                 // Version info
-                if let appStoreVersion = versionChecker.appStoreVersion {
+                if !remoteConfig.isMaintenanceMode, let latestVersion = remoteConfig.latestVersion {
                     VStack(spacing: 4) {
-                        Text("Current: \(versionChecker.currentVersion)")
+                        Text("Current: \(remoteConfig.currentVersion)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
-                        Text("Available: \(appStoreVersion)")
+                        Text("Available: \(latestVersion)")
                             .font(.caption)
                             .foregroundColor(.green)
                             .fontWeight(.medium)
@@ -63,31 +59,31 @@ struct ForceUpdateView: View {
                 Spacer()
                 
                 // Update Button
-                Button(action: {
-                    versionChecker.openAppStore()
-                }) {
-                    HStack {
-                        Image(systemName: "arrow.down.circle.fill")
-                        Text("Update Now")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(
-                        LinearGradient(
-                            colors: [.blue, .purple],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                if !remoteConfig.isMaintenanceMode {
+                    Button(action: {
+                        remoteConfig.openAppStore()
+                    }) {
+                        HStack {
+                            Image(systemName: "arrow.down.circle.fill")
+                            Text("Update Now")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(
+                            LinearGradient(
+                                colors: [.blue, .purple],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .foregroundColor(.white)
-                    .cornerRadius(14)
-                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                        .foregroundColor(.white)
+                        .cornerRadius(14)
+                        .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 40)
                 }
-                .disabled(!canOpenAppStore)
-                .opacity(canOpenAppStore ? 1 : 0.6)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 40)
             }
         }
         .interactiveDismissDisabled()
@@ -95,5 +91,5 @@ struct ForceUpdateView: View {
 }
 
 #Preview {
-    ForceUpdateView(versionChecker: AppStoreVersionChecker.shared)
+    ForceUpdateView(remoteConfig: RemoteConfigService.shared)
 }

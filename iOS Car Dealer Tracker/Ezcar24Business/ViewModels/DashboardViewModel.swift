@@ -671,6 +671,11 @@ class DashboardViewModel: ObservableObject {
     var totalAssets: Decimal {
         totalCash + totalBank + totalVehicleValue
     }
+    
+    var totalAssetsCount: Int {
+        // Active vehicles (not sold)
+        vehicleCount - soldCount
+    }
 
     var netPosition: Decimal {
         totalCash + totalBank

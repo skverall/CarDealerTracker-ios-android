@@ -26,7 +26,7 @@ struct Ezcar24BusinessApp: App {
     @StateObject private var appSessionState: AppSessionState
     @StateObject private var cloudSyncManager: CloudSyncManager
     @StateObject private var regionSettings = RegionSettingsManager.shared
-    @StateObject private var versionChecker = AppStoreVersionChecker.shared
+    @StateObject private var remoteConfig = RemoteConfigService.shared
     let persistenceController = PersistenceController.shared
     
     @State private var showRegionSelection = false
@@ -40,6 +40,10 @@ struct Ezcar24BusinessApp: App {
 
         CloudSyncManager.shared = syncManager
         SessionStoreEnvironment.shared = sessionStore
+        
+        // Configure Permissions and Remote Config with client
+        PermissionService.shared.configure(client: provider.client)
+        RemoteConfigService.shared.configure(client: provider.client)
 
         _sessionStore = StateObject(wrappedValue: sessionStore)
         _appSessionState = StateObject(wrappedValue: AppSessionState(sessionStore: sessionStore))
@@ -76,13 +80,13 @@ struct Ezcar24BusinessApp: App {
                 }
                 .task {
                     // Check for app updates on launch
-                    await versionChecker.checkForUpdate()
+                    await remoteConfig.checkForUpdate()
                     await LocalNotificationManager.shared.refreshAll(context: persistenceController.container.viewContext)
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         Task {
-                            await versionChecker.checkForUpdate()
+                            await remoteConfig.checkForUpdate()
                             await LocalNotificationManager.shared.refreshAll(context: persistenceController.container.viewContext)
                         }
                     }
@@ -93,8 +97,8 @@ struct Ezcar24BusinessApp: App {
                         showRegionSelection = true
                     }
                 }
-                .fullScreenCover(isPresented: $versionChecker.isUpdateRequired) {
-                    ForceUpdateView(versionChecker: versionChecker)
+                .fullScreenCover(isPresented: $remoteConfig.isUpdateRequired) {
+                    ForceUpdateView(remoteConfig: remoteConfig)
                 }
                 .sheet(isPresented: $showRegionSelection) {
                     RegionSelectionSheet()

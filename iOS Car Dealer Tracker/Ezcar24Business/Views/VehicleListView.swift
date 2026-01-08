@@ -326,6 +326,8 @@ struct VehicleListView: View {
 }
 
 struct VehicleCard: View {
+    @ObservedObject private var permissionService = PermissionService.shared
+
     @ObservedObject var vehicle: Vehicle
     let viewModel: VehicleViewModel
 
@@ -373,62 +375,73 @@ struct VehicleCard: View {
                 .padding(.horizontal, 12)
             
             // Financial Footer
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("purchase_price".localizedString)
-                        .font(.caption2)
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Text((vehicle.purchasePrice as Decimal? ?? 0).asCurrency())
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(ColorTheme.primaryText)
-                }
-                
-                Spacer()
-                
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("total_cost".localizedString)
-                        .font(.caption2)
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Text(viewModel.totalCost(for: vehicle).asCurrency())
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(ColorTheme.primary)
-                }
-                
-                if let p = profitValue() {
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("profit".localizedString)
+            if PermissionService.shared.can(.viewFinancials) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("purchase_price".localizedString)
                             .font(.caption2)
                             .foregroundColor(ColorTheme.secondaryText)
-                        Text(p.asCurrency())
+                        Text((vehicle.purchasePrice as Decimal? ?? 0).asCurrency())
                             .font(.subheadline)
-                            .fontWeight(.bold)
-                            .foregroundColor(p >= 0 ? ColorTheme.success : ColorTheme.danger)
+                            .fontWeight(.medium)
+                            .foregroundColor(ColorTheme.primaryText)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("total_cost".localizedString)
+                            .font(.caption2)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Text(viewModel.totalCost(for: vehicle).asCurrency())
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(ColorTheme.primary)
+                    }
+                    
+                    if let p = profitValue() {
+                        Spacer()
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("profit".localizedString)
+                                .font(.caption2)
+                                .foregroundColor(ColorTheme.secondaryText)
+                            Text(p.asCurrency())
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(p >= 0 ? ColorTheme.success : ColorTheme.danger)
+                        }
                     }
                 }
+                .padding(12)
+                .background(ColorTheme.background.opacity(0.5))
+            } else {
+               // Restricted View Footer (Optional: Show Status Only or nothing)
+               // For now, show nothing or maybe sale date if sold?
+               // Let's just hide the footer completely.
             }
-            .padding(12)
-            .background(ColorTheme.background.opacity(0.5))
         }
         .background(ColorTheme.background)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
     }
-
-    private func profitValue() -> Decimal? {
-        guard (vehicle.status ?? "") == "sold", let sp = vehicle.salePrice as Decimal? else { return nil }
-        return sp - viewModel.totalCost(for: vehicle)
-    }
     
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
-        formatter.dateFormat = "d MMM, h:mm a"
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
         return formatter
     }
-}
 
+    private func profitValue() -> Decimal? {
+        // Use vehicle.salePrice directly as confirmed in VehicleViewModel
+        guard vehicle.status == "sold",
+              let salePrice = vehicle.salePrice as Decimal?
+        else { return nil }
+        
+        let totalCost = viewModel.totalCost(for: vehicle)
+        return salePrice - totalCost
+    }
+}
 
 struct VehicleThumbnailView: View {
     let vehicleID: UUID

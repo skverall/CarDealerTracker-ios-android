@@ -134,7 +134,7 @@ struct AccountView: View {
                             
                             menuSection(title: "management".localizedKey) {
                                 NavigationLink {
-                                    UserManagementView()
+                                    TeamManagementView()
                                 } label: {
                                     MenuRow(icon: "person.2.fill", title: "team_members".localizedKey, color: .blue)
                                 }

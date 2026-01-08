@@ -143,6 +143,10 @@ final class CloudSyncManager: ObservableObject {
             
             // 8. Process offline queue again
             await processOfflineQueue(dealerId: dealerId)
+
+            // 9. Fetch Permissions
+            PermissionService.shared.configure(client: self.client)
+            await PermissionService.shared.fetchPermissions(dealerId: dealerId)
             
         } catch {
 

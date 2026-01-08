@@ -615,47 +615,51 @@ struct VehicleDetailView: View {
     }
 
     private var editFinancialsModeCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("financial_summary_section".localizedString)
-                .font(.headline)
-                .padding(.horizontal)
-            
-            VStack(spacing: 12) {
-                DatePicker("purchase_date_label".localizedString, selection: $editPurchaseDate, displayedComponents: .date)
-                
-                HStack {
-                    Text("purchase_price".localizedString)
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Spacer()
-                    TextField("0", text: $editPurchasePrice)
-                        .keyboardType(.decimalPad)
-                        .onChange(of: editPurchasePrice) { old, new in
-                            let filtered = filterAmountInput(new)
-                            if filtered != new { editPurchasePrice = filtered }
+        Group {
+            if PermissionService.shared.can(.viewFinancials) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("financial_summary_section".localizedString)
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    VStack(spacing: 12) {
+                        DatePicker("purchase_date_label".localizedString, selection: $editPurchaseDate, displayedComponents: .date)
+                        
+                        HStack {
+                            Text("purchase_price".localizedString)
+                                .foregroundColor(ColorTheme.secondaryText)
+                            Spacer()
+                            TextField("0", text: $editPurchasePrice)
+                                .keyboardType(.decimalPad)
+                                .onChange(of: editPurchasePrice) { old, new in
+                                    let filtered = filterAmountInput(new)
+                                    if filtered != new { editPurchasePrice = filtered }
+                                }
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 140)
                         }
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 140)
-                }
-                
-                Divider()
-                
-                HStack {
-                    Text("asking_price".localizedString)
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Spacer()
-                    TextField("0", text: $editAskingPrice)
-                        .keyboardType(.decimalPad)
-                        .onChange(of: editAskingPrice) { old, new in
-                            let filtered = filterAmountInput(new)
-                            if filtered != new { editAskingPrice = filtered }
+                        
+                        Divider()
+                        
+                        HStack {
+                            Text("asking_price".localizedString)
+                                .foregroundColor(ColorTheme.secondaryText)
+                            Spacer()
+                            TextField("0", text: $editAskingPrice)
+                                .keyboardType(.decimalPad)
+                                .onChange(of: editAskingPrice) { old, new in
+                                    let filtered = filterAmountInput(new)
+                                    if filtered != new { editAskingPrice = filtered }
+                                }
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 140)
                         }
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 140)
+                    }
+                    .padding()
+                    .cardStyle()
+                    .padding(.horizontal)
                 }
             }
-            .padding()
-            .cardStyle()
-            .padding(.horizontal)
         }
     }
 
@@ -840,15 +844,8 @@ struct VehicleDetailView: View {
                 .padding(.horizontal)
             
             VStack(spacing: 12) {
-                HStack {
-                    Text("purchase_price".localizedString)
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Spacer()
-                    Text((vehicle.purchasePrice?.decimalValue ?? 0).asCurrency())
-                        .fontWeight(.medium)
-                }
-                
-                if let asking = vehicle.askingPrice?.decimalValue, asking > 0 {
+                // Public Info: Asking Price & Report
+                 if let asking = vehicle.askingPrice?.decimalValue, asking > 0 {
                     HStack {
                         Text("asking_price".localizedString)
                             .foregroundColor(ColorTheme.secondaryText)
@@ -874,56 +871,69 @@ struct VehicleDetailView: View {
                         }
                     }
                 }
-                
-                HStack {
-                    Text("total_expenses_label".localizedString)
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Spacer()
-                    Text(totalExpenses.asCurrency())
-                        .fontWeight(.medium)
-                        .foregroundColor(ColorTheme.accent)
-                }
-                
-                Divider()
-                
-                HStack {
-                    Text("total_cost".localizedString)
-                        .font(.headline)
-                        Spacer()
-                    Text(totalCost.asCurrency())
-                        .font(.headline)
-                        .foregroundColor(ColorTheme.primary)
-                }
-                
-                if let sale = vehicle.salePrice?.decimalValue {
+
+                // Protected Info
+                if PermissionService.shared.can(.viewFinancials) {
+                    Divider()
+                    
                     HStack {
-                        Text("sale_price".localizedString)
+                        Text("purchase_price".localizedString)
                             .foregroundColor(ColorTheme.secondaryText)
                         Spacer()
-                        Text(sale.asCurrency())
+                        Text((vehicle.purchasePrice?.decimalValue ?? 0).asCurrency())
                             .fontWeight(.medium)
-                            .foregroundColor(ColorTheme.success)
                     }
-                    if let d = vehicle.saleDate {
-                        HStack {
-                            Text("sale_date".localizedString)
-                                .foregroundColor(ColorTheme.secondaryText)
-                            Spacer()
-                            Text(d.formatted(date: .abbreviated, time: .omitted))
-                                .fontWeight(.medium)
-                        }
+                    
+                    HStack {
+                        Text("total_expenses_label".localizedString)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Spacer()
+                        Text(totalExpenses.asCurrency())
+                            .fontWeight(.medium)
+                            .foregroundColor(ColorTheme.accent)
                     }
                     
                     Divider()
                     
-                    if let p = profit {
+                    HStack {
+                        Text("total_cost".localizedString)
+                            .font(.headline)
+                        Spacer()
+                        Text(totalCost.asCurrency())
+                            .font(.headline)
+                            .foregroundColor(ColorTheme.primary)
+                    }
+                    
+                    if let sale = vehicle.salePrice?.decimalValue {
                         HStack {
-                            Text("profit_loss_label".localizedString)
-                                .font(.headline)
+                            Text("sale_price".localizedString)
+                                .foregroundColor(ColorTheme.secondaryText)
                             Spacer()
-                            Text(p.asCurrency())
-                                .font(.headline)
-                                .foregroundColor(p >= 0 ? ColorTheme.success : ColorTheme.danger)
+                            Text(sale.asCurrency())
+                                .fontWeight(.medium)
+                                .foregroundColor(ColorTheme.success)
+                        }
+                        if let d = vehicle.saleDate {
+                            HStack {
+                                Text("sale_date".localizedString)
+                                    .foregroundColor(ColorTheme.secondaryText)
+                                Spacer()
+                                Text(d.formatted(date: .abbreviated, time: .omitted))
+                                    .fontWeight(.medium)
+                            }
+                        }
+                        
+                        Divider()
+                        
+                        if let p = profit {
+                            HStack {
+                                Text("profit_loss_label".localizedString)
+                                    .font(.headline)
+                                Spacer()
+                                Text(p.asCurrency())
+                                    .font(.headline)
+                                    .foregroundColor(p >= 0 ? ColorTheme.success : ColorTheme.danger)
+                            }
                         }
                     }
                 }
