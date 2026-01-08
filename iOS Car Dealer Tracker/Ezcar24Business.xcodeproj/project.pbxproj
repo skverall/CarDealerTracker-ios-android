@@ -1,0 +1,724 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		101CC6762EA6B9C0005FCB41 /* DataHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101CC6752EA6B9C0005FCB41 /* DataHealthView.swift */; };
+		101CC6782EA6C337005FCB41 /* ImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101CC6772EA6C337005FCB41 /* ImageStore.swift */; };
+		10F075372ED4B66F00740D2D /* PasswordResetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10F075362ED4B66F00740D2D /* PasswordResetView.swift */; };
+		10FA8DD82ECF6BE000ECC6F9 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 10FA8DD72ECF6BE000ECC6F9 /* RevenueCat */; };
+		10FA8DDA2ECF6BE000ECC6F9 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 10FA8DD92ECF6BE000ECC6F9 /* RevenueCatUI */; };
+		10FA8DDF2ECF7ED400ECC6F9 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */; };
+		10FA8DE12ECF7F7D00ECC6F9 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */; };
+		A1000001 /* Ezcar24BusinessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000 /* Ezcar24BusinessApp.swift */; };
+		A1000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002 /* ContentView.swift */; };
+		A1000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000004 /* Assets.xcassets */; };
+		A1000009 /* Ezcar24Business.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1000007 /* Ezcar24Business.xcdatamodeld */; };
+		A100000B /* PersistenceController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000A /* PersistenceController.swift */; };
+		A100000D /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000C /* DashboardView.swift */; };
+		A100000F /* VehicleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000E /* VehicleListView.swift */; };
+		A1000011 /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010 /* VehicleDetailView.swift */; };
+		A1000013 /* ExpenseListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012 /* ExpenseListView.swift */; };
+		A1000015 /* AddExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000014 /* AddExpenseView.swift */; };
+		A1000017 /* UserManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016 /* UserManagementView.swift */; };
+		A1000019 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018 /* DashboardViewModel.swift */; };
+		A100001B /* VehicleViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001A /* VehicleViewModel.swift */; };
+		A100001D /* ExpenseViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001C /* ExpenseViewModel.swift */; };
+		A100001F /* UserViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100001E /* UserViewModel.swift */; };
+		A1000021 /* ColorTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000020 /* ColorTheme.swift */; };
+		A1000023 /* CurrencyFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000022 /* CurrencyFormatter.swift */; };
+		A1000025 /* AddVehicleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000024 /* AddVehicleView.swift */; };
+		B2000100 /* AuthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000001 /* AuthGateView.swift */; };
+		B2000101 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000002 /* LoginView.swift */; };
+		B2000102 /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000003 /* SessionStore.swift */; };
+		B2000103 /* AppSessionState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000004 /* AppSessionState.swift */; };
+		B2000104 /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000005 /* SupabaseClientProvider.swift */; };
+		B2000105 /* SupabaseConfig.plist in Resources */ = {isa = PBXBuildFile; fileRef = B2000006 /* SupabaseConfig.plist */; };
+		B2000106 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B2000200 /* Supabase */; };
+		C3000001 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3000000 /* AccountView.swift */; };
+		D0000010 /* CloudSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000001 /* CloudSyncManager.swift */; };
+		D0000011 /* CloudSyncEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000002 /* CloudSyncEnvironment.swift */; };
+		D0000012 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000003 /* SupabaseModels.swift */; };
+		E1000007 /* ClientListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000001 /* ClientListView.swift */; };
+		E1000008 /* ClientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000002 /* ClientDetailView.swift */; };
+		E1000009 /* ClientViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000004 /* ClientViewModel.swift */; };
+		E100000A /* Client+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000005 /* Client+CoreDataClass.swift */; };
+		E100000B /* Client+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000008 /* Client+CoreDataProperties.swift */; };
+		E100000C /* ClientCRMModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000009 /* ClientCRMModels.swift */; };
+		E20653B82EED8B0500C1002F /* AppStoreVersionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20653B72EED8B0500C1002F /* AppStoreVersionChecker.swift */; };
+		E20653BA2EED8B6F00C1002F /* ForceUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */; };
+		E20700012F1234567890ABCD /* LocalNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20700002F1234567890ABCD /* LocalNotificationManager.swift */; };
+		E29C0AEF2F0B92620087CEB6 /* String+Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */; };
+		E29C0AF12F0B92BA0087CEB6 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */; };
+		E2C37EE62F06A39E00EA13C1 /* AppReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */; };
+		E2C37EE82F06A77C00EA13C1 /* VehicleSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */; };
+		F0000002 /* FinancialAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000001 /* FinancialAccountsView.swift */; };
+		F0000004 /* EditAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000003 /* EditAccountView.swift */; };
+		F0000006 /* FinancialAccountsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000005 /* FinancialAccountsViewModel.swift */; };
+		F1000002 /* YearFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001 /* YearFormatter.swift */; };
+		F1000009 /* SalesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000008 /* SalesViewModel.swift */; };
+		F1000011 /* SalesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000010 /* SalesListView.swift */; };
+		F1000013 /* AddSaleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000012 /* AddSaleView.swift */; };
+		F2000101 /* Debt+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000001 /* Debt+Extensions.swift */; };
+		F2000102 /* DebtViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000002 /* DebtViewModel.swift */; };
+		F2000103 /* DebtsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000003 /* DebtsListView.swift */; };
+		F2000104 /* DebtDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000004 /* DebtDetailView.swift */; };
+		F2000105 /* AddDebtView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000005 /* AddDebtView.swift */; };
+		F2000106 /* AddDebtPaymentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000006 /* AddDebtPaymentView.swift */; };
+		F3000101 /* AccountTransaction+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000001 /* AccountTransaction+Extensions.swift */; };
+		F3000102 /* AccountTransactionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000002 /* AccountTransactionsViewModel.swift */; };
+		F3000103 /* AddAccountTransactionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000003 /* AddAccountTransactionView.swift */; };
+		G0000101 /* BackupExportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000001 /* BackupExportManager.swift */; };
+		G0000102 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000002 /* ShareSheet.swift */; };
+		G0000103 /* BackupCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000003 /* BackupCenterView.swift */; };
+		H0000101 /* RegionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000001 /* RegionSettings.swift */; };
+		H0000102 /* RegionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000002 /* RegionSelectionView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		101CC6752EA6B9C0005FCB41 /* DataHealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataHealthView.swift; sourceTree = "<group>"; };
+		101CC6772EA6C337005FCB41 /* ImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStore.swift; sourceTree = "<group>"; };
+		10F075362ED4B66F00740D2D /* PasswordResetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordResetView.swift; sourceTree = "<group>"; };
+		10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
+		10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		A0FFFFFF /* Ezcar24Business.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ezcar24Business.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000 /* Ezcar24BusinessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ezcar24BusinessApp.swift; sourceTree = "<group>"; };
+		A1000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A1000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000008 /* Ezcar24Business.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Ezcar24Business.xcdatamodel; sourceTree = "<group>"; };
+		A100000A /* PersistenceController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistenceController.swift; sourceTree = "<group>"; };
+		A100000C /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		A100000E /* VehicleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleListView.swift; sourceTree = "<group>"; };
+		A1000010 /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
+		A1000012 /* ExpenseListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseListView.swift; sourceTree = "<group>"; };
+		A1000014 /* AddExpenseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseView.swift; sourceTree = "<group>"; };
+		A1000016 /* UserManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserManagementView.swift; sourceTree = "<group>"; };
+		A1000018 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		A100001A /* VehicleViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleViewModel.swift; sourceTree = "<group>"; };
+		A100001C /* ExpenseViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseViewModel.swift; sourceTree = "<group>"; };
+		A100001E /* UserViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserViewModel.swift; sourceTree = "<group>"; };
+		A1000020 /* ColorTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorTheme.swift; sourceTree = "<group>"; };
+		A1000022 /* CurrencyFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyFormatter.swift; sourceTree = "<group>"; };
+		A1000024 /* AddVehicleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddVehicleView.swift; sourceTree = "<group>"; };
+		A1000031 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B2000001 /* AuthGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthGateView.swift; sourceTree = "<group>"; };
+		B2000002 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		B2000003 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		B2000004 /* AppSessionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionState.swift; sourceTree = "<group>"; };
+		B2000005 /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
+		B2000006 /* SupabaseConfig.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = SupabaseConfig.plist; sourceTree = "<group>"; };
+		C3000000 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
+		D0000001 /* CloudSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncManager.swift; sourceTree = "<group>"; };
+		D0000002 /* CloudSyncEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncEnvironment.swift; sourceTree = "<group>"; };
+		D0000003 /* SupabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseModels.swift; sourceTree = "<group>"; };
+		E0000001 /* ClientListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientListView.swift; sourceTree = "<group>"; };
+		E0000002 /* ClientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailView.swift; sourceTree = "<group>"; };
+		E0000004 /* ClientViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientViewModel.swift; sourceTree = "<group>"; };
+		E0000005 /* Client+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Client+CoreDataClass.swift"; sourceTree = "<group>"; };
+		E0000008 /* Client+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Client+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		E0000009 /* ClientCRMModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientCRMModels.swift; sourceTree = "<group>"; };
+		E20653B72EED8B0500C1002F /* AppStoreVersionChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreVersionChecker.swift; sourceTree = "<group>"; };
+		E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceUpdateView.swift; sourceTree = "<group>"; };
+		E20700002F1234567890ABCD /* LocalNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNotificationManager.swift; sourceTree = "<group>"; };
+		E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Localization.swift"; sourceTree = "<group>"; };
+		E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReviewManager.swift; sourceTree = "<group>"; };
+		E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleSelectionSheet.swift; sourceTree = "<group>"; };
+		F0000001 /* FinancialAccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsView.swift; sourceTree = "<group>"; };
+		F0000003 /* EditAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditAccountView.swift; sourceTree = "<group>"; };
+		F0000005 /* FinancialAccountsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsViewModel.swift; sourceTree = "<group>"; };
+		F1000001 /* YearFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearFormatter.swift; sourceTree = "<group>"; };
+		F1000008 /* SalesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SalesViewModel.swift; sourceTree = "<group>"; };
+		F1000010 /* SalesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SalesListView.swift; sourceTree = "<group>"; };
+		F1000012 /* AddSaleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddSaleView.swift; sourceTree = "<group>"; };
+		F2000001 /* Debt+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Debt+Extensions.swift"; sourceTree = "<group>"; };
+		F2000002 /* DebtViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebtViewModel.swift; sourceTree = "<group>"; };
+		F2000003 /* DebtsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebtsListView.swift; sourceTree = "<group>"; };
+		F2000004 /* DebtDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebtDetailView.swift; sourceTree = "<group>"; };
+		F2000005 /* AddDebtView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDebtView.swift; sourceTree = "<group>"; };
+		F2000006 /* AddDebtPaymentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddDebtPaymentView.swift; sourceTree = "<group>"; };
+		F3000001 /* AccountTransaction+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AccountTransaction+Extensions.swift"; sourceTree = "<group>"; };
+		F3000002 /* AccountTransactionsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountTransactionsViewModel.swift; sourceTree = "<group>"; };
+		F3000003 /* AddAccountTransactionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddAccountTransactionView.swift; sourceTree = "<group>"; };
+		G0000001 /* BackupExportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupExportManager.swift; sourceTree = "<group>"; };
+		G0000002 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
+		G0000003 /* BackupCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupCenterView.swift; sourceTree = "<group>"; };
+		H0000001 /* RegionSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSettings.swift; sourceTree = "<group>"; };
+		H0000002 /* RegionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A0FFFFF0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				10FA8DDA2ECF6BE000ECC6F9 /* RevenueCatUI in Frameworks */,
+				B2000106 /* Supabase in Frameworks */,
+				10FA8DD82ECF6BE000ECC6F9 /* RevenueCat in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		10FA8DDD2ECF7E0000ECC6F9 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A0FFFFFC = {
+			isa = PBXGroup;
+			children = (
+				A1000026 /* Ezcar24Business */,
+				10FA8DDD2ECF7E0000ECC6F9 /* Frameworks */,
+				A0FFFFFD /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A0FFFFFD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A0FFFFFF /* Ezcar24Business.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A1000026 /* Ezcar24Business */ = {
+			isa = PBXGroup;
+			children = (
+				E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */,
+				A1000000 /* Ezcar24BusinessApp.swift */,
+				A1000002 /* ContentView.swift */,
+				B2000007 /* Auth */,
+				A1000027 /* Models */,
+				A1000028 /* ViewModels */,
+				A1000029 /* Views */,
+				D0000000 /* Services */,
+				A100002A /* Utilities */,
+				A1000004 /* Assets.xcassets */,
+				B2000006 /* SupabaseConfig.plist */,
+				A1000031 /* Info.plist */,
+			);
+			path = Ezcar24Business;
+			sourceTree = "<group>";
+		};
+		A1000027 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000007 /* Ezcar24Business.xcdatamodeld */,
+				A100000A /* PersistenceController.swift */,
+				F2000001 /* Debt+Extensions.swift */,
+				F3000001 /* AccountTransaction+Extensions.swift */,
+				E0000005 /* Client+CoreDataClass.swift */,
+				E0000008 /* Client+CoreDataProperties.swift */,
+				E0000009 /* ClientCRMModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A1000028 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A1000018 /* DashboardViewModel.swift */,
+				A100001A /* VehicleViewModel.swift */,
+				A100001C /* ExpenseViewModel.swift */,
+				A100001E /* UserViewModel.swift */,
+				F0000005 /* FinancialAccountsViewModel.swift */,
+				E0000004 /* ClientViewModel.swift */,
+				F1000008 /* SalesViewModel.swift */,
+				F2000002 /* DebtViewModel.swift */,
+				F3000002 /* AccountTransactionsViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A1000029 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */,
+				E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */,
+				10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */,
+				101CC6752EA6B9C0005FCB41 /* DataHealthView.swift */,
+				A100000C /* DashboardView.swift */,
+				A100000E /* VehicleListView.swift */,
+				A1000010 /* VehicleDetailView.swift */,
+				A1000024 /* AddVehicleView.swift */,
+				A1000012 /* ExpenseListView.swift */,
+				A1000014 /* AddExpenseView.swift */,
+				A1000016 /* UserManagementView.swift */,
+				C3000000 /* AccountView.swift */,
+				E0000001 /* ClientListView.swift */,
+				E0000002 /* ClientDetailView.swift */,
+				F0000001 /* FinancialAccountsView.swift */,
+				F0000003 /* EditAccountView.swift */,
+				F3000003 /* AddAccountTransactionView.swift */,
+				F1000010 /* SalesListView.swift */,
+				F1000012 /* AddSaleView.swift */,
+				F2000003 /* DebtsListView.swift */,
+				F2000004 /* DebtDetailView.swift */,
+				F2000005 /* AddDebtView.swift */,
+				F2000006 /* AddDebtPaymentView.swift */,
+				G0000003 /* BackupCenterView.swift */,
+				H0000002 /* RegionSelectionView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A100002A /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */,
+				101CC6772EA6C337005FCB41 /* ImageStore.swift */,
+				A1000020 /* ColorTheme.swift */,
+				A1000022 /* CurrencyFormatter.swift */,
+				F1000001 /* YearFormatter.swift */,
+				G0000002 /* ShareSheet.swift */,
+				H0000001 /* RegionSettings.swift */,
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
+		B2000007 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				10F075362ED4B66F00740D2D /* PasswordResetView.swift */,
+				B2000001 /* AuthGateView.swift */,
+				B2000002 /* LoginView.swift */,
+				B2000003 /* SessionStore.swift */,
+				B2000004 /* AppSessionState.swift */,
+				B2000005 /* SupabaseClientProvider.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		D0000000 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */,
+				E20653B72EED8B0500C1002F /* AppStoreVersionChecker.swift */,
+				10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */,
+				D0000001 /* CloudSyncManager.swift */,
+				D0000002 /* CloudSyncEnvironment.swift */,
+				D0000003 /* SupabaseModels.swift */,
+				G0000001 /* BackupExportManager.swift */,
+				E20700002F1234567890ABCD /* LocalNotificationManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A0FFFFFE /* Ezcar24Business */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A100002B /* Build configuration list for PBXNativeTarget "Ezcar24Business" */;
+			buildPhases = (
+				A0FFFFFA /* Sources */,
+				A0FFFFF0 /* Frameworks */,
+				A0FFFFFB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Ezcar24Business;
+			packageProductDependencies = (
+				B2000200 /* Supabase */,
+				10FA8DD72ECF6BE000ECC6F9 /* RevenueCat */,
+				10FA8DD92ECF6BE000ECC6F9 /* RevenueCatUI */,
+			);
+			productName = Ezcar24Business;
+			productReference = A0FFFFFF /* Ezcar24Business.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A0FFFFF9 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					A0FFFFFE = {
+						CreatedOnToolsVersion = 15.0;
+					};
+				};
+			};
+			buildConfigurationList = A100002C /* Build configuration list for PBXProject "Ezcar24Business" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A0FFFFFC;
+			packageReferences = (
+				B20001FF /* XCRemoteSwiftPackageReference "supabase-swift" */,
+				10FA8DD42ECF6BE000ECC6F9 /* XCRemoteSwiftPackageReference "purchases-ios" */,
+			);
+			productRefGroup = A0FFFFFD /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A0FFFFFE /* Ezcar24Business */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A0FFFFFB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000005 /* Assets.xcassets in Resources */,
+				B2000105 /* SupabaseConfig.plist in Resources */,
+				E29C0AF12F0B92BA0087CEB6 /* Localizable.xcstrings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A0FFFFFA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E20653B82EED8B0500C1002F /* AppStoreVersionChecker.swift in Sources */,
+				E20700012F1234567890ABCD /* LocalNotificationManager.swift in Sources */,
+				A1000001 /* Ezcar24BusinessApp.swift in Sources */,
+				A1000003 /* ContentView.swift in Sources */,
+				A1000009 /* Ezcar24Business.xcdatamodeld in Sources */,
+				A100000B /* PersistenceController.swift in Sources */,
+				A100000D /* DashboardView.swift in Sources */,
+				A100000F /* VehicleListView.swift in Sources */,
+				A1000011 /* VehicleDetailView.swift in Sources */,
+				10F075372ED4B66F00740D2D /* PasswordResetView.swift in Sources */,
+				A1000013 /* ExpenseListView.swift in Sources */,
+				A1000015 /* AddExpenseView.swift in Sources */,
+				A1000017 /* UserManagementView.swift in Sources */,
+				101CC6762EA6B9C0005FCB41 /* DataHealthView.swift in Sources */,
+				10FA8DE12ECF7F7D00ECC6F9 /* PaywallView.swift in Sources */,
+				A1000019 /* DashboardViewModel.swift in Sources */,
+				A100001B /* VehicleViewModel.swift in Sources */,
+				A100001D /* ExpenseViewModel.swift in Sources */,
+				A100001F /* UserViewModel.swift in Sources */,
+				A1000021 /* ColorTheme.swift in Sources */,
+				101CC6782EA6C337005FCB41 /* ImageStore.swift in Sources */,
+				A1000023 /* CurrencyFormatter.swift in Sources */,
+				A1000025 /* AddVehicleView.swift in Sources */,
+				C3000001 /* AccountView.swift in Sources */,
+				B2000100 /* AuthGateView.swift in Sources */,
+				B2000101 /* LoginView.swift in Sources */,
+				B2000102 /* SessionStore.swift in Sources */,
+				B2000103 /* AppSessionState.swift in Sources */,
+				B2000104 /* SupabaseClientProvider.swift in Sources */,
+				D0000010 /* CloudSyncManager.swift in Sources */,
+				D0000011 /* CloudSyncEnvironment.swift in Sources */,
+				D0000012 /* SupabaseModels.swift in Sources */,
+				E1000007 /* ClientListView.swift in Sources */,
+				E1000008 /* ClientDetailView.swift in Sources */,
+				E1000009 /* ClientViewModel.swift in Sources */,
+				E100000A /* Client+CoreDataClass.swift in Sources */,
+				E100000B /* Client+CoreDataProperties.swift in Sources */,
+				E100000C /* ClientCRMModels.swift in Sources */,
+				F0000002 /* FinancialAccountsView.swift in Sources */,
+				F0000004 /* EditAccountView.swift in Sources */,
+				F0000006 /* FinancialAccountsViewModel.swift in Sources */,
+				F1000002 /* YearFormatter.swift in Sources */,
+				F1000009 /* SalesViewModel.swift in Sources */,
+				F1000011 /* SalesListView.swift in Sources */,
+				F1000013 /* AddSaleView.swift in Sources */,
+				F2000101 /* Debt+Extensions.swift in Sources */,
+				F2000102 /* DebtViewModel.swift in Sources */,
+				E2C37EE62F06A39E00EA13C1 /* AppReviewManager.swift in Sources */,
+				E2C37EE82F06A77C00EA13C1 /* VehicleSelectionSheet.swift in Sources */,
+				F2000103 /* DebtsListView.swift in Sources */,
+				F2000104 /* DebtDetailView.swift in Sources */,
+				F2000105 /* AddDebtView.swift in Sources */,
+				F2000106 /* AddDebtPaymentView.swift in Sources */,
+				F3000101 /* AccountTransaction+Extensions.swift in Sources */,
+				F3000102 /* AccountTransactionsViewModel.swift in Sources */,
+				F3000103 /* AddAccountTransactionView.swift in Sources */,
+				10FA8DDF2ECF7ED400ECC6F9 /* SubscriptionManager.swift in Sources */,
+				G0000101 /* BackupExportManager.swift in Sources */,
+				G0000102 /* ShareSheet.swift in Sources */,
+				E20653BA2EED8B6F00C1002F /* ForceUpdateView.swift in Sources */,
+				G0000103 /* BackupCenterView.swift in Sources */,
+				H0000101 /* RegionSettings.swift in Sources */,
+				H0000102 /* RegionSelectionView.swift in Sources */,
+				E29C0AEF2F0B92620087CEB6 /* String+Localization.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A100002D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 2RCZ658ZDD;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A100002E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 2RCZ658ZDD;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A100002F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 7;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Ezcar24Business/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		A1000030 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 7;
+				ENABLE_PREVIEWS = YES;
+				INFOPLIST_FILE = Ezcar24Business/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A100002B /* Build configuration list for PBXNativeTarget "Ezcar24Business" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A100002F /* Debug */,
+				A1000030 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A100002C /* Build configuration list for PBXProject "Ezcar24Business" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A100002D /* Debug */,
+				A100002E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		10FA8DD42ECF6BE000ECC6F9 /* XCRemoteSwiftPackageReference "purchases-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.48.0;
+			};
+		};
+		B20001FF /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase-community/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		10FA8DD72ECF6BE000ECC6F9 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10FA8DD42ECF6BE000ECC6F9 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCat;
+		};
+		10FA8DD92ECF6BE000ECC6F9 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 10FA8DD42ECF6BE000ECC6F9 /* XCRemoteSwiftPackageReference "purchases-ios" */;
+			productName = RevenueCatUI;
+		};
+		B2000200 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B20001FF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+/* Begin XCVersionGroup section */
+		A1000007 /* Ezcar24Business.xcdatamodeld */ = {
+			isa = XCVersionGroup;
+			children = (
+				A1000008 /* Ezcar24Business.xcdatamodel */,
+			);
+			currentVersion = A1000008 /* Ezcar24Business.xcdatamodel */;
+			path = Ezcar24Business.xcdatamodeld;
+			sourceTree = "<group>";
+			versionGroupType = wrapper.xcdatamodel;
+		};
+/* End XCVersionGroup section */
+	};
+	rootObject = A0FFFFF9 /* Project object */;
+}
