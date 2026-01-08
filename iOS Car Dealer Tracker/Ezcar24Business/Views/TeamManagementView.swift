@@ -8,6 +8,7 @@
 import SwiftUI
 import Supabase
 import Combine
+import UIKit
 
 // MARK: - Models
 
@@ -16,6 +17,7 @@ struct TeamMember: Identifiable, Codable {
     let role: String
     let status: String
     let email: String?
+    let inviteToken: String?
     
     var displayName: String {
         return email ?? "User"
@@ -27,6 +29,7 @@ struct TeamMemberResponse: Codable {
     let role: String
     let status: String
     let member_email: String?
+    let invite_token: String?
 }
 
 // MARK: - ViewModel
@@ -106,7 +109,7 @@ struct TeamManagementView: View {
                 } else if viewModel.members.isEmpty {
                     VStack(spacing: 16) {
                         Image(systemName: "person.3.fill")
-                            .font(.system(size: 50))
+                        .font(.system(size: 50))
                             .foregroundColor(ColorTheme.secondaryText)
                         Text("No team members found")
                             .foregroundColor(ColorTheme.secondaryText)
@@ -170,26 +173,55 @@ struct StackCompat<Content: View>: View {
 
 struct TeamMemberRow: View {
     let member: TeamMemberResponse
+    @State private var copied = false
     
     var body: some View {
-        HStack {
-            VStack(alignment: .leading) {
-                Text(member.member_email ?? "User")
-                    .font(.headline)
-                    .foregroundColor(ColorTheme.primaryText)
-                Text(member.role.capitalized)
-                    .font(.caption)
-                    .foregroundColor(ColorTheme.secondaryText)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2)
-                    .background(roleColor.opacity(0.1))
-                    .cornerRadius(4)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading) {
+                    Text(member.member_email ?? "User")
+                        .font(.headline)
+                        .foregroundColor(ColorTheme.primaryText)
+                    Text(member.role.capitalized)
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(roleColor.opacity(0.1))
+                        .cornerRadius(4)
+                }
+                Spacer()
+                if member.status == "invited" {
+                     Text("Pending")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
             }
-            Spacer()
-            if member.status == "invited" {
-                 Text("Pending")
+            
+            // Copy Link Button for Invited Users
+            if member.status == "invited", let token = member.invite_token {
+                Button {
+                    let link = "https://ezcar24.com/accept-invite?token=\(token)"
+                    UIPasteboard.general.string = link
+                    withAnimation {
+                        copied = true
+                    }
+                    
+                    // Reset copied state after delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation {
+                            copied = false
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        Text(copied ? "Copied" : "Copy Invite Link")
+                    }
                     .font(.caption)
-                    .foregroundColor(.orange)
+                    .foregroundColor(.blue)
+                }
+                .buttonStyle(PlainButtonStyle())
             }
         }
         .padding(.vertical, 4)
