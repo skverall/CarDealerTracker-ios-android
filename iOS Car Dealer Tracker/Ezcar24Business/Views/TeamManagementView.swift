@@ -56,11 +56,15 @@ class TeamViewModel: ObservableObject {
         isLoading = false
     }
     
-    func inviteMember(email: String, role: String) async -> Bool {
+    func inviteMember(email: String, role: String, language: String = "en") async -> Bool {
         isLoading = true
         errorMessage = nil
         do {
-            let params = ["email": email, "role": role]
+            let params: [String: String] = [
+                "email": email, 
+                "role": role,
+                "language": language
+            ]
             let _ = try await client.functions.invoke("invite_member", options: FunctionInvokeOptions(body: params))
             
             await fetchTeam()
@@ -234,7 +238,11 @@ struct InviteMemberSheet: View {
                 
                 Button("Send Invite") {
                     Task {
-                        let success = await viewModel.inviteMember(email: email, role: selectedRole)
+                        // Detect current language
+                        let currentLanguage = Locale.current.language.languageCode?.identifier ?? "en"
+                        let lang = currentLanguage == "ru" ? "ru" : "en"
+                        
+                        let success = await viewModel.inviteMember(email: email, role: selectedRole, language: lang)
                         if success {
                             dismiss()
                         }
