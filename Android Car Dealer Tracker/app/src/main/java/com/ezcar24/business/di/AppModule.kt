@@ -29,8 +29,8 @@ import javax.inject.Singleton
 object AppModule {
 
     // Ideally move to BuildConfig
-    private const val SUPABASE_URL = "https://haordpdxyyreliyzmire.supabase.co"
-    private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhhb3JkcGR4eXlyZWxpeXptaXJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNzIxNTAsImV4cCI6MjA3MDY0ODE1MH0.3cc_tkF4So5g0JbbPLEiKlZ_3JyaqW6u_cxV6rxKFQg"
+    private const val SUPABASE_URL = "https://ltjjzamyclmjaavxmyug.supabase.co"
+    private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0amp6YW15Y2xtamFhdnhteXVnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4OTUxNTMsImV4cCI6MjA4MzQ3MTE1M30.HX0yFl47XKMdVo5OD5tYuvyCvw5uS4pCutpql1Jmzo0"
 
     @Provides
     @Singleton
