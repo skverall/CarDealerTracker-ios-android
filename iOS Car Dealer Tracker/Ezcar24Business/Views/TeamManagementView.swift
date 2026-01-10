@@ -92,6 +92,19 @@ class TeamViewModel: ObservableObject {
             errorMessage = error.localizedDescription
         }
     }
+    
+    func cancelInvite(inviteId: UUID) async {
+        do {
+            try await client.from("team_invitations")
+                .delete()
+                .eq("id", value: inviteId)
+                .execute()
+            
+            await fetchTeam()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
 }
 
 // MARK: - Views
@@ -119,6 +132,8 @@ struct TeamManagementView: View {
                     List {
                         ForEach(viewModel.members, id: \.user_id) { member in
                             TeamMemberRow(member: member)
+                                // Disable delete swipe action for the owner
+                                .deleteDisabled(member.role == "owner")
                         }
                         .onDelete(perform: deleteMember)
                     }
@@ -150,7 +165,11 @@ struct TeamManagementView: View {
         for index in offsets {
             let member = viewModel.members[index]
             Task {
-                await viewModel.removeMember(userId: member.user_id)
+                if member.status == "invited" {
+                    await viewModel.cancelInvite(inviteId: member.user_id)
+                } else {
+                    await viewModel.removeMember(userId: member.user_id)
+                }
             }
         }
     }
