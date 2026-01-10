@@ -13,10 +13,15 @@ final class SessionStore: ObservableObject {
     @Published private(set) var isAuthenticating = false
     @Published var errorMessage: String?
     @Published var showPasswordReset = false
+    @Published private(set) var organizationId: UUID?
+    @Published private(set) var inviteToastMessage: String?
+    @Published private(set) var inviteToastIsError = false
+    @Published private(set) var isAcceptingInvite = false
     
     private var isPasswordRecoverySessionActive = false
     private let passwordRecoveryFlagKey = "passwordRecoveryInProgress"
     private let lastSignedInUserIdKey = "lastSignedInUserId"
+    private let pendingInviteTokenKey = "pendingInviteToken"
 
     private let client: SupabaseClient
     private var authChangeTask: Task<Void, Never>?
@@ -100,6 +105,7 @@ final class SessionStore: ObservableObject {
                 }
             } else {
                 updateStatus(for: .initialSession, session: currentSession)
+                await loadOrganizationContext()
                 // Link RevenueCat user on launch
                 SubscriptionManager.shared.logIn(userId: currentSession.user.id.uuidString)
                 errorMessage = nil
@@ -249,6 +255,10 @@ final class SessionStore: ObservableObject {
     }
 
     func handleDeepLink(_ url: URL) async throws {
+        if await handleInviteDeepLink(url) {
+            return
+        }
+
         // Check if this is a password recovery link
         let urlString = url.absoluteString.lowercased()
         print("Deep link received:", urlString)
@@ -268,6 +278,108 @@ final class SessionStore: ObservableObject {
             // Regular magic link or other auth link
             client.handle(url)
         }
+    }
+
+    func prepareForSync() async {
+        await loadOrganizationContext()
+        _ = await acceptPendingInviteIfPossible()
+        if organizationId == nil {
+            await loadOrganizationContext()
+        }
+    }
+
+    func dismissInviteToast() {
+        inviteToastMessage = nil
+        inviteToastIsError = false
+    }
+
+    private func loadOrganizationContext() async {
+        guard case .signedIn(let user) = status else {
+            organizationId = nil
+            return
+        }
+
+        struct MembershipRow: Decodable {
+            let organization_id: UUID
+        }
+
+        do {
+            let row: MembershipRow = try await client
+                .from("dealer_team_members")
+                .select("organization_id")
+                .eq("user_id", value: user.id)
+                .single()
+                .execute()
+                .value
+            organizationId = row.organization_id
+        } catch {
+            organizationId = nil
+        }
+    }
+
+    private func handleInviteDeepLink(_ url: URL) async -> Bool {
+        guard let token = extractInviteToken(from: url) else { return false }
+        cachePendingInviteToken(token)
+
+        switch status {
+        case .signedIn:
+            _ = await acceptInvite(token: token)
+        default:
+            errorMessage = "Invitation link saved. Sign in to accept."
+        }
+
+        return true
+    }
+
+    private func extractInviteToken(from url: URL) -> String? {
+        let host = url.host?.lowercased() ?? ""
+        let path = url.path.lowercased()
+        let isUniversalInvite = host.contains("ezcar24.com") && path.contains("accept-invite")
+        let isCustomInvite = host.contains("accept-invite")
+
+        guard isUniversalInvite || isCustomInvite else { return nil }
+
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        return components?.queryItems?.first(where: { $0.name == "token" })?.value
+    }
+
+    private func acceptPendingInviteIfPossible() async -> Bool {
+        guard let token = pendingInviteToken() else { return false }
+        return await acceptInvite(token: token)
+    }
+
+    private func acceptInvite(token: String) async -> Bool {
+        guard !isAcceptingInvite else { return false }
+        guard case .signedIn = status else { return false }
+        isAcceptingInvite = true
+        defer { isAcceptingInvite = false }
+
+        do {
+            let _ = try await client
+                .functions
+                .invoke("accept_invite", options: FunctionInvokeOptions(body: ["token": token]))
+            clearPendingInviteToken()
+            await loadOrganizationContext()
+            inviteToastMessage = "Invitation accepted."
+            inviteToastIsError = false
+            return true
+        } catch {
+            inviteToastMessage = localized(error)
+            inviteToastIsError = true
+            return false
+        }
+    }
+
+    private func cachePendingInviteToken(_ token: String) {
+        UserDefaults.standard.set(token, forKey: pendingInviteTokenKey)
+    }
+
+    private func pendingInviteToken() -> String? {
+        UserDefaults.standard.string(forKey: pendingInviteTokenKey)
+    }
+
+    private func clearPendingInviteToken() {
+        UserDefaults.standard.removeObject(forKey: pendingInviteTokenKey)
     }
 
     private func listenForAuthChanges() {
@@ -339,6 +451,10 @@ final class SessionStore: ObservableObject {
         status = .signedOut
         errorMessage = nil
         isPasswordRecoverySessionActive = false
+        organizationId = nil
+        inviteToastMessage = nil
+        inviteToastIsError = false
+        isAcceptingInvite = false
         UserDefaults.standard.removeObject(forKey: passwordRecoveryFlagKey)
         // Logout from RevenueCat and clear any cached entitlement state
         SubscriptionManager.shared.logOut()

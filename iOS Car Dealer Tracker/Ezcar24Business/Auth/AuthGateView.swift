@@ -38,6 +38,7 @@ struct AuthGateView: View {
                 case .signedIn(let user):
                     ContentContainerView()
                         .task {
+                            await sessionStore.prepareForSync()
                             await cloudSyncManager.syncAfterLogin(user: user)
                         }
                 }
@@ -70,6 +71,7 @@ struct AuthGateView: View {
                 // Only sync if NOT in password recovery mode
                 if !sessionStore.showPasswordReset {
                     Task {
+                        await sessionStore.prepareForSync()
                         await cloudSyncManager.syncAfterLogin(user: user)
                     }
                 }

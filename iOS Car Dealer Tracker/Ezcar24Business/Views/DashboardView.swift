@@ -120,7 +120,8 @@ struct DashboardView: View {
         .task {
             // Re-fetch credentials/permissions on load
             if case .signedIn(let user) = sessionStore.status {
-                 await PermissionService.shared.fetchPermissions(dealerId: user.id)
+                let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+                await PermissionService.shared.fetchPermissions(dealerId: dealerId)
             }
             await refreshOfflineQueueCount()
         }
@@ -317,7 +318,8 @@ private extension DashboardView {
             return
         }
         let items = await SyncQueueManager.shared.getAllItems()
-        let count = items.filter { $0.dealerId == user.id }.count
+        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+        let count = items.filter { $0.dealerId == dealerId }.count
         await MainActor.run { offlineQueueCount = count }
     }
 
@@ -560,7 +562,8 @@ private extension DashboardView {
                                             viewModel.fetchFinancialData(range: selectedRange)
                                             if let id = deletedId, case .signedIn(let user) = sessionStore.status {
                                                 Task {
-                                                    await cloudSyncManager.deleteExpense(id: id, dealerId: user.id)
+                                                    let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+                                                    await cloudSyncManager.deleteExpense(id: id, dealerId: dealerId)
                                                 }
                                             }
                                         } catch {

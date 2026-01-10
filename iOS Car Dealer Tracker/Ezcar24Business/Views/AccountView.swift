@@ -406,7 +406,8 @@ struct AccountView: View {
             
             // Step 2: Process all pending offline operations
             if case .signedIn(let user) = sessionStore.status {
-                await cloudSyncManager.processOfflineQueue(dealerId: user.id)
+                let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+                await cloudSyncManager.processOfflineQueue(dealerId: dealerId)
             }
             
             // Step 3: Show success checkmark
@@ -457,7 +458,8 @@ struct AccountView: View {
         guard case .signedIn(let user) = sessionStore.status else { return }
         dedupState = .running
         do {
-            try await cloudSyncManager.deduplicateData(dealerId: user.id)
+            let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+            try await cloudSyncManager.deduplicateData(dealerId: dealerId)
             dedupState = .success
         } catch {
             dedupState = .error(error.localizedDescription)

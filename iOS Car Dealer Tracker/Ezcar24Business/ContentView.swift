@@ -12,6 +12,7 @@ import Supabase
 
 struct ContentView: View {
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
+    @EnvironmentObject private var sessionStore: SessionStore
     @State private var selectedTab = 0
     @State private var showProfileSheet = false
 
@@ -60,6 +61,20 @@ struct ContentView: View {
                         message: errorMessage,
                         isError: true,
                         onDismiss: { cloudSyncManager.errorMessage = nil }
+                    )
+                    .padding(.bottom, 60) // Above tab bar
+                }
+                .zIndex(100)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+
+            if let inviteMessage = sessionStore.inviteToastMessage {
+                VStack {
+                    Spacer()
+                    ToastView(
+                        message: inviteMessage,
+                        isError: sessionStore.inviteToastIsError,
+                        onDismiss: { sessionStore.dismissInviteToast() }
                     )
                     .padding(.bottom, 60) // Above tab bar
                 }
@@ -212,5 +227,4 @@ struct ToastView: View {
         .animation(.spring(), value: message)
     }
 }
-
 

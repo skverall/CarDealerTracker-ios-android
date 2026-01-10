@@ -60,7 +60,7 @@ final class CloudSyncManager: ObservableObject {
         
         defer { isSyncing = false }
 
-        let dealerId = user.id
+        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
         var effectiveSince = lastSyncTimestamp
         
         // Create a background context for heavy lifting
@@ -164,7 +164,7 @@ final class CloudSyncManager: ObservableObject {
             print("CloudSyncManager sync error: \(error)")
             await logSyncError(
                 rpc: "syncAfterLogin",
-                dealerId: user.id,
+                dealerId: dealerId,
                 error: error
             )
             if isFirstSync {
@@ -182,7 +182,7 @@ final class CloudSyncManager: ObservableObject {
         isSyncing = true
         defer { isSyncing = false }
 
-        let dealerId = user.id
+        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
         let syncStartedAt = Date()
         let since = force ? nil : lastSyncTimestamp
         

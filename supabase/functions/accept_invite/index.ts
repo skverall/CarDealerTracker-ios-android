@@ -52,16 +52,14 @@ serve(async (req) => {
         // The safest flow: User signs up / logs in -> Calls accept_invite with token.
         if (!currentUser) throw new Error("Please sign in or sign up to accept the invitation")
 
-        // Optional: Verify email matches invite email? 
-        // Ideally yes, but users might use Google Auth with different email. 
-        // Strict Mode: currentUser.email must match invite.email
-        if (currentUser.email !== invite.email) {
-            // throw new Error("Email mismatch. Please login with: " + invite.email)
-            // Relaxing this constraint for now as commonly requested features allow joining with any email
-            // But for security high-level we should maybe warn. 
-            // User requested World Class. World Class typically enforces email matching OR explicit confirmation.
-            // Let's enforce match for security.
-            // throw new Error("You must accept this invite with the email: " + invite.email)
+        const strictEmailMatch = (Deno.env.get("INVITE_STRICT_EMAIL_MATCH") ?? "true") === "true"
+        if (
+            strictEmailMatch &&
+            invite.email &&
+            currentUser.email &&
+            invite.email.toLowerCase() !== currentUser.email.toLowerCase()
+        ) {
+            throw new Error("Email mismatch. Please sign in with the invited address.")
         }
 
         // 3. Create Membership
@@ -92,7 +90,12 @@ serve(async (req) => {
         })
 
         return new Response(
-            JSON.stringify({ success: true, message: "Welcome to the team!" }),
+            JSON.stringify({
+                success: true,
+                organization_id: invite.organization_id,
+                role: invite.role,
+                message: "Welcome to the team!",
+            }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         )
 

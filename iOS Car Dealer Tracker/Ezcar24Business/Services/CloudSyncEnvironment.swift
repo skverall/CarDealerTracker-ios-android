@@ -6,7 +6,7 @@ enum CloudSyncEnvironment {
     static var currentDealerId: UUID? {
         guard let sessionStore = SessionStoreEnvironment.shared else { return nil }
         if case .signedIn(let user) = sessionStore.status {
-            return user.id
+            return sessionStore.organizationId ?? user.id
         }
         return nil
     }
@@ -16,4 +16,3 @@ enum CloudSyncEnvironment {
 enum SessionStoreEnvironment {
     static weak var shared: SessionStore?
 }
-

@@ -113,6 +113,7 @@
 		B2000004 /* AppSessionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSessionState.swift; sourceTree = "<group>"; };
 		B2000005 /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
 		B2000006 /* SupabaseConfig.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = SupabaseConfig.plist; sourceTree = "<group>"; };
+		B2000008 /* Ezcar24Business.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ezcar24Business.entitlements; sourceTree = "<group>"; };
 		C3000000 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		D0000001 /* CloudSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncManager.swift; sourceTree = "<group>"; };
 		D0000002 /* CloudSyncEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncEnvironment.swift; sourceTree = "<group>"; };
@@ -208,6 +209,7 @@
 				A1000004 /* Assets.xcassets */,
 				B2000006 /* SupabaseConfig.plist */,
 				A1000031 /* Info.plist */,
+				B2000008 /* Ezcar24Business.entitlements */,
 			);
 			path = Ezcar24Business;
 			sourceTree = "<group>";
@@ -598,6 +600,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 7;
 				ENABLE_PREVIEWS = YES;
@@ -629,6 +632,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 7;
 				ENABLE_PREVIEWS = YES;

@@ -119,7 +119,8 @@ struct VehicleListView: View {
                     if case .signedIn(let user) = sessionStore.status {
                         Task {
                             // Soft delete: sets deletedAt, updates UI via observation
-                            await cloudSyncManager.deleteVehicle(v, dealerId: user.id)
+                            let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+                            await cloudSyncManager.deleteVehicle(v, dealerId: dealerId)
                         }
                     } else {
                         // Fallback for guest mode (local delete)

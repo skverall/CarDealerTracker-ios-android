@@ -446,9 +446,10 @@ struct ExpenseListView: View {
     private func deleteExpenseFromCloud(_ id: UUID?, account: FinancialAccount?) {
         guard let id, case .signedIn(let user) = sessionStore.status else { return }
         Task {
-            await cloudSyncManager.deleteExpense(id: id, dealerId: user.id)
+            let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+            await cloudSyncManager.deleteExpense(id: id, dealerId: dealerId)
             if let account {
-                await cloudSyncManager.upsertFinancialAccount(account, dealerId: user.id)
+                await cloudSyncManager.upsertFinancialAccount(account, dealerId: dealerId)
             }
         }
     }
@@ -1100,9 +1101,10 @@ struct DealerExpenseDashboardView: View {
     private func deleteExpenseFromCloud(_ id: UUID?, account: FinancialAccount?) {
         guard let id, case .signedIn(let user) = sessionStore.status else { return }
         Task {
-            await cloudSyncManager.deleteExpense(id: id, dealerId: user.id)
+            let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+            await cloudSyncManager.deleteExpense(id: id, dealerId: dealerId)
             if let account {
-                await cloudSyncManager.upsertFinancialAccount(account, dealerId: user.id)
+                await cloudSyncManager.upsertFinancialAccount(account, dealerId: dealerId)
             }
         }
     }

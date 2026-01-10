@@ -189,7 +189,8 @@ struct DataHealthView: View {
         }
         errorMessage = nil
         isRunning = true
-        report = await cloudSyncManager.runDiagnostics(dealerId: user.id)
+        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+        report = await cloudSyncManager.runDiagnostics(dealerId: dealerId)
         isRunning = false
     }
 
@@ -202,7 +203,8 @@ struct DataHealthView: View {
         errorMessage = nil
         isRefreshing = true
         await cloudSyncManager.manualSync(user: user, force: true)
-        report = await cloudSyncManager.runDiagnostics(dealerId: user.id)
+        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+        report = await cloudSyncManager.runDiagnostics(dealerId: dealerId)
         isRefreshing = false
     }
 }
