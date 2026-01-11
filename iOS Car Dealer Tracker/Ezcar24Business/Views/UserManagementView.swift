@@ -12,6 +12,15 @@ struct UserManagementView: View {
     @StateObject private var viewModel: UserViewModel
     @State private var showingAddUser = false
     @State private var newUserName = ""
+    @EnvironmentObject private var sessionStore: SessionStore
+    @ObservedObject private var permissionService = PermissionService.shared
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
     
     init() {
         let context = PersistenceController.shared.container.viewContext
@@ -46,6 +55,7 @@ struct UserManagementView: View {
                                 .listRowBackground(Color.clear)
                         }
                         .onDelete(perform: deleteUsers)
+                        .deleteDisabled(!canDeleteRecords)
                     }
                     .listStyle(.plain)
                     .background(ColorTheme.secondaryBackground)
@@ -88,6 +98,7 @@ struct UserManagementView: View {
     }
     
     private func deleteUsers(at offsets: IndexSet) {
+        guard canDeleteRecords else { return }
         let usersToDelete = offsets.map { viewModel.users[$0] }
         for user in usersToDelete {
             let deletedId = viewModel.deleteUser(user)

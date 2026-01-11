@@ -43,7 +43,7 @@ struct RemoteVehicle: Codable {
     let make: String?
     let model: String?
     let year: Int?
-    let purchasePrice: Decimal
+    let purchasePrice: Decimal?
     let purchaseDate: String
     let status: String
     let notes: String?

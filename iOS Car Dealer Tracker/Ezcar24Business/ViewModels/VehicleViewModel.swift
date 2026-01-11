@@ -306,7 +306,8 @@ class VehicleViewModel: ObservableObject {
 
         // Save image (if any) in background associated with the newly created id
         if let data = imageData, let id = vehicle.id {
-            ImageStore.shared.save(imageData: data, for: id)
+            let dealerId = CloudSyncEnvironment.currentDealerId
+            ImageStore.shared.save(imageData: data, for: id, dealerId: dealerId)
         }
 
         fetchVehicles()
@@ -341,10 +342,11 @@ class VehicleViewModel: ObservableObject {
         new.saleDate = nil
         saveContext()
         // Copy photo if exists
-        if let oldID = original.id, let newID = new.id, ImageStore.shared.hasImage(id: oldID) {
-            let url = ImageStore.shared.imageURL(for: oldID)
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        if let oldID = original.id, let newID = new.id, ImageStore.shared.hasImage(id: oldID, dealerId: dealerId) {
+            let url = ImageStore.shared.imageURL(for: oldID, dealerId: dealerId)
             if let data = try? Data(contentsOf: url) {
-                ImageStore.shared.save(imageData: data, for: newID)
+                ImageStore.shared.save(imageData: data, for: newID, dealerId: dealerId)
             }
         }
         fetchVehicles()

@@ -4,6 +4,14 @@ struct DebtsListView: View {
     @ObservedObject var viewModel: DebtViewModel
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
+    @ObservedObject private var permissionService = PermissionService.shared
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
 
     var body: some View {
         Group {
@@ -20,6 +28,7 @@ struct DebtsListView: View {
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
                     .onDelete(perform: deleteItems)
+                    .deleteDisabled(!canDeleteRecords)
                 }
                 .listStyle(.plain)
                 .refreshable {
@@ -33,6 +42,7 @@ struct DebtsListView: View {
     }
 
     private func deleteItems(at offsets: IndexSet) {
+        guard canDeleteRecords else { return }
         for index in offsets {
             let debt = viewModel.debtItems[index].debt
             viewModel.deleteDebt(debt)

@@ -9,6 +9,7 @@ struct SupabaseClientProvider {
             let configuration = try SupabaseClientProvider.loadConfiguration()
             let authOptions = SupabaseClientOptions.AuthOptions(
                 redirectToURL: URL(string: "com.ezcar24.business://login-callback"),
+                flowType: .implicit,
                 emitLocalSessionAsInitialSession: true
             )
             let options = SupabaseClientOptions(auth: authOptions)

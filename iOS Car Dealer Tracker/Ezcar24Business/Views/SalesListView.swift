@@ -15,8 +15,20 @@ struct SalesListView: View {
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var regionSettings: RegionSettingsManager
+    @ObservedObject private var permissionService = PermissionService.shared
     private let showNavigation: Bool
     @State private var selectedSection: SalesSection = .sales
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
+
+    private var canViewFinancials: Bool {
+        permissionService.can(.viewFinancials)
+    }
 
     enum SalesSection: String, CaseIterable, Identifiable {
         case sales
@@ -57,7 +69,7 @@ struct SalesListView: View {
                 ColorTheme.background.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    if showNavigation {
+                    if showNavigation, canViewFinancials {
                         Picker("Section", selection: $selectedSection) {
                             ForEach(SalesSection.allCases) { section in
                                 Text(section.title).tag(section)
@@ -97,7 +109,8 @@ struct SalesListView: View {
                         SalesInsightsView(
                             salesCount: viewModel.saleItems.count,
                             netProfit: totalNetProfit,
-                            totalReceivables: totalReceivables
+                            totalReceivables: totalReceivables,
+                            showProfit: permissionService.canViewVehicleProfit()
                         )
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -126,6 +139,7 @@ struct SalesListView: View {
                                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                 }
                                 .onDelete(perform: deleteItems)
+                                .deleteDisabled(!canDeleteRecords)
                             }
                             .listStyle(.plain)
                             .refreshable {
@@ -147,10 +161,12 @@ struct SalesListView: View {
                     if showNavigation {
                         switch activeSection {
                         case .sales:
-                            NavigationLink(destination: AddSaleView()) {
-                                Image(systemName: "plus.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(ColorTheme.primary)
+                            if permissionService.can(.createSale) {
+                                NavigationLink(destination: AddSaleView()) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title2)
+                                        .foregroundColor(ColorTheme.primary)
+                                }
                             }
                         case .debts:
                             NavigationLink(destination: AddDebtView()) {
@@ -164,6 +180,7 @@ struct SalesListView: View {
             }
         }
     private func deleteItems(at offsets: IndexSet) {
+        guard canDeleteRecords else { return }
         for index in offsets {
             let sale = viewModel.saleItems[index].sale
             viewModel.deleteSale(sale)
@@ -171,7 +188,10 @@ struct SalesListView: View {
     }
 
     private var activeSection: SalesSection {
-        showNavigation ? selectedSection : .sales
+        if !showNavigation || !canViewFinancials {
+            return .sales
+        }
+        return selectedSection
     }
 
     private var activeSearchText: Binding<String> {
@@ -209,6 +229,50 @@ struct SalesListView: View {
 
 struct SaleCard: View {
     let item: SaleItem
+    @ObservedObject private var permissionService = PermissionService.shared
+    
+    private struct Metric: Identifiable {
+        let id = UUID()
+        let title: String
+        let amount: Decimal
+        let color: Color
+        let isBold: Bool
+    }
+
+    private var metrics: [Metric] {
+        var items: [Metric] = [
+            Metric(
+                title: "revenue".localizedString,
+                amount: item.salePrice,
+                color: ColorTheme.primaryText,
+                isBold: false
+            )
+        ]
+
+        if permissionService.canViewVehicleCost() {
+            items.append(
+                Metric(
+                    title: "cost".localizedString,
+                    amount: item.costPrice,
+                    color: ColorTheme.secondaryText,
+                    isBold: false
+                )
+            )
+        }
+
+        if permissionService.canViewVehicleProfit() {
+            items.append(
+                Metric(
+                    title: "net_profit".localizedString,
+                    amount: item.netProfit,
+                    color: item.netProfit >= 0 ? ColorTheme.success : ColorTheme.danger,
+                    isBold: true
+                )
+            )
+        }
+
+        return items
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -245,33 +309,19 @@ struct SaleCard: View {
             
             // Financials Grid
             HStack(spacing: 0) {
-                // Revenue
-                FinancialColumn(
-                    title: "revenue".localizedString,
-                    amount: item.salePrice,
-                    color: ColorTheme.primaryText
-                )
-                
-                Divider()
-                    .frame(height: 40)
-                
-                // Cost
-                FinancialColumn(
-                    title: "cost".localizedString,
-                    amount: item.costPrice,
-                    color: ColorTheme.secondaryText
-                )
-                
-                Divider()
-                    .frame(height: 40)
-                
-                // Profit
-                FinancialColumn(
-                    title: "net_profit".localizedString,
-                    amount: item.netProfit,
-                    color: item.netProfit >= 0 ? ColorTheme.success : ColorTheme.danger,
-                    isBold: true
-                )
+                ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
+                    FinancialColumn(
+                        title: metric.title,
+                        amount: metric.amount,
+                        color: metric.color,
+                        isBold: metric.isBold
+                    )
+                    
+                    if index < metrics.count - 1 {
+                        Divider()
+                            .frame(height: 40)
+                    }
+                }
             }
             .padding(.vertical, 12)
             .background(ColorTheme.secondaryBackground.opacity(0.5))
@@ -343,6 +393,7 @@ struct SalesInsightsView: View {
     let salesCount: Int
     let netProfit: Decimal
     let totalReceivables: Decimal
+    let showProfit: Bool
     
     var body: some View {
         HStack(spacing: 12) {
@@ -355,12 +406,14 @@ struct SalesInsightsView: View {
             )
             
             // 2. Net Profit
-            CompactInsightCard(
-                title: "net_profit".localizedString,
-                value: netProfit.asCurrency(),
-                color: ColorTheme.success,
-                bgColor: ColorTheme.success.opacity(0.1)
-            )
+            if showProfit {
+                CompactInsightCard(
+                    title: "net_profit".localizedString,
+                    value: netProfit.asCurrency(),
+                    color: ColorTheme.success,
+                    bgColor: ColorTheme.success.opacity(0.1)
+                )
+            }
             
             // 3. Receivables
             CompactInsightCard(

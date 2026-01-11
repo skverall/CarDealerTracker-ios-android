@@ -11,6 +11,7 @@ import CoreData
 struct AddSaleView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var permissionService = PermissionService.shared
     
     // Form State
     @State private var selectedVehicle: Vehicle?
@@ -81,6 +82,10 @@ struct AddSaleView: View {
     
     var estimatedProfit: Decimal {
         salePrice - totalCost
+    }
+
+    private var canViewFinancials: Bool {
+        permissionService.can(.viewFinancials)
     }
     
     var isFormValid: Bool {
@@ -267,19 +272,21 @@ struct AddSaleView: View {
             }
             
             HStack(spacing: 20) {
-                financialMetric(title: "total_cost".localizedString, amount: totalCost, color: ColorTheme.primaryText)
-                
-                Divider()
-                
+                if canViewFinancials {
+                    financialMetric(title: "total_cost".localizedString, amount: totalCost, color: ColorTheme.primaryText)
+                    Divider()
+                }
+
                 financialMetric(title: "sale_price".localizedString, amount: salePrice, color: ColorTheme.primary)
-                
-                Divider()
-                
-                financialMetric(
-                    title: "estimated_profit".localizedString,
-                    amount: estimatedProfit,
-                    color: estimatedProfit >= 0 ? ColorTheme.success : ColorTheme.danger
-                )
+
+                if canViewFinancials {
+                    Divider()
+                    financialMetric(
+                        title: "estimated_profit".localizedString,
+                        amount: estimatedProfit,
+                        color: estimatedProfit >= 0 ? ColorTheme.success : ColorTheme.danger
+                    )
+                }
             }
         }
         .padding(16)

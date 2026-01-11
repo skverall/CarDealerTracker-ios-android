@@ -15,6 +15,7 @@ struct VehicleListView: View {
     @EnvironmentObject private var appSessionState: AppSessionState
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var regionSettings: RegionSettingsManager
+    @ObservedObject private var permissionService = PermissionService.shared
     
     @State private var showingAddVehicle = false
     @State private var showingPaywall = false
@@ -43,6 +44,13 @@ struct VehicleListView: View {
     private var isSignedIn: Bool {
         if case .signedIn = sessionStore.status { return true }
         return false
+    }
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
     }
 
     private var canSaveQuickSale: Bool {
@@ -91,16 +99,18 @@ struct VehicleListView: View {
             .navigationTitle("vehicles".localizedString)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        if !subscriptionManager.isProAccessActive && !subscriptionManager.isCheckingStatus && viewModel.vehicles.count >= 3 {
-                            handleUpgradeRequest()
-                        } else {
-                            showingAddVehicle = true
+                    if permissionService.can(.viewInventory), permissionService.canViewVehicleCost() {
+                        Button(action: {
+                            if !subscriptionManager.isProAccessActive && !subscriptionManager.isCheckingStatus && viewModel.vehicles.count >= 3 {
+                                handleUpgradeRequest()
+                            } else {
+                                showingAddVehicle = true
+                            }
+                        }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(ColorTheme.primary)
                         }
-                    }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(ColorTheme.primary)
                     }
                 }
             }
@@ -115,6 +125,7 @@ struct VehicleListView: View {
             }
             .alert(Text("delete".localizedString) + Text("".localizedString) + Text("vehicle_section_title".localizedString) + Text("?"), isPresented: $showDeleteAlert, presenting: vehicleToDelete) { v in
                 Button("delete".localizedString, role: .destructive) {
+                    guard canDeleteRecords else { return }
                     // Soft delete via CloudSyncManager
                     if case .signedIn(let user) = sessionStore.status {
                         Task {
@@ -302,7 +313,7 @@ struct VehicleListView: View {
                     .padding(.horizontal, 40)
             }
             
-            if viewModel.displayMode == .inventory {
+            if viewModel.displayMode == .inventory && permissionService.can(.viewInventory) {
                 Button(action: {
                     if !subscriptionManager.isProAccessActive && !subscriptionManager.isCheckingStatus && viewModel.vehicles.count >= 3 {
                         handleUpgradeRequest()
@@ -359,7 +370,9 @@ struct VehicleCard: View {
                     
                     HStack(spacing: 12) {
                         Label(vehicle.year.asYear(), systemImage: "calendar")
-                        Label("\(viewModel.expenseCount(for: vehicle)) exp", systemImage: "wrench.and.screwdriver")
+                        if permissionService.canViewVehicleCost() {
+                            Label("\(viewModel.expenseCount(for: vehicle)) exp", systemImage: "wrench.and.screwdriver")
+                        }
                     }
                     .font(.caption2)
                     .foregroundColor(ColorTheme.tertiaryText)
@@ -375,32 +388,39 @@ struct VehicleCard: View {
             Divider()
                 .padding(.horizontal, 12)
             
+            let canSeeCost = permissionService.canViewVehicleCost()
+            let canSeeProfit = permissionService.canViewVehicleProfit()
+
             // Financial Footer
-            if PermissionService.shared.can(.viewFinancials) {
+            if canSeeCost || canSeeProfit {
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("purchase_price".localizedString)
-                            .font(.caption2)
-                            .foregroundColor(ColorTheme.secondaryText)
-                        Text((vehicle.purchasePrice as Decimal? ?? 0).asCurrency())
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(ColorTheme.primaryText)
+                    if canSeeCost {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("purchase_price".localizedString)
+                                .font(.caption2)
+                                .foregroundColor(ColorTheme.secondaryText)
+                            Text((vehicle.purchasePrice as Decimal? ?? 0).asCurrency())
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(ColorTheme.primaryText)
+                        }
                     }
                     
                     Spacer()
                     
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("total_cost".localizedString)
-                            .font(.caption2)
-                            .foregroundColor(ColorTheme.secondaryText)
-                        Text(viewModel.totalCost(for: vehicle).asCurrency())
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(ColorTheme.primary)
+                    if canSeeCost {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("total_cost".localizedString)
+                                .font(.caption2)
+                                .foregroundColor(ColorTheme.secondaryText)
+                            Text(viewModel.totalCost(for: vehicle).asCurrency())
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(ColorTheme.primary)
+                        }
                     }
                     
-                    if let p = profitValue() {
+                    if canSeeProfit, let p = profitValue() {
                         Spacer()
                         VStack(alignment: .trailing, spacing: 2) {
                             Text("profit".localizedString)
@@ -415,10 +435,6 @@ struct VehicleCard: View {
                 }
                 .padding(12)
                 .background(ColorTheme.background.opacity(0.5))
-            } else {
-               // Restricted View Footer (Optional: Show Status Only or nothing)
-               // For now, show nothing or maybe sale date if sold?
-               // Let's just hide the footer completely.
             }
         }
         .background(ColorTheme.background)
@@ -479,7 +495,8 @@ struct VehicleThumbnailView: View {
     }
 
     private func loadImage() {
-        ImageStore.shared.swiftUIImage(id: vehicleID) { loaded in
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        ImageStore.shared.swiftUIImage(id: vehicleID, dealerId: dealerId) { loaded in
             self.image = loaded
         }
     }
@@ -662,21 +679,29 @@ extension VehicleListView {
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .contextMenu {
-                        Button { editingVehicle = vehicle } label: { Label("edit".localizedString, systemImage: "pencil") }
-                        Button { viewModel.duplicateVehicle(vehicle) } label: { Label("duplicate".localizedString, systemImage: "doc.on.doc") }
-                        Divider()
-                        Button(role: .destructive) { vehicleToDelete = vehicle; showDeleteAlert = true } label: { Label("delete".localizedString, systemImage: "trash") }
+                        if permissionService.can(.viewInventory) {
+                            Button { editingVehicle = vehicle } label: { Label("edit".localizedString, systemImage: "pencil") }
+                            Button { viewModel.duplicateVehicle(vehicle) } label: { Label("duplicate".localizedString, systemImage: "doc.on.doc") }
+                            if canDeleteRecords {
+                                Divider()
+                                Button(role: .destructive) { vehicleToDelete = vehicle; showDeleteAlert = true } label: { Label("delete".localizedString, systemImage: "trash") }
+                            }
+                        }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
-                            vehicleToDelete = vehicle; showDeleteAlert = true
-                        } label: { Label("delete".localizedString, systemImage: "trash") }
-                        
-                        Button { editingVehicle = vehicle } label: { Label("edit".localizedString, systemImage: "pencil") }
-                            .tint(ColorTheme.primary)
+                        if permissionService.can(.viewInventory) {
+                            if canDeleteRecords {
+                                Button(role: .destructive) {
+                                    vehicleToDelete = vehicle; showDeleteAlert = true
+                                } label: { Label("delete".localizedString, systemImage: "trash") }
+                            }
+                            
+                            Button { editingVehicle = vehicle } label: { Label("edit".localizedString, systemImage: "pencil") }
+                                .tint(ColorTheme.primary)
+                        }
                     }
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                        if vehicle.status != "sold" {
+                        if vehicle.status != "sold", permissionService.can(.createSale) {
                             Button {
                                 sellingVehicle = vehicle
                                 sellPriceText = ""

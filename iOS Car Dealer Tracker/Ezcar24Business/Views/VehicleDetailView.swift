@@ -11,6 +11,8 @@ import PhotosUI
 
 struct VehicleDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @EnvironmentObject private var sessionStore: SessionStore
+    @ObservedObject private var permissionService = PermissionService.shared
     let vehicle: Vehicle
     @State private var selectedPhoto: PhotosPickerItem? = nil
     @State private var pendingImageData: Data? = nil // Image data waiting for confirmation
@@ -49,6 +51,13 @@ struct VehicleDetailView: View {
     let paymentMethods = ["Cash", "Bank Transfer", "Cheque", "Finance", "Other"]
 
     @State private var isEditing: Bool = false
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
 
 
 
@@ -120,7 +129,8 @@ struct VehicleDetailView: View {
             }
 
             // 2. Save image locally
-            ImageStore.shared.save(imageData: data, for: id)
+            let dealerId = CloudSyncEnvironment.currentDealerId
+            ImageStore.shared.save(imageData: data, for: id, dealerId: dealerId)
             refreshID = UUID()
 
             // 3. Sync vehicle update & upload image
@@ -196,9 +206,10 @@ struct VehicleDetailView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
 
 
-                if isEditing, let id = vehicle.id, ImageStore.shared.hasImage(id: id) {
+                let dealerId = CloudSyncEnvironment.currentDealerId
+                if canDeleteRecords, isEditing, let id = vehicle.id, ImageStore.shared.hasImage(id: id, dealerId: dealerId) {
                     Button(role: .destructive) {
-                        ImageStore.shared.delete(id: id) {
+                        ImageStore.shared.delete(id: id, dealerId: dealerId) {
                             refreshID = UUID()
                         }
                     } label: {
@@ -308,7 +319,8 @@ struct VehicleDetailView: View {
     @ViewBuilder
     private var vehiclePhotoView: some View {
         if let id = vehicle.id {
-                let hasImage = ImageStore.shared.hasImage(id: id)
+                let dealerId = CloudSyncEnvironment.currentDealerId
+                let hasImage = ImageStore.shared.hasImage(id: id, dealerId: dealerId)
                 let addPhotoText = "add_photo".localizedString
                 let changePhotoText = "change_photo".localizedString
                 
@@ -377,6 +389,8 @@ struct VehicleDetailView: View {
 
     @ViewBuilder
     private var editModeView: some View {
+        let canSeeCost = permissionService.canViewVehicleCost()
+
         VStack(spacing: 24) {
             // Basic Info Section
             VStack(alignment: .leading, spacing: 16) {
@@ -411,9 +425,12 @@ struct VehicleDetailView: View {
                         .padding()
                     
                     Divider().padding(.leading)
-                    
-                    editRow(label: "purchase_price".localizedString, text: $editPurchasePrice, placeholder: "0.00", keyboardType: .decimalPad)
-                    Divider().padding(.leading)
+
+                    if canSeeCost {
+                        editRow(label: "purchase_price".localizedString, text: $editPurchasePrice, placeholder: "0.00", keyboardType: .decimalPad)
+                        Divider().padding(.leading)
+                    }
+
                     editRow(label: "asking_price".localizedString, text: $editAskingPrice, placeholder: "0.00", keyboardType: .decimalPad)
                 }
                 .background(ColorTheme.cardBackground)
@@ -557,7 +574,9 @@ struct VehicleDetailView: View {
     private var displayModeView: some View {
         displayHeaderView
         displayFinancialsView
-        displayExpensesView
+        if permissionService.canViewVehicleCost() {
+            displayExpensesView
+        }
     }
 
     // MARK: - Edit Mode Subviews
@@ -615,51 +634,51 @@ struct VehicleDetailView: View {
     }
 
     private var editFinancialsModeCard: some View {
-        Group {
-            if PermissionService.shared.can(.viewFinancials) {
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("financial_summary_section".localizedString)
-                        .font(.headline)
-                        .padding(.horizontal)
-                    
-                    VStack(spacing: 12) {
-                        DatePicker("purchase_date_label".localizedString, selection: $editPurchaseDate, displayedComponents: .date)
-                        
-                        HStack {
-                            Text("purchase_price".localizedString)
-                                .foregroundColor(ColorTheme.secondaryText)
-                            Spacer()
-                            TextField("0", text: $editPurchasePrice)
-                                .keyboardType(.decimalPad)
-                                .onChange(of: editPurchasePrice) { old, new in
-                                    let filtered = filterAmountInput(new)
-                                    if filtered != new { editPurchasePrice = filtered }
-                                }
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 140)
-                        }
-                        
-                        Divider()
-                        
-                        HStack {
-                            Text("asking_price".localizedString)
-                                .foregroundColor(ColorTheme.secondaryText)
-                            Spacer()
-                            TextField("0", text: $editAskingPrice)
-                                .keyboardType(.decimalPad)
-                                .onChange(of: editAskingPrice) { old, new in
-                                    let filtered = filterAmountInput(new)
-                                    if filtered != new { editAskingPrice = filtered }
-                                }
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 140)
-                        }
+        let canSeeCost = PermissionService.shared.canViewVehicleCost()
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("financial_summary_section".localizedString)
+                .font(.headline)
+                .padding(.horizontal)
+            
+            VStack(spacing: 12) {
+                DatePicker("purchase_date_label".localizedString, selection: $editPurchaseDate, displayedComponents: .date)
+                
+                if canSeeCost {
+                    HStack {
+                        Text("purchase_price".localizedString)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Spacer()
+                        TextField("0", text: $editPurchasePrice)
+                            .keyboardType(.decimalPad)
+                            .onChange(of: editPurchasePrice) { old, new in
+                                let filtered = filterAmountInput(new)
+                                if filtered != new { editPurchasePrice = filtered }
+                            }
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 140)
                     }
-                    .padding()
-                    .cardStyle()
-                    .padding(.horizontal)
+                    
+                    Divider()
+                }
+                
+                HStack {
+                    Text("asking_price".localizedString)
+                        .foregroundColor(ColorTheme.secondaryText)
+                    Spacer()
+                    TextField("0", text: $editAskingPrice)
+                        .keyboardType(.decimalPad)
+                        .onChange(of: editAskingPrice) { old, new in
+                            let filtered = filterAmountInput(new)
+                            if filtered != new { editAskingPrice = filtered }
+                        }
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 140)
                 }
             }
+            .padding()
+            .cardStyle()
+            .padding(.horizontal)
         }
     }
 
@@ -838,7 +857,10 @@ struct VehicleDetailView: View {
     }
 
     private var displayFinancialsView: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let canSeeCost = PermissionService.shared.canViewVehicleCost()
+        let canSeeProfit = PermissionService.shared.canViewVehicleProfit()
+
+        return VStack(alignment: .leading, spacing: 12) {
             Text("financial_summary_section".localizedString)
                 .font(.headline)
                 .padding(.horizontal)
@@ -872,8 +894,7 @@ struct VehicleDetailView: View {
                     }
                 }
 
-                // Protected Info
-                if PermissionService.shared.can(.viewFinancials) {
+                if canSeeCost {
                     Divider()
                     
                     HStack {
@@ -903,37 +924,38 @@ struct VehicleDetailView: View {
                             .font(.headline)
                             .foregroundColor(ColorTheme.primary)
                     }
+                }
+                
+                if let sale = vehicle.salePrice?.decimalValue {
+                    Divider()
                     
-                    if let sale = vehicle.salePrice?.decimalValue {
+                    HStack {
+                        Text("sale_price".localizedString)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Spacer()
+                        Text(sale.asCurrency())
+                            .fontWeight(.medium)
+                            .foregroundColor(ColorTheme.success)
+                    }
+                    if let d = vehicle.saleDate {
                         HStack {
-                            Text("sale_price".localizedString)
+                            Text("sale_date".localizedString)
                                 .foregroundColor(ColorTheme.secondaryText)
                             Spacer()
-                            Text(sale.asCurrency())
+                            Text(d.formatted(date: .abbreviated, time: .omitted))
                                 .fontWeight(.medium)
-                                .foregroundColor(ColorTheme.success)
                         }
-                        if let d = vehicle.saleDate {
-                            HStack {
-                                Text("sale_date".localizedString)
-                                    .foregroundColor(ColorTheme.secondaryText)
-                                Spacer()
-                                Text(d.formatted(date: .abbreviated, time: .omitted))
-                                    .fontWeight(.medium)
-                            }
-                        }
-                        
+                    }
+                    
+                    if canSeeProfit, let p = profit {
                         Divider()
-                        
-                        if let p = profit {
-                            HStack {
-                                Text("profit_loss_label".localizedString)
-                                    .font(.headline)
-                                Spacer()
-                                Text(p.asCurrency())
-                                    .font(.headline)
-                                    .foregroundColor(p >= 0 ? ColorTheme.success : ColorTheme.danger)
-                            }
+                        HStack {
+                            Text("profit_loss_label".localizedString)
+                                .font(.headline)
+                            Spacer()
+                            Text(p.asCurrency())
+                                .font(.headline)
+                                .foregroundColor(p >= 0 ? ColorTheme.success : ColorTheme.danger)
                         }
                     }
                 }
@@ -1035,8 +1057,10 @@ struct VehicleDetailView: View {
         vehicle.reportURL = editReportURL.isEmpty ? nil : editReportURL
 
         // Prices & status
-        let pp = sanitizedDecimal(from: editPurchasePrice) ?? 0
-        vehicle.purchasePrice = NSDecimalNumber(decimal: pp)
+        if permissionService.canViewVehicleCost() {
+            let pp = sanitizedDecimal(from: editPurchasePrice) ?? 0
+            vehicle.purchasePrice = NSDecimalNumber(decimal: pp)
+        }
         vehicle.status = editStatus
         if editStatus == "sold" {
             let saleAmount = sanitizedDecimal(from: editSalePrice)
@@ -1155,7 +1179,8 @@ struct VehicleDetailView: View {
         let vin = vehicle.vin ?? ""
         
         // 1. Load image (async)
-        ImageStore.shared.load(id: id) { loadedImage in
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        ImageStore.shared.load(id: id, dealerId: dealerId) { loadedImage in
             // 2. Generate Image Card
             let cardView = VehicleShareCard(
                 image: loadedImage,
@@ -1350,7 +1375,8 @@ struct VehicleLargeImageView: View {
     }
 
     private func loadImage() {
-        ImageStore.shared.swiftUIImage(id: vehicleID) { loaded in
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        ImageStore.shared.swiftUIImage(id: vehicleID, dealerId: dealerId) { loaded in
             self.image = loaded
         }
     }

@@ -69,7 +69,8 @@ serve(async (req) => {
                 organization_id: invite.organization_id,
                 user_id: currentUser.id,
                 role: invite.role,
-                status: 'active'
+                status: 'active',
+                permissions: invite.permissions ?? {}
             })
 
         if (memberError) {

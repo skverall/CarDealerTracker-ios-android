@@ -138,6 +138,14 @@ struct ExpenseListView: View {
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var regionSettings: RegionSettingsManager
+    @ObservedObject private var permissionService = PermissionService.shared
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
     
     @State private var showingAddExpense = false
     @State private var showingEdit = false
@@ -464,13 +472,15 @@ struct ExpenseListView: View {
         }
         .buttonStyle(.plain)
             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                Button(role: .destructive) {
-                    let account = expense.account
-                    if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
-                        deleteExpenseFromCloud(deletedId, account: account)
+                if canDeleteRecords {
+                    Button(role: .destructive) {
+                        let account = expense.account
+                        if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
+                            deleteExpenseFromCloud(deletedId, account: account)
+                        }
+                    } label: {
+                        Label("delete".localizedString, systemImage: "trash")
                     }
-                } label: {
-                    Label("delete".localizedString, systemImage: "trash")
                 }
 
                 Button {
@@ -482,13 +492,15 @@ struct ExpenseListView: View {
                 .tint(ColorTheme.primary)
             }
             .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                Button(role: .destructive) {
-                    let account = expense.account
-                    if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
-                        deleteExpenseFromCloud(deletedId, account: account)
+                if canDeleteRecords {
+                    Button(role: .destructive) {
+                        let account = expense.account
+                        if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
+                            deleteExpenseFromCloud(deletedId, account: account)
+                        }
+                    } label: {
+                        Label("delete".localizedString, systemImage: "trash")
                     }
-                } label: {
-                    Label("delete".localizedString, systemImage: "trash")
                 }
                 Button("category".localizedString) {
                     quickEditExpense = expense
@@ -908,8 +920,10 @@ struct ExpenseListView: View {
                     .accessibilityLabel("Export expenses as CSV")
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddExpense = true }) {
-                        Image(systemName: "plus")
+                    if permissionService.can(.viewExpenses) {
+                        Button(action: { showingAddExpense = true }) {
+                            Image(systemName: "plus")
+                        }
                     }
                 }
             }
@@ -1093,10 +1107,18 @@ struct DealerExpenseDashboardView: View {
     @EnvironmentObject private var appSessionState: AppSessionState
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var regionSettings: RegionSettingsManager
+    @ObservedObject private var permissionService = PermissionService.shared
     @StateObject private var viewModel: ExpenseViewModel
     @State private var showingAddExpense = false
     @State private var editingExpense: Expense? = nil
     @State private var searchText = ""
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
 
     private func deleteExpenseFromCloud(_ id: UUID?, account: FinancialAccount?) {
         guard let id, case .signedIn(let user) = sessionStore.status else { return }
@@ -1181,13 +1203,15 @@ struct DealerExpenseDashboardView: View {
                                         .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                                         .listRowBackground(Color.clear)
                                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                            Button(role: .destructive) {
-                                                let account = expense.account
-                                                if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
-                                                    deleteExpenseFromCloud(deletedId, account: account)
+                                            if canDeleteRecords {
+                                                Button(role: .destructive) {
+                                                    let account = expense.account
+                                                    if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
+                                                        deleteExpenseFromCloud(deletedId, account: account)
+                                                    }
+                                                } label: {
+                                                    Label("delete".localizedString, systemImage: "trash")
                                                 }
-                                            } label: {
-                                                Label("delete".localizedString, systemImage: "trash")
                                             }
                                             
                                             Button {

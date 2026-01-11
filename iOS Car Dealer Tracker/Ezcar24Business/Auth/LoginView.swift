@@ -4,6 +4,7 @@ import Supabase
 struct LoginView: View {
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var appSessionState: AppSessionState
+    @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @Binding var isGuest: Bool
     @State private var showingPaywall = false
@@ -120,13 +121,15 @@ struct LoginView: View {
                             
                             // Error Message
                             if let message = sessionStore.errorMessage {
+                                let successMessage = "auth_reset_email_sent".localizedString
+                                let isSuccess = message == successMessage
                                 HStack {
-                                    Image(systemName: message.contains("sent") ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                    Image(systemName: isSuccess ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
                                     Text(message)
                                         .font(.caption)
                                         .multilineTextAlignment(.leading)
                                 }
-                                .foregroundColor(message.contains("sent") ? .green : .red)
+                                .foregroundColor(isSuccess ? .green : .red)
                                 .padding(.horizontal)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                             }
@@ -215,12 +218,12 @@ struct LoginView: View {
 
     private func handlePasswordReset() {
         if appSessionState.email.isEmpty {
-            sessionStore.errorMessage = "Please enter your email address to reset password."
+            sessionStore.errorMessage = "auth_reset_email_required".localizedString
         } else {
             Task {
                 do {
                     try await sessionStore.resetPassword(email: appSessionState.email)
-                    sessionStore.errorMessage = "Password reset email sent! Check your inbox."
+                    sessionStore.errorMessage = "auth_reset_email_sent".localizedString
                 } catch {
                     // Error is already handled in sessionStore but we can ensure it's shown
                 }
@@ -234,10 +237,11 @@ struct LoginView: View {
         // - Clear offline sync queue so old operations are not replayed
         // - Reset last sync timestamp so future login will do a full clean sync
         PersistenceController.shared.deleteAllData()
+        cloudSyncManager.updateContext(PersistenceController.shared.viewContext)
         Task {
             await SyncQueueManager.shared.clear()
         }
-        UserDefaults.standard.removeObject(forKey: "lastSyncTimestamp")
+        CloudSyncManager.clearAllSyncTimestamps()
         ImageStore.shared.clearAll()
         appSessionState.startGuestMode()
         isGuest = true

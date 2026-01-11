@@ -6,7 +6,7 @@ enum CloudSyncEnvironment {
     static var currentDealerId: UUID? {
         guard let sessionStore = SessionStoreEnvironment.shared else { return nil }
         if case .signedIn(let user) = sessionStore.status {
-            return sessionStore.organizationId ?? user.id
+            return sessionStore.activeOrganizationId ?? user.id
         }
         return nil
     }

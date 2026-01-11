@@ -8,12 +8,21 @@
 import CoreData
 import Foundation
 
-final class PersistenceController {
+@MainActor
+final class PersistenceController: ObservableObject {
     static let shared = PersistenceController()
+
+    private static let managedObjectModel: NSManagedObjectModel = {
+        guard let modelURL = Bundle.main.url(forResource: "Ezcar24Business", withExtension: "momd"),
+              let model = NSManagedObjectModel(contentsOf: modelURL) else {
+            fatalError("Failed to load Core Data model.")
+        }
+        return model
+    }()
     
     static var preview: PersistenceController = {
         let result = PersistenceController(inMemory: true)
-        let viewContext = result.container.viewContext
+        let viewContext = result.viewContext
         
         // Create sample data for previews
         result.createSampleData(in: viewContext)
@@ -21,46 +30,68 @@ final class PersistenceController {
         return result
     }()
     
-    let container: NSPersistentContainer
+    @Published private(set) var activeStoreKey: String
+    private var containers: [String: NSPersistentContainer] = [:]
+
+    var container: NSPersistentContainer {
+        guard let container = containers[activeStoreKey] else {
+            let created = makeContainer(storeKey: activeStoreKey, inMemory: activeStoreKey == Self.guestStoreKey)
+            containers[activeStoreKey] = created
+            return created
+        }
+        return container
+    }
+
+    var viewContext: NSManagedObjectContext {
+        container.viewContext
+    }
+    
+    static let guestStoreKey = "guest"
     
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "Ezcar24Business")
-        let container = self.container
-        
+        let initialKey = inMemory ? Self.guestStoreKey : Self.guestStoreKey
+        activeStoreKey = initialKey
+        containers[initialKey] = makeContainer(storeKey: initialKey, inMemory: inMemory || initialKey == Self.guestStoreKey)
+    }
+
+    func setActiveStore(organizationId: UUID?) {
+        let key = organizationId?.uuidString ?? Self.guestStoreKey
+        guard key != activeStoreKey else { return }
+        activeStoreKey = key
+        if containers[key] == nil {
+            containers[key] = makeContainer(storeKey: key, inMemory: key == Self.guestStoreKey)
+        }
+    }
+
+    func newBackgroundContext() -> NSManagedObjectContext {
+        let context = container.newBackgroundContext()
+        context.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        return context
+    }
+
+    private func makeContainer(storeKey: String, inMemory: Bool) -> NSPersistentContainer {
+        let container = NSPersistentContainer(name: "Ezcar24Business", managedObjectModel: Self.managedObjectModel)
         let description = container.persistentStoreDescriptions.first
         description?.shouldMigrateStoreAutomatically = true
         description?.shouldInferMappingModelAutomatically = true
-        
+
         if inMemory {
             description?.url = URL(fileURLWithPath: "/dev/null")
+        } else if let description {
+            description.url = storeURL(for: storeKey)
         }
-        
+
         container.loadPersistentStores { (storeDescription, error) in
             if let error = error as NSError? {
-                // Replace this implementation with code to handle the error appropriately.
-                // fatalError() causes the application to generate a crash log and terminate. You should not use this function in a shipping application, although it may be useful during development.
-                
-                /*
-                 Typical reasons for an error here include:
-                 * The parent directory does not exist, cannot be created, or disallows writing.
-                 * The persistent store is not accessible, due to permissions or data protection when the device is locked.
-                 * The device is out of space.
-                 * The store could not be migrated to the current model version.
-                 Check the error message to determine what the actual problem was.
-                 */
-                
                 #if DEBUG
                 print("Core Data failed to load: \(error.localizedDescription)")
                 print("Attempting to delete and recreate the store...")
-                
+
                 do {
-                    // If we are in debug mode and migration fails, we can try to delete the store and start fresh
-                    // This is useful for development when we change the model often
                     if let storeURL = storeDescription.url {
                         try container.persistentStoreCoordinator.destroyPersistentStore(at: storeURL, ofType: NSSQLiteStoreType, options: nil)
-                        
-                        // Try to load again
-                        container.loadPersistentStores { (storeDescription, error) in
+
+                        container.loadPersistentStores { (_, error) in
                             if let error = error as NSError? {
                                 fatalError("Unresolved error after reset \(error), \(error.userInfo)")
                             }
@@ -70,22 +101,27 @@ final class PersistenceController {
                     fatalError("Failed to destroy persistent store: \(error)")
                 }
                 #else
-                // In production, we should log this to a crash reporting service
                 print("Unresolved error \(error), \(error.userInfo)")
                 #endif
             }
         }
-        
+
         container.viewContext.automaticallyMergesChangesFromParent = true
-        
-        // Create sample data on first launch
-        // DISABLED: We want a clean state for new users and guests.
-        /*
-        if !inMemory && !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
-            createSampleData(in: container.viewContext)
-            UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+        return container
+    }
+
+    private func storeURL(for key: String) -> URL {
+        let fm = FileManager.default
+        let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? fm.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let dir = base
+            .appendingPathComponent("Ezcar24Business", isDirectory: true)
+            .appendingPathComponent("Stores", isDirectory: true)
+            .appendingPathComponent(key, isDirectory: true)
+        if !fm.fileExists(atPath: dir.path) {
+            try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-        */
+        return dir.appendingPathComponent("Ezcar24Business.sqlite")
     }
     
     func createSampleData(in context: NSManagedObjectContext) {
@@ -276,7 +312,7 @@ final class PersistenceController {
     }
     
     func save() {
-        let context = container.viewContext
+        let context = viewContext
         
         if context.hasChanges {
             do {
@@ -289,33 +325,19 @@ final class PersistenceController {
     }
     
     func deleteAllData() {
-        let context = container.viewContext
-        let coordinator = container.persistentStoreCoordinator
-        let entities = container.managedObjectModel.entities
-        
-        context.performAndWait {
-            for entity in entities {
-                guard let name = entity.name else { continue }
-                let fetchRequest = NSFetchRequest<NSFetchRequestResult>(entityName: name)
-                let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
-                deleteRequest.resultType = .resultTypeObjectIDs // Get deleted IDs
-                
-                do {
-                    let result = try coordinator.execute(deleteRequest, with: context) as? NSBatchDeleteResult
-                    if let objectIDs = result?.result as? [NSManagedObjectID], !objectIDs.isEmpty {
-                        // Merge deletions into the context so all observers see the change
-                        NSManagedObjectContext.mergeChanges(
-                            fromRemoteContextSave: [NSDeletedObjectsKey: objectIDs],
-                            into: [context]
-                        )
-                    }
-                } catch {
-                    print("Failed to delete entity \(name): \(error)")
-                }
-            }
-            
-            context.reset()
+        // Remove all persistent stores from disk to fully isolate accounts/orgs
+        let fm = FileManager.default
+        let base = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? fm.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let storesDir = base
+            .appendingPathComponent("Ezcar24Business", isDirectory: true)
+            .appendingPathComponent("Stores", isDirectory: true)
+        if fm.fileExists(atPath: storesDir.path) {
+            try? fm.removeItem(at: storesDir)
         }
+
+        containers.removeAll()
+        activeStoreKey = Self.guestStoreKey
+        containers[activeStoreKey] = makeContainer(storeKey: activeStoreKey, inMemory: true)
     }
 }
-

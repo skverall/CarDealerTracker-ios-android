@@ -26,23 +26,23 @@ private struct ApplicationLogInsert: Encodable {
 @MainActor
 final class CloudSyncManager: ObservableObject {
     static var shared: CloudSyncManager?
+    static let syncTimestampPrefix = "lastSyncTimestamp_"
 
     private let client: SupabaseClient
     private var writeClient: SupabaseClient { client }
-    private let context: NSManagedObjectContext
+    private var context: NSManagedObjectContext
 
     @Published private(set) var isSyncing = false
     @Published private(set) var lastSyncAt: Date?
     @Published var syncHUDState: SyncHUDState?
     @Published var errorMessage: String?
 
-    private var lastSyncTimestamp: Date? {
-        get { UserDefaults.standard.object(forKey: "lastSyncTimestamp") as? Date }
-        set { UserDefaults.standard.set(newValue, forKey: "lastSyncTimestamp") }
-    }
-
     init(client: SupabaseClient, context: NSManagedObjectContext) {
         self.client = client
+        self.context = context
+    }
+
+    func updateContext(_ context: NSManagedObjectContext) {
         self.context = context
     }
 
@@ -51,21 +51,21 @@ final class CloudSyncManager: ObservableObject {
     func syncAfterLogin(user: Auth.User) async {
         guard !isSyncing else { return }
         isSyncing = true
-        
+
+        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+        let currentLastSync = lastSyncTimestamp(for: dealerId)
         // Only show blocking HUD if this is the first sync ever
-        let isFirstSync = lastSyncTimestamp == nil
+        let isFirstSync = currentLastSync == nil
         if isFirstSync {
             syncHUDState = .syncing
         }
         
         defer { isSyncing = false }
 
-        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
-        var effectiveSince = lastSyncTimestamp
+        var effectiveSince = currentLastSync
         
         // Create a background context for heavy lifting
-        let bgContext = PersistenceController.shared.container.newBackgroundContext()
-        bgContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        let bgContext = PersistenceController.shared.newBackgroundContext()
         
         let writeClient = self.writeClient
         
@@ -128,8 +128,8 @@ final class CloudSyncManager: ObservableObject {
             try await self.pushLocalChanges(context: bgContext, dealerId: dealerId, writeClient: writeClient, skippingVehicleIds: pendingDeletes[.vehicle] ?? [])
             
             // 6. Update timestamp (Main Actor)
-            lastSyncTimestamp = Date()
-            lastSyncAt = lastSyncTimestamp
+            setLastSyncTimestamp(Date(), for: dealerId)
+            lastSyncAt = lastSyncTimestamp(for: dealerId)
             
             // 7. Background tasks
             Task { [weak self] in
@@ -184,7 +184,7 @@ final class CloudSyncManager: ObservableObject {
 
         let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
         let syncStartedAt = Date()
-        let since = force ? nil : lastSyncTimestamp
+        let since = force ? nil : lastSyncTimestamp(for: dealerId)
         
         // Collect pending IDs in the offline queue to avoid deleting unsynced local items during a full refresh
         let queueItems = await SyncQueueManager.shared.getAllItems()
@@ -261,8 +261,7 @@ final class CloudSyncManager: ObservableObject {
             }
         }
 
-        let bgContext = PersistenceController.shared.container.newBackgroundContext()
-        bgContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
+        let bgContext = PersistenceController.shared.newBackgroundContext()
 
         do {
             // 0. Push local changes first to avoid overwrites during merge
@@ -279,8 +278,8 @@ final class CloudSyncManager: ObservableObject {
                             !snapshot.accountTransactions.isEmpty || !snapshot.templates.isEmpty
 
             guard hasChanges else {
-                lastSyncTimestamp = Date()
-                lastSyncAt = lastSyncTimestamp
+                setLastSyncTimestamp(Date(), for: dealerId)
+                lastSyncAt = lastSyncTimestamp(for: dealerId)
                 return
             }
 
@@ -314,8 +313,8 @@ final class CloudSyncManager: ObservableObject {
             }
 
             // 3. Update timestamp
-            lastSyncTimestamp = Date()
-            lastSyncAt = lastSyncTimestamp
+            setLastSyncTimestamp(Date(), for: dealerId)
+            lastSyncAt = lastSyncTimestamp(for: dealerId)
 
             // 4. Download images in background (non-blocking)
             Task.detached { [weak self] in
@@ -351,10 +350,20 @@ final class CloudSyncManager: ObservableObject {
     }
 
     func resetSyncState() {
-        lastSyncTimestamp = nil
+        if let dealerId = CloudSyncEnvironment.currentDealerId {
+            clearLastSyncTimestamp(for: dealerId)
+        }
         lastSyncAt = nil
         syncHUDState = nil
         errorMessage = nil
+    }
+
+    func refreshLastSyncForCurrentOrg() {
+        if let dealerId = CloudSyncEnvironment.currentDealerId {
+            lastSyncAt = lastSyncTimestamp(for: dealerId)
+        } else {
+            lastSyncAt = nil
+        }
     }
 
     // MARK: - Diagnostics
@@ -430,6 +439,29 @@ final class CloudSyncManager: ObservableObject {
             entityCounts: entityCounts,
             remoteFetchError: remoteFetchError
         )
+    }
+
+    private func syncKey(for dealerId: UUID) -> String {
+        "\(Self.syncTimestampPrefix)\(dealerId.uuidString)"
+    }
+
+    private func lastSyncTimestamp(for dealerId: UUID) -> Date? {
+        UserDefaults.standard.object(forKey: syncKey(for: dealerId)) as? Date
+    }
+
+    private func setLastSyncTimestamp(_ date: Date?, for dealerId: UUID) {
+        UserDefaults.standard.set(date, forKey: syncKey(for: dealerId))
+    }
+
+    private func clearLastSyncTimestamp(for dealerId: UUID) {
+        UserDefaults.standard.removeObject(forKey: syncKey(for: dealerId))
+    }
+
+    static func clearAllSyncTimestamps() {
+        let defaults = UserDefaults.standard
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(syncTimestampPrefix) {
+            defaults.removeObject(forKey: key)
+        }
     }
 
     private func isNetworkConnectivityError(_ error: Error) -> Bool {
@@ -1592,7 +1624,7 @@ final class CloudSyncManager: ObservableObject {
                     .from("vehicle-images")
                     .download(path: path)
                 print("CloudSyncManager: Downloaded image for \(vehicle.id) - \(data.count) bytes")
-                ImageStore.shared.save(imageData: data, for: vehicle.id)
+                ImageStore.shared.save(imageData: data, for: vehicle.id, dealerId: dealerId)
             } catch {
                 // It's fine if an image does not exist for a vehicle.
                 print("CloudSyncManager: No image for vehicle \(vehicle.id) at path \(path)")
@@ -1953,7 +1985,7 @@ final class CloudSyncManager: ObservableObject {
             obj.make = v.make
             obj.model = v.model
             obj.year = v.year != nil ? Int32(v.year!) : 0
-            obj.purchasePrice = NSDecimalNumber(decimal: v.purchasePrice)
+            obj.purchasePrice = NSDecimalNumber(decimal: v.purchasePrice ?? 0)
 
             if let d = CloudSyncManager.parseRemoteDateOnly(v.purchaseDate) {
                 obj.purchaseDate = d

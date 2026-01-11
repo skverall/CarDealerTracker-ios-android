@@ -13,10 +13,18 @@ import Supabase
 struct ContentView: View {
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var sessionStore: SessionStore
+    @ObservedObject private var permissionService = PermissionService.shared
     @State private var selectedTab = 0
     @State private var showProfileSheet = false
 
     var body: some View {
+        let shouldGatePermissions: Bool = {
+            if case .signedIn = sessionStore.status {
+                return true
+            }
+            return false
+        }()
+
         ZStack {
             TabView(selection: $selectedTab) {
                 DashboardView()
@@ -25,29 +33,85 @@ struct ContentView: View {
                     }
                     .tag(0)
 
-                VehicleListView()
-                    .tabItem {
-                        Label("vehicles".localizedString, systemImage: "car.fill")
+                Group {
+                    if shouldGatePermissions {
+                        if permissionService.didLoad {
+                        if permissionService.can(.viewInventory) {
+                            VehicleListView()
+                        } else {
+                            RestrictedAccessView(title: "vehicles".localizedString)
+                        }
+                    } else {
+                        PermissionLoadingView(title: "vehicles".localizedString)
                     }
-                    .tag(1)
+                } else {
+                    VehicleListView()
+                }
+                }
+                .tabItem {
+                    Label("vehicles".localizedString, systemImage: "car.fill")
+                }
+                .tag(1)
 
-                DealerExpenseDashboardView()
-                    .tabItem {
-                        Label("expenses".localizedString, systemImage: "creditcard")
+                Group {
+                    if shouldGatePermissions {
+                        if permissionService.didLoad {
+                        if permissionService.can(.viewExpenses) {
+                            DealerExpenseDashboardView()
+                        } else {
+                            RestrictedAccessView(title: "expenses".localizedString)
+                        }
+                    } else {
+                        PermissionLoadingView(title: "expenses".localizedString)
                     }
-                    .tag(2)
+                } else {
+                    DealerExpenseDashboardView()
+                    }
+                }
+                .tabItem {
+                    Label("expenses".localizedString, systemImage: "creditcard")
+                }
+                .tag(2)
 
-                SalesListView()
-                    .tabItem {
-                        Label("sales".localizedString, systemImage: "dollarsign.circle.fill")
+                Group {
+                    if shouldGatePermissions {
+                        if permissionService.didLoad {
+                            if permissionService.can(.createSale) || permissionService.can(.viewFinancials) {
+                                SalesListView()
+                            } else {
+                                RestrictedAccessView(title: "sales".localizedString)
+                            }
+                        } else {
+                            PermissionLoadingView(title: "sales".localizedString)
+                        }
+                    } else {
+                        SalesListView()
                     }
-                    .tag(3)
+                }
+                .tabItem {
+                    Label("sales".localizedString, systemImage: "dollarsign.circle.fill")
+                }
+                .tag(3)
 
-                ClientListView()
-                    .tabItem {
-                        Label("clients".localizedString, systemImage: "person.2")
+                Group {
+                    if shouldGatePermissions {
+                        if permissionService.didLoad {
+                        if permissionService.can(.viewLeads) {
+                            ClientListView()
+                        } else {
+                            RestrictedAccessView(title: "clients".localizedString)
+                        }
+                    } else {
+                        PermissionLoadingView(title: "clients".localizedString)
                     }
-                    .tag(4)
+                } else {
+                    ClientListView()
+                    }
+                }
+                .tabItem {
+                    Label("clients".localizedString, systemImage: "person.2")
+                }
+                .tag(4)
             }
             .tint(ColorTheme.dealerGreen)
 
@@ -228,3 +292,61 @@ struct ToastView: View {
     }
 }
 
+struct RestrictedAccessView: View {
+    let title: String
+    @EnvironmentObject private var sessionStore: SessionStore
+
+    var body: some View {
+        let message = String(
+            format: "permission_access_restricted_message".localizedString,
+            locale: Locale.current,
+            title
+        )
+
+        ScrollView {
+            VStack(spacing: 16) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 48))
+                    .foregroundColor(ColorTheme.secondaryText)
+                Text(title)
+                    .font(.headline)
+                    .foregroundColor(ColorTheme.primaryText)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+                Text("permission_access_pull_to_refresh".localizedString)
+                    .font(.caption)
+                    .foregroundColor(ColorTheme.tertiaryText)
+            }
+            .frame(maxWidth: .infinity, minHeight: 260)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ColorTheme.background)
+        .refreshable {
+            await sessionStore.refreshPermissionsIfPossible()
+        }
+    }
+}
+
+struct PermissionLoadingView: View {
+    let title: String
+
+    var body: some View {
+        let message = String(
+            format: "permission_access_loading_message".localizedString,
+            locale: Locale.current,
+            title
+        )
+
+        VStack(spacing: 16) {
+            ProgressView()
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(ColorTheme.secondaryText)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ColorTheme.background)
+    }
+}

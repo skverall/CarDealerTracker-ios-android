@@ -13,7 +13,8 @@ final class SessionStore: ObservableObject {
     @Published private(set) var isAuthenticating = false
     @Published var errorMessage: String?
     @Published var showPasswordReset = false
-    @Published private(set) var organizationId: UUID?
+    @Published private(set) var activeOrganizationId: UUID?
+    @Published private(set) var organizations: [OrganizationMembership] = []
     @Published private(set) var inviteToastMessage: String?
     @Published private(set) var inviteToastIsError = false
     @Published private(set) var isAcceptingInvite = false
@@ -22,10 +23,21 @@ final class SessionStore: ObservableObject {
     private let passwordRecoveryFlagKey = "passwordRecoveryInProgress"
     private let lastSignedInUserIdKey = "lastSignedInUserId"
     private let pendingInviteTokenKey = "pendingInviteToken"
+    private let pendingInviteTokenTimestampKey = "pendingInviteTokenTimestamp"
+    private let activeOrganizationKeyPrefix = "activeOrganizationId"
 
     private let client: SupabaseClient
     private var authChangeTask: Task<Void, Never>?
     private var didBootstrap = false
+
+    struct OrganizationMembership: Identifiable, Decodable, Equatable {
+        let organization_id: UUID
+        let organization_name: String
+        let role: String
+        let status: String
+
+        var id: UUID { organization_id }
+    }
 
     init(client: SupabaseClient) {
         self.client = client
@@ -89,6 +101,19 @@ final class SessionStore: ObservableObject {
         return false
     }
 
+    var activeOrganization: OrganizationMembership? {
+        guard let activeOrganizationId else { return nil }
+        return organizations.first(where: { $0.organization_id == activeOrganizationId })
+    }
+
+    var activeOrganizationName: String? {
+        activeOrganization?.organization_name
+    }
+
+    var activeOrganizationRole: String? {
+        activeOrganization?.role
+    }
+
     func bootstrap() async {
         guard !didBootstrap else { return }
         didBootstrap = true
@@ -105,7 +130,7 @@ final class SessionStore: ObservableObject {
                 }
             } else {
                 updateStatus(for: .initialSession, session: currentSession)
-                await loadOrganizationContext()
+                await loadOrganizations()
                 // Link RevenueCat user on launch
                 SubscriptionManager.shared.logIn(userId: currentSession.user.id.uuidString)
                 errorMessage = nil
@@ -182,6 +207,11 @@ final class SessionStore: ObservableObject {
         isAuthenticating = true
         defer { isAuthenticating = false }
         do {
+            guard client.auth.currentSession != nil else {
+                let message = "auth_recovery_session_missing".localizedString
+                errorMessage = message
+                throw NSError(domain: "Auth", code: 401, userInfo: [NSLocalizedDescriptionKey: message])
+            }
             // Update password using the temporary recovery session
             try await client.auth.update(user: UserAttributes(password: newPassword))
             // Force sign-out so the user must authenticate manually with the new password
@@ -216,10 +246,33 @@ final class SessionStore: ObservableObject {
             // Explicitly tell Supabase where to redirect back to the app
             // NOTE: This must exactly match an allowed Redirect URL in Supabase Auth settings.
             let redirectURL = URL(string: "com.ezcar24.business://login-callback")
-            try await client.auth.resetPasswordForEmail(email, redirectTo: redirectURL)
+            struct PasswordResetPayload: Encodable {
+                let email: String
+                let redirect_to: String
+            }
+            let payload = PasswordResetPayload(
+                email: email,
+                redirect_to: redirectURL?.absoluteString ?? ""
+            )
+            do {
+                _ = try await client.functions.invoke(
+                    "request_password_reset",
+                    options: FunctionInvokeOptions(body: payload)
+                )
+            } catch {
+                if case let FunctionsError.httpError(code, _) = error, code == 404 {
+                    try await client.auth.resetPasswordForEmail(email, redirectTo: redirectURL)
+                } else {
+                    let resolved = functionErrorMessage(from: error)
+                    errorMessage = resolved.message
+                    throw error
+                }
+            }
             errorMessage = nil
         } catch {
-            errorMessage = localized(error)
+            if errorMessage == nil {
+                errorMessage = localized(error)
+            }
             throw error
         }
     }
@@ -254,6 +307,12 @@ final class SessionStore: ObservableObject {
         errorMessage = nil
     }
 
+    func refreshPermissionsIfPossible() async {
+        guard case .signedIn = status else { return }
+        guard let dealerId = activeOrganizationId else { return }
+        await PermissionService.shared.fetchPermissions(dealerId: dealerId)
+    }
+
     func handleDeepLink(_ url: URL) async throws {
         if await handleInviteDeepLink(url) {
             return
@@ -265,26 +324,36 @@ final class SessionStore: ObservableObject {
         let isExplicitRecovery = urlString.contains("type=recovery") || urlString.contains("recovery")
         let isLoginCallback = urlString.contains("com.ezcar24.business://login-callback")
         let hasPendingRecovery = UserDefaults.standard.bool(forKey: passwordRecoveryFlagKey)
+        let expectsRecovery = isExplicitRecovery || (hasPendingRecovery && isLoginCallback)
 
-        if isExplicitRecovery || (hasPendingRecovery && isLoginCallback) {
+        if expectsRecovery {
             // This is a password reset link
             beginPasswordRecoveryFlow()
-            // Drop any existing session before handling recovery link so we don't auto-enter the app
-            do {
-                try await client.auth.signOut()
-            } catch { }
-            client.handle(url)
-        } else {
-            // Regular magic link or other auth link
-            client.handle(url)
+        }
+
+        do {
+            _ = try await client.auth.session(from: url)
+        } catch {
+            if expectsRecovery {
+                errorMessage = "auth_recovery_session_missing".localizedString
+            } else {
+                errorMessage = localized(error)
+            }
+            throw error
         }
     }
 
     func prepareForSync() async {
-        await loadOrganizationContext()
-        _ = await acceptPendingInviteIfPossible()
-        if organizationId == nil {
-            await loadOrganizationContext()
+        await ensurePersonalOrganizationIfNeeded()
+        await loadOrganizations()
+
+        if pendingInviteToken() != nil {
+            _ = await acceptPendingInviteIfPossible()
+            await loadOrganizations()
+        }
+
+        if pendingInviteToken() != nil {
+            clearPendingInviteToken()
         }
     }
 
@@ -293,28 +362,100 @@ final class SessionStore: ObservableObject {
         inviteToastIsError = false
     }
 
-    private func loadOrganizationContext() async {
+    private func loadOrganizations() async {
         guard case .signedIn(let user) = status else {
-            organizationId = nil
+            organizations = []
+            applyActiveOrganization(nil, persist: false)
             return
         }
 
-        struct MembershipRow: Decodable {
-            let organization_id: UUID
-        }
-
         do {
-            let row: MembershipRow = try await client
-                .from("dealer_team_members")
-                .select("organization_id")
-                .eq("user_id", value: user.id)
-                .single()
+            let list: [OrganizationMembership] = try await client
+                .rpc("get_my_organizations")
                 .execute()
                 .value
-            organizationId = row.organization_id
+            organizations = list
+
+            let stored = restoreActiveOrganizationId(for: user.id)
+            if let stored, list.contains(where: { $0.organization_id == stored }) {
+                applyActiveOrganization(stored, persist: false)
+                return
+            }
+
+            if let personal = list.first(where: { $0.organization_id == user.id }) {
+                applyActiveOrganization(personal.organization_id, persist: true)
+                return
+            }
+
+            if let first = list.first {
+                applyActiveOrganization(first.organization_id, persist: true)
+                return
+            }
+
+            applyActiveOrganization(nil, persist: false)
         } catch {
-            organizationId = nil
+            organizations = []
+            applyActiveOrganization(nil, persist: false)
         }
+    }
+
+    private func ensurePersonalOrganizationIfNeeded() async {
+        guard case .signedIn = status else { return }
+        do {
+            _ = try await client.rpc("ensure_personal_organization").execute()
+        } catch {
+            // Non-fatal; user might already be configured
+        }
+    }
+
+    func createOrganization(name: String) async throws -> UUID {
+        let params = ["_name": name]
+        let orgId: UUID = try await client
+            .rpc("create_organization", params: params)
+            .execute()
+            .value
+        await loadOrganizations()
+        return orgId
+    }
+
+    func switchOrganization(to organizationId: UUID) async {
+        applyActiveOrganization(organizationId, persist: true)
+
+        if let dealerId = activeOrganizationId {
+            ImageStore.shared.setActiveDealerId(dealerId)
+            PermissionService.shared.configure(client: client)
+            await PermissionService.shared.fetchPermissions(dealerId: dealerId)
+        }
+
+        if case .signedIn(let user) = status {
+            CloudSyncManager.shared?.updateContext(PersistenceController.shared.viewContext)
+            CloudSyncManager.shared?.refreshLastSyncForCurrentOrg()
+            await CloudSyncManager.shared?.syncAfterLogin(user: user)
+        }
+    }
+
+    private func applyActiveOrganization(_ orgId: UUID?, persist: Bool) {
+        activeOrganizationId = orgId
+        PersistenceController.shared.setActiveStore(organizationId: orgId)
+        CloudSyncManager.shared?.updateContext(PersistenceController.shared.viewContext)
+        CloudSyncManager.shared?.refreshLastSyncForCurrentOrg()
+        ImageStore.shared.setActiveDealerId(orgId)
+        if persist, let orgId, case .signedIn(let user) = status {
+            persistActiveOrganizationId(orgId, for: user.id)
+        }
+    }
+
+    private func persistActiveOrganizationId(_ orgId: UUID, for userId: UUID) {
+        UserDefaults.standard.set(orgId.uuidString, forKey: activeOrganizationDefaultsKey(for: userId))
+    }
+
+    private func restoreActiveOrganizationId(for userId: UUID) -> UUID? {
+        guard let raw = UserDefaults.standard.string(forKey: activeOrganizationDefaultsKey(for: userId)) else { return nil }
+        return UUID(uuidString: raw)
+    }
+
+    private func activeOrganizationDefaultsKey(for userId: UUID) -> String {
+        "\(activeOrganizationKeyPrefix)_\(userId.uuidString)"
     }
 
     private func handleInviteDeepLink(_ url: URL) async -> Bool {
@@ -359,27 +500,87 @@ final class SessionStore: ObservableObject {
                 .functions
                 .invoke("accept_invite", options: FunctionInvokeOptions(body: ["token": token]))
             clearPendingInviteToken()
-            await loadOrganizationContext()
-            inviteToastMessage = "Invitation accepted."
-            inviteToastIsError = false
+            await loadOrganizations()
+            showInviteToast(message: "Invitation accepted. Use the switcher to change organizations.", isError: false)
             return true
         } catch {
-            inviteToastMessage = localized(error)
-            inviteToastIsError = true
+            let resolved = functionErrorMessage(from: error)
+            if shouldClearPendingInviteToken(statusCode: resolved.statusCode, message: resolved.message) {
+                clearPendingInviteToken()
+            }
+            showInviteToast(message: resolved.message, isError: true)
             return false
         }
     }
 
     private func cachePendingInviteToken(_ token: String) {
         UserDefaults.standard.set(token, forKey: pendingInviteTokenKey)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: pendingInviteTokenTimestampKey)
     }
 
     private func pendingInviteToken() -> String? {
-        UserDefaults.standard.string(forKey: pendingInviteTokenKey)
+        guard let token = UserDefaults.standard.string(forKey: pendingInviteTokenKey) else { return nil }
+        let timestamp = UserDefaults.standard.object(forKey: pendingInviteTokenTimestampKey) as? Double
+        guard let timestamp else {
+            clearPendingInviteToken()
+            return nil
+        }
+        let maxAge: TimeInterval = 26 * 60 * 60
+        if Date().timeIntervalSince1970 - timestamp > maxAge {
+            clearPendingInviteToken()
+            return nil
+        }
+        return token
     }
 
     private func clearPendingInviteToken() {
         UserDefaults.standard.removeObject(forKey: pendingInviteTokenKey)
+        UserDefaults.standard.removeObject(forKey: pendingInviteTokenTimestampKey)
+    }
+
+    private func showInviteToast(message: String, isError: Bool) {
+        inviteToastMessage = message
+        inviteToastIsError = isError
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 5 * 1_000_000_000)
+            if inviteToastMessage == message {
+                inviteToastMessage = nil
+                inviteToastIsError = false
+            }
+        }
+    }
+
+    private struct FunctionErrorPayload: Decodable {
+        let error: String
+    }
+
+    private func functionErrorMessage(from error: Error) -> (message: String, statusCode: Int?) {
+        if let functionsError = error as? FunctionsError {
+            switch functionsError {
+            case let .httpError(code, data):
+                if let payload = try? JSONDecoder().decode(FunctionErrorPayload.self, from: data) {
+                    let trimmed = payload.error.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        return (prettify(trimmed), code)
+                    }
+                }
+                return (localized(error), code)
+            case .relayError:
+                return (localized(error), nil)
+            }
+        }
+        return (localized(error), nil)
+    }
+
+    private func shouldClearPendingInviteToken(statusCode: Int?, message: String) -> Bool {
+        if let code = statusCode, (400..<500).contains(code) {
+            return true
+        }
+        let lower = message.lowercased()
+        return lower.contains("invalid") ||
+            lower.contains("expired") ||
+            lower.contains("already") ||
+            lower.contains("mismatch")
     }
 
     private func listenForAuthChanges() {
@@ -431,10 +632,11 @@ final class SessionStore: ObservableObject {
 
     private func resetLocalStateForAccountChange() {
         PersistenceController.shared.deleteAllData()
+        CloudSyncManager.shared?.updateContext(PersistenceController.shared.viewContext)
         Task {
             await SyncQueueManager.shared.clear()
         }
-        UserDefaults.standard.removeObject(forKey: "lastSyncTimestamp")
+        CloudSyncManager.clearAllSyncTimestamps()
         ImageStore.shared.clearAll()
         CloudSyncManager.shared?.resetSyncState()
     }
@@ -451,11 +653,13 @@ final class SessionStore: ObservableObject {
         status = .signedOut
         errorMessage = nil
         isPasswordRecoverySessionActive = false
-        organizationId = nil
+        activeOrganizationId = nil
+        organizations = []
         inviteToastMessage = nil
         inviteToastIsError = false
         isAcceptingInvite = false
         UserDefaults.standard.removeObject(forKey: passwordRecoveryFlagKey)
+        ImageStore.shared.setActiveDealerId(nil)
         // Logout from RevenueCat and clear any cached entitlement state
         SubscriptionManager.shared.logOut()
         // IMPORTANT: For this app we must fully isolate data between users/guests.
@@ -463,10 +667,11 @@ final class SessionStore: ObservableObject {
         // offline sync queue so operations from the previous user are never
         // replayed for the next user.
         PersistenceController.shared.deleteAllData()
+        CloudSyncManager.shared?.updateContext(PersistenceController.shared.viewContext)
         Task {
             await SyncQueueManager.shared.clear()
         }
-        UserDefaults.standard.removeObject(forKey: "lastSyncTimestamp")
+        CloudSyncManager.clearAllSyncTimestamps()
         ImageStore.shared.clearAll()
     }
 

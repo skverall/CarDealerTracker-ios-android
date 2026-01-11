@@ -5,8 +5,17 @@ struct DebtDetailView: View {
     @ObservedObject var viewModel: DebtViewModel
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var sessionStore: SessionStore
+    @ObservedObject private var permissionService = PermissionService.shared
     @State private var showAddPayment = false
     @State private var showDeleteAlert = false
+    
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
 
     private var paymentItems: [DebtPayment] {
         debt.paymentsArray
@@ -26,6 +35,7 @@ struct DebtDetailView: View {
                         DebtPaymentRow(payment: payment, direction: debt.directionEnum)
                     }
                     .onDelete(perform: deletePayments)
+                    .deleteDisabled(!canDeleteRecords)
                 }
             } header: {
                 Text("Payments")
@@ -45,16 +55,19 @@ struct DebtDetailView: View {
                 .disabled(debt.isPaid)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button(role: .destructive) {
-                    showDeleteAlert = true
-                } label: {
-                    Image(systemName: "trash")
+                if canDeleteRecords {
+                    Button(role: .destructive) {
+                        showDeleteAlert = true
+                    } label: {
+                        Image(systemName: "trash")
+                    }
                 }
             }
         }
         .alert("Delete Debt", isPresented: $showDeleteAlert) {
             Button("cancel".localizedString, role: .cancel) {}
             Button("delete".localizedString, role: .destructive) {
+                guard canDeleteRecords else { return }
                 viewModel.deleteDebt(debt)
                 dismiss()
             }
@@ -68,6 +81,7 @@ struct DebtDetailView: View {
     }
 
     private func deletePayments(at offsets: IndexSet) {
+        guard canDeleteRecords else { return }
         for index in offsets {
             let payment = paymentItems[index]
             viewModel.deletePayment(payment)

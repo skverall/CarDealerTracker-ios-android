@@ -37,6 +37,13 @@ struct DashboardView: View {
     @State private var navPath: [DashboardDestination] = []
     @State private var offlineQueueCount: Int = 0
 
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
+
     init() {
         let context = PersistenceController.shared.container.viewContext
         _viewModel = StateObject(wrappedValue: DashboardViewModel(context: context))
@@ -150,7 +157,7 @@ private extension DashboardView {
     var topBar: some View {
         VStack(spacing: 16) {
             HStack {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(greeting)
                         .font(.subheadline)
                         .foregroundColor(ColorTheme.secondaryText)
@@ -158,6 +165,8 @@ private extension DashboardView {
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(ColorTheme.primaryText)
+                    OrganizationSwitcherView()
+                        .frame(maxWidth: 220, alignment: .leading)
                 }
                 
                 Spacer()
@@ -192,16 +201,20 @@ private extension DashboardView {
                     }
                     
                     Menu {
-                        Button {
-                            showingAddExpense = true
-                        } label: {
-                            Label("add_expense".localizedString, systemImage: "creditcard")
+                        if permissionService.can(.viewExpenses) {
+                            Button {
+                                showingAddExpense = true
+                            } label: {
+                                Label("add_expense".localizedString, systemImage: "creditcard")
+                            }
                         }
                         
-                        Button {
-                            navPath.append(.assets)
-                        } label: {
-                            Label("view_vehicles".localizedString, systemImage: "car")
+                        if permissionService.can(.viewInventory) {
+                            Button {
+                                navPath.append(.assets)
+                            } label: {
+                                Label("view_vehicles".localizedString, systemImage: "car")
+                            }
                         }
                     } label: {
                         Image(systemName: "plus")
@@ -341,7 +354,8 @@ private extension DashboardView {
         Section {
             VStack(spacing: 12) {
                 // First row: Assets, Cash, Bank
-                if PermissionService.shared.can(.viewFinancials) {
+                if permissionService.can(.viewFinancials) {
+                    let canViewProfit = permissionService.canViewVehicleProfit()
                     HStack(spacing: 12) {
                         Button {
                             navPath.append(.assets)
@@ -395,18 +409,20 @@ private extension DashboardView {
                         }
                         .buttonStyle(.plain)
                         
-                        Button {
-                            navPath.append(.profit)
-                        } label: {
-                            FinancialCard(
-                                title: "net_profit".localizedString,
-                                amount: viewModel.totalSalesProfit,
-                                icon: "dollarsign.circle.fill",
-                                color: viewModel.totalSalesProfit >= 0 ? .green : .red,
-                                isHero: true
-                            )
+                        if canViewProfit {
+                            Button {
+                                navPath.append(.profit)
+                            } label: {
+                                FinancialCard(
+                                    title: "net_profit".localizedString,
+                                    amount: viewModel.totalSalesProfit,
+                                    icon: "dollarsign.circle.fill",
+                                    color: viewModel.totalSalesProfit >= 0 ? .green : .red,
+                                    isHero: true
+                                )
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                         
                         Button {
                             navPath.append(.sold)
@@ -501,7 +517,7 @@ private extension DashboardView {
 
     var summarySection: some View {
         Section {
-            if PermissionService.shared.can(.viewFinancials) {
+            if permissionService.can(.viewFinancials) {
                 VStack(spacing: 16) {
                     SummaryOverviewCard(
                         totalSpent: viewModel.totalExpenses,
@@ -510,11 +526,13 @@ private extension DashboardView {
                         range: selectedRange
                     )
 
-                    ProfitOverviewCard(
-                        totalProfit: selectedRange == .week ? viewModel.monthlyNetProfit : viewModel.periodSalesProfit,
-                        trendPoints: selectedRange == .week ? viewModel.monthlyProfitTrendPoints : viewModel.profitTrendPoints,
-                        range: selectedRange == .week ? .month : selectedRange
-                    )
+                    if permissionService.canViewVehicleProfit() {
+                        ProfitOverviewCard(
+                            totalProfit: selectedRange == .week ? viewModel.monthlyNetProfit : viewModel.periodSalesProfit,
+                            trendPoints: selectedRange == .week ? viewModel.monthlyProfitTrendPoints : viewModel.profitTrendPoints,
+                            range: selectedRange == .week ? .month : selectedRange
+                        )
+                    }
 
                     CategoryBreakdownCard(stats: viewModel.categoryStats)
                 }
@@ -556,21 +574,23 @@ private extension DashboardView {
                                     selectedExpense = expense
                                 }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                    Button(role: .destructive) {
-                                        do {
-                                            let deletedId = try expenseEntryViewModel.deleteExpense(expense)
-                                            viewModel.fetchFinancialData(range: selectedRange)
-                                            if let id = deletedId, case .signedIn(let user) = sessionStore.status {
-                                                Task {
-                                                    let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
-                                                    await cloudSyncManager.deleteExpense(id: id, dealerId: dealerId)
+                                    if canDeleteRecords {
+                                        Button(role: .destructive) {
+                                            do {
+                                                let deletedId = try expenseEntryViewModel.deleteExpense(expense)
+                                                viewModel.fetchFinancialData(range: selectedRange)
+                                                if let id = deletedId, case .signedIn(let user) = sessionStore.status {
+                                                    Task {
+                                                        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+                                                        await cloudSyncManager.deleteExpense(id: id, dealerId: dealerId)
+                                                    }
                                                 }
+                                            } catch {
+                                                print("Failed to delete expense: \(error)")
                                             }
-                                        } catch {
-                                            print("Failed to delete expense: \(error)")
+                                        } label: {
+                                            Label("delete".localizedString, systemImage: "trash")
                                         }
-                                    } label: {
-                                        Label("delete".localizedString, systemImage: "trash")
                                     }
     
                                     Button {
@@ -1604,6 +1624,118 @@ private struct DetailRow: View {
             }
             Spacer()
         }
+    }
+}
+
+struct OrganizationSwitcherView: View {
+    @EnvironmentObject private var sessionStore: SessionStore
+    @State private var showingCreateSheet = false
+    @State private var newOrgName = ""
+    @State private var isCreating = false
+    @State private var createError: String?
+
+    var body: some View {
+        Menu {
+            if sessionStore.organizations.isEmpty {
+                Text("No organizations yet")
+            } else {
+                ForEach(sessionStore.organizations) { org in
+                    Button {
+                        Task { await sessionStore.switchOrganization(to: org.organization_id) }
+                    } label: {
+                        HStack {
+                            Text(org.organization_name)
+                            Spacer()
+                            Text(org.role.capitalized)
+                                .foregroundColor(.secondary)
+                            if org.organization_id == sessionStore.activeOrganizationId {
+                                Image(systemName: "checkmark")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Divider()
+
+            Button("Create Business") {
+                showingCreateSheet = true
+            }
+            .disabled(!isSignedIn)
+        } label: {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(sessionStore.activeOrganizationName ?? "Select Business")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(ColorTheme.primaryText)
+                        .lineLimit(1)
+                    if let role = sessionStore.activeOrganizationRole {
+                        Text(role.capitalized)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+                }
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.caption)
+                    .foregroundColor(ColorTheme.secondaryText)
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(ColorTheme.cardBackground)
+            .cornerRadius(12)
+            .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+        }
+        .sheet(isPresented: $showingCreateSheet) {
+            NavigationView {
+                Form {
+                    Section(header: Text("Business Name")) {
+                        TextField("Enter business name", text: $newOrgName)
+                            .autocapitalization(.words)
+                    }
+
+                    if let createError {
+                        Section {
+                            Text(createError)
+                                .foregroundColor(.red)
+                        }
+                    }
+
+                    Button(isCreating ? "Creating..." : "Create") {
+                        Task {
+                            isCreating = true
+                            defer { isCreating = false }
+                            do {
+                                let newId = try await sessionStore.createOrganization(name: newOrgName)
+                                await sessionStore.switchOrganization(to: newId)
+                                showingCreateSheet = false
+                                newOrgName = ""
+                                createError = nil
+                            } catch {
+                                createError = error.localizedDescription
+                            }
+                        }
+                    }
+                    .disabled(newOrgName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
+                }
+                .navigationTitle("Create Business")
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            showingCreateSheet = false
+                            newOrgName = ""
+                            createError = nil
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var isSignedIn: Bool {
+        if case .signedIn = sessionStore.status { return true }
+        return false
     }
 }
 

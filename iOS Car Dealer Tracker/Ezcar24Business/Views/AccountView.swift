@@ -319,6 +319,9 @@ struct AccountView: View {
                         .font(.title3)
                         .fontWeight(.semibold)
                         .foregroundColor(ColorTheme.primaryText)
+
+                    OrganizationSwitcherView()
+                        .frame(maxWidth: 240)
                     
                     Text("Member since \(user.createdAt, style: .date)")
                         .font(.caption)

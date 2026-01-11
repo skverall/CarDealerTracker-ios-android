@@ -20,32 +20,55 @@ final class ImageStore {
 
     private let cache = NSCache<NSString, UIImage>()
     private let ioQueue = DispatchQueue(label: "image-store-io", qos: .utility)
+    private let stateQueue = DispatchQueue(label: "image-store-state")
+    private var activeDealerId: UUID?
 
     private init() {
         cache.countLimit = 200 // thumbnails are small; tweak as needed
     }
 
     // Directory URL for images
-    private var directoryURL: URL {
+    private func directoryURL(dealerId: UUID?) -> URL {
         let fm = FileManager.default
         let baseDir = fm.urls(for: .documentDirectory, in: .userDomainMask).first ?? fm.temporaryDirectory
-        let dir = baseDir.appendingPathComponent("VehicleImages", isDirectory: true)
+        let dealerKey = dealerId?.uuidString ?? "guest"
+        let dir = baseDir
+            .appendingPathComponent("VehicleImages", isDirectory: true)
+            .appendingPathComponent(dealerKey, isDirectory: true)
         if !fm.fileExists(atPath: dir.path) {
             try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
         return dir
     }
 
-    func imageURL(for id: UUID) -> URL { directoryURL.appendingPathComponent("\(id.uuidString).jpg") }
+    func setActiveDealerId(_ id: UUID?) {
+        stateQueue.async {
+            self.activeDealerId = id
+        }
+    }
+
+    private func resolvedDealerId(_ dealerId: UUID?) -> UUID? {
+        if let dealerId { return dealerId }
+        var current: UUID?
+        stateQueue.sync {
+            current = activeDealerId
+        }
+        return current
+    }
+
+    func imageURL(for id: UUID, dealerId: UUID? = nil) -> URL {
+        let resolved = resolvedDealerId(dealerId)
+        return directoryURL(dealerId: resolved).appendingPathComponent("\(id.uuidString).jpg")
+    }
 
     // Save image data. We scale down large images and compress to JPEG to reduce IO and memory.
-    func save(imageData: Data, for id: UUID, maxDimension: CGFloat = 1600, quality: CGFloat = 0.8) {
+    func save(imageData: Data, for id: UUID, dealerId: UUID? = nil, maxDimension: CGFloat = 1600, quality: CGFloat = 0.8) {
         // First clear old cache entry to ensure fresh image is displayed
         cache.removeObject(forKey: id.uuidString as NSString)
+        let url = imageURL(for: id, dealerId: dealerId)
 
         ioQueue.async { [weak self] in
             guard let self = self else { return }
-            let url = self.imageURL(for: id)
             do {
                 let dataToWrite = self.scaleAndCompress(imageData: imageData, maxDimension: maxDimension, quality: quality) ?? imageData
                 try dataToWrite.write(to: url, options: .atomic)
@@ -65,14 +88,14 @@ final class ImageStore {
 
     // Load UIImage with in-memory cache. Completion is called on the main thread.
     // Set forceReload to true to bypass cache and load fresh from disk.
-    func load(id: UUID, forceReload: Bool = false, completion: @escaping (UIImage?) -> Void) {
+    func load(id: UUID, dealerId: UUID? = nil, forceReload: Bool = false, completion: @escaping (UIImage?) -> Void) {
         if !forceReload, let cached = cache.object(forKey: id.uuidString as NSString) {
             completion(cached)
             return
         }
+        let url = imageURL(for: id, dealerId: dealerId)
         ioQueue.async { [weak self] in
             guard let self = self else { return }
-            let url = self.imageURL(for: id)
             var result: UIImage? = nil
             if let data = try? Data(contentsOf: url) { result = UIImage(data: data) }
             if let result { self.cache.setObject(result, forKey: id.uuidString as NSString) }
@@ -86,8 +109,8 @@ final class ImageStore {
     }
 
     // Convenience SwiftUI Image loader (scaled for thumbnails)
-    func swiftUIImage(id: UUID, completion: @escaping (Image?) -> Void) {
-        load(id: id) { uiImage in
+    func swiftUIImage(id: UUID, dealerId: UUID? = nil, completion: @escaping (Image?) -> Void) {
+        load(id: id, dealerId: dealerId) { uiImage in
             if let uiImage {
                 completion(Image(uiImage: uiImage))
             } else {
@@ -97,10 +120,10 @@ final class ImageStore {
     }
 
     // Delete stored image and remove from cache
-    func delete(id: UUID, completion: (() -> Void)? = nil) {
+    func delete(id: UUID, dealerId: UUID? = nil, completion: (() -> Void)? = nil) {
+        let url = imageURL(for: id, dealerId: dealerId)
         ioQueue.async { [weak self] in
             guard let self = self else { return }
-            let url = self.imageURL(for: id)
             try? FileManager.default.removeItem(at: url)
             self.cache.removeObject(forKey: id.uuidString as NSString)
             DispatchQueue.main.async { completion?() }
@@ -112,7 +135,8 @@ final class ImageStore {
         ioQueue.async { [weak self] in
             guard let self = self else { return }
             let fm = FileManager.default
-            let dir = self.directoryURL
+            let baseDir = fm.urls(for: .documentDirectory, in: .userDomainMask).first ?? fm.temporaryDirectory
+            let dir = baseDir.appendingPathComponent("VehicleImages", isDirectory: true)
             if fm.fileExists(atPath: dir.path) {
                 try? fm.removeItem(at: dir)
             }
@@ -122,8 +146,8 @@ final class ImageStore {
 
 
     // Check if image exists on disk (fast path without loading)
-    func hasImage(id: UUID) -> Bool {
-        FileManager.default.fileExists(atPath: imageURL(for: id).path)
+    func hasImage(id: UUID, dealerId: UUID? = nil) -> Bool {
+        FileManager.default.fileExists(atPath: imageURL(for: id, dealerId: dealerId).path)
     }
 
     // MARK: - Private

@@ -2,14 +2,22 @@ import SwiftUI
 import CoreData
 
 struct ClientListView: View {
-    @StateObject private var viewModel = ClientViewModel()
+    @StateObject private var viewModel: ClientViewModel
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
+    @ObservedObject private var permissionService = PermissionService.shared
 
     @State private var activeSheet: SheetType?
     @State private var showFilters = false
     @State private var dateFilter: DashboardTimeRange = .all
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
     
     enum SheetType: Identifiable {
         case new
@@ -21,6 +29,11 @@ struct ClientListView: View {
             case .edit(let client): return client.objectID.uriRepresentation().absoluteString
             }
         }
+    }
+
+    init() {
+        let context = PersistenceController.shared.container.viewContext
+        _viewModel = StateObject(wrappedValue: ClientViewModel(context: context))
     }
 
     var body: some View {
@@ -250,7 +263,9 @@ struct ClientListView: View {
                 Button { call(phone) } label: { Label("call".localizedString, systemImage: "phone") }
                 Button { whatsapp(phone) } label: { Label("whatsapp".localizedString, systemImage: "message") }
             }
-            Button(role: .destructive) { delete(client) } label: { Label("delete".localizedString, systemImage: "trash") }
+            if canDeleteRecords {
+                Button(role: .destructive) { delete(client) } label: { Label("delete".localizedString, systemImage: "trash") }
+            }
         }
     }
     
@@ -271,6 +286,7 @@ struct ClientListView: View {
     }
     
     private func delete(_ client: Client) {
+        guard canDeleteRecords else { return }
         guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
         let deletedId = viewModel.deleteClient(client)
         if let id = deletedId {
@@ -588,4 +604,3 @@ extension Vehicle {
         return "Vehicle"
     }
 }
-

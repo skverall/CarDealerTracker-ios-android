@@ -11,9 +11,18 @@ struct EditAccountView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: FinancialAccountsViewModel
     let account: FinancialAccount
+    @EnvironmentObject private var sessionStore: SessionStore
+    @ObservedObject private var permissionService = PermissionService.shared
 
     @StateObject private var transactionsViewModel: AccountTransactionsViewModel
     @State private var showAddTransaction = false
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
 
     init(viewModel: FinancialAccountsViewModel, account: FinancialAccount) {
         self.viewModel = viewModel
@@ -57,6 +66,7 @@ struct EditAccountView: View {
                             AccountTransactionRow(transaction: transaction)
                         }
                         .onDelete(perform: deleteTransactions)
+                        .deleteDisabled(!canDeleteRecords)
                     }
                 }
             }
@@ -88,6 +98,7 @@ struct EditAccountView: View {
     }
 
     private func deleteTransactions(at offsets: IndexSet) {
+        guard canDeleteRecords else { return }
         for index in offsets {
             let transaction = transactionsViewModel.transactions[index]
             transactionsViewModel.deleteTransaction(transaction)

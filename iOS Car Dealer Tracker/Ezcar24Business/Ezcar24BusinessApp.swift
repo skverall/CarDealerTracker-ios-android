@@ -27,7 +27,7 @@ struct Ezcar24BusinessApp: App {
     @StateObject private var cloudSyncManager: CloudSyncManager
     @StateObject private var regionSettings = RegionSettingsManager.shared
     @StateObject private var remoteConfig = RemoteConfigService.shared
-    let persistenceController = PersistenceController.shared
+    @StateObject private var persistenceController = PersistenceController.shared
     
     @State private var showRegionSelection = false
 
@@ -35,7 +35,7 @@ struct Ezcar24BusinessApp: App {
         // Initialize Supabase and Core Data
         let provider = SupabaseClientProvider()
         let sessionStore = SessionStore(client: provider.client)
-        let context = PersistenceController.shared.container.viewContext
+        let context = PersistenceController.shared.viewContext
         let syncManager = CloudSyncManager(client: provider.client, context: context)
 
         CloudSyncManager.shared = syncManager
@@ -66,9 +66,9 @@ struct Ezcar24BusinessApp: App {
                 .environmentObject(appSessionState)
                 .environmentObject(cloudSyncManager)
                 .environmentObject(regionSettings)
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environment(\.managedObjectContext, persistenceController.viewContext)
                 .environment(\.locale, regionSettings.selectedLanguage.locale)
-                .id(regionSettings.selectedLanguage.id)
+                .id("\(regionSettings.selectedLanguage.id)-\(persistenceController.activeStoreKey)")
                 .onOpenURL { url in
                     Task {
                         do {
@@ -88,6 +88,7 @@ struct Ezcar24BusinessApp: App {
                         Task {
                             await remoteConfig.checkForUpdate()
                             await LocalNotificationManager.shared.refreshAll(context: persistenceController.container.viewContext)
+                            await sessionStore.refreshPermissionsIfPossible()
                         }
                     }
                 }

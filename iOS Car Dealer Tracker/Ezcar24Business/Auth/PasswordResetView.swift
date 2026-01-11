@@ -25,114 +25,120 @@ struct PasswordResetView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                // Header
-                VStack(spacing: 12) {
-                    Image(systemName: "lock.rotation")
-                        .font(.system(size: 60))
-                        .foregroundColor(.blue)
-                    
-                    Text("Reset Password")
-                        .font(.title)
-                        .fontWeight(.bold)
-                    
-                    Text("Create a new password to regain access. You'll sign in again after saving.")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
-                .padding(.top, 40)
-                
-                // Password fields
-                VStack(spacing: 16) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("New Password")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    VStack(spacing: 12) {
+                        Image(systemName: "lock.rotation")
+                            .font(.system(size: 60))
+                            .foregroundColor(.blue)
                         
-                        HStack {
-                            if showNewPassword {
-                                TextField("At least 6 characters", text: $newPassword)
-                                    .textContentType(.newPassword)
-                                    .focused($focusedField, equals: .newPassword)
-                            } else {
-                                SecureField("At least 6 characters", text: $newPassword)
-                                    .textContentType(.newPassword)
-                                    .focused($focusedField, equals: .newPassword)
-                            }
+                        Text("Reset Password")
+                            .font(.title)
+                            .fontWeight(.bold)
+                        
+                        Text("Create a new password to regain access. You'll sign in again after saving.")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 40)
+                    
+                    // Password fields
+                    VStack(spacing: 16) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("New Password")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
                             
-                            Button(action: { showNewPassword.toggle() }) {
-                                Image(systemName: showNewPassword ? "eye.slash" : "eye")
-                                    .foregroundColor(.secondary)
+                            HStack {
+                                if showNewPassword {
+                                    TextField("At least 6 characters", text: $newPassword)
+                                        .textContentType(.newPassword)
+                                        .focused($focusedField, equals: .newPassword)
+                                } else {
+                                    SecureField("At least 6 characters", text: $newPassword)
+                                        .textContentType(.newPassword)
+                                        .focused($focusedField, equals: .newPassword)
+                                }
+                                
+                                Button(action: { showNewPassword.toggle() }) {
+                                    Image(systemName: showNewPassword ? "eye.slash" : "eye")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(10)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Confirm Password")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            HStack {
+                                if showConfirmPassword {
+                                    TextField("Re-enter password", text: $confirmPassword)
+                                        .textContentType(.newPassword)
+                                        .focused($focusedField, equals: .confirmPassword)
+                                } else {
+                                    SecureField("Re-enter password", text: $confirmPassword)
+                                        .textContentType(.newPassword)
+                                        .focused($focusedField, equals: .confirmPassword)
+                                }
+                                
+                                Button(action: { showConfirmPassword.toggle() }) {
+                                    Image(systemName: showConfirmPassword ? "eye.slash" : "eye")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(10)
+                            
+                            if !confirmPassword.isEmpty && newPassword != confirmPassword {
+                                Text("Passwords do not match")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
                             }
                         }
+                    }
+                    .padding(.horizontal)
+                    
+                    // Update button
+                    Button(action: updatePassword) {
+                        HStack {
+                            if isProcessing {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                    .tint(.white)
+                            }
+                            Text(isProcessing ? "Updating..." : "Update Password")
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.systemGray6))
+                        .background(isValid ? Color.blue : Color.gray)
+                        .foregroundColor(.white)
                         .cornerRadius(10)
                     }
+                    .disabled(!isValid || isProcessing)
+                    .padding(.horizontal)
                     
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Confirm Password")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                        
-                        HStack {
-                            if showConfirmPassword {
-                                TextField("Re-enter password", text: $confirmPassword)
-                                    .textContentType(.newPassword)
-                                    .focused($focusedField, equals: .confirmPassword)
-                            } else {
-                                SecureField("Re-enter password", text: $confirmPassword)
-                                    .textContentType(.newPassword)
-                                    .focused($focusedField, equals: .confirmPassword)
-                            }
-                            
-                            Button(action: { showConfirmPassword.toggle() }) {
-                                Image(systemName: showConfirmPassword ? "eye.slash" : "eye")
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding()
-                        .background(Color(.systemGray6))
-                        .cornerRadius(10)
-                        
-                        if !confirmPassword.isEmpty && newPassword != confirmPassword {
-                            Text("Passwords do not match")
-                                .font(.caption)
-                                .foregroundColor(.red)
-                        }
+                    if let errorMessage = sessionStore.errorMessage {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
                     }
+                    
+                    Spacer()
                 }
-                .padding(.horizontal)
-                
-                // Update button
-                Button(action: updatePassword) {
-                    HStack {
-                        if isProcessing {
-                            ProgressView()
-                                .progressViewStyle(.circular)
-                                .tint(.white)
-                        }
-                        Text(isProcessing ? "Updating..." : "Update Password")
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isValid ? Color.blue : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-                }
-                .disabled(!isValid || isProcessing)
-                .padding(.horizontal)
-                
-                if let errorMessage = sessionStore.errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundColor(.red)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal)
-                }
-                
-                Spacer()
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .onTapGesture {
+                focusedField = nil
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

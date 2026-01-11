@@ -7,6 +7,8 @@ struct ClientDetailView: View {
     var onSave: (Client) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var sessionStore: SessionStore
+    @ObservedObject private var permissionService = PermissionService.shared
 
     @State private var name: String = ""
     @State private var phone: String = ""
@@ -33,6 +35,13 @@ struct ClientDetailView: View {
     // Track which item is being edited for interactions/reminders
     @State private var activeInteractionId: UUID?
     @State private var activeReminderId: UUID?
+
+    private var canDeleteRecords: Bool {
+        if case .signedIn = sessionStore.status {
+            return permissionService.can(.deleteRecords)
+        }
+        return true
+    }
 
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
@@ -865,9 +874,11 @@ struct ClientDetailView: View {
                 TextField("Title", text: draft.title)
                     .font(.headline)
                 Spacer()
-                Button(role: .destructive) { onDelete() } label: {
-                    Image(systemName: "trash")
-                        .foregroundColor(ColorTheme.danger)
+                if canDeleteRecords {
+                    Button(role: .destructive) { onDelete() } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(ColorTheme.danger)
+                    }
                 }
             }
             
@@ -913,9 +924,11 @@ struct ClientDetailView: View {
                 TextField("Task", text: draft.title)
                     .font(.headline)
                 Spacer()
-                Button(role: .destructive) { onDelete() } label: {
-                    Image(systemName: "trash")
-                        .foregroundColor(ColorTheme.danger)
+                if canDeleteRecords {
+                    Button(role: .destructive) { onDelete() } label: {
+                        Image(systemName: "trash")
+                            .foregroundColor(ColorTheme.danger)
+                    }
                 }
             }
             
@@ -1008,12 +1021,14 @@ struct ClientDetailView: View {
     }
 
     private func deleteInteractionDraft(_ id: UUID) {
+        guard canDeleteRecords else { return }
         DispatchQueue.main.async {
             interactionDrafts.removeAll { $0.id == id }
         }
     }
 
     private func deleteReminderDraft(_ id: UUID) {
+        guard canDeleteRecords else { return }
         DispatchQueue.main.async {
             reminderDrafts.removeAll { $0.id == id }
         }
