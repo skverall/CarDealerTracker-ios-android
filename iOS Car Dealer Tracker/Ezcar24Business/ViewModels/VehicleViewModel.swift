@@ -279,6 +279,7 @@ class VehicleViewModel: ObservableObject {
 
         // Deduct purchase amount from selected account (if provided)
         if let account {
+            vehicle.purchaseAccountId = account.id
             let currentBalance = account.balance?.decimalValue ?? 0
             account.balance = NSDecimalNumber(decimal: currentBalance - purchasePrice)
             account.updatedAt = Date()

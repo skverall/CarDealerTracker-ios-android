@@ -12,7 +12,10 @@ struct SupabaseClientProvider {
                 flowType: .implicit,
                 emitLocalSessionAsInitialSession: true
             )
-            let options = SupabaseClientOptions(auth: authOptions)
+            let options = SupabaseClientOptions(
+                auth: authOptions,
+                storage: .init(useNewHostname: true)
+            )
 
             client = SupabaseClient(
                 supabaseURL: configuration.url,

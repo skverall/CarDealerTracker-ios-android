@@ -51,6 +51,9 @@
 		E100000C /* ClientCRMModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000009 /* ClientCRMModels.swift */; };
 		E20653BA2EED8B6F00C1002F /* ForceUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */; };
 		E20700012F1234567890ABCD /* LocalNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20700002F1234567890ABCD /* LocalNotificationManager.swift */; };
+		E2460EEE2F14089A0048EA80 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EED2F14089A0048EA80 /* EditProfileView.swift */; };
+		E2460EF12F1408C10048EA80 /* User+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */; };
+		E2460EF22F1408C10048EA80 /* User+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */; };
 		E29C0AEF2F0B92620087CEB6 /* String+Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */; };
 		E29C0AF12F0B92BA0087CEB6 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */; };
 		E2A08AAF2F10532C0071352E /* RemoteConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */; };
@@ -126,6 +129,9 @@
 		E0000009 /* ClientCRMModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientCRMModels.swift; sourceTree = "<group>"; };
 		E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceUpdateView.swift; sourceTree = "<group>"; };
 		E20700002F1234567890ABCD /* LocalNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNotificationManager.swift; sourceTree = "<group>"; };
+		E2460EED2F14089A0048EA80 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
+		E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "User+CoreDataClass.swift"; sourceTree = "<group>"; };
+		E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "User+CoreDataProperties.swift"; sourceTree = "<group>"; };
 		E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Localization.swift"; sourceTree = "<group>"; };
 		E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigService.swift; sourceTree = "<group>"; };
@@ -217,6 +223,8 @@
 		A1000027 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */,
+				E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */,
 				A1000007 /* Ezcar24Business.xcdatamodeld */,
 				A100000A /* PersistenceController.swift */,
 				F2000001 /* Debt+Extensions.swift */,
@@ -247,6 +255,7 @@
 		A1000029 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E2460EED2F14089A0048EA80 /* EditProfileView.swift */,
 				E2A08AB22F105B580071352E /* TeamManagementView.swift */,
 				E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */,
 				E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */,
@@ -408,6 +417,8 @@
 				A100000D /* DashboardView.swift in Sources */,
 				A100000F /* VehicleListView.swift in Sources */,
 				A1000011 /* VehicleDetailView.swift in Sources */,
+				E2460EF12F1408C10048EA80 /* User+CoreDataProperties.swift in Sources */,
+				E2460EF22F1408C10048EA80 /* User+CoreDataClass.swift in Sources */,
 				10F075372ED4B66F00740D2D /* PasswordResetView.swift in Sources */,
 				A1000013 /* ExpenseListView.swift in Sources */,
 				A1000015 /* AddExpenseView.swift in Sources */,
@@ -443,6 +454,7 @@
 				F1000002 /* YearFormatter.swift in Sources */,
 				F1000009 /* SalesViewModel.swift in Sources */,
 				F1000011 /* SalesListView.swift in Sources */,
+				E2460EEE2F14089A0048EA80 /* EditProfileView.swift in Sources */,
 				F1000013 /* AddSaleView.swift in Sources */,
 				F2000101 /* Debt+Extensions.swift in Sources */,
 				F2000102 /* DebtViewModel.swift in Sources */,

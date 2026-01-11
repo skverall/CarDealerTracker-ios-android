@@ -14,6 +14,7 @@ extension Vehicle {
     @NSManaged public var year: Int32
     @NSManaged public var purchasePrice: NSDecimalNumber?
     @NSManaged public var purchaseDate: Date?
+    @NSManaged public var purchaseAccountId: UUID?
     @NSManaged public var status: String?
     @NSManaged public var notes: String?
     @NSManaged public var createdAt: Date?

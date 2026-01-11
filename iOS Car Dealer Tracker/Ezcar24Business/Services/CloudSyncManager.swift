@@ -68,6 +68,9 @@ final class CloudSyncManager: ObservableObject {
         let bgContext = PersistenceController.shared.newBackgroundContext()
         
         let writeClient = self.writeClient
+        let accountBaseline = await bgContext.perform {
+            self.captureAccountLedgerBaseline(context: bgContext)
+        }
         
         do {
             // 1. Flush any queued offline operations first (Main Actor is fine for this as it's usually small)
@@ -117,6 +120,11 @@ final class CloudSyncManager: ObservableObject {
                 // 4. Smart Merge
                 try self.mergeRemoteChanges(snapshotForMerge, context: bgContext, dealerId: dealerId)
 
+                // Ensure current user exists locally so profile editing works
+                self.ensureCurrentUserExists(context: bgContext, user: user, dealerId: dealerId)
+
+                self.recalculateAccountBalances(context: bgContext, baseline: accountBaseline)
+
                 // 4.5. CRITICAL: Save the merged changes to Core Data
                 if bgContext.hasChanges {
                     try bgContext.save()
@@ -145,7 +153,7 @@ final class CloudSyncManager: ObservableObject {
             await processOfflineQueue(dealerId: dealerId)
 
             // 9. Fetch Permissions
-            PermissionService.shared.configure(client: self.client)
+            PermissionService.shared.configure(client: self.client, dealerId: dealerId)
             await PermissionService.shared.fetchPermissions(dealerId: dealerId)
             
         } catch {
@@ -262,6 +270,9 @@ final class CloudSyncManager: ObservableObject {
         }
 
         let bgContext = PersistenceController.shared.newBackgroundContext()
+        let accountBaseline = await bgContext.perform {
+            self.captureAccountLedgerBaseline(context: bgContext)
+        }
 
         do {
             // 0. Push local changes first to avoid overwrites during merge
@@ -307,6 +318,7 @@ final class CloudSyncManager: ObservableObject {
                     dealerId: dealerId,
                     missingCleanup: cleanupContext
                 )
+                self.recalculateAccountBalances(context: bgContext, baseline: accountBaseline)
                 if bgContext.hasChanges {
                     try bgContext.save()
                 }
@@ -1296,6 +1308,10 @@ final class CloudSyncManager: ObservableObject {
             id: id,
             dealerId: dealerId,
             name: user.name ?? "",
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            avatarURL: user.avatarUrl,
             createdAt: iso8601Formatter.string(from: createdAt),
             updatedAt: iso8601Formatter.string(from: updatedAt),
             deletedAt: deletedAt.map { iso8601Formatter.string(from: $0) }
@@ -1338,6 +1354,10 @@ final class CloudSyncManager: ObservableObject {
             id: id,
             dealerId: dealerId,
             name: user.name ?? "",
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phone: user.phone,
+            avatarURL: user.avatarUrl,
             createdAt: iso8601Formatter.string(from: createdAt),
             updatedAt: iso8601Formatter.string(from: updatedAt),
             deletedAt: deletedAt.map { iso8601Formatter.string(from: $0) }
@@ -1614,6 +1634,62 @@ final class CloudSyncManager: ObservableObject {
         }
     }
 
+    func uploadAvatar(image: Data, userId: UUID) async throws -> String {
+        let path = avatarPath(userId: userId)
+        let options = FileOptions(
+            cacheControl: "3600",
+            contentType: "image/jpeg",
+            upsert: true
+        )
+        try await uploadAvatarWithRetry(path: path, data: image, options: options)
+        
+        let publicUrl = try client.storage
+            .from("avatars")
+            .getPublicURL(path: path)
+        
+        return publicUrl.absoluteString
+    }
+
+    func downloadAvatar(userId: UUID) async throws -> Data {
+        let path = avatarPath(userId: userId)
+        return try await client.storage
+            .from("avatars")
+            .download(path: path)
+    }
+
+    private func avatarPath(userId: UUID) -> String {
+        let effectiveUserId = client.auth.currentSession?.user.id ?? userId
+        return "\(effectiveUserId.uuidString.lowercased())/avatar.jpg"
+    }
+
+    private func uploadAvatarWithRetry(path: String, data: Data, options: FileOptions) async throws {
+        var lastError: Error?
+        for attempt in 0..<2 {
+            do {
+                _ = try await client.storage
+                    .from("avatars")
+                    .upload(path, data: data, options: options)
+                return
+            } catch {
+                lastError = error
+                if attempt == 0, shouldRetryUpload(error) {
+                    try? await Task.sleep(nanoseconds: 350_000_000)
+                    continue
+                }
+                throw error
+            }
+        }
+        throw lastError ?? URLError(.unknown)
+    }
+
+    private func shouldRetryUpload(_ error: Error) -> Bool {
+        if let urlError = error as? URLError {
+            return urlError.code == .cannotParseResponse
+        }
+        let nsError = error as NSError
+        return nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCannotParseResponse
+    }
+
     private func downloadVehicleImages(dealerId: UUID, vehicles: [RemoteVehicle]) async {
         print("CloudSyncManager: Starting to download images for \(vehicles.count) vehicles")
         for vehicle in vehicles {
@@ -1829,6 +1905,128 @@ final class CloudSyncManager: ObservableObject {
         let remoteIds: [SyncEntityType: Set<UUID>]
         let protectedIds: [SyncEntityType: Set<UUID>]
     }
+
+    private struct AccountLedgerBaseline {
+        let balances: [UUID: Decimal]
+        let ledgerTotals: [UUID: Decimal]
+    }
+
+    nonisolated private func captureAccountLedgerBaseline(context: NSManagedObjectContext) -> AccountLedgerBaseline {
+        let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+        accountRequest.predicate = NSPredicate(format: "deletedAt == nil")
+
+        let accounts = (try? context.fetch(accountRequest)) ?? []
+        var balances: [UUID: Decimal] = [:]
+        for account in accounts {
+            guard let id = account.id else { continue }
+            balances[id] = account.balance?.decimalValue ?? 0
+        }
+
+        let ledgerTotals = computeAccountLedgerTotals(context: context)
+        return AccountLedgerBaseline(balances: balances, ledgerTotals: ledgerTotals)
+    }
+
+    nonisolated private func computeAccountLedgerTotals(context: NSManagedObjectContext) -> [UUID: Decimal] {
+        var totals: [UUID: Decimal] = [:]
+
+        func add(_ accountId: UUID, _ delta: Decimal) {
+            totals[accountId, default: 0] += delta
+        }
+
+        let expenseRequest: NSFetchRequest<Expense> = Expense.fetchRequest()
+        expenseRequest.predicate = NSPredicate(format: "deletedAt == nil AND account != nil")
+        if let expenses = try? context.fetch(expenseRequest) {
+            for expense in expenses {
+                guard let accountId = expense.account?.id else { continue }
+                let amount = expense.amount?.decimalValue ?? 0
+                add(accountId, -amount)
+            }
+        }
+
+        let saleRequest: NSFetchRequest<Sale> = Sale.fetchRequest()
+        saleRequest.predicate = NSPredicate(format: "deletedAt == nil AND account != nil")
+        if let sales = try? context.fetch(saleRequest) {
+            for sale in sales {
+                guard let accountId = sale.account?.id else { continue }
+                let amount = sale.amount?.decimalValue ?? 0
+                add(accountId, amount)
+            }
+        }
+
+        let paymentRequest: NSFetchRequest<DebtPayment> = DebtPayment.fetchRequest()
+        paymentRequest.predicate = NSPredicate(format: "deletedAt == nil AND account != nil")
+        if let payments = try? context.fetch(paymentRequest) {
+            for payment in payments {
+                guard let accountId = payment.account?.id else { continue }
+                let amount = payment.amount?.decimalValue ?? 0
+                switch payment.debt?.directionEnum ?? .owedToMe {
+                case .owedToMe:
+                    add(accountId, amount)
+                case .iOwe:
+                    add(accountId, -amount)
+                }
+            }
+        }
+
+        let transactionRequest: NSFetchRequest<AccountTransaction> = AccountTransaction.fetchRequest()
+        transactionRequest.predicate = NSPredicate(format: "deletedAt == nil AND account != nil")
+        if let transactions = try? context.fetch(transactionRequest) {
+            for transaction in transactions {
+                guard let accountId = transaction.account?.id else { continue }
+                let amount = transaction.amount?.decimalValue ?? 0
+                switch transaction.transactionTypeEnum {
+                case .deposit:
+                    add(accountId, amount)
+                case .withdrawal:
+                    add(accountId, -amount)
+                }
+            }
+        }
+
+        let vehicleRequest: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
+        vehicleRequest.predicate = NSPredicate(format: "deletedAt == nil AND purchaseAccountId != nil")
+        if let vehicles = try? context.fetch(vehicleRequest) {
+            for vehicle in vehicles {
+                guard let accountId = vehicle.purchaseAccountId else { continue }
+                let amount = vehicle.purchasePrice?.decimalValue ?? 0
+                add(accountId, -amount)
+            }
+        }
+
+        return totals
+    }
+
+    nonisolated private func recalculateAccountBalances(context: NSManagedObjectContext, baseline: AccountLedgerBaseline) {
+        let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+        accountRequest.predicate = NSPredicate(format: "deletedAt == nil")
+        let accounts = (try? context.fetch(accountRequest)) ?? []
+        let ledgerTotals = computeAccountLedgerTotals(context: context)
+        let now = Date()
+        let epsilon = Decimal(string: "0.01") ?? 0.01
+
+        for account in accounts {
+            guard let id = account.id else { continue }
+            let baselineBalance = baseline.balances[id] ?? account.balance?.decimalValue ?? 0
+            let baselineLedger = baseline.ledgerTotals[id] ?? 0
+            var offset = baselineBalance - baselineLedger
+            let baselineMagnitude = NSDecimalNumber(decimal: baselineBalance).doubleValue.magnitude
+            let baselineLedgerMagnitude = NSDecimalNumber(decimal: baselineLedger).doubleValue.magnitude
+            let baselineRatio = baselineLedgerMagnitude > 0 ? (baselineMagnitude / baselineLedgerMagnitude) : 0
+            if baselineLedgerMagnitude > 100 && baselineRatio < 0.05 {
+                offset = 0
+            }
+            let newBalance = (ledgerTotals[id] ?? 0) + offset
+            let currentBalance = account.balance?.decimalValue ?? 0
+            if decimalAbs(newBalance - currentBalance) > epsilon {
+                account.balance = NSDecimalNumber(decimal: newBalance)
+                account.updatedAt = now
+            }
+        }
+    }
+
+    nonisolated private func decimalAbs(_ value: Decimal) -> Decimal {
+        value < 0 ? -value : value
+    }
     
     nonisolated private func mergeRemoteChanges(
         _ snapshot: RemoteSnapshot,
@@ -1893,9 +2091,12 @@ final class CloudSyncManager: ObservableObject {
             
             user.id = u.id
             user.name = u.name
+            user.firstName = u.firstName
+            user.lastName = u.lastName
+            user.phone = u.phone
+            user.avatarUrl = u.avatarURL
             user.createdAt = CloudSyncManager.parseDateAndTime(u.createdAt)
             user.updatedAt = CloudSyncManager.parseDateAndTime(u.updatedAt)
-            user.deletedAt = nil
             user.deletedAt = nil
         }
 
@@ -1986,6 +2187,7 @@ final class CloudSyncManager: ObservableObject {
             obj.model = v.model
             obj.year = v.year != nil ? Int32(v.year!) : 0
             obj.purchasePrice = NSDecimalNumber(decimal: v.purchasePrice ?? 0)
+            obj.purchaseAccountId = v.purchaseAccountId
 
             if let d = CloudSyncManager.parseRemoteDateOnly(v.purchaseDate) {
                 obj.purchaseDate = d
@@ -2019,7 +2221,10 @@ final class CloudSyncManager: ObservableObject {
             let clientIds = snapshot.clients.map { $0.id }
             let existingClients: [UUID: Client] = fetchExisting(entityName: "Client", ids: clientIds)
             for c in snapshot.clients {
+
                 let obj = existingClients[c.id] ?? Client(context: context)
+
+
                 
                 if c.deletedAt != nil {
                     context.delete(obj)
@@ -2338,6 +2543,30 @@ final class CloudSyncManager: ObservableObject {
             }
         }
 
+    nonisolated private func ensureCurrentUserExists(context: NSManagedObjectContext, user: Auth.User, dealerId: UUID) {
+        let request: NSFetchRequest<User> = User.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", user.id as CVarArg)
+        
+        do {
+            let count = try context.count(for: request)
+            if count == 0 {
+                print("CloudSyncManager: Creating missing local User record for \(user.id)")
+                let localUser = User(context: context)
+                localUser.id = user.id
+                localUser.createdAt = Date()
+                localUser.updatedAt = Date()
+                // Default name from email if available, to have something
+                if let email = user.email {
+                    let prefix = email.components(separatedBy: "@").first ?? "User"
+                    localUser.name = prefix.capitalized
+                }
+            }
+        } catch {
+             print("Error checking for local user: \(error)")
+        }
+    }
+
+
     // MARK: - Mapping helpers
 
     nonisolated private static func parseDateOnly(_ string: String) -> Date? {
@@ -2388,7 +2617,7 @@ final class CloudSyncManager: ObservableObject {
 
     // Push local Core Data state to Supabase so we don't lose offline changes when applying a remote snapshot.
     nonisolated private func pushLocalChanges(context: NSManagedObjectContext, dealerId: UUID, writeClient: SupabaseClient, skippingVehicleIds: Set<UUID> = []) async throws {
-        let payload = try await context.perform { [self] () throws -> (users: [RemoteDealerUser], accounts: [RemoteFinancialAccount], accountTransactions: [RemoteAccountTransaction], vehicles: [RemoteVehicle], expenses: [RemoteExpense], sales: [RemoteSale], debts: [RemoteDebt], debtPayments: [RemoteDebtPayment], clients: [RemoteClient], templates: [RemoteExpenseTemplate]) in
+        let payload = try await context.perform { [self] in
             // Fetch current local objects
             let userRequest: NSFetchRequest<User> = User.fetchRequest()
             let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
@@ -2439,6 +2668,10 @@ final class CloudSyncManager: ObservableObject {
                     id: id,
                     dealerId: dealerId,
                     name: user.name ?? "",
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    phone: user.phone,
+                    avatarURL: user.avatarUrl,
                     createdAt: CloudSyncManager.formatDateAndTime(user.createdAt ?? Date()),
                     updatedAt: CloudSyncManager.formatDateAndTime(user.updatedAt ?? Date()),
                     deletedAt: user.deletedAt.map { CloudSyncManager.formatDateAndTime($0) }
@@ -2657,6 +2890,7 @@ final class CloudSyncManager: ObservableObject {
             model: vehicle.model,
             year: year,
             purchasePrice: (vehicle.purchasePrice as Decimal?) ?? 0,
+            purchaseAccountId: vehicle.purchaseAccountId,
             purchaseDate: CloudSyncManager.formatDateOnly(purchaseDate), // Use date only for purchase_date
             status: vehicle.status ?? "on_sale",
             notes: vehicle.notes,

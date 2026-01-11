@@ -4,6 +4,10 @@ struct RemoteDealerUser: Codable {
     let id: UUID
     let dealerId: UUID
     let name: String
+    let firstName: String?
+    let lastName: String?
+    let phone: String?
+    let avatarURL: String?
     let createdAt: String
     let updatedAt: String
     let deletedAt: String?
@@ -12,6 +16,10 @@ struct RemoteDealerUser: Codable {
         case id
         case dealerId = "dealer_id"
         case name
+        case firstName = "first_name"
+        case lastName = "last_name"
+        case phone
+        case avatarURL = "avatar_url"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case deletedAt = "deleted_at"
@@ -44,6 +52,7 @@ struct RemoteVehicle: Codable {
     let model: String?
     let year: Int?
     let purchasePrice: Decimal?
+    let purchaseAccountId: UUID?
     let purchaseDate: String
     let status: String
     let notes: String?
@@ -64,6 +73,7 @@ struct RemoteVehicle: Codable {
         case model
         case year
         case purchasePrice = "purchase_price"
+        case purchaseAccountId = "purchase_account_id"
         case purchaseDate = "purchase_date"
         case status
         case notes

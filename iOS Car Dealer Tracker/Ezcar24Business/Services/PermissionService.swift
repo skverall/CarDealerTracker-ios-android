@@ -18,6 +18,7 @@ final class PermissionService: ObservableObject {
     static let shared = PermissionService()
     
     @Published private(set) var permissions: [String: Bool] = [:]
+    @Published private(set) var currentRole: String = ""
     @Published private(set) var didLoad = false
     
     private let client = SupabaseClient(
@@ -36,15 +37,43 @@ final class PermissionService: ObservableObject {
     // For simplicity I'll add a 'configure' method.
     
     private var supabase: SupabaseClient?
+    private var activeDealerId: UUID?
+    private let permissionsCacheKeyPrefix = "permissions_cache_v1"
+    private let roleCacheKeyPrefix = "role_cache_v1"
     
-    func configure(client: SupabaseClient) {
+    func configure(client: SupabaseClient, dealerId: UUID? = nil) {
         self.supabase = client
-        self.permissions = [:]
-        self.didLoad = false
+        if let dealerId {
+            setActiveDealerId(dealerId)
+        }
+    }
+
+    func setActiveDealerId(_ dealerId: UUID?) {
+        activeDealerId = dealerId
+        guard let dealerId, let userId = currentUserId() else {
+            resetSession()
+            return
+        }
+        let cachedPermissions = loadCachedPermissions(userId: userId, dealerId: dealerId)
+        let cachedRole = loadCachedRole(userId: userId, dealerId: dealerId)
+        if applyCachedState(permissions: cachedPermissions, role: cachedRole) {
+            return
+        }
+        permissions = [:]
+        currentRole = ""
+        didLoad = false
+    }
+
+    func resetSession() {
+        activeDealerId = nil
+        permissions = [:]
+        currentRole = ""
+        didLoad = false
     }
     
     func fetchPermissions(dealerId: UUID) async {
         guard let supabase = supabase else { return }
+        loadCachedStateIfAvailable(dealerId: dealerId)
         
         do {
             let result: [String: Bool] = try await supabase
@@ -53,17 +82,42 @@ final class PermissionService: ObservableObject {
                 .value
             
             self.permissions = result
+            cachePermissions(result, dealerId: dealerId)
             print("PermissionService: Loaded permissions: \(result)")
         } catch {
             print("PermissionService: Failed to fetch permissions: \(error)")
             // Default to RESTRICTIVE if fail? Or Permissive for Owner?
             // "Secure by Default" -> False.
         }
+        
+        // Fetch role
+        do {
+            let roleResult: String = try await supabase
+                .rpc("get_my_role", params: ["_org_id": dealerId.uuidString])
+                .execute()
+                .value
+            
+            self.currentRole = roleResult
+            cacheRole(roleResult, dealerId: dealerId)
+            print("PermissionService: Loaded role: \(roleResult)")
+        } catch {
+            print("PermissionService: Failed to fetch role: \(error)")
+            self.currentRole = ""
+        }
+
+        applyResolvedPermissionsIfPossible()
+        
         self.didLoad = true
     }
     
     func can(_ key: PermissionKey) -> Bool {
-        return permissions[key.rawValue] ?? false
+        if let value = permissionValue(for: key) {
+            return value
+        }
+        if !currentRole.isEmpty {
+            return PermissionCatalog.defaultPermissions(for: currentRole)[key.rawValue] ?? false
+        }
+        return false
     }
 
     private func permissionValue(for key: PermissionKey) -> Bool? {
@@ -88,6 +142,77 @@ final class PermissionService: ObservableObject {
     }
     
     // Helper for 'owner' bypass? No, cache should reflect owner=true from DB RPC.
+
+    private func currentUserId() -> UUID? {
+        supabase?.auth.currentSession?.user.id ?? supabase?.auth.currentUser?.id
+    }
+
+    private func cacheKey(prefix: String, userId: UUID, dealerId: UUID) -> String {
+        "\(prefix)_\(userId.uuidString.lowercased())_\(dealerId.uuidString.lowercased())"
+    }
+
+    private func loadCachedPermissions(userId: UUID, dealerId: UUID) -> [String: Bool]? {
+        let key = cacheKey(prefix: permissionsCacheKeyPrefix, userId: userId, dealerId: dealerId)
+        guard let raw = UserDefaults.standard.dictionary(forKey: key) else { return nil }
+        var result: [String: Bool] = [:]
+        for (k, v) in raw {
+            if let boolValue = v as? Bool {
+                result[k] = boolValue
+            } else if let number = v as? NSNumber {
+                result[k] = number.boolValue
+            }
+        }
+        return result.isEmpty ? nil : result
+    }
+
+    private func loadCachedRole(userId: UUID, dealerId: UUID) -> String? {
+        let key = cacheKey(prefix: roleCacheKeyPrefix, userId: userId, dealerId: dealerId)
+        return UserDefaults.standard.string(forKey: key)
+    }
+
+    private func cachePermissions(_ permissions: [String: Bool], dealerId: UUID) {
+        guard let userId = currentUserId() else { return }
+        let key = cacheKey(prefix: permissionsCacheKeyPrefix, userId: userId, dealerId: dealerId)
+        UserDefaults.standard.set(permissions, forKey: key)
+    }
+
+    private func cacheRole(_ role: String, dealerId: UUID) {
+        guard let userId = currentUserId() else { return }
+        let key = cacheKey(prefix: roleCacheKeyPrefix, userId: userId, dealerId: dealerId)
+        UserDefaults.standard.set(role, forKey: key)
+    }
+
+    private func loadCachedStateIfAvailable(dealerId: UUID) {
+        guard let userId = currentUserId() else { return }
+        let cachedPermissions = loadCachedPermissions(userId: userId, dealerId: dealerId)
+        let cachedRole = loadCachedRole(userId: userId, dealerId: dealerId)
+        _ = applyCachedState(permissions: cachedPermissions, role: cachedRole)
+    }
+
+    private func applyCachedState(permissions cachedPermissions: [String: Bool]?, role cachedRole: String?) -> Bool {
+        guard cachedPermissions != nil || cachedRole != nil else { return false }
+        if let role = cachedRole, !role.isEmpty {
+            currentRole = role
+            let resolved = PermissionCatalog.resolvedPermissions(cachedPermissions, role: role)
+            if !resolved.isEmpty {
+                permissions = resolved
+            } else if let cachedPermissions {
+                permissions = cachedPermissions
+            }
+        } else if let cachedPermissions {
+            permissions = cachedPermissions
+        }
+        didLoad = true
+        return true
+    }
+
+    private func applyResolvedPermissionsIfPossible() {
+        guard !currentRole.isEmpty else { return }
+        let resolved = PermissionCatalog.resolvedPermissions(permissions, role: currentRole)
+        if !resolved.isEmpty {
+            permissions = resolved
+        }
+    }
 }
 
 struct PermissionDefinition: Identifiable {
@@ -135,7 +260,7 @@ enum PermissionCatalog {
                 key: .viewLeads,
                 titleKey: "permission_view_leads_title",
                 detailKey: "permission_view_leads_detail",
-                systemImage: "person.crop.circle.badge.magnifyingglass"
+                systemImage: "person.text.rectangle"
             ),
             detailTitleKey: nil,
             detailItems: []
@@ -146,6 +271,26 @@ enum PermissionCatalog {
                 titleKey: "permission_view_expenses_title",
                 detailKey: "permission_view_expenses_detail",
                 systemImage: "creditcard.fill"
+            ),
+            detailTitleKey: nil,
+            detailItems: []
+        ),
+        PermissionGroup(
+            primary: PermissionDefinition(
+                key: .viewVehicleCost,
+                titleKey: "permission_view_vehicle_cost_title",
+                detailKey: "permission_view_vehicle_cost_detail",
+                systemImage: "dollarsign.circle"
+            ),
+            detailTitleKey: nil,
+            detailItems: []
+        ),
+        PermissionGroup(
+            primary: PermissionDefinition(
+                key: .viewVehicleProfit,
+                titleKey: "permission_view_vehicle_profit_title",
+                detailKey: "permission_view_vehicle_profit_detail",
+                systemImage: "chart.line.uptrend.xyaxis"
             ),
             detailTitleKey: nil,
             detailItems: []
@@ -182,6 +327,8 @@ enum PermissionCatalog {
                 PermissionKey.createSale.rawValue: true,
                 PermissionKey.viewLeads.rawValue: true,
                 PermissionKey.viewExpenses.rawValue: true,
+                PermissionKey.viewVehicleCost.rawValue: true,
+                PermissionKey.viewVehicleProfit.rawValue: true,
                 PermissionKey.manageTeam.rawValue: true,
                 PermissionKey.deleteRecords.rawValue: true
             ]
@@ -191,6 +338,8 @@ enum PermissionCatalog {
                 PermissionKey.createSale.rawValue: true,
                 PermissionKey.viewLeads.rawValue: true,
                 PermissionKey.viewExpenses.rawValue: true,
+                PermissionKey.viewVehicleCost.rawValue: true,
+                PermissionKey.viewVehicleProfit.rawValue: true,
                 PermissionKey.manageTeam.rawValue: true,
                 PermissionKey.deleteRecords.rawValue: true
             ]
@@ -200,6 +349,8 @@ enum PermissionCatalog {
                 PermissionKey.createSale.rawValue: true,
                 PermissionKey.viewLeads.rawValue: true,
                 PermissionKey.viewExpenses.rawValue: true,
+                PermissionKey.viewVehicleCost.rawValue: false,
+                PermissionKey.viewVehicleProfit.rawValue: false,
                 PermissionKey.manageTeam.rawValue: false,
                 PermissionKey.deleteRecords.rawValue: false
             ]
@@ -209,6 +360,8 @@ enum PermissionCatalog {
                 PermissionKey.createSale.rawValue: false,
                 PermissionKey.viewLeads.rawValue: false,
                 PermissionKey.viewExpenses.rawValue: false,
+                PermissionKey.viewVehicleCost.rawValue: false,
+                PermissionKey.viewVehicleProfit.rawValue: false,
                 PermissionKey.manageTeam.rawValue: false,
                 PermissionKey.deleteRecords.rawValue: false
             ]

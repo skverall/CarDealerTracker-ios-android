@@ -45,6 +45,8 @@ serve(async (req) => {
       "manage_team",
       "view_leads",
       "delete_records",
+      "view_vehicle_cost",
+      "view_vehicle_profit",
     ])
     const normalizedPermissions: Record<string, boolean> = {}
     if (permissions && typeof permissions === "object" && !Array.isArray(permissions)) {

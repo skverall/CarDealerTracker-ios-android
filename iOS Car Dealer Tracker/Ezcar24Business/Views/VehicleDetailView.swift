@@ -6,8 +6,8 @@
 //
 
 import SwiftUI
-
 import PhotosUI
+import CoreData
 
 struct VehicleDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -1027,6 +1027,8 @@ struct VehicleDetailView: View {
         let existingSale = currentSale(for: vehicle)
         let previousSaleAmount = existingSale?.amount?.decimalValue ?? 0
         let previousAccount = existingSale?.account
+        let previousPurchasePrice = vehicle.purchasePrice?.decimalValue ?? 0
+        let purchaseAccountId = vehicle.purchaseAccountId
         var saleToSync: Sale? = nil
         var accountsToSync: [FinancialAccount] = []
         
@@ -1058,8 +1060,19 @@ struct VehicleDetailView: View {
 
         // Prices & status
         if permissionService.canViewVehicleCost() {
-            let pp = sanitizedDecimal(from: editPurchasePrice) ?? 0
-            vehicle.purchasePrice = NSDecimalNumber(decimal: pp)
+            let newPurchasePrice = sanitizedDecimal(from: editPurchasePrice) ?? 0
+            if newPurchasePrice != previousPurchasePrice,
+               let accountId = purchaseAccountId,
+               let account = fetchAccount(by: accountId) {
+                let delta = newPurchasePrice - previousPurchasePrice
+                if delta != 0 {
+                    let currentBalance = account.balance?.decimalValue ?? 0
+                    account.balance = NSDecimalNumber(decimal: currentBalance - delta)
+                    account.updatedAt = Date()
+                    trackAccount(account)
+                }
+            }
+            vehicle.purchasePrice = NSDecimalNumber(decimal: newPurchasePrice)
         }
         vehicle.status = editStatus
         if editStatus == "sold" {
@@ -1223,6 +1236,13 @@ struct VehicleDetailView: View {
     private func currentSale(for vehicle: Vehicle) -> Sale? {
         let sales = (vehicle.sales as? Set<Sale>)?.filter { $0.deletedAt == nil } ?? []
         return sales.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }.first
+    }
+
+    private func fetchAccount(by id: UUID) -> FinancialAccount? {
+        let request: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        return try? viewContext.fetch(request).first
     }
     
     private func defaultSaleAccount() -> FinancialAccount? {

@@ -423,7 +423,7 @@ final class SessionStore: ObservableObject {
 
         if let dealerId = activeOrganizationId {
             ImageStore.shared.setActiveDealerId(dealerId)
-            PermissionService.shared.configure(client: client)
+            PermissionService.shared.configure(client: client, dealerId: dealerId)
             await PermissionService.shared.fetchPermissions(dealerId: dealerId)
         }
 
@@ -440,6 +440,7 @@ final class SessionStore: ObservableObject {
         CloudSyncManager.shared?.updateContext(PersistenceController.shared.viewContext)
         CloudSyncManager.shared?.refreshLastSyncForCurrentOrg()
         ImageStore.shared.setActiveDealerId(orgId)
+        PermissionService.shared.setActiveDealerId(orgId)
         if persist, let orgId, case .signedIn(let user) = status {
             persistActiveOrganizationId(orgId, for: user.id)
         }
@@ -658,6 +659,7 @@ final class SessionStore: ObservableObject {
         inviteToastMessage = nil
         inviteToastIsError = false
         isAcceptingInvite = false
+        PermissionService.shared.resetSession()
         UserDefaults.standard.removeObject(forKey: passwordRecoveryFlagKey)
         ImageStore.shared.setActiveDealerId(nil)
         // Logout from RevenueCat and clear any cached entitlement state

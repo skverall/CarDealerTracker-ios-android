@@ -538,20 +538,9 @@ private extension DashboardView {
                 }
                 .padding(.vertical, 4)
             } else {
-                 // Non-Financial Summary (Sales/Inv Only)
-                 VStack(spacing: 16) {
-                     HStack {
-                        Text("active_vehicles".localizedString)
-                            .foregroundColor(ColorTheme.secondaryText)
-                        Spacer()
-                        Text("\(viewModel.totalAssetsCount)")
-                            .fontWeight(.bold)
-                            .foregroundColor(ColorTheme.primaryText)
-                    }
-                    .padding()
-                    .cardStyle()
-                 }
-                 .padding(.vertical, 4)
+                // Non-Financial Summary (Sales/Inv Only)
+                 // "Active Vehicles" is redundant with the top card, so we remove it to clean up the UI.
+                 EmptyView()
             }
         }
         .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
@@ -1415,7 +1404,17 @@ private extension Expense {
         let make = vehicle?.make ?? ""
         let model = vehicle?.model ?? ""
         let title = [make, model].filter { !$0.isEmpty }.joined(separator: " ")
-        return title.isEmpty ? "Any Vehicle" : title
+        
+        if !title.isEmpty {
+            return title
+        }
+        
+        // Use the user's name if this is a general expense (no vehicle)
+        if let userName = user?.name?.trimmingCharacters(in: .whitespacesAndNewlines), !userName.isEmpty {
+            return userName
+        }
+        
+        return "Any Vehicle"
     }
 
     var vehicleSubtitle: String {

@@ -374,12 +374,25 @@ struct TeamManagementView: View {
                     canManageTeam: canManageTeam,
                     onEdit: { editingMember = member }
                 )
-                    // Disable delete swipe action for the owner
-                    .deleteDisabled(member.role == "owner" || !canManageTeam)
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                    if canManageTeam && member.role != "owner" {
+                        Button(role: .destructive) {
+                            deleteMember(member)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                }
+                // Disable delete swipe action for the owner
+                .deleteDisabled(member.role == "owner" || !canManageTeam)
             }
             .onDelete(perform: deleteMember)
         }
         .listStyle(.plain)
+        .background(ColorTheme.background)
     }
 
     private var inviteSheet: some View {
@@ -422,6 +435,28 @@ struct TeamManagementView: View {
             await viewModel.fetchTeam(organizationId: orgId)
         }
     }
+
+    private func deleteMember(_ member: TeamMemberResponse) {
+        guard permissionService.can(.manageTeam) else {
+            viewModel.listErrorMessage = "team_manage_permission_denied".localizedString
+            return
+        }
+        guard let index = viewModel.members.firstIndex(where: { $0.id == member.id }) else { return }
+        
+        let orgId = sessionStore.activeOrganizationId
+        withAnimation {
+            viewModel.members.remove(at: index)
+        }
+        
+        Task {
+            if member.status == "invited" {
+                _ = await viewModel.cancelInvite(inviteId: member.user_id, organizationId: orgId)
+            } else {
+                _ = await viewModel.removeMember(userId: member.user_id, organizationId: orgId)
+            }
+            await viewModel.fetchTeam(organizationId: orgId)
+        }
+    }
 }
 
 // Helper wrapper for NavigationStack/AnyView
@@ -451,78 +486,104 @@ struct TeamMemberRow: View {
             ? "permission_badge_custom".localizedString
             : "permission_badge_preset".localizedString
 
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(member.member_email ?? "User")
-                        .font(.headline)
-                        .foregroundColor(ColorTheme.primaryText)
-                    Text(member.role.capitalized)
-                        .font(.caption)
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
-                        .background(roleColor.opacity(0.1))
-                        .cornerRadius(4)
-                }
-                Spacer()
-                if member.status == "invited" {
-                     Text("team_member_pending".localizedString)
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                }
-            }
-
-            Text(PermissionCatalog.permissionSummary(for: member.permissions, role: member.role))
-                .font(.caption2)
-                .foregroundColor(ColorTheme.secondaryText)
-
-            Text(badgeText)
-                .font(.caption2)
-                .foregroundColor(isCustom ? ColorTheme.primary : ColorTheme.secondaryText)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 3)
-                .background((isCustom ? ColorTheme.primary.opacity(0.12) : ColorTheme.secondaryText.opacity(0.12)))
-                .clipShape(Capsule())
+        ZStack {
+            ColorTheme.cardBackground
+                .cornerRadius(16)
+                .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 2)
             
-            // Copy Link Button for Invited Users
-            if member.status == "invited", let token = member.invite_token {
-                Button {
-                    let link = "https://ezcar24.com/accept-invite?token=\(token)"
-                    UIPasteboard.general.string = link
-                    withAnimation {
-                        copied = true
-                    }
-                    
-                    // Reset copied state after delay
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        withAnimation {
-                            copied = false
+            VStack(alignment: .leading, spacing: 14) {
+                // Header Area
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(member.member_email ?? "User")
+                            .font(.headline)
+                            .foregroundColor(ColorTheme.primaryText)
+                        
+                        HStack(spacing: 8) {
+                            // Role Badge
+                            Text(member.role.capitalized)
+                                .font(.system(size: 11, weight: .bold))
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(roleColor.opacity(0.15))
+                                .foregroundColor(roleColor)
+                                .clipShape(Capsule())
+                            
+                            // Access Badge
+                            Text(badgeText)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(ColorTheme.secondaryText)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(ColorTheme.background)
+                                .clipShape(Capsule())
                         }
                     }
-                } label: {
-                    HStack {
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        Text(copied ? "Copied" : "Copy Invite Link")
+                    Spacer()
+                    if member.status == "invited" {
+                        Text("team_member_pending".localizedString.uppercased())
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.orange)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.1))
+                            .cornerRadius(6)
                     }
-                    .font(.caption)
-                    .foregroundColor(.blue)
                 }
-                .buttonStyle(PlainButtonStyle())
-            }
 
-            if canManageTeam && member.role != "owner" {
-                Button {
-                    onEdit()
-                } label: {
-                    Label("team_manage_access".localizedString, systemImage: "slider.horizontal.3")
+                // Summary
+                if !PermissionCatalog.permissionSummary(for: member.permissions, role: member.role).isEmpty {
+                    Text(PermissionCatalog.permissionSummary(for: member.permissions, role: member.role))
                         .font(.caption)
-                        .foregroundColor(ColorTheme.primary)
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .buttonStyle(.plain)
+
+                Divider().opacity(0.5)
+
+                // Actions
+                HStack {
+                    if canManageTeam && member.role != "owner" {
+                        Button {
+                            onEdit()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "slider.horizontal.3")
+                                Text("team_manage_access".localizedString)
+                            }
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(ColorTheme.primary)
+                        }
+                    }
+
+                    Spacer()
+
+                    if member.status == "invited", let token = member.invite_token {
+                        Button {
+                            let link = "https://ezcar24.com/accept-invite?token=\(token)"
+                            UIPasteboard.general.string = link
+                            withAnimation {
+                                copied = true
+                            }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                withAnimation {
+                                    copied = false
+                                }
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                                Text(copied ? "Copied" : "Copy Link")
+                            }
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(copied ? .green : .blue)
+                        }
+                    }
+                }
             }
+            .padding(16)
         }
-        .padding(.vertical, 4)
     }
     
     var roleColor: Color {
@@ -563,10 +624,9 @@ struct InviteMemberSheet: View {
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
                     
-                    Picker("team_role_section_title".localizedString, selection: $selectedRole) {
-                        ForEach(PermissionCatalog.roles, id: \.self) { role in
-                            Text(role.capitalized).tag(role)
-                        }
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("team_role_section_title".localizedString)
+                        RoleSelectionView(selectedRole: $selectedRole)
                     }
 
                     Text(PermissionCatalog.roleSummary(for: selectedRole))
@@ -745,11 +805,7 @@ struct MemberAccessSheet: View {
                 }
 
                 Section(header: Text("team_role_section_title".localizedString)) {
-                    Picker("team_role_section_title".localizedString, selection: $selectedRole) {
-                        ForEach(PermissionCatalog.roles, id: \.self) { role in
-                            Text(role.capitalized).tag(role)
-                        }
-                    }
+                    RoleSelectionView(selectedRole: $selectedRole)
                     Text(PermissionCatalog.roleSummary(for: selectedRole))
                         .font(.footnote)
                         .foregroundColor(.secondary)
@@ -825,19 +881,33 @@ struct PermissionToggleRow: View {
     @Binding var isOn: Bool
 
     var body: some View {
-        Toggle(isOn: $isOn) {
-            HStack(spacing: 12) {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(ColorTheme.primary.opacity(0.1))
+                    .frame(width: 42, height: 42)
                 Image(systemName: systemImage)
+                    .font(.system(size: 20))
                     .foregroundColor(ColorTheme.primary)
-                    .frame(width: 20)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
             }
+            
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(ColorTheme.primaryText)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Spacer()
+            
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
         }
+        .padding(.vertical, 6)
     }
 }
 
@@ -897,6 +967,81 @@ struct CredentialsSheet: View {
                     Button("Done") { dismiss() }
                 }
             }
+        }
+    }
+}
+
+struct RoleSelectionView: View {
+    @Binding var selectedRole: String
+    
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(PermissionCatalog.roles, id: \.self) { role in
+                    RoleCard(role: role, isSelected: selectedRole == role) {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            selectedRole = role
+                        }
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+            .padding(.horizontal, 2)
+        }
+    }
+}
+
+struct RoleCard: View {
+    let role: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Circle()
+                        .fill(roleColor)
+                        .frame(width: 8, height: 8)
+                    Spacer()
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(ColorTheme.primary)
+                            .font(.system(size: 16))
+                    } else {
+                        Image(systemName: "circle")
+                            .foregroundColor(Color.gray.opacity(0.3))
+                            .font(.system(size: 16))
+                    }
+                }
+                
+                Text(role.capitalized)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(ColorTheme.primaryText)
+                    .lineLimit(1)
+            }
+            .padding(12)
+            .frame(width: 110, height: 75)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(ColorTheme.cardBackground)
+                    .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? ColorTheme.primary : Color.clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    var roleColor: Color {
+        switch role {
+        case "owner": return .purple
+        case "admin": return .blue
+        case "sales": return .green
+        case "viewer": return .gray
+        default: return .primary
         }
     }
 }
