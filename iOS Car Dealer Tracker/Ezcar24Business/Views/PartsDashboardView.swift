@@ -36,70 +36,117 @@ struct PartsDashboardView: View {
         _salesViewModel = StateObject(wrappedValue: PartSalesViewModel(context: context))
     }
 
-    @State private var expandedCategories: Set<String> = [] // If empty, assume all expanded or handle logic
+    @State private var expandedCategories: Set<String> = []
     @State private var showFilters = true
 
     // MARK: - Body
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // Section Picker
-                Picker("Section", selection: $selectedSection) {
-                    ForEach(PartsSection.allCases) { section in
-                        Text(section.title).tag(section)
+            ZStack(alignment: .bottomTrailing) {
+                VStack(spacing: 0) {
+                    // Custom Section Picker
+                    customSegmentedControl
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(ColorTheme.background)
+                    
+                    // Search Bar
+                    searchBar
+                        .background(ColorTheme.background)
+                    
+                    // Filters (Only for Inventory currently)
+                    if selectedSection == .inventory {
+                        filtersBar
+                            .background(ColorTheme.background)
+                            .padding(.bottom, 8)
+                    }
+
+                    // Main Content
+                    switch selectedSection {
+                    case .inventory:
+                        inventoryListWithGrouping
+                    case .sales:
+                        salesList
                     }
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(ColorTheme.background)
+                .background(ColorTheme.secondaryBackground.ignoresSafeArea())
                 
-                // Search Bar
-                searchBar
-                    .background(ColorTheme.background)
-                
-                // Filters (Only for Inventory currently)
-                if selectedSection == .inventory {
-                    filtersBar
-                        .background(ColorTheme.background)
-                        .padding(.bottom, 8)
-                }
-
-                // Main Content
-                switch selectedSection {
-                case .inventory:
-                    inventoryListWithGrouping
-                case .sales:
-                    salesList
+                // Floating Action Button (FAB)
+                if hasAnyActions {
+                   floatingActionButton
+                        .padding()
                 }
             }
-            .background(ColorTheme.secondaryBackground.ignoresSafeArea())
             .navigationTitle("parts_tab_title".localizedString)
             .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if hasAnyActions {
-                        Menu {
-                            if permissionService.can(.managePartsInventory) {
-                                Button("parts_add_part".localizedString) { showAddPart = true }
-                                Button("parts_receive_stock".localizedString) { showReceiveStock = true }
-                            }
-                            if permissionService.can(.createPartSale) {
-                                Button("parts_new_sale".localizedString) { showAddSale = true }
-                            }
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(ColorTheme.primary)
-                        }
-                    }
-                }
-            }
         }
         .id(regionSettings.selectedRegion.rawValue)
         .sheet(isPresented: $showAddPart) { NavigationStack { AddPartView() } }
         .sheet(isPresented: $showReceiveStock) { NavigationStack { ReceivePartStockView() } }
         .sheet(isPresented: $showAddSale) { NavigationStack { AddPartSaleView() } }
+    }
+    
+    // MARK: - Custom Segmented Control
+    private var customSegmentedControl: some View {
+        HStack(spacing: 0) {
+            ForEach(PartsSection.allCases) { section in
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedSection = section
+                    }
+                } label: {
+                    Text(section.title)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(selectedSection == section ? ColorTheme.primaryText : ColorTheme.secondaryText)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(
+                            ZStack {
+                                if selectedSection == section {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(ColorTheme.cardBackground)
+                                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
+                                        .matchedGeometryEffect(id: "SEGMENT", in: namespace)
+                                }
+                            }
+                        )
+                }
+            }
+        }
+        .padding(4)
+        .background(ColorTheme.secondaryBackground) // Light gray background for the track
+        .cornerRadius(12)
+    }
+    
+    @Namespace private var namespace
+
+    // MARK: - Floating Action Button
+    private var floatingActionButton: some View {
+        Menu {
+            if permissionService.can(.managePartsInventory) {
+                Button(action: { showAddPart = true }) {
+                    Label("parts_add_part".localizedString, systemImage: "plus.circle")
+                }
+                Button(action: { showReceiveStock = true }) {
+                    Label("parts_receive_stock".localizedString, systemImage: "shippingbox")
+                }
+            }
+            if permissionService.can(.createPartSale) {
+                Button(action: { showAddSale = true }) {
+                    Label("parts_new_sale".localizedString, systemImage: "cart")
+                }
+            }
+        } label: {
+            Image(systemName: "plus")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(width: 56, height: 56)
+                .background(ColorTheme.primary)
+                .clipShape(Circle())
+                .shadow(color: ColorTheme.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+        }
     }
 
     // MARK: - Filters
@@ -127,50 +174,56 @@ struct PartsDashboardView: View {
 
                 // Low Stock Toggle
                 Button {
-                    inventoryViewModel.showLowStockOnly.toggle()
+                    withAnimation {
+                        inventoryViewModel.showLowStockOnly.toggle()
+                    }
                 } label: {
                     filterPill(
                         title: "parts_filter_low_stock".localizedString,
                         icon: "exclamationmark.triangle.fill",
-                        isActive: inventoryViewModel.showLowStockOnly
+                        isActive: inventoryViewModel.showLowStockOnly,
+                        activeColor: .orange
                     )
                 }
 
                 // Clear Filters
                 if inventoryViewModel.selectedCategory != nil || inventoryViewModel.showLowStockOnly {
                     Button {
-                        inventoryViewModel.selectedCategory = nil
-                        inventoryViewModel.showLowStockOnly = false
+                        withAnimation {
+                            inventoryViewModel.selectedCategory = nil
+                            inventoryViewModel.showLowStockOnly = false
+                        }
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "xmark.circle.fill").font(.caption)
                             Text("clear".localizedString).font(.footnote)
                         }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
                         .foregroundColor(ColorTheme.secondaryText)
                         .background(Capsule().fill(Color.gray.opacity(0.1)))
                     }
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
             .padding(.horizontal, 16)
         }
     }
 
-    private func filterPill(title: String, icon: String, isActive: Bool) -> some View {
+    private func filterPill(title: String, icon: String, isActive: Bool, activeColor: Color = ColorTheme.primary) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon).font(.caption)
-            Text(title).font(.footnote).lineLimit(1)
+            Text(title).font(.footnote).fontWeight(.medium).lineLimit(1)
             if !isActive {
                 Image(systemName: "chevron.down").font(.caption2).opacity(0.6)
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .frame(minHeight: 28)
-        .foregroundColor(isActive ? .white : ColorTheme.secondaryText)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .foregroundColor(isActive ? .white : ColorTheme.primaryText)
         .background(
-            Capsule().fill(isActive ? ColorTheme.primary : Color.gray.opacity(0.1))
+            Capsule().fill(isActive ? activeColor : ColorTheme.cardBackground)
+                .shadow(color: isActive ? activeColor.opacity(0.3) : Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
         )
     }
 
@@ -180,11 +233,11 @@ struct PartsDashboardView: View {
             // Summary Stats Section
             Section {
                 VStack(spacing: 16) {
-                    HStack(spacing: 20) {
+                    HStack(spacing: 16) {
                         summaryCard(
                             title: "parts_stats_total_value".localizedString,
                             value: inventoryViewModel.totalValue.asCurrency(),
-                            icon: "scroll",
+                            icon: "scroll.fill",
                             color: .blue
                         )
                         summaryCard(
@@ -201,10 +254,11 @@ struct PartsDashboardView: View {
                         Spacer()
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical, 12)
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
             }
+            .listSectionSeparator(.hidden)
 
             // Grouped Items
             ForEach(groupedParts, id: \.category) { group in
@@ -213,46 +267,58 @@ struct PartsDashboardView: View {
                         EmptyView()
                     } else {
                         ForEach(group.parts) { part in
-                            NavigationLink(destination: PartDetailView(part: part)) {
+                            ZStack {
+                                NavigationLink(destination: PartDetailView(part: part)) {
+                                    EmptyView()
+                                }
+                                .opacity(0) // Hide the chevron
+
                                 PartRow(part: part, canViewCost: permissionService.canViewPartCost())
                             }
                             .listRowSeparator(.hidden)
-                            .listRowBackground(ColorTheme.cardBackground)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
                     }
                 } header: {
                     Button {
-                        if expandedCategories.contains(group.category) {
-                            expandedCategories.remove(group.category)
-                        } else {
-                            expandedCategories.insert(group.category)
+                        withAnimation {
+                            if expandedCategories.contains(group.category) {
+                                expandedCategories.remove(group.category)
+                            } else {
+                                expandedCategories.insert(group.category)
+                            }
                         }
                     } label: {
                         HStack {
                             Text(group.category)
-                                .font(.headline)
+                                .font(.title3)
+                                .fontWeight(.bold)
                                 .foregroundColor(ColorTheme.primaryText)
                             Spacer()
                             Text("\(group.parts.count)")
                                 .font(.subheadline)
+                                .fontWeight(.medium)
                                 .foregroundColor(ColorTheme.secondaryText)
                                 .padding(.horizontal, 8)
-                                .padding(.vertical, 2)
+                                .padding(.vertical, 4)
                                 .background(Color.gray.opacity(0.1))
                                 .cornerRadius(8)
-                            Image(systemName: expandedCategories.contains(group.category) ? "chevron.right" : "chevron.down")
+                            Image(systemName: "chevron.right")
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
+                                .rotationEffect(.degrees(expandedCategories.contains(group.category) ? 0 : 90))
                         }
                         .padding(.vertical, 8)
                     }
                 }
+                .listSectionSeparator(.hidden)
             }
             // Add padding at bottom
             Section {
-                Color.clear.frame(height: 60).listRowBackground(Color.clear)
+                Color.clear.frame(height: 80).listRowBackground(Color.clear)
             }
+            .listSectionSeparator(.hidden)
         }
         .listStyle(.plain)
         .refreshable {
@@ -272,33 +338,35 @@ struct PartsDashboardView: View {
 
     private func summaryCard(title: String, value: String, icon: String, color: Color) -> some View {
         HStack {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: icon)
                         .foregroundColor(color)
+                        .font(.custom("system", size: 18))
                     Text(title)
                         .font(.caption)
+                        .fontWeight(.medium)
                         .foregroundColor(ColorTheme.secondaryText)
                 }
                 Text(value)
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(ColorTheme.primaryText)
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
             }
             Spacer()
         }
-        .padding(12)
+        .padding(16)
         .background(ColorTheme.cardBackground)
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
     }
 
-
-    
     // MARK: - Search Bar
     private var searchBar: some View {
         HStack {
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundColor(ColorTheme.secondaryText)
                 TextField(searchPlaceholder, text: activeSearchText)
@@ -312,13 +380,9 @@ struct PartsDashboardView: View {
                     }
                 }
             }
-            .padding(10)
+            .padding(12)
             .background(ColorTheme.secondaryBackground)
-            .cornerRadius(10)
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-            )
+            .cornerRadius(12)
         }
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
@@ -363,6 +427,10 @@ struct PartsDashboardView: View {
                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
                     .onDelete(perform: deletePartSales)
+                    
+                    Section {
+                         Color.clear.frame(height: 80).listRowBackground(Color.clear)
+                    }
                 }
                 .listStyle(.plain)
                 .refreshable {
@@ -417,7 +485,11 @@ private struct PartRow: View {
                     Text(code)
                         .font(.caption)
                         .fontWeight(.medium)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(ColorTheme.primary.opacity(0.1))
                         .foregroundColor(ColorTheme.primary)
+                        .cornerRadius(4)
                 }
 
                 if let category = part.category, !category.isEmpty {
@@ -435,13 +507,20 @@ private struct PartRow: View {
                     .foregroundColor(ColorTheme.primaryText)
                 if canViewCost {
                     Text(valueText)
-                        .font(.caption)
-                        .foregroundColor(ColorTheme.secondaryText)
+                    .font(.caption)
+                    .foregroundColor(ColorTheme.secondaryText)
                 }
             }
+            
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(ColorTheme.secondaryText)
+                .padding(.leading, 8)
         }
         .padding(16)
-        .cardStyle()
+        .background(ColorTheme.cardBackground)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
 
     private func formatQuantity(_ value: Decimal) -> String {
@@ -489,7 +568,9 @@ private struct PartSaleRow: View {
             }
         }
         .padding(16)
-        .cardStyle()
+        .background(ColorTheme.cardBackground)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
 }
 

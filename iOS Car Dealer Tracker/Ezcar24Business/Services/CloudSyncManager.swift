@@ -2664,6 +2664,7 @@ final class CloudSyncManager: ObservableObject {
 
                 obj.id = p.id
                 obj.name = p.name
+                obj.code = p.code
                 obj.category = p.category
                 obj.notes = p.notes
                 obj.createdAt = p.createdAt
