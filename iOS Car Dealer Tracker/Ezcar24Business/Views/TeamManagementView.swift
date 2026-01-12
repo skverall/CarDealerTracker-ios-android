@@ -444,7 +444,7 @@ struct TeamManagementView: View {
         guard let index = viewModel.members.firstIndex(where: { $0.id == member.id }) else { return }
         
         let orgId = sessionStore.activeOrganizationId
-        withTransaction(Transaction(animation: .default)) {
+        _ = withTransaction(Transaction(animation: .default)) {
             viewModel.members.remove(at: index)
         }
         

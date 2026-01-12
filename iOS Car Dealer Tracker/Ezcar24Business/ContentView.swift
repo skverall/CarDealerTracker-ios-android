@@ -56,6 +56,26 @@ struct ContentView: View {
                 Group {
                     if shouldGatePermissions {
                         if permissionService.didLoad {
+                            if permissionService.can(.viewPartsInventory) {
+                                PartsDashboardView()
+                            } else {
+                                RestrictedAccessView(title: "parts_tab_title".localizedString)
+                            }
+                        } else {
+                            PermissionLoadingView(title: "parts_tab_title".localizedString)
+                        }
+                    } else {
+                        PartsDashboardView()
+                    }
+                }
+                .tabItem {
+                    Label("parts_tab_title".localizedString, systemImage: "shippingbox")
+                }
+                .tag(2)
+
+                Group {
+                    if shouldGatePermissions {
+                        if permissionService.didLoad {
                         if permissionService.can(.viewExpenses) {
                             DealerExpenseDashboardView()
                         } else {
@@ -71,7 +91,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("expenses".localizedString, systemImage: "creditcard")
                 }
-                .tag(2)
+                .tag(3)
 
                 Group {
                     if shouldGatePermissions {
@@ -91,7 +111,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("sales".localizedString, systemImage: "dollarsign.circle.fill")
                 }
-                .tag(3)
+                .tag(4)
 
                 Group {
                     if shouldGatePermissions {
@@ -111,7 +131,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("clients".localizedString, systemImage: "person.2")
                 }
-                .tag(4)
+                .tag(5)
             }
             .tint(ColorTheme.dealerGreen)
 

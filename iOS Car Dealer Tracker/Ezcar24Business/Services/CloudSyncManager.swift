@@ -110,7 +110,11 @@ final class CloudSyncManager: ObservableObject {
                 sales: filteredSnapshot.sales,
                 debts: filteredSnapshot.debts,
                 debtPayments: filteredSnapshot.debtPayments,
-                clients: filteredSnapshot.clients
+                clients: filteredSnapshot.clients,
+                parts: filteredSnapshot.parts,
+                partBatches: filteredSnapshot.partBatches,
+                partSales: filteredSnapshot.partSales,
+                partSaleLineItems: filteredSnapshot.partSaleLineItems
             )
             
             try await bgContext.perform {
@@ -263,6 +267,30 @@ final class CloudSyncManager: ObservableObject {
                 } else if let remote = try? decoder.decode(RemoteDebtPayment.self, from: item.payload) {
                     protect(.debtPayment, id: remote.id)
                 }
+            case .part:
+                if item.operation == .delete {
+                    if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.part, id: id) }
+                } else if let remote = try? decoder.decode(RemotePart.self, from: item.payload) {
+                    protect(.part, id: remote.id)
+                }
+            case .partBatch:
+                if item.operation == .delete {
+                    if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.partBatch, id: id) }
+                } else if let remote = try? decoder.decode(RemotePartBatch.self, from: item.payload) {
+                    protect(.partBatch, id: remote.id)
+                }
+            case .partSale:
+                if item.operation == .delete {
+                    if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.partSale, id: id) }
+                } else if let remote = try? decoder.decode(RemotePartSale.self, from: item.payload) {
+                    protect(.partSale, id: remote.id)
+                }
+            case .partSaleLineItem:
+                if item.operation == .delete {
+                    if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.partSaleLineItem, id: id) }
+                } else if let remote = try? decoder.decode(RemotePartSaleLineItem.self, from: item.payload) {
+                    protect(.partSaleLineItem, id: remote.id)
+                }
             }
         }
 
@@ -281,7 +309,9 @@ final class CloudSyncManager: ObservableObject {
                             !snapshot.sales.isEmpty || !snapshot.debts.isEmpty ||
                             !snapshot.debtPayments.isEmpty || !snapshot.clients.isEmpty ||
                             !snapshot.users.isEmpty || !snapshot.accounts.isEmpty ||
-                            !snapshot.accountTransactions.isEmpty || !snapshot.templates.isEmpty
+                            !snapshot.accountTransactions.isEmpty || !snapshot.templates.isEmpty ||
+                            !snapshot.parts.isEmpty || !snapshot.partBatches.isEmpty ||
+                            !snapshot.partSales.isEmpty || !snapshot.partSaleLineItems.isEmpty
 
             guard hasChanges else {
                 setLastSyncTimestamp(Date(), for: dealerId)
@@ -302,7 +332,11 @@ final class CloudSyncManager: ObservableObject {
                     .user: Set(snapshot.users.map { $0.id }),
                     .account: Set(snapshot.accounts.map { $0.id }),
                     .accountTransaction: Set(snapshot.accountTransactions.map { $0.id }),
-                    .template: Set(snapshot.templates.map { $0.id })
+                    .template: Set(snapshot.templates.map { $0.id }),
+                    .part: Set(snapshot.parts.map { $0.id }),
+                    .partBatch: Set(snapshot.partBatches.map { $0.id }),
+                    .partSale: Set(snapshot.partSales.map { $0.id }),
+                    .partSaleLineItem: Set(snapshot.partSaleLineItems.map { $0.id })
                 ],
                 protectedIds: protectedIds
             ) : nil
@@ -405,6 +439,10 @@ final class CloudSyncManager: ObservableObject {
                 .vehicle: count("Vehicle"),
                 .expense: count("Expense"),
                 .sale: count("Sale"),
+                .part: count("Part"),
+                .partBatch: count("PartBatch"),
+                .partSale: count("PartSale"),
+                .partSaleLineItem: count("PartSaleLineItem"),
                 .debt: count("Debt"),
                 .debtPayment: count("DebtPayment"),
                 .client: count("Client"),
@@ -428,6 +466,10 @@ final class CloudSyncManager: ObservableObject {
                 .vehicle: countActive(snapshot.vehicles) { $0.deletedAt },
                 .expense: countActive(snapshot.expenses) { $0.deletedAt },
                 .sale: countActive(snapshot.sales) { $0.deletedAt },
+                .part: countActive(snapshot.parts) { $0.deletedAt },
+                .partBatch: countActive(snapshot.partBatches) { $0.deletedAt },
+                .partSale: countActive(snapshot.partSales) { $0.deletedAt },
+                .partSaleLineItem: countActive(snapshot.partSaleLineItems) { $0.deletedAt },
                 .debt: countActive(snapshot.debts) { $0.deletedAt },
                 .debtPayment: countActive(snapshot.debtPayments) { $0.deletedAt },
                 .client: countActive(snapshot.clients) { $0.deletedAt },
@@ -690,6 +732,10 @@ final class CloudSyncManager: ObservableObject {
                         case .template: return "sync_templates"
                         case .debt: return "sync_debts"
                         case .debtPayment: return "sync_debt_payments"
+                        case .part: return "sync_parts"
+                        case .partBatch: return "sync_part_batches"
+                        case .partSale: return "sync_part_sales"
+                        case .partSaleLineItem: return "sync_part_sale_line_items"
                         }
                     case .delete:
                         switch item.entityType {
@@ -703,6 +749,10 @@ final class CloudSyncManager: ObservableObject {
                         case .template: return "delete_crm_expense_templates"
                         case .debt: return "delete_crm_debts"
                         case .debtPayment: return "delete_crm_debt_payments"
+                        case .part: return "delete_crm_parts"
+                        case .partBatch: return "delete_crm_part_batches"
+                        case .partSale: return "delete_crm_part_sales"
+                        case .partSaleLineItem: return "delete_crm_part_sale_line_items"
                         }
                     }
                 }()
@@ -724,6 +774,10 @@ final class CloudSyncManager: ObservableObject {
                         case .template: return (try? decoder.decode(RemoteExpenseTemplate.self, from: item.payload))?.id
                         case .debt: return (try? decoder.decode(RemoteDebt.self, from: item.payload))?.id
                         case .debtPayment: return (try? decoder.decode(RemoteDebtPayment.self, from: item.payload))?.id
+                        case .part: return (try? decoder.decode(RemotePart.self, from: item.payload))?.id
+                        case .partBatch: return (try? decoder.decode(RemotePartBatch.self, from: item.payload))?.id
+                        case .partSale: return (try? decoder.decode(RemotePartSale.self, from: item.payload))?.id
+                        case .partSaleLineItem: return (try? decoder.decode(RemotePartSaleLineItem.self, from: item.payload))?.id
                         }
                     }
                 }()
@@ -782,6 +836,14 @@ final class CloudSyncManager: ObservableObject {
             rpcName = "delete_crm_debts"
         case .debtPayment:
             rpcName = "delete_crm_debt_payments"
+        case .part:
+            rpcName = "delete_crm_parts"
+        case .partBatch:
+            rpcName = "delete_crm_part_batches"
+        case .partSale:
+            rpcName = "delete_crm_part_sales"
+        case .partSaleLineItem:
+            rpcName = "delete_crm_part_sale_line_items"
         }
         
         try await writeClient
@@ -854,6 +916,26 @@ final class CloudSyncManager: ObservableObject {
                 await deleteDebtPayment(payment, dealerId: dealerId)
                 return
             }
+        case .part:
+            if let part = fetchLocalEntity(Part.self, id: id) {
+                await deletePart(part, dealerId: dealerId)
+                return
+            }
+        case .partBatch:
+            if let batch = fetchLocalEntity(PartBatch.self, id: id) {
+                await deletePartBatch(batch, dealerId: dealerId)
+                return
+            }
+        case .partSale:
+            if let sale = fetchLocalEntity(PartSale.self, id: id) {
+                await deletePartSale(sale, dealerId: dealerId)
+                return
+            }
+        case .partSaleLineItem:
+            if let item = fetchLocalEntity(PartSaleLineItem.self, id: id) {
+                await deletePartSaleLineItem(item, dealerId: dealerId)
+                return
+            }
         }
 
         try await performDeleteRPC(for: entity, id: id, dealerId: dealerId)
@@ -899,6 +981,18 @@ final class CloudSyncManager: ObservableObject {
         case .debtPayment:
             let remote = try decoder.decode(RemoteDebtPayment.self, from: item.payload)
             try await writeClient.rpc("sync_debt_payments", params: ["payload": [remote]]).execute()
+        case .part:
+            let remote = try decoder.decode(RemotePart.self, from: item.payload)
+            try await writeClient.rpc("sync_parts", params: ["payload": [remote]]).execute()
+        case .partBatch:
+            let remote = try decoder.decode(RemotePartBatch.self, from: item.payload)
+            try await writeClient.rpc("sync_part_batches", params: ["payload": [remote]]).execute()
+        case .partSale:
+            let remote = try decoder.decode(RemotePartSale.self, from: item.payload)
+            try await writeClient.rpc("sync_part_sales", params: ["payload": [remote]]).execute()
+        case .partSaleLineItem:
+            let remote = try decoder.decode(RemotePartSaleLineItem.self, from: item.payload)
+            try await writeClient.rpc("sync_part_sale_line_items", params: ["payload": [remote]]).execute()
         }
     }
 
@@ -1157,6 +1251,253 @@ final class CloudSyncManager: ObservableObject {
             )
             showError("Deleted locally. Will sync when online.")
             await enqueueDelete(.sale, id: id, dealerId: dealerId)
+        }
+    }
+
+    func upsertPart(_ part: Part, dealerId: UUID) async {
+        guard let remote = makeRemotePart(from: part, dealerId: dealerId) else { return }
+
+            do {
+                try await writeClient
+                    .rpc("sync_parts", params: SyncPayload<RemotePart>(payload: [remote]))
+                    .execute()
+                await processOfflineQueue(dealerId: dealerId)
+            } catch {
+                print("CloudSyncManager upsertPart error: \(error)")
+                await logSyncError(
+                    rpc: "sync_parts",
+                    dealerId: dealerId,
+                    entityType: .part,
+                    payloadId: remote.id,
+                    error: error
+                )
+                showError(savedLocallySyncFailureMessage(for: error))
+                if let data = try? JSONEncoder().encode(remote) {
+                    let item = SyncQueueItem(entityType: .part, operation: .upsert, payload: data, dealerId: dealerId)
+                    await SyncQueueManager.shared.enqueue(item: item)
+                }
+            }
+    }
+
+    func deletePart(_ part: Part, dealerId: UUID) async {
+        part.deletedAt = Date()
+        part.updatedAt = Date()
+        guard let remote = makeRemotePart(from: part, dealerId: dealerId) else { return }
+
+        do {
+            try await writeClient
+                .rpc("sync_parts", params: SyncPayload<RemotePart>(payload: [remote]))
+                .execute()
+            await processOfflineQueue(dealerId: dealerId)
+        } catch {
+            await logSyncError(
+                rpc: "sync_parts",
+                dealerId: dealerId,
+                entityType: .part,
+                payloadId: remote.id,
+                extraContext: ["operation": "delete"],
+                error: error
+            )
+            if let data = try? JSONEncoder().encode(remote) {
+                let item = SyncQueueItem(entityType: .part, operation: .upsert, payload: data, dealerId: dealerId)
+                await SyncQueueManager.shared.enqueue(item: item)
+            }
+        }
+    }
+
+    func upsertPartBatch(_ batch: PartBatch, dealerId: UUID) async {
+        guard let remote = makeRemotePartBatch(from: batch, dealerId: dealerId) else { return }
+
+            do {
+                try await writeClient
+                    .rpc("sync_part_batches", params: SyncPayload<RemotePartBatch>(payload: [remote]))
+                    .execute()
+                await processOfflineQueue(dealerId: dealerId)
+            } catch {
+                print("CloudSyncManager upsertPartBatch error: \(error)")
+                await logSyncError(
+                    rpc: "sync_part_batches",
+                    dealerId: dealerId,
+                    entityType: .partBatch,
+                    payloadId: remote.id,
+                    error: error
+                )
+                showError(savedLocallySyncFailureMessage(for: error))
+                if let data = try? JSONEncoder().encode(remote) {
+                    let item = SyncQueueItem(entityType: .partBatch, operation: .upsert, payload: data, dealerId: dealerId)
+                    await SyncQueueManager.shared.enqueue(item: item)
+                }
+            }
+    }
+
+    func deletePartBatch(_ batch: PartBatch, dealerId: UUID) async {
+        batch.deletedAt = Date()
+        batch.updatedAt = Date()
+        guard let remote = makeRemotePartBatch(from: batch, dealerId: dealerId) else { return }
+
+        do {
+            try await writeClient
+                .rpc("sync_part_batches", params: SyncPayload<RemotePartBatch>(payload: [remote]))
+                .execute()
+            await processOfflineQueue(dealerId: dealerId)
+        } catch {
+            await logSyncError(
+                rpc: "sync_part_batches",
+                dealerId: dealerId,
+                entityType: .partBatch,
+                payloadId: remote.id,
+                extraContext: ["operation": "delete"],
+                error: error
+            )
+            if let data = try? JSONEncoder().encode(remote) {
+                let item = SyncQueueItem(entityType: .partBatch, operation: .upsert, payload: data, dealerId: dealerId)
+                await SyncQueueManager.shared.enqueue(item: item)
+            }
+        }
+    }
+
+    func upsertPartSale(_ sale: PartSale, dealerId: UUID) async {
+        guard let remote = makeRemotePartSale(from: sale, dealerId: dealerId) else { return }
+
+        Task {
+            do {
+                try await writeClient
+                    .rpc("sync_part_sales", params: SyncPayload<RemotePartSale>(payload: [remote]))
+                    .execute()
+                await processOfflineQueue(dealerId: dealerId)
+            } catch {
+                print("CloudSyncManager upsertPartSale error: \(error)")
+                await logSyncError(
+                    rpc: "sync_part_sales",
+                    dealerId: dealerId,
+                    entityType: .partSale,
+                    payloadId: remote.id,
+                    error: error
+                )
+                showError(savedLocallySyncFailureMessage(for: error))
+                if let data = try? JSONEncoder().encode(remote) {
+                    let item = SyncQueueItem(entityType: .partSale, operation: .upsert, payload: data, dealerId: dealerId)
+                    await SyncQueueManager.shared.enqueue(item: item)
+                }
+            }
+        }
+    }
+
+    func deletePartSale(_ sale: PartSale, dealerId: UUID) async {
+        let now = Date()
+        sale.deletedAt = now
+        sale.updatedAt = now
+
+        let items = (sale.lineItems as? Set<PartSaleLineItem>) ?? []
+        for item in items {
+            item.deletedAt = now
+            item.updatedAt = now
+        }
+
+        guard let remote = makeRemotePartSale(from: sale, dealerId: dealerId) else { return }
+        let itemPayload = items.compactMap { makeRemotePartSaleLineItem(from: $0, dealerId: dealerId) }
+
+        do {
+            try await writeClient
+                .rpc("sync_part_sales", params: SyncPayload<RemotePartSale>(payload: [remote]))
+                .execute()
+            if !itemPayload.isEmpty {
+                try await writeClient
+                    .rpc("sync_part_sale_line_items", params: SyncPayload<RemotePartSaleLineItem>(payload: itemPayload))
+                    .execute()
+            }
+            await processOfflineQueue(dealerId: dealerId)
+        } catch {
+            await logSyncError(
+                rpc: "sync_part_sales",
+                dealerId: dealerId,
+                entityType: .partSale,
+                payloadId: remote.id,
+                extraContext: ["operation": "delete"],
+                error: error
+            )
+            if let data = try? JSONEncoder().encode(remote) {
+                let item = SyncQueueItem(entityType: .partSale, operation: .upsert, payload: data, dealerId: dealerId)
+                await SyncQueueManager.shared.enqueue(item: item)
+            }
+            if !itemPayload.isEmpty {
+                for payload in itemPayload {
+                    if let data = try? JSONEncoder().encode(payload) {
+                        let item = SyncQueueItem(entityType: .partSaleLineItem, operation: .upsert, payload: data, dealerId: dealerId)
+                        await SyncQueueManager.shared.enqueue(item: item)
+                    }
+                }
+            }
+        }
+    }
+
+    func deletePartSale(id: UUID, dealerId: UUID) async {
+        do {
+            try await deleteEntityById(id, dealerId: dealerId, entity: .partSale)
+        } catch {
+            print("CloudSyncManager deletePartSale(id:) error: \(error)")
+            await logSyncError(
+                rpc: "delete_crm_part_sales",
+                dealerId: dealerId,
+                entityType: .partSale,
+                payloadId: id,
+                error: error
+            )
+            showError("Deleted locally. Will sync when online.")
+            await enqueueDelete(.partSale, id: id, dealerId: dealerId)
+        }
+    }
+
+    func upsertPartSaleLineItem(_ item: PartSaleLineItem, dealerId: UUID) async {
+        guard let remote = makeRemotePartSaleLineItem(from: item, dealerId: dealerId) else { return }
+
+        Task {
+            do {
+                try await writeClient
+                    .rpc("sync_part_sale_line_items", params: SyncPayload<RemotePartSaleLineItem>(payload: [remote]))
+                    .execute()
+                await processOfflineQueue(dealerId: dealerId)
+            } catch {
+                print("CloudSyncManager upsertPartSaleLineItem error: \(error)")
+                await logSyncError(
+                    rpc: "sync_part_sale_line_items",
+                    dealerId: dealerId,
+                    entityType: .partSaleLineItem,
+                    payloadId: remote.id,
+                    error: error
+                )
+                showError(savedLocallySyncFailureMessage(for: error))
+                if let data = try? JSONEncoder().encode(remote) {
+                    let item = SyncQueueItem(entityType: .partSaleLineItem, operation: .upsert, payload: data, dealerId: dealerId)
+                    await SyncQueueManager.shared.enqueue(item: item)
+                }
+            }
+        }
+    }
+
+    func deletePartSaleLineItem(_ item: PartSaleLineItem, dealerId: UUID) async {
+        item.deletedAt = Date()
+        item.updatedAt = Date()
+        guard let remote = makeRemotePartSaleLineItem(from: item, dealerId: dealerId) else { return }
+
+        do {
+            try await writeClient
+                .rpc("sync_part_sale_line_items", params: SyncPayload<RemotePartSaleLineItem>(payload: [remote]))
+                .execute()
+            await processOfflineQueue(dealerId: dealerId)
+        } catch {
+            await logSyncError(
+                rpc: "sync_part_sale_line_items",
+                dealerId: dealerId,
+                entityType: .partSaleLineItem,
+                payloadId: remote.id,
+                extraContext: ["operation": "delete"],
+                error: error
+            )
+            if let data = try? JSONEncoder().encode(remote) {
+                let item = SyncQueueItem(entityType: .partSaleLineItem, operation: .upsert, payload: data, dealerId: dealerId)
+                await SyncQueueManager.shared.enqueue(item: item)
+            }
         }
     }
 
@@ -1466,7 +1807,6 @@ final class CloudSyncManager: ObservableObject {
     func upsertFinancialAccount(_ account: FinancialAccount, dealerId: UUID) async {
         guard let remote = makeRemoteFinancialAccount(from: account, dealerId: dealerId) else { return }
         
-        Task {
             do {
                 try await writeClient
                     .rpc("sync_accounts", params: SyncPayload<RemoteFinancialAccount>(payload: [remote]))
@@ -1487,7 +1827,6 @@ final class CloudSyncManager: ObservableObject {
                     await SyncQueueManager.shared.enqueue(item: item)
                 }
             }
-        }
     }
 
     func upsertAccountTransaction(_ transaction: AccountTransaction, dealerId: UUID) async {
@@ -1796,6 +2135,10 @@ final class CloudSyncManager: ObservableObject {
         let accountIds = skippingIds[.account] ?? []
         let accountTransactionIds = skippingIds[.accountTransaction] ?? []
         let templateIds = skippingIds[.template] ?? []
+        let partIds = skippingIds[.part] ?? []
+        let partBatchIds = skippingIds[.partBatch] ?? []
+        let partSaleIds = skippingIds[.partSale] ?? []
+        let partSaleLineItemIds = skippingIds[.partSaleLineItem] ?? []
 
         let filteredVehicles = snapshot.vehicles.filter { !vehicleIds.contains($0.id) }
         
@@ -1837,6 +2180,21 @@ final class CloudSyncManager: ObservableObject {
         }
         let filteredTemplates = snapshot.templates.filter { !templateIds.contains($0.id) }
 
+        let filteredParts = snapshot.parts.filter { !partIds.contains($0.id) }
+        let filteredPartBatches = snapshot.partBatches.filter { batch in
+            if partBatchIds.contains(batch.id) { return false }
+            if partIds.contains(batch.partId) { return false }
+            return true
+        }
+        let filteredPartSales = snapshot.partSales.filter { !partSaleIds.contains($0.id) }
+        let filteredPartSaleLineItems = snapshot.partSaleLineItems.filter { item in
+            if partSaleLineItemIds.contains(item.id) { return false }
+            if partSaleIds.contains(item.saleId) { return false }
+            if partIds.contains(item.partId) { return false }
+            if partBatchIds.contains(item.batchId) { return false }
+            return true
+        }
+
         return RemoteSnapshot(
             users: filteredUsers,
             accounts: filteredAccounts,
@@ -1847,7 +2205,11 @@ final class CloudSyncManager: ObservableObject {
             sales: filteredSales,
             debts: filteredDebts,
             debtPayments: filteredDebtPayments,
-            clients: filteredClients
+            clients: filteredClients,
+            parts: filteredParts,
+            partBatches: filteredPartBatches,
+            partSales: filteredPartSales,
+            partSaleLineItems: filteredPartSaleLineItems
         )
     }
 
@@ -1986,6 +2348,27 @@ final class CloudSyncManager: ObservableObject {
                 guard let accountId = vehicle.purchaseAccountId else { continue }
                 let amount = vehicle.purchasePrice?.decimalValue ?? 0
                 add(accountId, -amount)
+            }
+        }
+
+        let partBatchRequest: NSFetchRequest<PartBatch> = PartBatch.fetchRequest()
+        partBatchRequest.predicate = NSPredicate(format: "deletedAt == nil AND purchaseAccountId != nil")
+        if let batches = try? context.fetch(partBatchRequest) {
+            for batch in batches {
+                guard let accountId = batch.purchaseAccountId else { continue }
+                let quantity = batch.quantityReceived?.decimalValue ?? 0
+                let unitCost = batch.unitCost?.decimalValue ?? 0
+                add(accountId, -(quantity * unitCost))
+            }
+        }
+
+        let partSaleRequest: NSFetchRequest<PartSale> = PartSale.fetchRequest()
+        partSaleRequest.predicate = NSPredicate(format: "deletedAt == nil AND account != nil")
+        if let partSales = try? context.fetch(partSaleRequest) {
+            for sale in partSales {
+                guard let accountId = sale.account?.id else { continue }
+                let amount = sale.amount?.decimalValue ?? 0
+                add(accountId, amount)
             }
         }
 
@@ -2264,7 +2647,137 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 6. Expenses
+            // 6. Parts
+            let partIds = snapshot.parts.map { $0.id }
+            var existingParts: [UUID: Part] = fetchExisting(entityName: "Part", ids: partIds)
+            for p in snapshot.parts {
+                let obj = existingParts[p.id] ?? Part(context: context)
+
+                if p.deletedAt != nil {
+                    context.delete(obj)
+                    continue
+                }
+
+                if let localUpdated = obj.updatedAt, localUpdated > p.updatedAt {
+                    continue
+                }
+
+                obj.id = p.id
+                obj.name = p.name
+                obj.category = p.category
+                obj.notes = p.notes
+                obj.createdAt = p.createdAt
+                obj.updatedAt = p.updatedAt
+                obj.deletedAt = nil
+                existingParts[p.id] = obj
+            }
+
+            // 7. Part Batches
+            let partBatchIds = snapshot.partBatches.map { $0.id }
+            var existingPartBatches: [UUID: PartBatch] = fetchExisting(entityName: "PartBatch", ids: partBatchIds)
+            for b in snapshot.partBatches {
+                guard let part = existingParts[b.partId] else {
+                    print("Skipping PartBatch \(b.id) - part \(b.partId) not found")
+                    continue
+                }
+
+                let obj = existingPartBatches[b.id] ?? PartBatch(context: context)
+
+                if b.deletedAt != nil {
+                    context.delete(obj)
+                    continue
+                }
+
+                if let localUpdated = obj.updatedAt, localUpdated > b.updatedAt {
+                    continue
+                }
+
+                obj.id = b.id
+                obj.batchLabel = b.batchLabel
+                obj.quantityReceived = NSDecimalNumber(decimal: b.quantityReceived)
+                obj.quantityRemaining = NSDecimalNumber(decimal: b.quantityRemaining)
+                obj.unitCost = NSDecimalNumber(decimal: b.unitCost)
+                if let d = CloudSyncManager.parseRemoteDateOnly(b.purchaseDate) {
+                    obj.purchaseDate = d
+                } else {
+                    obj.purchaseDate = b.createdAt
+                }
+                obj.purchaseAccountId = b.purchaseAccountId
+                obj.notes = b.notes
+                obj.createdAt = b.createdAt
+                obj.updatedAt = b.updatedAt
+                obj.deletedAt = nil
+                obj.part = part
+                existingPartBatches[b.id] = obj
+            }
+
+            // 8. Part Sales
+            let partSaleIds = snapshot.partSales.map { $0.id }
+            var existingPartSales: [UUID: PartSale] = fetchExisting(entityName: "PartSale", ids: partSaleIds)
+            for s in snapshot.partSales {
+                let obj = existingPartSales[s.id] ?? PartSale(context: context)
+
+                if s.deletedAt != nil {
+                    context.delete(obj)
+                    continue
+                }
+
+                if let localUpdated = obj.updatedAt, localUpdated > s.updatedAt {
+                    continue
+                }
+
+                obj.id = s.id
+                obj.amount = NSDecimalNumber(decimal: s.amount)
+                if let d = CloudSyncManager.parseDateAndTime(s.date) ?? CloudSyncManager.parseDateOnly(s.date) {
+                    obj.date = d
+                } else {
+                    obj.date = s.createdAt
+                }
+                obj.buyerName = s.buyerName
+                obj.buyerPhone = s.buyerPhone
+                obj.paymentMethod = s.paymentMethod
+                obj.notes = s.notes
+                obj.createdAt = s.createdAt
+                obj.updatedAt = s.updatedAt
+                obj.deletedAt = nil
+                existingPartSales[s.id] = obj
+            }
+
+            // 9. Part Sale Line Items
+            let partSaleLineItemIds = snapshot.partSaleLineItems.map { $0.id }
+            let existingPartSaleLineItems: [UUID: PartSaleLineItem] = fetchExisting(entityName: "PartSaleLineItem", ids: partSaleLineItemIds)
+            for item in snapshot.partSaleLineItems {
+                guard let sale = existingPartSales[item.saleId],
+                      let part = existingParts[item.partId],
+                      let batch = existingPartBatches[item.batchId] else {
+                    print("Skipping PartSaleLineItem \(item.id) - missing sale/part/batch")
+                    continue
+                }
+
+                let obj = existingPartSaleLineItems[item.id] ?? PartSaleLineItem(context: context)
+
+                if item.deletedAt != nil {
+                    context.delete(obj)
+                    continue
+                }
+
+                if let localUpdated = obj.updatedAt, localUpdated > item.updatedAt {
+                    continue
+                }
+
+                obj.id = item.id
+                obj.quantity = NSDecimalNumber(decimal: item.quantity)
+                obj.unitPrice = NSDecimalNumber(decimal: item.unitPrice)
+                obj.unitCost = NSDecimalNumber(decimal: item.unitCost)
+                obj.createdAt = item.createdAt
+                obj.updatedAt = item.updatedAt
+                obj.deletedAt = nil
+                obj.sale = sale
+                obj.part = part
+                obj.batch = batch
+            }
+
+            // 10. Expenses
             let expenseIds = snapshot.expenses.map { $0.id }
             let existingExpenses: [UUID: Expense] = fetchExisting(entityName: "Expense", ids: expenseIds)
             for e in snapshot.expenses {
@@ -2295,7 +2808,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 7. Sales
+            // 11. Sales
             let saleIds = snapshot.sales.map { $0.id }
             let existingSales: [UUID: Sale] = fetchExisting(entityName: "Sale", ids: saleIds)
             for s in snapshot.sales {
@@ -2327,7 +2840,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 8. Account Transactions
+            // 12. Account Transactions
             let accountTransactionIds = snapshot.accountTransactions.map { $0.id }
             let existingAccountTransactions: [UUID: AccountTransaction] = fetchExisting(entityName: "AccountTransaction", ids: accountTransactionIds)
             for t in snapshot.accountTransactions {
@@ -2356,7 +2869,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 9. Debts
+            // 13. Debts
             let debtIds = snapshot.debts.map { $0.id }
             let existingDebts: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: debtIds)
             for d in snapshot.debts {
@@ -2387,7 +2900,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 10. Debt Payments
+            // 14. Debt Payments
             // Build debt map first so we can link the required relationship immediately
             let allDebtIdsForPayments = Set(snapshot.debts.map { $0.id } + snapshot.debtPayments.map { $0.debtId })
             let debtMapForPayments: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: Array(allDebtIdsForPayments))
@@ -2442,8 +2955,11 @@ final class CloudSyncManager: ObservableObject {
             // Re-fetch maps to include newly created objects
             let allVehicles: [UUID: Vehicle] = fetchExisting(entityName: "Vehicle", ids: snapshot.vehicles.map { $0.id } + snapshot.clients.compactMap { $0.vehicleId } + snapshot.sales.map { $0.vehicleId } + snapshot.expenses.compactMap { $0.vehicleId })
             let allUsers: [UUID: User] = fetchExisting(entityName: "User", ids: snapshot.users.map { $0.id } + snapshot.expenses.compactMap { $0.userId })
-            let allAccounts: [UUID: FinancialAccount] = fetchExisting(entityName: "FinancialAccount", ids: snapshot.accounts.map { $0.id } + snapshot.expenses.compactMap { $0.accountId } + snapshot.debtPayments.compactMap { $0.accountId } + snapshot.accountTransactions.map { $0.accountId } + snapshot.sales.compactMap { $0.accountId })
+            let allAccounts: [UUID: FinancialAccount] = fetchExisting(entityName: "FinancialAccount", ids: snapshot.accounts.map { $0.id } + snapshot.expenses.compactMap { $0.accountId } + snapshot.debtPayments.compactMap { $0.accountId } + snapshot.accountTransactions.map { $0.accountId } + snapshot.sales.compactMap { $0.accountId } + snapshot.partSales.compactMap { $0.accountId })
             let allDebts: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: snapshot.debts.map { $0.id } + snapshot.debtPayments.map { $0.debtId })
+            let allParts: [UUID: Part] = fetchExisting(entityName: "Part", ids: snapshot.parts.map { $0.id } + snapshot.partBatches.map { $0.partId } + snapshot.partSaleLineItems.map { $0.partId })
+            let allPartBatches: [UUID: PartBatch] = fetchExisting(entityName: "PartBatch", ids: snapshot.partBatches.map { $0.id } + snapshot.partSaleLineItems.map { $0.batchId })
+            let allPartSales: [UUID: PartSale] = fetchExisting(entityName: "PartSale", ids: snapshot.partSales.map { $0.id } + snapshot.partSaleLineItems.map { $0.saleId })
             
             // Link Clients -> Vehicles
             for c in snapshot.clients {
@@ -2472,6 +2988,26 @@ final class CloudSyncManager: ObservableObject {
                     } else {
                         sale.account = nil
                     }
+                }
+            }
+
+            // Link Part Sales -> Account
+            for s in snapshot.partSales {
+                if let sale = existingPartSales[s.id] ?? (try? context.fetch(PartSale.fetchRequest()).first(where: { $0.id == s.id })) {
+                    if let aId = s.accountId {
+                        sale.account = allAccounts[aId]
+                    } else {
+                        sale.account = nil
+                    }
+                }
+            }
+
+            // Link Part Sale Line Items -> Sale, Part, Batch
+            for item in snapshot.partSaleLineItems {
+                if let lineItem = existingPartSaleLineItems[item.id] ?? (try? context.fetch(PartSaleLineItem.fetchRequest()).first(where: { $0.id == item.id })) {
+                    lineItem.sale = allPartSales[item.saleId]
+                    lineItem.part = allParts[item.partId]
+                    lineItem.batch = allPartBatches[item.batchId]
                 }
             }
 
@@ -2527,6 +3063,10 @@ final class CloudSyncManager: ObservableObject {
                 cleanupEntity(entityName: "User", type: .user)
                 cleanupEntity(entityName: "FinancialAccount", type: .account)
                 cleanupEntity(entityName: "ExpenseTemplate", type: .template)
+                cleanupEntity(entityName: "Part", type: .part)
+                cleanupEntity(entityName: "PartBatch", type: .partBatch)
+                cleanupEntity(entityName: "PartSale", type: .partSale)
+                cleanupEntity(entityName: "PartSaleLineItem", type: .partSaleLineItem)
             }
 
             if context.hasChanges {
@@ -2620,6 +3160,10 @@ final class CloudSyncManager: ObservableObject {
             let debtPaymentRequest: NSFetchRequest<DebtPayment> = DebtPayment.fetchRequest()
             let clientRequest: NSFetchRequest<Client> = Client.fetchRequest()
             let templateRequest: NSFetchRequest<ExpenseTemplate> = ExpenseTemplate.fetchRequest()
+            let partRequest: NSFetchRequest<Part> = Part.fetchRequest()
+            let partBatchRequest: NSFetchRequest<PartBatch> = PartBatch.fetchRequest()
+            let partSaleRequest: NSFetchRequest<PartSale> = PartSale.fetchRequest()
+            let partSaleLineItemRequest: NSFetchRequest<PartSaleLineItem> = PartSaleLineItem.fetchRequest()
 
             let users = try context.fetch(userRequest)
             let accounts = try context.fetch(accountRequest)
@@ -2651,6 +3195,10 @@ final class CloudSyncManager: ObservableObject {
                     return !skippingVehicleIds.contains(vId)
                 }
             let templates = try context.fetch(templateRequest)
+            let parts = try context.fetch(partRequest)
+            let partBatches = try context.fetch(partBatchRequest)
+            let partSales = try context.fetch(partSaleRequest)
+            let partSaleLineItems = try context.fetch(partSaleLineItemRequest)
 
             // Map to remote models
             let remoteUsers: [RemoteDealerUser] = users.compactMap { user -> RemoteDealerUser? in
@@ -2723,6 +3271,22 @@ final class CloudSyncManager: ObservableObject {
                 self.makeRemoteTemplate(from: template, dealerId: dealerId)
             }
 
+            let remoteParts: [RemotePart] = parts.compactMap { part in
+                self.makeRemotePart(from: part, dealerId: dealerId)
+            }
+
+            let remotePartBatches: [RemotePartBatch] = partBatches.compactMap { batch in
+                self.makeRemotePartBatch(from: batch, dealerId: dealerId)
+            }
+
+            let remotePartSales: [RemotePartSale] = partSales.compactMap { sale in
+                self.makeRemotePartSale(from: sale, dealerId: dealerId)
+            }
+
+            let remotePartSaleLineItems: [RemotePartSaleLineItem] = partSaleLineItems.compactMap { item in
+                self.makeRemotePartSaleLineItem(from: item, dealerId: dealerId)
+            }
+
             return (
                 users: remoteUsers,
                 accounts: remoteAccounts,
@@ -2733,7 +3297,11 @@ final class CloudSyncManager: ObservableObject {
                 debts: remoteDebts,
                 debtPayments: remoteDebtPayments,
                 clients: remoteClients,
-                templates: remoteTemplates
+                templates: remoteTemplates,
+                parts: remoteParts,
+                partBatches: remotePartBatches,
+                partSales: remotePartSales,
+                partSaleLineItems: remotePartSaleLineItems
             )
         }
 
@@ -2796,6 +3364,30 @@ final class CloudSyncManager: ObservableObject {
         if !payload.templates.isEmpty {
             try await writeClient
                 .rpc("sync_templates", params: SyncPayload<RemoteExpenseTemplate>(payload: payload.templates))
+                .execute()
+        }
+
+        if !payload.parts.isEmpty {
+            try await writeClient
+                .rpc("sync_parts", params: SyncPayload<RemotePart>(payload: payload.parts))
+                .execute()
+        }
+
+        if !payload.partBatches.isEmpty {
+            try await writeClient
+                .rpc("sync_part_batches", params: SyncPayload<RemotePartBatch>(payload: payload.partBatches))
+                .execute()
+        }
+
+        if !payload.partSales.isEmpty {
+            try await writeClient
+                .rpc("sync_part_sales", params: SyncPayload<RemotePartSale>(payload: payload.partSales))
+                .execute()
+        }
+
+        if !payload.partSaleLineItems.isEmpty {
+            try await writeClient
+                .rpc("sync_part_sale_line_items", params: SyncPayload<RemotePartSaleLineItem>(payload: payload.partSaleLineItems))
                 .execute()
         }
     }
@@ -3013,6 +3605,84 @@ final class CloudSyncManager: ObservableObject {
             deletedAt: client.deletedAt
         )
     }
+
+    nonisolated private func makeRemotePart(from part: Part, dealerId: UUID) -> RemotePart? {
+        guard let id = part.id else { return nil }
+        return RemotePart(
+            id: id,
+            dealerId: dealerId,
+            name: part.name ?? "",
+            code: part.code,
+            category: part.category,
+            notes: part.notes,
+            createdAt: part.createdAt ?? Date(),
+            updatedAt: part.updatedAt ?? Date(),
+            deletedAt: part.deletedAt
+        )
+    }
+
+    nonisolated private func makeRemotePartBatch(from batch: PartBatch, dealerId: UUID) -> RemotePartBatch? {
+        guard let id = batch.id, let partId = batch.part?.id else { return nil }
+        let purchaseDate = batch.purchaseDate ?? Date()
+        let normalizedDate = Calendar.current.startOfDay(for: purchaseDate)
+        return RemotePartBatch(
+            id: id,
+            dealerId: dealerId,
+            partId: partId,
+            batchLabel: batch.batchLabel,
+            quantityReceived: (batch.quantityReceived as Decimal?) ?? 0,
+            quantityRemaining: (batch.quantityRemaining as Decimal?) ?? 0,
+            unitCost: (batch.unitCost as Decimal?) ?? 0,
+            purchaseDate: CloudSyncManager.formatDateOnly(normalizedDate),
+            purchaseAccountId: batch.purchaseAccountId,
+            notes: batch.notes,
+            createdAt: batch.createdAt ?? Date(),
+            updatedAt: batch.updatedAt ?? Date(),
+            deletedAt: batch.deletedAt
+        )
+    }
+
+    nonisolated private func makeRemotePartSale(from sale: PartSale, dealerId: UUID) -> RemotePartSale? {
+        guard let id = sale.id else { return nil }
+        let date = sale.date ?? Date()
+        return RemotePartSale(
+            id: id,
+            dealerId: dealerId,
+            amount: (sale.amount as Decimal?) ?? 0,
+            date: CloudSyncManager.formatDateAndTime(date),
+            buyerName: sale.buyerName,
+            buyerPhone: sale.buyerPhone,
+            paymentMethod: sale.paymentMethod,
+            accountId: sale.account?.id,
+            notes: sale.notes,
+            createdAt: sale.createdAt ?? Date(),
+            updatedAt: sale.updatedAt ?? Date(),
+            deletedAt: sale.deletedAt
+        )
+    }
+
+    nonisolated private func makeRemotePartSaleLineItem(from item: PartSaleLineItem, dealerId: UUID) -> RemotePartSaleLineItem? {
+        guard
+            let id = item.id,
+            let saleId = item.sale?.id,
+            let partId = item.part?.id,
+            let batchId = item.batch?.id
+        else { return nil }
+
+        return RemotePartSaleLineItem(
+            id: id,
+            dealerId: dealerId,
+            saleId: saleId,
+            partId: partId,
+            batchId: batchId,
+            quantity: (item.quantity as Decimal?) ?? 0,
+            unitPrice: (item.unitPrice as Decimal?) ?? 0,
+            unitCost: (item.unitCost as Decimal?) ?? 0,
+            createdAt: item.createdAt ?? Date(),
+            updatedAt: item.updatedAt ?? Date(),
+            deletedAt: item.deletedAt
+        )
+    }
     // MARK: - Deduplication
 
     func deduplicateData(dealerId: UUID) async throws {
@@ -3174,6 +3844,12 @@ final class CloudSyncManager: ObservableObject {
         // 2. Sales
         try await writeClient.from("crm_sales").delete().eq("dealer_id", value: dealerId).execute()
 
+        // 2.2. Part Sale Line Items
+        try await writeClient.from("crm_part_sale_line_items").delete().eq("dealer_id", value: dealerId).execute()
+
+        // 2.3. Part Sales
+        try await writeClient.from("crm_part_sales").delete().eq("dealer_id", value: dealerId).execute()
+
         // 2.5. Debts
         try await writeClient.from("crm_debts").delete().eq("dealer_id", value: dealerId).execute()
         
@@ -3182,6 +3858,12 @@ final class CloudSyncManager: ObservableObject {
         
         // 4. Vehicles
         try await writeClient.from("crm_vehicles").delete().eq("dealer_id", value: dealerId).execute()
+
+        // 4.5. Part Batches
+        try await writeClient.from("crm_part_batches").delete().eq("dealer_id", value: dealerId).execute()
+
+        // 4.6. Parts
+        try await writeClient.from("crm_parts").delete().eq("dealer_id", value: dealerId).execute()
         
         // 5. Templates
         try await writeClient.from("crm_expense_templates").delete().eq("dealer_id", value: dealerId).execute()
@@ -3215,6 +3897,10 @@ enum SyncEntityType: String, Codable, CaseIterable, Hashable {
     case account
     case accountTransaction
     case template
+    case part
+    case partBatch
+    case partSale
+    case partSaleLineItem
 }
 
 extension SyncOperationType {
@@ -3246,6 +3932,10 @@ extension SyncEntityType {
         case .account: return "Accounts"
         case .accountTransaction: return "Account Transactions"
         case .template: return "Expense Templates"
+        case .part: return "Parts"
+        case .partBatch: return "Part Batches"
+        case .partSale: return "Part Sales"
+        case .partSaleLineItem: return "Part Sale Line Items"
         }
     }
 
@@ -3261,6 +3951,10 @@ extension SyncEntityType {
         case .account: return 7
         case .accountTransaction: return 8
         case .template: return 9
+        case .part: return 10
+        case .partBatch: return 11
+        case .partSale: return 12
+        case .partSaleLineItem: return 13
         }
     }
 }

@@ -6,10 +6,15 @@ enum PermissionKey: String, Codable {
     case viewExpenses = "view_expenses"
     case viewInventory = "view_inventory"
     case createSale = "create_sale"
+    case viewPartsInventory = "view_parts_inventory"
+    case managePartsInventory = "manage_parts_inventory"
+    case createPartSale = "create_part_sale"
     case manageTeam = "manage_team"
     case viewLeads = "view_leads"
     case viewVehicleCost = "view_vehicle_cost"
     case viewVehicleProfit = "view_vehicle_profit"
+    case viewPartCost = "view_part_cost"
+    case viewPartProfit = "view_part_profit"
     case deleteRecords = "delete_records"
 }
 
@@ -121,6 +126,20 @@ final class PermissionService: ObservableObject {
 
     func canViewVehicleProfit() -> Bool {
         if let value = permissionValue(for: .viewVehicleProfit) {
+            return value
+        }
+        return can(.viewFinancials)
+    }
+
+    func canViewPartCost() -> Bool {
+        if let value = permissionValue(for: .viewPartCost) {
+            return value
+        }
+        return can(.viewFinancials)
+    }
+
+    func canViewPartProfit() -> Bool {
+        if let value = permissionValue(for: .viewPartProfit) {
             return value
         }
         return can(.viewFinancials)
@@ -242,6 +261,36 @@ enum PermissionCatalog {
         ),
         PermissionGroup(
             primary: PermissionDefinition(
+                key: .viewPartsInventory,
+                titleKey: "permission_view_parts_inventory_title",
+                detailKey: "permission_view_parts_inventory_detail",
+                systemImage: "shippingbox.fill"
+            ),
+            detailTitleKey: nil,
+            detailItems: []
+        ),
+        PermissionGroup(
+            primary: PermissionDefinition(
+                key: .managePartsInventory,
+                titleKey: "permission_manage_parts_inventory_title",
+                detailKey: "permission_manage_parts_inventory_detail",
+                systemImage: "tray.full.fill"
+            ),
+            detailTitleKey: nil,
+            detailItems: []
+        ),
+        PermissionGroup(
+            primary: PermissionDefinition(
+                key: .createPartSale,
+                titleKey: "permission_create_part_sale_title",
+                detailKey: "permission_create_part_sale_detail",
+                systemImage: "cart.fill"
+            ),
+            detailTitleKey: nil,
+            detailItems: []
+        ),
+        PermissionGroup(
+            primary: PermissionDefinition(
                 key: .viewLeads,
                 titleKey: "permission_view_leads_title",
                 detailKey: "permission_view_leads_detail",
@@ -282,6 +331,26 @@ enum PermissionCatalog {
         ),
         PermissionGroup(
             primary: PermissionDefinition(
+                key: .viewPartCost,
+                titleKey: "permission_view_part_cost_title",
+                detailKey: "permission_view_part_cost_detail",
+                systemImage: "banknote"
+            ),
+            detailTitleKey: nil,
+            detailItems: []
+        ),
+        PermissionGroup(
+            primary: PermissionDefinition(
+                key: .viewPartProfit,
+                titleKey: "permission_view_part_profit_title",
+                detailKey: "permission_view_part_profit_detail",
+                systemImage: "chart.line.uptrend.xyaxis.circle"
+            ),
+            detailTitleKey: nil,
+            detailItems: []
+        ),
+        PermissionGroup(
+            primary: PermissionDefinition(
                 key: .manageTeam,
                 titleKey: "permission_manage_team_title",
                 detailKey: "permission_manage_team_detail",
@@ -310,10 +379,15 @@ enum PermissionCatalog {
             return [
                 PermissionKey.viewInventory.rawValue: true,
                 PermissionKey.createSale.rawValue: true,
+                PermissionKey.viewPartsInventory.rawValue: true,
+                PermissionKey.managePartsInventory.rawValue: true,
+                PermissionKey.createPartSale.rawValue: true,
                 PermissionKey.viewLeads.rawValue: true,
                 PermissionKey.viewExpenses.rawValue: true,
                 PermissionKey.viewVehicleCost.rawValue: true,
                 PermissionKey.viewVehicleProfit.rawValue: true,
+                PermissionKey.viewPartCost.rawValue: true,
+                PermissionKey.viewPartProfit.rawValue: true,
                 PermissionKey.manageTeam.rawValue: true,
                 PermissionKey.deleteRecords.rawValue: true
             ]
@@ -321,10 +395,15 @@ enum PermissionCatalog {
             return [
                 PermissionKey.viewInventory.rawValue: true,
                 PermissionKey.createSale.rawValue: true,
+                PermissionKey.viewPartsInventory.rawValue: true,
+                PermissionKey.managePartsInventory.rawValue: true,
+                PermissionKey.createPartSale.rawValue: true,
                 PermissionKey.viewLeads.rawValue: true,
                 PermissionKey.viewExpenses.rawValue: true,
                 PermissionKey.viewVehicleCost.rawValue: true,
                 PermissionKey.viewVehicleProfit.rawValue: true,
+                PermissionKey.viewPartCost.rawValue: true,
+                PermissionKey.viewPartProfit.rawValue: true,
                 PermissionKey.manageTeam.rawValue: true,
                 PermissionKey.deleteRecords.rawValue: true
             ]
@@ -332,10 +411,15 @@ enum PermissionCatalog {
             return [
                 PermissionKey.viewInventory.rawValue: true,
                 PermissionKey.createSale.rawValue: true,
+                PermissionKey.viewPartsInventory.rawValue: true,
+                PermissionKey.managePartsInventory.rawValue: false,
+                PermissionKey.createPartSale.rawValue: true,
                 PermissionKey.viewLeads.rawValue: true,
                 PermissionKey.viewExpenses.rawValue: true,
                 PermissionKey.viewVehicleCost.rawValue: false,
                 PermissionKey.viewVehicleProfit.rawValue: false,
+                PermissionKey.viewPartCost.rawValue: false,
+                PermissionKey.viewPartProfit.rawValue: false,
                 PermissionKey.manageTeam.rawValue: false,
                 PermissionKey.deleteRecords.rawValue: false
             ]
@@ -343,10 +427,15 @@ enum PermissionCatalog {
             return [
                 PermissionKey.viewInventory.rawValue: true,
                 PermissionKey.createSale.rawValue: false,
+                PermissionKey.viewPartsInventory.rawValue: true,
+                PermissionKey.managePartsInventory.rawValue: false,
+                PermissionKey.createPartSale.rawValue: false,
                 PermissionKey.viewLeads.rawValue: false,
                 PermissionKey.viewExpenses.rawValue: false,
                 PermissionKey.viewVehicleCost.rawValue: false,
                 PermissionKey.viewVehicleProfit.rawValue: false,
+                PermissionKey.viewPartCost.rawValue: false,
+                PermissionKey.viewPartProfit.rawValue: false,
                 PermissionKey.manageTeam.rawValue: false,
                 PermissionKey.deleteRecords.rawValue: false
             ]

@@ -54,6 +54,14 @@
 		E2460EEE2F14089A0048EA80 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EED2F14089A0048EA80 /* EditProfileView.swift */; };
 		E2460EF12F1408C10048EA80 /* User+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */; };
 		E2460EF22F1408C10048EA80 /* User+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */; };
+		E2460EF42F150C340048EA80 /* Part+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EF32F150C340048EA80 /* Part+Extensions.swift */; };
+		E2460EF72F150C480048EA80 /* PartSalesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EF52F150C480048EA80 /* PartSalesViewModel.swift */; };
+		E2460EF82F150C480048EA80 /* PartsInventoryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EF62F150C480048EA80 /* PartsInventoryViewModel.swift */; };
+		E2460EFE2F150C680048EA80 /* PartDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EFB2F150C680048EA80 /* PartDetailView.swift */; };
+		E2460EFF2F150C680048EA80 /* PartsDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EFC2F150C680048EA80 /* PartsDashboardView.swift */; };
+		E2460F002F150C680048EA80 /* AddPartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EFA2F150C680048EA80 /* AddPartView.swift */; };
+		E2460F012F150C680048EA80 /* ReceivePartStockView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EFD2F150C680048EA80 /* ReceivePartStockView.swift */; };
+		E2460F022F150C680048EA80 /* AddPartSaleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EF92F150C680048EA80 /* AddPartSaleView.swift */; };
 		E29C0AEF2F0B92620087CEB6 /* String+Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */; };
 		E29C0AF12F0B92BA0087CEB6 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */; };
 		E2A08AAF2F10532C0071352E /* RemoteConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */; };
@@ -132,6 +140,14 @@
 		E2460EED2F14089A0048EA80 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
 		E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "User+CoreDataClass.swift"; sourceTree = "<group>"; };
 		E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "User+CoreDataProperties.swift"; sourceTree = "<group>"; };
+		E2460EF32F150C340048EA80 /* Part+Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Part+Extensions.swift"; sourceTree = "<group>"; };
+		E2460EF52F150C480048EA80 /* PartSalesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartSalesViewModel.swift; sourceTree = "<group>"; };
+		E2460EF62F150C480048EA80 /* PartsInventoryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsInventoryViewModel.swift; sourceTree = "<group>"; };
+		E2460EF92F150C680048EA80 /* AddPartSaleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPartSaleView.swift; sourceTree = "<group>"; };
+		E2460EFA2F150C680048EA80 /* AddPartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddPartView.swift; sourceTree = "<group>"; };
+		E2460EFB2F150C680048EA80 /* PartDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartDetailView.swift; sourceTree = "<group>"; };
+		E2460EFC2F150C680048EA80 /* PartsDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PartsDashboardView.swift; sourceTree = "<group>"; };
+		E2460EFD2F150C680048EA80 /* ReceivePartStockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivePartStockView.swift; sourceTree = "<group>"; };
 		E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Localization.swift"; sourceTree = "<group>"; };
 		E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigService.swift; sourceTree = "<group>"; };
@@ -223,6 +239,7 @@
 		A1000027 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				E2460EF32F150C340048EA80 /* Part+Extensions.swift */,
 				E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */,
 				E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */,
 				A1000007 /* Ezcar24Business.xcdatamodeld */,
@@ -239,6 +256,8 @@
 		A1000028 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				E2460EF52F150C480048EA80 /* PartSalesViewModel.swift */,
+				E2460EF62F150C480048EA80 /* PartsInventoryViewModel.swift */,
 				A1000018 /* DashboardViewModel.swift */,
 				A100001A /* VehicleViewModel.swift */,
 				A100001C /* ExpenseViewModel.swift */,
@@ -255,6 +274,11 @@
 		A1000029 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E2460EF92F150C680048EA80 /* AddPartSaleView.swift */,
+				E2460EFA2F150C680048EA80 /* AddPartView.swift */,
+				E2460EFB2F150C680048EA80 /* PartDetailView.swift */,
+				E2460EFC2F150C680048EA80 /* PartsDashboardView.swift */,
+				E2460EFD2F150C680048EA80 /* ReceivePartStockView.swift */,
 				E2460EED2F14089A0048EA80 /* EditProfileView.swift */,
 				E2A08AB22F105B580071352E /* TeamManagementView.swift */,
 				E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */,
@@ -434,6 +458,11 @@
 				A1000023 /* CurrencyFormatter.swift in Sources */,
 				A1000025 /* AddVehicleView.swift in Sources */,
 				C3000001 /* AccountView.swift in Sources */,
+				E2460EFE2F150C680048EA80 /* PartDetailView.swift in Sources */,
+				E2460EFF2F150C680048EA80 /* PartsDashboardView.swift in Sources */,
+				E2460F002F150C680048EA80 /* AddPartView.swift in Sources */,
+				E2460F012F150C680048EA80 /* ReceivePartStockView.swift in Sources */,
+				E2460F022F150C680048EA80 /* AddPartSaleView.swift in Sources */,
 				B2000100 /* AuthGateView.swift in Sources */,
 				B2000101 /* LoginView.swift in Sources */,
 				B2000102 /* SessionStore.swift in Sources */,
@@ -442,6 +471,8 @@
 				D0000010 /* CloudSyncManager.swift in Sources */,
 				D0000011 /* CloudSyncEnvironment.swift in Sources */,
 				D0000012 /* SupabaseModels.swift in Sources */,
+				E2460EF72F150C480048EA80 /* PartSalesViewModel.swift in Sources */,
+				E2460EF82F150C480048EA80 /* PartsInventoryViewModel.swift in Sources */,
 				E1000007 /* ClientListView.swift in Sources */,
 				E1000008 /* ClientDetailView.swift in Sources */,
 				E1000009 /* ClientViewModel.swift in Sources */,
@@ -459,6 +490,7 @@
 				F2000101 /* Debt+Extensions.swift in Sources */,
 				F2000102 /* DebtViewModel.swift in Sources */,
 				E2C37EE62F06A39E00EA13C1 /* AppReviewManager.swift in Sources */,
+				E2460EF42F150C340048EA80 /* Part+Extensions.swift in Sources */,
 				E2C37EE82F06A77C00EA13C1 /* VehicleSelectionSheet.swift in Sources */,
 				F2000103 /* DebtsListView.swift in Sources */,
 				F2000104 /* DebtDetailView.swift in Sources */,

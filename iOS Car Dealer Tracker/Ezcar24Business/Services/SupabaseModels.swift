@@ -290,6 +290,119 @@ struct RemoteClient: Codable {
     }
 }
 
+struct RemotePart: Codable {
+    let id: UUID
+    let dealerId: UUID
+    let name: String
+    let code: String?
+    let category: String?
+    let notes: String?
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case dealerId = "dealer_id"
+        case name
+        case code
+        case category
+        case notes
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
+}
+
+struct RemotePartBatch: Codable {
+    let id: UUID
+    let dealerId: UUID
+    let partId: UUID
+    let batchLabel: String?
+    let quantityReceived: Decimal
+    let quantityRemaining: Decimal
+    let unitCost: Decimal
+    let purchaseDate: String
+    let purchaseAccountId: UUID?
+    let notes: String?
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case dealerId = "dealer_id"
+        case partId = "part_id"
+        case batchLabel = "batch_label"
+        case quantityReceived = "quantity_received"
+        case quantityRemaining = "quantity_remaining"
+        case unitCost = "unit_cost"
+        case purchaseDate = "purchase_date"
+        case purchaseAccountId = "purchase_account_id"
+        case notes
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
+}
+
+struct RemotePartSale: Codable {
+    let id: UUID
+    let dealerId: UUID
+    let amount: Decimal
+    let date: String
+    let buyerName: String?
+    let buyerPhone: String?
+    let paymentMethod: String?
+    let accountId: UUID?
+    let notes: String?
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case dealerId = "dealer_id"
+        case amount
+        case date
+        case buyerName = "buyer_name"
+        case buyerPhone = "buyer_phone"
+        case paymentMethod = "payment_method"
+        case accountId = "account_id"
+        case notes
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
+}
+
+struct RemotePartSaleLineItem: Codable {
+    let id: UUID
+    let dealerId: UUID
+    let saleId: UUID
+    let partId: UUID
+    let batchId: UUID
+    let quantity: Decimal
+    let unitPrice: Decimal
+    let unitCost: Decimal
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case dealerId = "dealer_id"
+        case saleId = "sale_id"
+        case partId = "part_id"
+        case batchId = "batch_id"
+        case quantity
+        case unitPrice = "unit_price"
+        case unitCost = "unit_cost"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
+}
 
 struct RemoteSnapshot: Decodable {
     let users: [RemoteDealerUser]
@@ -302,6 +415,10 @@ struct RemoteSnapshot: Decodable {
     let debts: [RemoteDebt]
     let debtPayments: [RemoteDebtPayment]
     let clients: [RemoteClient]
+    let parts: [RemotePart]
+    let partBatches: [RemotePartBatch]
+    let partSales: [RemotePartSale]
+    let partSaleLineItems: [RemotePartSaleLineItem]
 
     enum CodingKeys: String, CodingKey {
         case users
@@ -314,6 +431,60 @@ struct RemoteSnapshot: Decodable {
         case debts
         case debtPayments = "debt_payments"
         case clients
+        case parts
+        case partBatches = "part_batches"
+        case partSales = "part_sales"
+        case partSaleLineItems = "part_sale_line_items"
+    }
+
+    init(
+        users: [RemoteDealerUser],
+        accounts: [RemoteFinancialAccount],
+        accountTransactions: [RemoteAccountTransaction],
+        vehicles: [RemoteVehicle],
+        templates: [RemoteExpenseTemplate],
+        expenses: [RemoteExpense],
+        sales: [RemoteSale],
+        debts: [RemoteDebt],
+        debtPayments: [RemoteDebtPayment],
+        clients: [RemoteClient],
+        parts: [RemotePart],
+        partBatches: [RemotePartBatch],
+        partSales: [RemotePartSale],
+        partSaleLineItems: [RemotePartSaleLineItem]
+    ) {
+        self.users = users
+        self.accounts = accounts
+        self.accountTransactions = accountTransactions
+        self.vehicles = vehicles
+        self.templates = templates
+        self.expenses = expenses
+        self.sales = sales
+        self.debts = debts
+        self.debtPayments = debtPayments
+        self.clients = clients
+        self.parts = parts
+        self.partBatches = partBatches
+        self.partSales = partSales
+        self.partSaleLineItems = partSaleLineItems
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        users = try container.decodeIfPresent([RemoteDealerUser].self, forKey: .users) ?? []
+        accounts = try container.decodeIfPresent([RemoteFinancialAccount].self, forKey: .accounts) ?? []
+        accountTransactions = try container.decodeIfPresent([RemoteAccountTransaction].self, forKey: .accountTransactions) ?? []
+        vehicles = try container.decodeIfPresent([RemoteVehicle].self, forKey: .vehicles) ?? []
+        templates = try container.decodeIfPresent([RemoteExpenseTemplate].self, forKey: .templates) ?? []
+        expenses = try container.decodeIfPresent([RemoteExpense].self, forKey: .expenses) ?? []
+        sales = try container.decodeIfPresent([RemoteSale].self, forKey: .sales) ?? []
+        debts = try container.decodeIfPresent([RemoteDebt].self, forKey: .debts) ?? []
+        debtPayments = try container.decodeIfPresent([RemoteDebtPayment].self, forKey: .debtPayments) ?? []
+        clients = try container.decodeIfPresent([RemoteClient].self, forKey: .clients) ?? []
+        parts = try container.decodeIfPresent([RemotePart].self, forKey: .parts) ?? []
+        partBatches = try container.decodeIfPresent([RemotePartBatch].self, forKey: .partBatches) ?? []
+        partSales = try container.decodeIfPresent([RemotePartSale].self, forKey: .partSales) ?? []
+        partSaleLineItems = try container.decodeIfPresent([RemotePartSaleLineItem].self, forKey: .partSaleLineItems) ?? []
     }
 }
 
