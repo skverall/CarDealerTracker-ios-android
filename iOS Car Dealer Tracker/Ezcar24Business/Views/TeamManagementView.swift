@@ -421,7 +421,7 @@ struct TeamManagementView: View {
         }
         let membersToDelete = offsets.map { viewModel.members[$0] }
         let orgId = sessionStore.activeOrganizationId
-        withAnimation {
+        withTransaction(Transaction(animation: .default)) {
             viewModel.members.remove(atOffsets: offsets)
         }
         Task {
@@ -444,7 +444,7 @@ struct TeamManagementView: View {
         guard let index = viewModel.members.firstIndex(where: { $0.id == member.id }) else { return }
         
         let orgId = sessionStore.activeOrganizationId
-        withAnimation {
+        withTransaction(Transaction(animation: .default)) {
             viewModel.members.remove(at: index)
         }
         

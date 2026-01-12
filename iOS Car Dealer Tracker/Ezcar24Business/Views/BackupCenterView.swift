@@ -33,7 +33,9 @@ struct BackupCenterView: View {
                                 icon: "creditcard",
                                 color: .blue
                             ) {
-                                try exporter.exportExpensesCSV()
+                                runExport {
+                                    try exporter.exportExpensesCSV()
+                                }
                             }
                             
                             Divider().padding(.leading, 52)
@@ -43,7 +45,9 @@ struct BackupCenterView: View {
                                 icon: "car.fill",
                                 color: .purple
                             ) {
-                                try exporter.exportVehiclesCSV()
+                                runExport {
+                                    try exporter.exportVehiclesCSV()
+                                }
                             }
                             
                             Divider().padding(.leading, 52)
@@ -53,7 +57,9 @@ struct BackupCenterView: View {
                                 icon: "person.2.fill",
                                 color: .orange
                             ) {
-                                try exporter.exportClientsCSV()
+                                runExport {
+                                    try exporter.exportClientsCSV()
+                                }
                             }
                         }
                         

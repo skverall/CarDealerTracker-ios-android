@@ -68,9 +68,6 @@ final class CloudSyncManager: ObservableObject {
         let bgContext = PersistenceController.shared.newBackgroundContext()
         
         let writeClient = self.writeClient
-        let accountBaseline = await bgContext.perform {
-            self.captureAccountLedgerBaseline(context: bgContext)
-        }
         
         do {
             // 1. Flush any queued offline operations first (Main Actor is fine for this as it's usually small)
@@ -123,7 +120,7 @@ final class CloudSyncManager: ObservableObject {
                 // Ensure current user exists locally so profile editing works
                 self.ensureCurrentUserExists(context: bgContext, user: user, dealerId: dealerId)
 
-                self.recalculateAccountBalances(context: bgContext, baseline: accountBaseline)
+                _ = self.recalculateAccountBalances(context: bgContext)
 
                 // 4.5. CRITICAL: Save the merged changes to Core Data
                 if bgContext.hasChanges {
@@ -270,9 +267,7 @@ final class CloudSyncManager: ObservableObject {
         }
 
         let bgContext = PersistenceController.shared.newBackgroundContext()
-        let accountBaseline = await bgContext.perform {
-            self.captureAccountLedgerBaseline(context: bgContext)
-        }
+        let writeClient = self.writeClient
 
         do {
             // 0. Push local changes first to avoid overwrites during merge
@@ -311,6 +306,7 @@ final class CloudSyncManager: ObservableObject {
                 ],
                 protectedIds: protectedIds
             ) : nil
+            var updatedAccountIds = Set<UUID>()
             try await bgContext.perform {
                 try self.mergeRemoteChanges(
                     snapshot,
@@ -318,9 +314,22 @@ final class CloudSyncManager: ObservableObject {
                     dealerId: dealerId,
                     missingCleanup: cleanupContext
                 )
-                self.recalculateAccountBalances(context: bgContext, baseline: accountBaseline)
+                updatedAccountIds = self.recalculateAccountBalances(context: bgContext)
                 if bgContext.hasChanges {
                     try bgContext.save()
+                }
+            }
+
+            if !updatedAccountIds.isEmpty {
+                do {
+                    try await self.pushAccountUpdates(
+                        accountIds: updatedAccountIds,
+                        context: bgContext,
+                        dealerId: dealerId,
+                        writeClient: writeClient
+                    )
+                } catch {
+                    print("CloudSyncManager manualSync account push error: \(error)")
                 }
             }
 
@@ -1906,31 +1915,18 @@ final class CloudSyncManager: ObservableObject {
         let protectedIds: [SyncEntityType: Set<UUID>]
     }
 
-    private struct AccountLedgerBaseline {
-        let balances: [UUID: Decimal]
-        let ledgerTotals: [UUID: Decimal]
+    private struct AccountLedgerSnapshot {
+        let totals: [UUID: Decimal]
+        let activeAccounts: Set<UUID>
     }
 
-    nonisolated private func captureAccountLedgerBaseline(context: NSManagedObjectContext) -> AccountLedgerBaseline {
-        let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
-        accountRequest.predicate = NSPredicate(format: "deletedAt == nil")
-
-        let accounts = (try? context.fetch(accountRequest)) ?? []
-        var balances: [UUID: Decimal] = [:]
-        for account in accounts {
-            guard let id = account.id else { continue }
-            balances[id] = account.balance?.decimalValue ?? 0
-        }
-
-        let ledgerTotals = computeAccountLedgerTotals(context: context)
-        return AccountLedgerBaseline(balances: balances, ledgerTotals: ledgerTotals)
-    }
-
-    nonisolated private func computeAccountLedgerTotals(context: NSManagedObjectContext) -> [UUID: Decimal] {
+    nonisolated private func computeAccountLedgerSnapshot(context: NSManagedObjectContext) -> AccountLedgerSnapshot {
         var totals: [UUID: Decimal] = [:]
+        var activeAccounts: Set<UUID> = []
 
         func add(_ accountId: UUID, _ delta: Decimal) {
             totals[accountId, default: 0] += delta
+            activeAccounts.insert(accountId)
         }
 
         let expenseRequest: NSFetchRequest<Expense> = Expense.fetchRequest()
@@ -1993,35 +1989,30 @@ final class CloudSyncManager: ObservableObject {
             }
         }
 
-        return totals
+        return AccountLedgerSnapshot(totals: totals, activeAccounts: activeAccounts)
     }
 
-    nonisolated private func recalculateAccountBalances(context: NSManagedObjectContext, baseline: AccountLedgerBaseline) {
+    nonisolated private func recalculateAccountBalances(context: NSManagedObjectContext) -> Set<UUID> {
         let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
         accountRequest.predicate = NSPredicate(format: "deletedAt == nil")
         let accounts = (try? context.fetch(accountRequest)) ?? []
-        let ledgerTotals = computeAccountLedgerTotals(context: context)
+        let ledgerSnapshot = computeAccountLedgerSnapshot(context: context)
         let now = Date()
         let epsilon = Decimal(string: "0.01") ?? 0.01
+        var updatedIds: Set<UUID> = []
 
         for account in accounts {
             guard let id = account.id else { continue }
-            let baselineBalance = baseline.balances[id] ?? account.balance?.decimalValue ?? 0
-            let baselineLedger = baseline.ledgerTotals[id] ?? 0
-            var offset = baselineBalance - baselineLedger
-            let baselineMagnitude = NSDecimalNumber(decimal: baselineBalance).doubleValue.magnitude
-            let baselineLedgerMagnitude = NSDecimalNumber(decimal: baselineLedger).doubleValue.magnitude
-            let baselineRatio = baselineLedgerMagnitude > 0 ? (baselineMagnitude / baselineLedgerMagnitude) : 0
-            if baselineLedgerMagnitude > 100 && baselineRatio < 0.05 {
-                offset = 0
-            }
-            let newBalance = (ledgerTotals[id] ?? 0) + offset
+            guard ledgerSnapshot.activeAccounts.contains(id) else { continue }
+            let newBalance = ledgerSnapshot.totals[id] ?? 0
             let currentBalance = account.balance?.decimalValue ?? 0
             if decimalAbs(newBalance - currentBalance) > epsilon {
                 account.balance = NSDecimalNumber(decimal: newBalance)
                 account.updatedAt = now
+                updatedIds.insert(id)
             }
         }
+        return updatedIds
     }
 
     nonisolated private func decimalAbs(_ value: Decimal) -> Decimal {
@@ -2807,6 +2798,25 @@ final class CloudSyncManager: ObservableObject {
                 .rpc("sync_templates", params: SyncPayload<RemoteExpenseTemplate>(payload: payload.templates))
                 .execute()
         }
+    }
+
+    nonisolated private func pushAccountUpdates(
+        accountIds: Set<UUID>,
+        context: NSManagedObjectContext,
+        dealerId: UUID,
+        writeClient: SupabaseClient
+    ) async throws {
+        guard !accountIds.isEmpty else { return }
+        let payload = try await context.perform { [self] in
+            let request: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+            request.predicate = NSPredicate(format: "id IN %@", Array(accountIds))
+            let accounts = try context.fetch(request)
+            return accounts.compactMap { self.makeRemoteFinancialAccount(from: $0, dealerId: dealerId) }
+        }
+        guard !payload.isEmpty else { return }
+        try await writeClient
+            .rpc("sync_accounts", params: SyncPayload<RemoteFinancialAccount>(payload: payload))
+            .execute()
     }
 
     nonisolated private func makeRemoteFinancialAccount(from account: FinancialAccount, dealerId: UUID) -> RemoteFinancialAccount? {

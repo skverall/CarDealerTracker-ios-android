@@ -51,11 +51,30 @@ class FinancialAccountsViewModel: ObservableObject {
     }
     
     func updateBalance(account: FinancialAccount, newBalance: Decimal) {
-        account.balance = newBalance as NSDecimalNumber
+        let currentBalance = account.balance?.decimalValue ?? 0
+        let delta = newBalance - currentBalance
+        guard delta != 0 else { return }
+
+        let transaction = AccountTransaction(context: context)
+        transaction.id = UUID()
+        transaction.transactionType = delta >= 0 ? AccountTransactionType.deposit.rawValue : AccountTransactionType.withdrawal.rawValue
+        transaction.amount = NSDecimalNumber(decimal: delta >= 0 ? delta : -delta)
+        transaction.date = Date()
+        transaction.note = "Manual balance adjustment"
+        transaction.createdAt = Date()
+        transaction.updatedAt = transaction.createdAt
+        transaction.account = account
+
+        account.balance = NSDecimalNumber(decimal: newBalance)
         account.updatedAt = Date()
         saveContext()
         fetchAccounts()
         syncAccountsIfPossible([account])
+
+        Task { @MainActor in
+            guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+            await CloudSyncManager.shared?.upsertAccountTransaction(transaction, dealerId: dealerId)
+        }
     }
 
     private func saveContext() {

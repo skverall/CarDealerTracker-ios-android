@@ -295,7 +295,6 @@ struct AccountView: View {
                 
                 if subscriptionManager.isProAccessActive {
                     if let expirationDate = subscriptionManager.expirationDate {
-                        let isTrial = subscriptionManager.isTrial
                         let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: expirationDate).day ?? 0
                         
                         if daysRemaining <= 7 {

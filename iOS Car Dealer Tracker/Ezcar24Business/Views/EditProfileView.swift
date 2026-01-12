@@ -103,7 +103,7 @@ struct EditProfileView: View {
                 phone = user.phone ?? ""
                 loadAvatar()
             }
-            .onChange(of: avatarItem) { newItem in
+            .onChange(of: avatarItem) { _, newItem in
                 Task {
                     if let data = try? await newItem?.loadTransferable(type: Data.self),
                        let uiImage = UIImage(data: data) {

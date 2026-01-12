@@ -20,22 +20,7 @@ final class PermissionService: ObservableObject {
     @Published private(set) var permissions: [String: Bool] = [:]
     @Published private(set) var currentRole: String = ""
     @Published private(set) var didLoad = false
-    
-    private let client = SupabaseClient(
-        supabaseURL: URL(string: "https://haordpdxyyreliyzmire.supabase.co")!,
-        supabaseKey: "PLACEHOLDER_KEY_managed_by_config" // Actually usually injected or config
-        // In this project SupabaseConfig.plist is used or CloudSyncManager has the client.
-        // We should probably inject the client or use a shared one.
-        // For now, I'll expose a setup method or use a shared accessor if available.
-    )
-    
-    // In Ezcar24Business, usually CloudSyncManager has the client.
-    // Or there is a SupabaseManager. 
-    // I see SupabaseModels, but not Manager in file list explicitly? 
-    // CloudSyncManager.init takes a client.
-    // I will let PermissionService be initialized with a client or fetched via Dependency Injection.
-    // For simplicity I'll add a 'configure' method.
-    
+
     private var supabase: SupabaseClient?
     private var activeDealerId: UUID?
     private let permissionsCacheKeyPrefix = "permissions_cache_v1"
