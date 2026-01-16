@@ -112,7 +112,7 @@ struct Ezcar24BusinessApp: App {
                 .fullScreenCover(isPresented: $remoteConfig.isUpdateRequired) {
                     ForceUpdateView(remoteConfig: remoteConfig)
                 }
-                .sheet(isPresented: $showRegionSelection) {
+                .fullScreenCover(isPresented: $showRegionSelection) {
                     RegionSelectionSheet()
                         .environmentObject(regionSettings)
                 }

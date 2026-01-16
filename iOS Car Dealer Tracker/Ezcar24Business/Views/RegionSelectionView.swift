@@ -59,10 +59,18 @@ struct RegionSelectionSheet: View {
                             .padding(.horizontal)
                             
                             // Region Grid
-                            LazyVGrid(columns: [
-                                GridItem(.flexible(), spacing: 16),
-                                GridItem(.flexible(), spacing: 16)
-                            ], spacing: 16) {
+                            let columns: [GridItem] = {
+                                if UIDevice.current.userInterfaceIdiom == .pad {
+                                    return [GridItem(.adaptive(minimum: 160), spacing: 20)]
+                                } else {
+                                    return [
+                                        GridItem(.flexible(), spacing: 16),
+                                        GridItem(.flexible(), spacing: 16)
+                                    ]
+                                }
+                            }()
+                            
+                            LazyVGrid(columns: columns, spacing: 16) {
                                 ForEach(AppRegion.allCases) { region in
                                     RegionCard(
                                         region: region,
@@ -107,6 +115,9 @@ struct RegionSelectionSheet: View {
                     .padding(.vertical, 20)
                     .background(ColorTheme.background) // Ensure background covers list content upon scroll
                 }
+                // Constrain max width for iPad so it doesn't look too stretched if full screen,
+                // or centers nicely if in a larger container.
+                .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 600 : .infinity)
             }
             .interactiveDismissDisabled()
         }
