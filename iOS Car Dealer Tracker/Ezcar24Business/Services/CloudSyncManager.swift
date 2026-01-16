@@ -3547,6 +3547,8 @@ final class CloudSyncManager: ObservableObject {
             buyerPhone: sale.buyerPhone,
             paymentMethod: sale.paymentMethod,
             accountId: sale.account?.id,
+            vatRefundPercent: sale.vatRefundPercent as Decimal?,
+            vatRefundAmount: sale.vatRefundAmount as Decimal?,
             notes: nil,
             createdAt: Date(),
             updatedAt: sale.updatedAt ?? Date(),

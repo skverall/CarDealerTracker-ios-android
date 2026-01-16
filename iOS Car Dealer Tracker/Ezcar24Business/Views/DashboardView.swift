@@ -509,7 +509,10 @@ private extension DashboardView {
     }
 
     var todaysExpenseColumns: [GridItem] {
-        [
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            return [GridItem(.adaptive(minimum: 220), spacing: 16)]
+        }
+        return [
             GridItem(.flexible(), spacing: 16),
             GridItem(.flexible(), spacing: 16)
         ]
@@ -518,25 +521,17 @@ private extension DashboardView {
     var summarySection: some View {
         Section {
             if permissionService.can(.viewFinancials) {
-                VStack(spacing: 16) {
-                    SummaryOverviewCard(
-                        totalSpent: viewModel.totalExpenses,
-                        changePercent: viewModel.periodChangePercent,
-                        trendPoints: viewModel.trendPoints,
-                        range: selectedRange
-                    )
-
-                    if permissionService.canViewVehicleProfit() {
-                        ProfitOverviewCard(
-                            totalProfit: selectedRange == .week ? viewModel.monthlyNetProfit : viewModel.periodSalesProfit,
-                            trendPoints: selectedRange == .week ? viewModel.monthlyProfitTrendPoints : viewModel.profitTrendPoints,
-                            range: selectedRange == .week ? .month : selectedRange
-                        )
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: 16)], spacing: 16) {
+                        summaryCardsContent
                     }
-
-                    CategoryBreakdownCard(stats: viewModel.categoryStats)
+                    .padding(.vertical, 4)
+                } else {
+                    VStack(spacing: 16) {
+                        summaryCardsContent
+                    }
+                    .padding(.vertical, 4)
                 }
-                .padding(.vertical, 4)
             } else {
                 // Non-Financial Summary (Sales/Inv Only)
                  // "Active Vehicles" is redundant with the top card, so we remove it to clean up the UI.
@@ -710,6 +705,26 @@ private extension DashboardView {
         .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: -2)
         .allowsHitTesting(false)
     }
+
+    @ViewBuilder
+    var summaryCardsContent: some View {
+        SummaryOverviewCard(
+            totalSpent: viewModel.totalExpenses,
+            changePercent: viewModel.periodChangePercent,
+            trendPoints: viewModel.trendPoints,
+            range: selectedRange
+        )
+
+        if permissionService.canViewVehicleProfit() {
+            ProfitOverviewCard(
+                totalProfit: selectedRange == .week ? viewModel.monthlyNetProfit : viewModel.periodSalesProfit,
+                trendPoints: selectedRange == .week ? viewModel.monthlyProfitTrendPoints : viewModel.profitTrendPoints,
+                range: selectedRange == .week ? .month : selectedRange
+            )
+        }
+
+        CategoryBreakdownCard(stats: viewModel.categoryStats)
+    }
 }
 
 // MARK: - Components
@@ -875,7 +890,7 @@ private struct FinancialCard: View {
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                 } else {
-                    Text(amount.asCurrency())
+                    Text(amount.asCurrencyCompact())
                         .font(isHero ? .headline.weight(.bold) : .subheadline.weight(.bold))
                         .foregroundColor(isHero ? .white : ColorTheme.primaryText)
                         .minimumScaleFactor(0.5)
@@ -1038,7 +1053,7 @@ private struct SummaryOverviewCard: View {
                         .foregroundColor(ColorTheme.secondaryText)
                     
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
-                        Text(totalSpent.asCurrency())
+                        Text(totalSpent.asCurrencyCompact())
                             .font(.system(size: 32, weight: .bold, design: .rounded))
                             .foregroundColor(ColorTheme.primaryText)
                         
@@ -1061,8 +1076,7 @@ private struct SummaryOverviewCard: View {
                                 Text(range.comparisonLabel)
                                     .font(.caption2)
                                     .foregroundColor(ColorTheme.secondaryText)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.9)
+                                    .minimumScaleFactor(0.5)
                             }
                         }
                     }
@@ -1172,7 +1186,7 @@ private struct ProfitOverviewCard: View {
                         .font(.subheadline)
                         .foregroundColor(ColorTheme.secondaryText)
                     
-                    Text(totalProfit.asCurrency())
+                    Text(totalProfit.asCurrencyCompact())
                         .font(.system(size: 32, weight: .bold, design: .rounded))
                         .foregroundColor(ColorTheme.primaryText)
                 }

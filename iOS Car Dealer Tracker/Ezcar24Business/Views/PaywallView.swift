@@ -29,56 +29,68 @@ struct PaywallView: View {
             ColorTheme.background.ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // 1. Premium Header (Compact)
-                headerSection
-                    .frame(height: 300) // Increased height for safe area
-                    .opacity(animateContent ? 1 : 0)
-                    .offset(y: animateContent ? 0 : -20)
-                
-                VStack(spacing: 16) { // Tighter spacing
-                    // 2. Value Proposition / Features
-                    featuresSection
-                        .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 20)
-                    
-                    // 3. Plan Selection
-                    planSelectionSection
-                        .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 30)
-                    
-                    if isGuest {
-                        guestSyncPrompt
+                // SCROLLABLE CONTENT
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        // 1. Premium Header
+                        headerSection
+                            .frame(height: 300)
                             .opacity(animateContent ? 1 : 0)
-                            .offset(y: animateContent ? 0 : 30)
+                            .offset(y: animateContent ? 0 : -20)
+                        
+                        VStack(spacing: 16) {
+                            // 2. Features
+                            featuresSection
+                                .opacity(animateContent ? 1 : 0)
+                                .offset(y: animateContent ? 0 : 20)
+                            
+                            // 3. Plan Selection
+                            planSelectionSection
+                                .opacity(animateContent ? 1 : 0)
+                                .offset(y: animateContent ? 0 : 30)
+                            
+                            if isGuest {
+                                guestSyncPrompt
+                                    .opacity(animateContent ? 1 : 0)
+                                    .offset(y: animateContent ? 0 : 30)
+                            }
+                            
+                            // 4. Details
+                            subscriptionDetailsSection
+                                .opacity(animateContent ? 1 : 0)
+                                .offset(y: animateContent ? 0 : 40)
+                            
+                            // 5. Trust
+                            trustSection
+                                .opacity(animateContent ? 1 : 0)
+                                .padding(.bottom, 100) // Extra padding for sticky button
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
                     }
-                    
-                    // Subscription details / auto-renew copy
-                    subscriptionDetailsSection
-                        .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 40)
-                    
-                    Spacer() // Push content up, CTA down
-                    
-                    // 4. Trust / Social Proof
-                    trustSection
-                        .opacity(animateContent ? 1 : 0)
-                        .padding(.bottom, 10)
-                    
-                    // 5. CTA Button
+                }
+                .ignoresSafeArea(.container, edges: .top)
+                
+                // STICKY BOTTOM BAR (Always Visible)
+                VStack(spacing: 12) {
                     ctaButton
                         .opacity(animateContent ? 1 : 0)
                         .offset(y: animateContent ? 0 : 50)
                     
-                    // 6. Legal Links
                     legalLinksSection
                         .opacity(animateContent ? 1 : 0)
                         .offset(y: animateContent ? 0 : 50)
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
-                .padding(.bottom, 20)
+                .padding(.top, 16)
+                .padding(.bottom, 5) // Respect safe area automatically
+                .background(
+                    ColorTheme.background
+                        .opacity(0.95)
+                        .shadow(color: .black.opacity(0.05), radius: -5, y: -5)
+                        .ignoresSafeArea()
+                )
             }
-            .ignoresSafeArea(.container, edges: .top)
             
             // Confetti Overlay
             if showConfetti {
@@ -410,13 +422,14 @@ struct PaywallView: View {
     
     private func billingDescription(for package: Package) -> String {
         guard let period = package.storeProduct.subscriptionPeriod else {
-            return "one-time purchase"
+            return ""
         }
         
         switch period.unit {
         case .day: return "per day"
         case .week: return "per week"
-        case .month: return "per month"
+        case .month: 
+            return period.value == 3 ? "every 3 months" : "per month"
         case .year: return "per year"
         @unknown default: return "per period"
         }
@@ -432,8 +445,11 @@ struct PaywallView: View {
     private func filteredPackages(_ packages: [Package]) -> [Package] {
         packages
             .filter {
-                guard let unit = $0.storeProduct.subscriptionPeriod?.unit else { return true } // Allow lifetime
-                return unit == .month || unit == .year
+                // Only include subscription products (no lifetime/non-consumable)
+                guard $0.storeProduct.productType != .nonConsumable,
+                      let period = $0.storeProduct.subscriptionPeriod else { return false }
+                // Allow monthly and yearly (quarterly is 3-month period, which uses .month unit)
+                return period.unit == .month || period.unit == .year
             }
             .sorted { lhs, rhs in
                 // Sort: Monthly -> Yearly -> Lifetime
@@ -444,9 +460,17 @@ struct PaywallView: View {
     }
     
     private func sortOrder(for package: Package) -> Int {
-        if package.storeProduct.productType == .nonConsumable { return 3 } // Lifetime last
-        if package.storeProduct.subscriptionPeriod?.unit == .year { return 2 }
-        return 1 // Monthly first
+        guard let period = package.storeProduct.subscriptionPeriod else { return 99 }
+        
+        switch period.unit {
+        case .month:
+            // Monthly (1 month) = 1, Quarterly (3 months) = 2
+            return period.value == 1 ? 1 : 2
+        case .year:
+            return 3
+        default:
+            return 99
+        }
     }
     
     private func isIntroEligible(for package: Package) -> Bool {
@@ -512,14 +536,6 @@ struct PlanCard: View {
                             .padding(.vertical, 2)
                             .background(Color.green)
                             .cornerRadius(4)
-                    } else if isLifetime {
-                        Text("once".localizedString)
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(Color.orange)
-                            .cornerRadius(4)
                     } else {
                         Spacer().frame(height: 12)
                     }
@@ -551,11 +567,7 @@ struct PlanCard: View {
                         .minimumScaleFactor(0.7)
                     
                     if let period = package.storeProduct.subscriptionPeriod {
-                        Text("/ \(period.unit == .year ? "year" : "mo")")
-                            .font(.system(size: 9))
-                            .foregroundColor(ColorTheme.secondaryText)
-                    } else {
-                         Text("once")
+                        Text(periodLabel(for: period))
                             .font(.system(size: 9))
                             .foregroundColor(ColorTheme.secondaryText)
                     }
@@ -594,19 +606,34 @@ struct PlanCard: View {
         package.storeProduct.subscriptionPeriod?.unit == .year
     }
     
-    var isLifetime: Bool {
-        package.storeProduct.productType == .nonConsumable
-    }
+
     
     var planTitle: String {
-        if isLifetime { return "Lifetime" }
-        if package.storeProduct.subscriptionPeriod?.unit == .year { return "Yearly" }
-        return "Monthly"
+        guard let period = package.storeProduct.subscriptionPeriod else { return "Plan" }
+        switch period.unit {
+        case .year:
+            return "Yearly"
+        case .month:
+            return period.value == 3 ? "Quarterly" : "Monthly"
+        default:
+            return "Plan"
+        }
     }
     
     var isEligibleForTrial: Bool {
         let eligibility = subscriptionManager.introEligibility[package.storeProduct.productIdentifier]
         return eligibility?.status == .eligible
+    }
+    
+    private func periodLabel(for period: SubscriptionPeriod) -> String {
+        switch period.unit {
+        case .year:
+            return "/ year"
+        case .month:
+            return period.value == 3 ? "/ 3 mo" : "/ mo"
+        default:
+            return "/ period"
+        }
     }
 }
 

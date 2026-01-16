@@ -6,6 +6,7 @@ struct AddPartSaleView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var permissionService = PermissionService.shared
+    var showHeader: Bool = true
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Part.name, ascending: true)],
@@ -22,9 +23,9 @@ struct AddPartSaleView: View {
     private var accounts: FetchedResults<FinancialAccount>
 
     @State private var lineItems: [DraftPartSaleLine] = [DraftPartSaleLine()]
-    @State private var buyerName: String = ""
-    @State private var buyerPhone: String = ""
-    @State private var paymentMethod: String = "Cash"
+    @State private var selectedClient: Client?
+    @State private var showClientSelection = false
+    @State private var paymentMethod: String = "payment_method_cash".localizedString
     @State private var notes: String = ""
     @State private var saleDate: Date = Date()
     @State private var selectedAccount: FinancialAccount?
@@ -36,20 +37,30 @@ struct AddPartSaleView: View {
     @FocusState private var focusedField: Field?
     
     enum Field: Hashable {
-        case buyerName, buyerPhone, notes
+        case notes
         case quantity(Int)
         case price(Int)
     }
 
-    private let paymentMethods = ["Cash", "Bank Transfer", "Cheque", "Finance", "Other"]
+    private var paymentMethods: [String] {
+        ["payment_method_cash".localizedString, 
+         "payment_method_bank_transfer".localizedString, 
+         "payment_method_cheque".localizedString, 
+         "payment_method_finance".localizedString, 
+         "payment_method_other".localizedString]
+    }
 
     var body: some View {
         ZStack {
-            ColorTheme.background.ignoresSafeArea()
+            if showHeader {
+                ColorTheme.background.ignoresSafeArea()
+            }
             
             VStack(spacing: 0) {
                 // Custom Header
-                headerView
+                if showHeader {
+                    headerView
+                }
                 
                 ScrollView {
                     VStack(spacing: 24) {
@@ -155,30 +166,39 @@ struct AddPartSaleView: View {
                 
                 Divider().padding(.leading, 52)
                 
-                // Buyer Name
-                HStack {
-                    Image(systemName: "person")
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .frame(width: 24)
-                    TextField("buyer_name".localizedString, text: $buyerName)
-                        .focused($focusedField, equals: .buyerName)
-                        .submitLabel(.next)
-                        .onSubmit { focusedField = .buyerPhone }
+                // Client Selection
+                Button {
+                     showClientSelection = true
+                } label: {
+                    HStack {
+                        Image(systemName: "person.crop.circle")
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .frame(width: 24)
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(selectedClient?.name ?? "select_client".localizedString)
+                                .font(.body)
+                                .foregroundColor(selectedClient != nil ? ColorTheme.primaryText : ColorTheme.secondaryText)
+                            
+                            if let phone = selectedClient?.phone, !phone.isEmpty {
+                                Text(phone)
+                                    .font(.caption)
+                                    .foregroundColor(ColorTheme.secondaryText)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+                    .padding(16)
                 }
-                .padding(16)
-                
-                Divider().padding(.leading, 52)
-                
-                // Buyer Phone
-                HStack {
-                    Image(systemName: "phone")
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .frame(width: 24)
-                    TextField("phone_number".localizedString, text: $buyerPhone)
-                        .keyboardType(.phonePad)
-                        .focused($focusedField, equals: .buyerPhone)
+                .sheet(isPresented: $showClientSelection) {
+                    ClientSelectionView(selectedClient: $selectedClient)
                 }
-                .padding(16)
+                .background(ColorTheme.cardBackground)
                 
                 Divider().padding(.leading, 52)
                 
@@ -298,9 +318,22 @@ struct AddPartSaleView: View {
                                 Text(part.displayName)
                                     .font(.headline)
                                     .foregroundColor(ColorTheme.primaryText)
-                                Text(String(format: "parts_sale_available_format".localizedString, formatQuantity(part.quantityOnHand)))
-                                    .font(.caption)
-                                    .foregroundColor(part.quantityOnHand > 0 ? ColorTheme.success : ColorTheme.danger)
+                                HStack(spacing: 4) {
+                                    Text(String(format: "parts_sale_available_format".localizedString, formatQuantity(part.quantityOnHand)))
+                                        .font(.caption)
+                                        .foregroundColor(part.quantityOnHand > 0 ? ColorTheme.success : ColorTheme.danger)
+                                    if permissionService.canViewPartCost() {
+                                        let avgCost = averageUnitCost(for: part)
+                                        if avgCost > 0 {
+                                            Text("•")
+                                                .font(.caption)
+                                                .foregroundColor(ColorTheme.secondaryText)
+                                            Text("\("parts_sale_total_cost".localizedString): \(avgCost.asCurrency())")
+                                                .font(.caption)
+                                                .foregroundColor(ColorTheme.secondaryText)
+                                        }
+                                    }
+                                }
                             }
                         } else {
                             Text("parts_select_part".localizedString)
@@ -317,7 +350,7 @@ struct AddPartSaleView: View {
                 if lineItems.count > 1 {
                     Button {
                         withAnimation {
-                            lineItems.remove(at: index)
+                            _ = lineItems.remove(at: index)
                         }
                         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     } label: {
@@ -373,7 +406,7 @@ struct AddPartSaleView: View {
                 
                 // Subtotal
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("Total") // Localize if needed, or keep generic symbol e.g. =
+                    Text("total".localizedString)
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                     
@@ -385,6 +418,42 @@ struct AddPartSaleView: View {
                 }
             }
             .padding(16)
+            
+            // Profit per item (if permission granted)
+            if permissionService.canViewPartCost(), let part = part {
+                let avgCost = averageUnitCost(for: part)
+                let qty = lineItems[index].quantityDecimal
+                let unitPrice = lineItems[index].unitPriceDecimal
+                let profitPerUnit = unitPrice - avgCost
+                let totalProfit = profitPerUnit * qty
+                
+                if qty > 0 && unitPrice > 0 {
+                    Divider()
+                    
+                    HStack {
+                        Text("parts_sale_total_cost".localizedString)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Text(avgCost.asCurrency())
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(ColorTheme.primaryText)
+                        
+                        Spacer()
+                        
+                        Text("parts_sale_total_profit".localizedString)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Text(totalProfit >= 0 ? "+\(totalProfit.asCurrency())" : totalProfit.asCurrency())
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(totalProfit >= 0 ? ColorTheme.success : ColorTheme.danger)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(totalProfit >= 0 ? ColorTheme.success.opacity(0.08) : ColorTheme.danger.opacity(0.08))
+                }
+            }
         }
         .background(ColorTheme.cardBackground)
         .cornerRadius(16)
@@ -510,8 +579,11 @@ struct AddPartSaleView: View {
         let sale = PartSale(context: viewContext)
         sale.id = UUID()
         sale.date = saleDate
-        sale.buyerName = buyerName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : buyerName
-        sale.buyerPhone = buyerPhone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : buyerPhone
+        sale.buyerName = selectedClient?.name
+        sale.buyerPhone = selectedClient?.phone
+        if let client = selectedClient {
+            sale.setValue(client, forKey: "client")
+        }
         sale.paymentMethod = paymentMethod
         sale.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : notes
         sale.account = account
@@ -589,6 +661,9 @@ struct AddPartSaleView: View {
                     for part in updatedPartsById.values {
                         await CloudSyncManager.shared?.upsertPart(part, dealerId: dealerId)
                     }
+                    if let client = selectedClient {
+                        await CloudSyncManager.shared?.upsertClient(client, dealerId: dealerId)
+                    }
                     for batch in updatedBatches {
                         await CloudSyncManager.shared?.upsertPartBatch(batch, dealerId: dealerId)
                     }
@@ -660,6 +735,22 @@ struct AddPartSaleView: View {
         formatter.maximumFractionDigits = 2
         return formatter.string(from: value as NSDecimalNumber) ?? "\(value)"
     }
+    
+    /// Calculates the weighted average unit cost from a part's active batches
+    private func averageUnitCost(for part: Part) -> Decimal {
+        let batches = part.activeBatches.filter { ($0.quantityRemaining?.decimalValue ?? 0) > 0 }
+        guard !batches.isEmpty else { return 0 }
+        
+        var totalCost: Decimal = 0
+        var totalQty: Decimal = 0
+        for batch in batches {
+            let qty = batch.quantityRemaining?.decimalValue ?? 0
+            let cost = batch.unitCost?.decimalValue ?? 0
+            totalCost += qty * cost
+            totalQty += qty
+        }
+        return totalQty > 0 ? totalCost / totalQty : 0
+    }
 
     private func createDefaultAccountsIfNeeded() {
         guard accounts.isEmpty else { return }
@@ -701,5 +792,145 @@ private struct DraftPartSaleLine: Identifiable {
 
     var isValid: Bool {
         partId != nil && quantityDecimal > 0 && unitPriceDecimal > 0
+    }
+}
+
+
+
+struct ClientSelectionView: View {
+    @Binding var selectedClient: Client?
+    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var searchText = ""
+    @State private var showAddClient = false
+    
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(keyPath: \Client.updatedAt, ascending: false)],
+        animation: .default)
+    private var clients: FetchedResults<Client>
+
+    var filteredClients: [Client] {
+        if searchText.isEmpty {
+            return Array(clients)
+        } else {
+            return clients.filter { client in
+                (client.name ?? "").localizedCaseInsensitiveContains(searchText) ||
+                (client.phone ?? "").localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(filteredClients) { client in
+                    Button {
+                        selectedClient = client
+                        dismiss()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(client.name ?? "Unknown")
+                                    .font(.headline)
+                                if let phone = client.phone, !phone.isEmpty {
+                                    Text(phone)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            Spacer()
+                            if selectedClient == client {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(ColorTheme.primary)
+                            }
+                        }
+                    }
+                    .foregroundColor(ColorTheme.primaryText)
+                }
+            }
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "search_client".localizedString)
+            .navigationTitle("select_client".localizedString)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("cancel".localizedString) {
+                        dismiss()
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showAddClient = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $showAddClient) {
+                QuickAddClientView(selectedClient: $selectedClient)
+            }
+        }
+    }
+}
+
+struct QuickAddClientView: View {
+    @Binding var selectedClient: Client?
+    @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var name = ""
+    @State private var phone = ""
+    
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("buyer_name".localizedString, text: $name)
+                    TextField("phone_number".localizedString, text: $phone)
+                        .keyboardType(.phonePad)
+                } header: {
+                    Text("client_details".localizedString)
+                }
+            }
+            .navigationTitle("new_client".localizedString)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("cancel".localizedString) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("save".localizedString) {
+                        saveClient()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func saveClient() {
+        let client = Client(context: viewContext)
+        client.id = UUID()
+        client.name = name
+        client.phone = phone
+        client.createdAt = Date()
+        client.updatedAt = Date()
+        client.status = "new"
+        
+        do {
+            try viewContext.save()
+            
+            // Trigger sync
+            if let dealerId = CloudSyncEnvironment.currentDealerId {
+                Task {
+                    await CloudSyncManager.shared?.upsertClient(client, dealerId: dealerId)
+                }
+            }
+            
+            selectedClient = client
+            dismiss()
+        } catch {
+            print("Error saving client: \(error)")
+        }
     }
 }

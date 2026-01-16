@@ -9,9 +9,84 @@ import SwiftUI
 import CoreData
 
 struct AddSaleView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var saleType: SaleType = .vehicle
+    
+    enum SaleType: String, CaseIterable {
+        case vehicle, parts
+        
+        @MainActor
+        var title: String {
+             switch self {
+             case .vehicle: return "vehicle".localizedString
+             case .parts: return "parts_tab_title".localizedString
+             }
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            ColorTheme.background.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                 // Header
+                 headerView
+                 
+                 // Picker
+                 Picker("Sale Type", selection: $saleType) {
+                     ForEach(SaleType.allCases, id: \.self) { type in
+                         Text(type.title).tag(type)
+                     }
+                 }
+                 .pickerStyle(.segmented)
+                 .padding(.horizontal, 20)
+                 .padding(.bottom, 10)
+                 
+                 // Form
+                 switch saleType {
+                 case .vehicle:
+                     VehicleSaleForm(showHeader: false)
+                 case .parts:
+                     AddPartSaleView(showHeader: false)
+                 }
+            }
+        }
+    }
+    
+    private var headerView: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .frame(width: 36, height: 36)
+                    .background(ColorTheme.secondaryBackground)
+                    .clipShape(Circle())
+            }
+            
+            Spacer()
+            
+            Text("new_sale".localizedString)
+                .font(.headline)
+                .foregroundColor(ColorTheme.primaryText)
+            
+            Spacer()
+            
+            Color.clear.frame(width: 36, height: 36)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+        .padding(.bottom, 10)
+    }
+}
+
+private struct VehicleSaleForm: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var permissionService = PermissionService.shared
+    var showHeader: Bool = true
     
     // Form State
     @State private var selectedVehicle: Vehicle?
@@ -19,8 +94,9 @@ struct AddSaleView: View {
     @State private var date: Date = Date()
     @State private var buyerName: String = ""
     @State private var buyerPhone: String = ""
-    @State private var paymentMethod: String = "Cash"
+    @State private var paymentMethod: String = "payment_method_cash".localizedString
     @State private var notes: String = ""
+    @State private var vatRefundPercent: String = ""
     
     // UI State
     @State private var showVehicleSheet: Bool = false
@@ -31,7 +107,13 @@ struct AddSaleView: View {
     @State private var showDatePicker: Bool = false
     @State private var vehicleSearchText: String = ""
     
-    let paymentMethods = ["Cash", "Bank Transfer", "Cheque", "Finance", "Other"]
+    private var paymentMethods: [String] {
+        ["payment_method_cash".localizedString, 
+         "payment_method_bank_transfer".localizedString, 
+         "payment_method_cheque".localizedString, 
+         "payment_method_finance".localizedString, 
+         "payment_method_other".localizedString]
+    }
     
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
@@ -93,82 +175,83 @@ struct AddSaleView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
+            if showHeader {
                 ColorTheme.background.ignoresSafeArea()
                     .onTapToDismissKeyboard()
-                
-                VStack(spacing: 0) {
-                    // Header
+            }
+            
+            VStack(spacing: 0) {
+                // Header
+                if showHeader {
                     headerView
-                    
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            // Vehicle Selection
-                            vehicleSelectionSection
-                            
-                            // Financial Preview Card (only if vehicle selected)
-                            if selectedVehicle != nil {
-                                financialPreviewCard
-                            }
-                            
-                            // Sale Details
-                            saleDetailsSection
+                }
+                
+                ScrollView {
+                    VStack(spacing: 24) {
+                        // Vehicle Selection
+                        vehicleSelectionSection
+                        
+                        // Financial Preview Card (only if vehicle selected)
+                        if selectedVehicle != nil {
+                            financialPreviewCard
+                        }
+                        
+                        // Sale Details
+                        saleDetailsSection
 
-                            // Account Selection
-                            accountSelectionSection
-                            
-                            // Buyer Details
-                            buyerDetailsSection
-                            
-                            Spacer(minLength: 100)
-                        }
-                        .padding(.vertical, 20)
+                        // Account Selection
+                        accountSelectionSection
+                        
+                        // Buyer Details
+                        buyerDetailsSection
+                        
+                        Spacer(minLength: 100)
                     }
-                    .scrollDismissesKeyboard(.interactively)
+                    .padding(.vertical, 20)
                 }
-                
-                // Floating Save Button
-                VStack {
-                    Spacer()
-                    saveButton
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-                }
-                // .ignoresSafeArea(.keyboard) - Removed to allow button to move up
-                
-                // Toast Overlay
-                if showSavedToast {
-                    savedToast
-                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .sheet(isPresented: $showVehicleSheet) {
-                vehicleSelectionSheet
+            
+            // Floating Save Button
+            VStack {
+                Spacer()
+                saveButton
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
             }
-            .sheet(isPresented: $showClientPicker) {
-                clientSelectionSheet
+            
+            // Toast Overlay
+            if showSavedToast {
+                savedToast
             }
-            .sheet(isPresented: $showDatePicker) {
-                VStack {
-                    DatePicker("Select Date", selection: $date, displayedComponents: .date)
-                        .datePickerStyle(.graphical)
-                        .padding()
-                        .onChange(of: date) { old, new in
-                            showDatePicker = false
-                        }
-                    
-                    Button("done".localizedString) {
+        }
+        .sheet(isPresented: $showVehicleSheet) {
+            vehicleSelectionSheet
+        }
+        .sheet(isPresented: $showClientPicker) {
+            clientSelectionSheet
+        }
+        .sheet(isPresented: $showDatePicker) {
+            VStack {
+                DatePicker("Select Date", selection: $date, displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .padding()
+                    .onChange(of: date) { old, new in
                         showDatePicker = false
                     }
-                    .padding()
-                    .foregroundColor(ColorTheme.primary)
+                
+                Button("done".localizedString) {
+                    showDatePicker = false
                 }
-                .presentationDetents([.medium])
+                .padding()
+                .foregroundColor(ColorTheme.primary)
             }
-            .onAppear {
-                if accounts.isEmpty {
-                    createDefaultAccounts()
-                }
+            .presentationDetents([.medium])
+        }
+        .onAppear {
+            if accounts.isEmpty {
+                createDefaultAccounts()
             }
         }
     }
@@ -386,6 +469,58 @@ struct AddSaleView: View {
                     .accentColor(ColorTheme.primary)
                 }
                 .padding(16)
+                
+                Divider().padding(.leading, 20)
+                
+                // VAT Refund Percentage
+                HStack(spacing: 12) {
+                    Image(systemName: "percent")
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .frame(width: 24)
+                    
+                    Text("vat_refund_percent".localizedString)
+                        .font(.body)
+                        .foregroundColor(ColorTheme.primaryText)
+                    
+                    Spacer()
+                    
+                    HStack(spacing: 4) {
+                        TextField("0", text: $vatRefundPercent)
+                            .keyboardType(.decimalPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 60)
+                            .onChange(of: vatRefundPercent) { old, new in
+                                let filtered = new.filter { "0123456789.".contains($0) }
+                                if filtered != new { vatRefundPercent = filtered }
+                            }
+                        
+                        Text("%")
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(ColorTheme.secondaryBackground)
+                    .cornerRadius(8)
+                }
+                .padding(16)
+                
+                // Show calculated VAT refund amount if percentage is entered
+                if let percent = Decimal(string: vatRefundPercent), percent > 0,
+                   let saleAmount = Decimal(string: amount), saleAmount > 0 {
+                    let refundAmount = saleAmount * percent / 100
+                    HStack {
+                        Spacer()
+                        Text("vat_refund_amount".localizedString + ": ")
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Text(refundAmount.asCurrency())
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(ColorTheme.success)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 8)
+                }
             }
             .background(ColorTheme.cardBackground)
             .cornerRadius(16)
@@ -622,8 +757,13 @@ struct AddSaleView: View {
                 newSale.account = selectedAccount
                 newSale.createdAt = Date()
                 newSale.updatedAt = newSale.createdAt
-
                 
+                // VAT Refund
+                if let vatPercent = Decimal(string: vatRefundPercent), vatPercent > 0 {
+                    newSale.vatRefundPercent = NSDecimalNumber(decimal: vatPercent)
+                    let vatAmount = salePrice * vatPercent / 100
+                    newSale.vatRefundAmount = NSDecimalNumber(decimal: vatAmount)
+                }                
                 // 2. Update Vehicle Status
                 vehicle.status = "sold"
                 vehicle.salePrice = NSDecimalNumber(decimal: salePrice)

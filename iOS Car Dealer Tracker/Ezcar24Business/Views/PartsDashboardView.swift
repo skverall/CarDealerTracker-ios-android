@@ -15,12 +15,17 @@ struct PartsDashboardView: View {
     @State private var showReceiveStock = false
     @State private var showAddSale = false
 
+    // Initialize view models
+    init() {
+        let context = PersistenceController.shared.container.viewContext
+        _inventoryViewModel = StateObject(wrappedValue: PartsInventoryViewModel(context: context))
+        _salesViewModel = StateObject(wrappedValue: PartSalesViewModel(context: context))
+    }
+
     enum PartsSection: String, CaseIterable, Identifiable {
-        case inventory
-        case sales
-
+        case inventory, sales
         var id: String { rawValue }
-
+        
         @MainActor
         var title: String {
             switch self {
@@ -30,103 +35,245 @@ struct PartsDashboardView: View {
         }
     }
 
-    init() {
-        let context = PersistenceController.shared.container.viewContext
-        _inventoryViewModel = StateObject(wrappedValue: PartsInventoryViewModel(context: context))
-        _salesViewModel = StateObject(wrappedValue: PartSalesViewModel(context: context))
-    }
-
-    @State private var expandedCategories: Set<String> = []
-    @State private var showFilters = true
-
-    // MARK: - Body
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
-                VStack(spacing: 0) {
-                    // Custom Section Picker
-                    customSegmentedControl
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .background(ColorTheme.background)
-                    
-                    // Search Bar
-                    searchBar
-                        .background(ColorTheme.background)
-                    
-                    // Filters (Only for Inventory currently)
-                    if selectedSection == .inventory {
-                        filtersBar
-                            .background(ColorTheme.background)
-                            .padding(.bottom, 8)
-                    }
-
-                    // Main Content
-                    switch selectedSection {
-                    case .inventory:
-                        inventoryListWithGrouping
-                    case .sales:
-                        salesList
-                    }
-                }
-                .background(ColorTheme.secondaryBackground.ignoresSafeArea())
+            ZStack(alignment: .top) {
+                Color(uiColor: .systemGroupedBackground)
+                    .ignoresSafeArea()
                 
-                // Floating Action Button (FAB)
-                if hasAnyActions {
-                   floatingActionButton
-                        .padding()
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // 1. Dashboard Header (Stats)
+                        dashboardHeader
+                        
+                        // 2. Control Bar (Filters & Segment)
+                        controlBar
+                        
+                        // 3. Content List
+                        contentList
+                            .padding(.bottom, 100) // Space for scroll
+                    }
+                    .padding(.top, 10)
+                }
+                .refreshable {
+                    if selectedSection == .inventory {
+                        inventoryViewModel.fetchParts()
+                    } else {
+                        salesViewModel.fetchSales()
+                    }
                 }
             }
             .navigationTitle("parts_tab_title".localizedString)
-            .navigationBarTitleDisplayMode(.large)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    menuActions
+                }
+            }
+            .sheet(isPresented: $showAddPart) { NavigationStack { AddPartView() } }
+            .sheet(isPresented: $showReceiveStock) { NavigationStack { ReceivePartStockView() } }
+            .sheet(isPresented: $showAddSale) { NavigationStack { AddPartSaleView() } }
         }
-        .id(regionSettings.selectedRegion.rawValue)
-        .sheet(isPresented: $showAddPart) { NavigationStack { AddPartView() } }
-        .sheet(isPresented: $showReceiveStock) { NavigationStack { ReceivePartStockView() } }
-        .sheet(isPresented: $showAddSale) { NavigationStack { AddPartSaleView() } }
     }
     
-    // MARK: - Custom Segmented Control
-    private var customSegmentedControl: some View {
-        HStack(spacing: 0) {
-            ForEach(PartsSection.allCases) { section in
-                Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        selectedSection = section
-                    }
-                } label: {
-                    Text(section.title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(selectedSection == section ? ColorTheme.primaryText : ColorTheme.secondaryText)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(
-                            ZStack {
-                                if selectedSection == section {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(ColorTheme.cardBackground)
-                                        .shadow(color: Color.black.opacity(0.1), radius: 2, x: 0, y: 1)
-                                        .matchedGeometryEffect(id: "SEGMENT", in: namespace)
-                                }
+    // MARK: - Dashboard Header
+    private var dashboardHeader: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                // Total Value Card
+                StatsCard(
+                    title: "parts_stats_total_value".localizedString,
+                    value: inventoryViewModel.totalValue.asCurrencyCompact(),
+                    icon: "shippingbox.fill", // More "Inventory" feeling
+                    gradient: LinearGradient(colors: [ColorTheme.primary, ColorTheme.primary.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    shadowColor: ColorTheme.primary
+                )
+                
+                // Low Stock Card
+                StatsCard(
+                    title: "parts_stats_low_stock".localizedString,
+                    value: "\(inventoryViewModel.lowStockCount)",
+                    icon: "exclamationmark.triangle.fill",
+                    gradient: LinearGradient(colors: [.orange, .red.opacity(0.8)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    shadowColor: .orange,
+                    isWarning: inventoryViewModel.lowStockCount > 0
+                )
+                
+                // Item Count (Subtle)
+                StatsCard(
+                    title: "parts_stats_items_count_short".localizedString, // "Items"
+                    value: "\(inventoryViewModel.activeItemCount)",
+                    icon: "number.circle.fill",
+                    gradient: LinearGradient(colors: [Color.gray, Color.gray.opacity(0.7)], startPoint: .topLeading, endPoint: .bottomTrailing),
+                    shadowColor: .gray
+                )
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+    
+    // MARK: - Control Bar
+    private var controlBar: some View {
+        VStack(spacing: 12) {
+            // Segment Switcher
+            HStack(spacing: 0) {
+                ForEach(PartsSection.allCases) { section in
+                    Button {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            selectedSection = section
+                        }
+                    } label: {
+                        VStack(spacing: 6) {
+                            Text(section.title)
+                                .font(.headline)
+                                .fontWeight(selectedSection == section ? .semibold : .medium)
+                                .foregroundColor(selectedSection == section ? ColorTheme.primary : ColorTheme.secondaryText)
+                            
+                            // Indicator
+                            if selectedSection == section {
+                                Capsule()
+                                    .fill(ColorTheme.primary)
+                                    .frame(height: 3)
+                                    .matchedGeometryEffect(id: "TabIndicator", in: namespace)
+                            } else {
+                                Capsule()
+                                    .fill(Color.clear)
+                                    .frame(height: 3)
                             }
-                        )
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.horizontal)
+            
+            // Search Input
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(ColorTheme.secondaryText)
+                TextField(searchPlaceholder, text: activeSearchText)
+/*                  .textFieldStyle(.plain) */
+                    .submitLabel(.search)
+                if !activeSearchText.wrappedValue.isEmpty {
+                    Button(action: { activeSearchText.wrappedValue = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+                }
+            }
+            .padding(10)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(10)
+            .padding(.horizontal, 16)
+
+            // Filters (Inventory Only)
+            if selectedSection == .inventory {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Menu {
+                            Button("all".localizedString) { inventoryViewModel.selectedCategory = nil }
+                            Divider()
+                            ForEach(inventoryViewModel.getAllCategories(), id: \.self) { cat in
+                                Button(cat) { inventoryViewModel.selectedCategory = cat }
+                            }
+                        } label: {
+                            PartsFilterChip(
+                                title: inventoryViewModel.selectedCategory ?? "category".localizedString,
+                                icon: "tag.fill",
+                                isSelected: inventoryViewModel.selectedCategory != nil
+                            )
+                        }
+
+                        Button {
+                            withAnimation { inventoryViewModel.showLowStockOnly.toggle() }
+                        } label: {
+                            PartsFilterChip(
+                                title: "parts_filter_low_stock".localizedString,
+                                icon: "exclamationmark.triangle.fill",
+                                isSelected: inventoryViewModel.showLowStockOnly,
+                                selectedColor: .orange
+                            )
+                        }
+                    }
+                    .padding(.horizontal, 16)
                 }
             }
         }
-        .padding(4)
-        .background(ColorTheme.secondaryBackground) // Light gray background for the track
-        .cornerRadius(12)
     }
     
-    @Namespace private var namespace
+    // MARK: - Content List
+    private var contentList: some View {
+        VStack(spacing: 16) {
+            switch selectedSection {
+            case .inventory:
+                ForEach(groupedParts, id: \.category) { group in
+                    VStack(alignment: .leading, spacing: 0) {
+                        // Section Header
+                        HStack {
+                            Text(group.category)
+                                .font(.callout)
+                                .fontWeight(.semibold)
+                                .foregroundColor(ColorTheme.secondaryText)
+                                .textCase(.uppercase)
+                            Spacer()
+                            Text("\(group.parts.count)")
+                                .font(.caption)
+                                .foregroundColor(ColorTheme.secondaryText)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color(uiColor: .tertiarySystemFill))
+                                .cornerRadius(4)
+                        }
+                        .padding(.leading, 16)
+                        .padding(.bottom, 6)
+                        .padding(.top, 8)
 
-    // MARK: - Floating Action Button
-    private var floatingActionButton: some View {
+                        // Items Group
+                        VStack(spacing: 0) {
+                            ForEach(group.parts.indices, id: \.self) { index in
+                                let part = group.parts[index]
+                                NavigationLink(destination: PartDetailView(part: part)) {
+                                    PartRowNew(part: part, canViewCost: permissionService.canViewPartCost())
+                                }
+                                .buttonStyle(PlainButtonStyle()) // Important for interactions
+                                
+                                if index < group.parts.count - 1 {
+                                    Divider().padding(.leading, 16)
+                                }
+                            }
+                        }
+                        .background(Color(uiColor: .secondarySystemGroupedBackground))
+                        .cornerRadius(10)
+                        .shadow(color: Color.black.opacity(0.02), radius: 2, x: 0, y: 1)
+                    }
+                    .padding(.horizontal, 16)
+                }
+                
+            case .sales:
+                VStack(spacing: 0) {
+                    ForEach(salesViewModel.saleItems) { item in
+                        Button(action: {}) { // Sales typically don't have detail view yet, just placeholder or logic
+                            PartSaleRowNew(item: item, canViewProfit: permissionService.canViewPartProfit())
+                        } // Simple wrapper, action could be show receipt
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        Divider().padding(.leading, 16)
+                    }
+                }
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .cornerRadius(10)
+                .padding(.horizontal, 16)
+                .shadow(color: Color.black.opacity(0.02), radius: 2, x: 0, y: 1)
+            }
+        }
+    }
+    
+    // MARK: - Actions Menu (Top Right)
+    private var menuActions: some View {
         Menu {
             if permissionService.can(.managePartsInventory) {
                 Button(action: { showAddPart = true }) {
-                    Label("parts_add_part".localizedString, systemImage: "plus.circle")
+                    Label("parts_add_part".localizedString, systemImage: "plus")
                 }
                 Button(action: { showReceiveStock = true }) {
                     Label("parts_receive_stock".localizedString, systemImage: "shippingbox")
@@ -138,463 +285,189 @@ struct PartsDashboardView: View {
                 }
             }
         } label: {
-            Image(systemName: "plus")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(.white)
-                .frame(width: 56, height: 56)
-                .background(ColorTheme.primary)
-                .clipShape(Circle())
-                .shadow(color: ColorTheme.primary.opacity(0.4), radius: 8, x: 0, y: 4)
+            Image(systemName: "plus.circle.fill")
+                .symbolRenderingMode(.hierarchical)
+                .font(.system(size: 20))
+                .foregroundColor(ColorTheme.primary)
         }
     }
 
-    // MARK: - Filters
-    private var filtersBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                // Category Filter
-                Menu {
-                    Button(action: { inventoryViewModel.selectedCategory = nil }) {
-                        Label("all".localizedString, systemImage: inventoryViewModel.selectedCategory == nil ? "checkmark" : "")
-                    }
-                    Divider()
-                    ForEach(inventoryViewModel.getAllCategories(), id: \.self) { cat in
-                        Button(action: { inventoryViewModel.selectedCategory = cat }) {
-                            Label(cat, systemImage: inventoryViewModel.selectedCategory == cat ? "checkmark" : "")
-                        }
-                    }
-                } label: {
-                    filterPill(
-                        title: inventoryViewModel.selectedCategory ?? "category".localizedString,
-                        icon: "tag.fill",
-                        isActive: inventoryViewModel.selectedCategory != nil
-                    )
-                }
+    @Namespace private var namespace
 
-                // Low Stock Toggle
-                Button {
-                    withAnimation {
-                        inventoryViewModel.showLowStockOnly.toggle()
-                    }
-                } label: {
-                    filterPill(
-                        title: "parts_filter_low_stock".localizedString,
-                        icon: "exclamationmark.triangle.fill",
-                        isActive: inventoryViewModel.showLowStockOnly,
-                        activeColor: .orange
-                    )
-                }
-
-                // Clear Filters
-                if inventoryViewModel.selectedCategory != nil || inventoryViewModel.showLowStockOnly {
-                    Button {
-                        withAnimation {
-                            inventoryViewModel.selectedCategory = nil
-                            inventoryViewModel.showLowStockOnly = false
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "xmark.circle.fill").font(.caption)
-                            Text("clear".localizedString).font(.footnote)
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .background(Capsule().fill(Color.gray.opacity(0.1)))
-                    }
-                    .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .padding(.horizontal, 16)
-        }
-    }
-
-    private func filterPill(title: String, icon: String, isActive: Bool, activeColor: Color = ColorTheme.primary) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon).font(.caption)
-            Text(title).font(.footnote).fontWeight(.medium).lineLimit(1)
-            if !isActive {
-                Image(systemName: "chevron.down").font(.caption2).opacity(0.6)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .foregroundColor(isActive ? .white : ColorTheme.primaryText)
-        .background(
-            Capsule().fill(isActive ? activeColor : ColorTheme.cardBackground)
-                .shadow(color: isActive ? activeColor.opacity(0.3) : Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-        )
-    }
-
-    // MARK: - Inventory List
-    private var inventoryListWithGrouping: some View {
-        List {
-            // Summary Stats Section
-            Section {
-                VStack(spacing: 16) {
-                    HStack(spacing: 16) {
-                        summaryCard(
-                            title: "parts_stats_total_value".localizedString,
-                            value: inventoryViewModel.totalValue.asCurrency(),
-                            icon: "scroll.fill",
-                            color: .blue
-                        )
-                        summaryCard(
-                            title: "parts_stats_low_stock".localizedString,
-                            value: "\(inventoryViewModel.lowStockCount)",
-                            icon: "exclamationmark.triangle.fill",
-                            color: inventoryViewModel.lowStockCount > 0 ? .orange : .green
-                        )
-                    }
-                     HStack {
-                         Text(String(format: "parts_stats_items_count".localizedString, inventoryViewModel.activeItemCount))
-                             .font(.caption)
-                             .foregroundColor(ColorTheme.secondaryText)
-                        Spacer()
-                    }
-                }
-                .padding(.vertical, 12)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-            }
-            .listSectionSeparator(.hidden)
-
-            // Grouped Items
-            ForEach(groupedParts, id: \.category) { group in
-                Section {
-                    if expandedCategories.contains(group.category) {
-                        EmptyView()
-                    } else {
-                        ForEach(group.parts) { part in
-                            ZStack {
-                                NavigationLink(destination: PartDetailView(part: part)) {
-                                    EmptyView()
-                                }
-                                .opacity(0) // Hide the chevron
-
-                                PartRow(part: part, canViewCost: permissionService.canViewPartCost())
-                            }
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                        }
-                    }
-                } header: {
-                    Button {
-                        withAnimation {
-                            if expandedCategories.contains(group.category) {
-                                expandedCategories.remove(group.category)
-                            } else {
-                                expandedCategories.insert(group.category)
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Text(group.category)
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(ColorTheme.primaryText)
-                            Spacer()
-                            Text("\(group.parts.count)")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(ColorTheme.secondaryText)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(Color.gray.opacity(0.1))
-                                .cornerRadius(8)
-                            Image(systemName: "chevron.right")
-                                .font(.caption)
-                                .foregroundColor(ColorTheme.secondaryText)
-                                .rotationEffect(.degrees(expandedCategories.contains(group.category) ? 0 : 90))
-                        }
-                        .padding(.vertical, 8)
-                    }
-                }
-                .listSectionSeparator(.hidden)
-            }
-            // Add padding at bottom
-            Section {
-                Color.clear.frame(height: 80).listRowBackground(Color.clear)
-            }
-            .listSectionSeparator(.hidden)
-        }
-        .listStyle(.plain)
-        .refreshable {
-            inventoryViewModel.fetchParts()
-        }
-    }
-    
-    // Grouping Logic
+    // MARK: - Helpers
     private var groupedParts: [(category: String, parts: [Part])] {
          let groups = Dictionary(grouping: inventoryViewModel.parts) { part in
              let cat = part.category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-             return cat.isEmpty ? "parts_uncategorized".localizedString : cat
+             return cat.isEmpty ? "parts_uncategorized".localizedString : cat.localizedString
          }
          return groups.map { (category: $0.key, parts: $0.value) }
              .sorted { $0.category < $1.category }
     }
-
-    private func summaryCard(title: String, value: String, icon: String, color: Color) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Image(systemName: icon)
-                        .foregroundColor(color)
-                        .font(.custom("system", size: 18))
-                    Text(title)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(ColorTheme.secondaryText)
-                }
-                Text(value)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(ColorTheme.primaryText)
-                    .minimumScaleFactor(0.8)
-                    .lineLimit(1)
-            }
-            Spacer()
-        }
-        .padding(16)
-        .background(ColorTheme.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
-    }
-
-    // MARK: - Search Bar
-    private var searchBar: some View {
-        HStack {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(ColorTheme.secondaryText)
-                TextField(searchPlaceholder, text: activeSearchText)
-                    .foregroundColor(ColorTheme.primaryText)
-                    .submitLabel(.search)
-                
-                if !activeSearchText.wrappedValue.isEmpty {
-                    Button(action: { activeSearchText.wrappedValue = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(ColorTheme.secondaryText)
-                    }
-                }
-            }
-            .padding(12)
-            .background(ColorTheme.secondaryBackground)
-            .cornerRadius(12)
-        }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
-    }
     
     private var activeSearchText: Binding<String> {
         switch selectedSection {
-        case .inventory:
-            return $inventoryViewModel.searchText
-        case .sales:
-            return $salesViewModel.searchText
+        case .inventory: return $inventoryViewModel.searchText
+        case .sales: return $salesViewModel.searchText
         }
     }
-
+    
     private var searchPlaceholder: String {
         switch selectedSection {
-        case .inventory:
-            return "parts_search_inventory_placeholder".localizedString
-        case .sales:
-            return "parts_search_sales_placeholder".localizedString
+        case .inventory: return "parts_search_inventory_placeholder".localizedString
+        case .sales: return "parts_search_sales_placeholder".localizedString
         }
-    }
-
-    // MARK: - Sales List (Existing logic adapted)
-    private var salesList: some View {
-        Group {
-            if salesViewModel.saleItems.isEmpty {
-                 EmptyStateView(
-                    title: "parts_sales_empty_title".localizedString,
-                    message: "parts_sales_empty_message".localizedString,
-                    systemImage: "cart"
-                )
-            } else {
-                List {
-                    ForEach(salesViewModel.saleItems) { item in
-                        PartSaleRow(
-                            item: item,
-                            canViewProfit: permissionService.canViewPartProfit()
-                        )
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    }
-                    .onDelete(perform: deletePartSales)
-                    
-                    Section {
-                         Color.clear.frame(height: 80).listRowBackground(Color.clear)
-                    }
-                }
-                .listStyle(.plain)
-                .refreshable {
-                    salesViewModel.fetchSales()
-                }
-            }
-        }
-    }
-
-    private func deletePartSales(at offsets: IndexSet) {
-        guard canDeleteRecords else { return }
-        for index in offsets {
-            let sale = salesViewModel.saleItems[index].sale
-            salesViewModel.deleteSale(sale)
-        }
-    }
-
-    private var hasAnyActions: Bool {
-        permissionService.can(.managePartsInventory) || permissionService.can(.createPartSale)
-    }
-
-    private var canDeleteRecords: Bool {
-        if case .signedIn = sessionStore.status {
-            return permissionService.can(.deleteRecords)
-        }
-        return true
     }
 }
 
-private struct PartRow: View {
+// MARK: - Subviews
+
+struct StatsCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let gradient: LinearGradient
+    var shadowColor: Color
+    var isWarning: Bool = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(.white.opacity(0.9))
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(value)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                    .minimumScaleFactor(0.8)
+                    .lineLimit(1)
+                
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white.opacity(0.8))
+            }
+        }
+        .padding(12)
+        .frame(width: 140, height: 100)
+        .background(gradient)
+        .cornerRadius(14)
+        .shadow(color: shadowColor.opacity(0.3), radius: 5, x: 0, y: 3)
+    }
+}
+
+struct PartsFilterChip: View {
+    let title: String
+    let icon: String
+    let isSelected: Bool
+    var selectedColor: Color = ColorTheme.primary
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2)
+            Text(title)
+                .font(.caption)
+                .fontWeight(.semibold)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(isSelected ? selectedColor.opacity(0.15) : Color(uiColor: .tertiarySystemFill))
+        .foregroundColor(isSelected ? selectedColor : ColorTheme.secondaryText)
+        .cornerRadius(20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(isSelected ? selectedColor : Color.clear, lineWidth: 1)
+        )
+    }
+}
+
+struct PartRowNew: View {
     let part: Part
     let canViewCost: Bool
-
-    private var quantityText: String {
-        formatQuantity(part.quantityOnHand)
-    }
-
-    private var valueText: String {
-        guard canViewCost else { return "" }
-        return part.inventoryValue.asCurrency()
-    }
-
+    
     var body: some View {
         HStack {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(part.displayName)
-                    .font(.headline)
+                    .font(.body)
+                    .fontWeight(.medium)
                     .foregroundColor(ColorTheme.primaryText)
                 
-                // Display code if available
                 if let code = part.code, !code.isEmpty {
                     Text(code)
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 6)
+                        .font(.caption2)
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 2)
-                        .background(ColorTheme.primary.opacity(0.1))
-                        .foregroundColor(ColorTheme.primary)
+                        .background(Color.gray.opacity(0.1))
                         .cornerRadius(4)
+                        .foregroundColor(ColorTheme.secondaryText)
                 }
-
-                if let category = part.category, !category.isEmpty {
-                    Text(category)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(formatQuantity(part.quantityOnHand))
+                    .font(.body)
+                    .fontWeight(.bold)
+                    .foregroundColor(part.quantityOnHand <= 2 ? .orange : ColorTheme.primaryText)
+                
+                if canViewCost {
+                    Text(part.inventoryValue.asCurrency())
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                 }
             }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 4) {
-                Text(quantityText)
-                    .font(.headline)
-                    .foregroundColor(ColorTheme.primaryText)
-                if canViewCost {
-                    Text(valueText)
-                    .font(.caption)
-                    .foregroundColor(ColorTheme.secondaryText)
-                }
-            }
-            
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundColor(ColorTheme.secondaryText)
-                .padding(.leading, 8)
         }
-        .padding(16)
-        .background(ColorTheme.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
     }
-
+    
     private func formatQuantity(_ value: Decimal) -> String {
         let formatter = NumberFormatter()
         formatter.numberStyle = .decimal
-        formatter.minimumFractionDigits = 0
         formatter.maximumFractionDigits = 2
         return formatter.string(from: value as NSDecimalNumber) ?? "\(value)"
     }
 }
 
-private struct PartSaleRow: View {
+struct PartSaleRowNew: View {
     let item: PartSaleItem
     let canViewProfit: Bool
-
+    
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(item.buyerName)
-                    .font(.headline)
-                    .foregroundColor(ColorTheme.primaryText)
-                Spacer()
+                    .font(.body)
+                    .fontWeight(.medium)
                 Text(item.saleDate, style: .date)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
             }
-
-            if !item.itemsSummary.isEmpty {
-                Text(item.itemsSummary)
-                    .font(.subheadline)
-                    .foregroundColor(ColorTheme.secondaryText)
-            }
-
-            HStack {
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 2) {
                 Text(item.totalAmount.asCurrency())
-                    .font(.headline)
-                    .foregroundColor(ColorTheme.primaryText)
-                Spacer()
+                    .font(.body)
+                    .fontWeight(.semibold)
+                
                 if canViewProfit {
-                    let profit = item.profit
-                    Text(profit.asCurrency())
-                        .font(.subheadline)
-                        .foregroundColor(profit >= 0 ? ColorTheme.success : ColorTheme.danger)
+                    Text(item.profit.asCurrency())
+                        .font(.caption)
+                        .foregroundColor(item.profit >= 0 ? ColorTheme.success : ColorTheme.danger)
                 }
             }
         }
-        .padding(16)
-        .background(ColorTheme.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
-    }
-}
-
-private struct EmptyStateView: View {
-    let title: String
-    let message: String
-    let systemImage: String
-
-    var body: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: systemImage)
-                .font(.system(size: 60))
-                .foregroundColor(ColorTheme.primary.opacity(0.2))
-            Text(title)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(ColorTheme.primaryText)
-            Text(message)
-                .font(.body)
-                .foregroundColor(ColorTheme.secondaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
-            Spacer()
-        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
     }
 }

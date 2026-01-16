@@ -69,8 +69,6 @@
 		E2A08AB32F105B580071352E /* TeamManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AB22F105B580071352E /* TeamManagementView.swift */; };
 		E2C37EE62F06A39E00EA13C1 /* AppReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */; };
 		E2C37EE82F06A77C00EA13C1 /* VehicleSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */; };
-		E2DC15452F1A1AB500068680 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */; };
-		E2DC15472F1A46BC00068680 /* iPadRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2DC15462F1A46BC00068680 /* iPadRootView.swift */; };
 		F0000002 /* FinancialAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000001 /* FinancialAccountsView.swift */; };
 		F0000004 /* EditAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000003 /* EditAccountView.swift */; };
 		F0000006 /* FinancialAccountsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000005 /* FinancialAccountsViewModel.swift */; };
@@ -78,7 +76,6 @@
 		F1000009 /* SalesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000008 /* SalesViewModel.swift */; };
 		F1000011 /* SalesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000010 /* SalesListView.swift */; };
 		F1000013 /* AddSaleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000012 /* AddSaleView.swift */; };
-		F1REBA5E0000000000000003 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = F1REBA5E0000000000000002 /* FirebaseAnalytics */; };
 		F2000101 /* Debt+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000001 /* Debt+Extensions.swift */; };
 		F2000102 /* DebtViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000002 /* DebtViewModel.swift */; };
 		F2000103 /* DebtsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2000003 /* DebtsListView.swift */; };
@@ -158,8 +155,6 @@
 		E2A08AB22F105B580071352E /* TeamManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamManagementView.swift; sourceTree = "<group>"; };
 		E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReviewManager.swift; sourceTree = "<group>"; };
 		E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleSelectionSheet.swift; sourceTree = "<group>"; };
-		E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
-		E2DC15462F1A46BC00068680 /* iPadRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPadRootView.swift; sourceTree = "<group>"; };
 		F0000001 /* FinancialAccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsView.swift; sourceTree = "<group>"; };
 		F0000003 /* EditAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditAccountView.swift; sourceTree = "<group>"; };
 		F0000005 /* FinancialAccountsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsViewModel.swift; sourceTree = "<group>"; };
@@ -191,7 +186,6 @@
 				10FA8DDA2ECF6BE000ECC6F9 /* RevenueCatUI in Frameworks */,
 				B2000106 /* Supabase in Frameworks */,
 				10FA8DD82ECF6BE000ECC6F9 /* RevenueCat in Frameworks */,
-				F1REBA5E0000000000000003 /* FirebaseAnalytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -225,7 +219,6 @@
 		A1000026 /* Ezcar24Business */ = {
 			isa = PBXGroup;
 			children = (
-				E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */,
 				E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */,
 				A1000000 /* Ezcar24BusinessApp.swift */,
 				A1000002 /* ContentView.swift */,
@@ -281,7 +274,6 @@
 		A1000029 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				E2DC15462F1A46BC00068680 /* iPadRootView.swift */,
 				E2460EF92F150C680048EA80 /* AddPartSaleView.swift */,
 				E2460EFA2F150C680048EA80 /* AddPartView.swift */,
 				E2460EFB2F150C680048EA80 /* PartDetailView.swift */,
@@ -381,7 +373,6 @@
 				B2000200 /* Supabase */,
 				10FA8DD72ECF6BE000ECC6F9 /* RevenueCat */,
 				10FA8DD92ECF6BE000ECC6F9 /* RevenueCatUI */,
-				F1REBA5E0000000000000002 /* FirebaseAnalytics */,
 			);
 			productName = Ezcar24Business;
 			productReference = A0FFFFFF /* Ezcar24Business.app */;
@@ -414,7 +405,6 @@
 			packageReferences = (
 				B20001FF /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				10FA8DD42ECF6BE000ECC6F9 /* XCRemoteSwiftPackageReference "purchases-ios" */,
-				F1REBA5E0000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = A0FFFFFD /* Products */;
 			projectDirPath = "";
@@ -431,7 +421,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000005 /* Assets.xcassets in Resources */,
-				E2DC15452F1A1AB500068680 /* GoogleService-Info.plist in Resources */,
 				B2000105 /* SupabaseConfig.plist in Resources */,
 				E29C0AF12F0B92BA0087CEB6 /* Localizable.xcstrings in Resources */,
 			);
@@ -470,7 +459,6 @@
 				A1000025 /* AddVehicleView.swift in Sources */,
 				C3000001 /* AccountView.swift in Sources */,
 				E2460EFE2F150C680048EA80 /* PartDetailView.swift in Sources */,
-				E2DC15472F1A46BC00068680 /* iPadRootView.swift in Sources */,
 				E2460EFF2F150C680048EA80 /* PartsDashboardView.swift in Sources */,
 				E2460F002F150C680048EA80 /* AddPartView.swift in Sources */,
 				E2460F012F150C680048EA80 /* ReceivePartStockView.swift in Sources */,
@@ -755,14 +743,6 @@
 				minimumVersion = 2.0.0;
 			};
 		};
-		F1REBA5E0000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 12.0.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -780,11 +760,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = B20001FF /* XCRemoteSwiftPackageReference "supabase-swift" */;
 			productName = Supabase;
-		};
-		F1REBA5E0000000000000002 /* FirebaseAnalytics */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = F1REBA5E0000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
-			productName = FirebaseAnalytics;
 		};
 /* End XCSwiftPackageProductDependency section */
 

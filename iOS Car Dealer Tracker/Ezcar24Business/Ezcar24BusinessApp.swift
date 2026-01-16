@@ -8,6 +8,7 @@
 import SwiftUI
 import Supabase
 import RevenueCat
+import FirebaseCore
 
 // Fallback provider to ensure RevenueCat keys are available even if the Services file
 // is not part of the build target.
@@ -20,8 +21,18 @@ private enum RevenueCatKeyProvider {
     }
 }
 
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication,
+                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+        FirebaseApp.configure()
+        return true
+    }
+}
+
 @main
 struct Ezcar24BusinessApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    
     @StateObject private var sessionStore: SessionStore
     @StateObject private var appSessionState: AppSessionState
     @StateObject private var cloudSyncManager: CloudSyncManager

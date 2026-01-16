@@ -91,6 +91,7 @@
         <attribute name="status" optional="YES" attributeType="String" defaultValueString="new" syncable="YES"/>
         <relationship name="interactions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClientInteraction" inverseName="client" inverseEntity="ClientInteraction"/>
         <relationship name="reminders" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClientReminder" inverseName="client" inverseEntity="ClientReminder"/>
+        <relationship name="partSales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSale" inverseName="client" inverseEntity="PartSale"/>
         <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="clients" inverseEntity="Vehicle"/>
     </entity>
     <entity name="ClientInteraction" representedClassName="ClientInteraction" syncable="YES" codeGenerationType="class">
@@ -118,6 +119,8 @@
         <attribute name="buyerName" optional="YES" attributeType="String"/>
         <attribute name="buyerPhone" optional="YES" attributeType="String"/>
         <attribute name="paymentMethod" optional="YES" attributeType="String"/>
+        <attribute name="vatRefundPercent" optional="YES" attributeType="Decimal"/>
+        <attribute name="vatRefundAmount" optional="YES" attributeType="Decimal"/>
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -199,6 +202,7 @@
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="partSales" inverseEntity="FinancialAccount"/>
+        <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="partSales" inverseEntity="Client"/>
         <relationship name="lineItems" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PartSaleLineItem" inverseName="sale" inverseEntity="PartSaleLineItem"/>
     </entity>
     <entity name="PartSaleLineItem" representedClassName="PartSaleLineItem" syncable="YES" codeGenerationType="class">

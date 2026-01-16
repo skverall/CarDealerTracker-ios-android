@@ -1260,7 +1260,7 @@ struct DealerExpenseDashboardView: View {
 
                 fab
                     .padding(.trailing, 24)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 90)
             }
             .toolbar(.hidden, for: .navigationBar)
             .sheet(isPresented: $showingAddExpense) {

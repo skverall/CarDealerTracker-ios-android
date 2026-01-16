@@ -14,10 +14,65 @@ struct ContentView: View {
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var sessionStore: SessionStore
     @ObservedObject private var permissionService = PermissionService.shared
-    @State private var selectedTab = 0
+    @State private var selectedTab: Tab = .dashboard
     @State private var showProfileSheet = false
 
+    enum Tab: Int, CaseIterable, Identifiable {
+        case dashboard = 0
+        case expenses = 1
+        case vehicles = 2
+        case parts = 3
+        case sales = 4
+        case clients = 5
+        
+        var id: Int { rawValue }
+        
+        @MainActor var title: String {
+            switch self {
+            case .dashboard: return "dashboard_title".localizedString
+            case .expenses: return "expenses".localizedString
+            case .vehicles: return "vehicles".localizedString
+            case .parts: return "parts_tab_title".localizedString
+            case .sales: return "sales".localizedString
+            case .clients: return "clients".localizedString
+            }
+        }
+        
+        var icon: String {
+            switch self {
+            case .dashboard: return "house.fill"
+            case .expenses: return "creditcard" // Used standard SF symbol as per existing code
+            case .vehicles: return "car.fill"
+            case .parts: return "shippingbox"
+            case .sales: return "dollarsign.circle.fill"
+            case .clients: return "person.2"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .dashboard: return .blue
+            case .expenses: return .red
+            case .vehicles: return .purple
+            case .parts: return .orange
+            case .sales: return .green
+            case .clients: return .indigo
+            }
+        }
+    }
+
     var body: some View {
+        Group {
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                iPadRootView()
+            } else {
+                mobileBody
+            }
+        }
+    }
+
+    @ViewBuilder
+    var mobileBody: some View {
         let shouldGatePermissions: Bool = {
             if case .signedIn = sessionStore.status {
                 return true
@@ -25,34 +80,50 @@ struct ContentView: View {
             return false
         }()
 
-        ZStack {
+        ZStack(alignment: .bottom) {
             TabView(selection: $selectedTab) {
+                // 1. Dashboard
                 DashboardView()
-                    .tabItem {
-                        Label("dashboard_title".localizedString, systemImage: "house.fill")
-                    }
-                    .tag(0)
+                    .tag(Tab.dashboard)
+                   // .toolbar(.hidden, for: .tabBar) // iOS 16+, falling back to onAppear for broader support if needed
 
+                // 2. Expenses
                 Group {
                     if shouldGatePermissions {
                         if permissionService.didLoad {
-                        if permissionService.can(.viewInventory) {
-                            VehicleListView()
+                            if permissionService.can(.viewExpenses) {
+                                DealerExpenseDashboardView()
+                            } else {
+                                RestrictedAccessView(title: "expenses".localizedString)
+                            }
                         } else {
-                            RestrictedAccessView(title: "vehicles".localizedString)
+                            PermissionLoadingView(title: "expenses".localizedString)
                         }
                     } else {
-                        PermissionLoadingView(title: "vehicles".localizedString)
+                        DealerExpenseDashboardView()
                     }
-                } else {
-                    VehicleListView()
                 }
-                }
-                .tabItem {
-                    Label("vehicles".localizedString, systemImage: "car.fill")
-                }
-                .tag(1)
+                .tag(Tab.expenses)
 
+                // 3. Vehicles
+                Group {
+                    if shouldGatePermissions {
+                        if permissionService.didLoad {
+                            if permissionService.can(.viewInventory) {
+                                VehicleListView()
+                            } else {
+                                RestrictedAccessView(title: "vehicles".localizedString)
+                            }
+                        } else {
+                            PermissionLoadingView(title: "vehicles".localizedString)
+                        }
+                    } else {
+                        VehicleListView()
+                    }
+                }
+                .tag(Tab.vehicles)
+
+                // 4. Parts
                 Group {
                     if shouldGatePermissions {
                         if permissionService.didLoad {
@@ -68,31 +139,9 @@ struct ContentView: View {
                         PartsDashboardView()
                     }
                 }
-                .tabItem {
-                    Label("parts_tab_title".localizedString, systemImage: "shippingbox")
-                }
-                .tag(2)
-
-                Group {
-                    if shouldGatePermissions {
-                        if permissionService.didLoad {
-                        if permissionService.can(.viewExpenses) {
-                            DealerExpenseDashboardView()
-                        } else {
-                            RestrictedAccessView(title: "expenses".localizedString)
-                        }
-                    } else {
-                        PermissionLoadingView(title: "expenses".localizedString)
-                    }
-                } else {
-                    DealerExpenseDashboardView()
-                    }
-                }
-                .tabItem {
-                    Label("expenses".localizedString, systemImage: "creditcard")
-                }
-                .tag(3)
-
+                .tag(Tab.parts)
+                
+                // 5. Sales
                 Group {
                     if shouldGatePermissions {
                         if permissionService.didLoad {
@@ -108,35 +157,40 @@ struct ContentView: View {
                         SalesListView()
                     }
                 }
-                .tabItem {
-                    Label("sales".localizedString, systemImage: "dollarsign.circle.fill")
-                }
-                .tag(4)
+                .tag(Tab.sales)
 
+                // 6. Clients
                 Group {
                     if shouldGatePermissions {
                         if permissionService.didLoad {
-                        if permissionService.can(.viewLeads) {
-                            ClientListView()
+                            if permissionService.can(.viewLeads) {
+                                ClientListView()
+                            } else {
+                                RestrictedAccessView(title: "clients".localizedString)
+                            }
                         } else {
-                            RestrictedAccessView(title: "clients".localizedString)
+                            PermissionLoadingView(title: "clients".localizedString)
                         }
                     } else {
-                        PermissionLoadingView(title: "clients".localizedString)
-                    }
-                } else {
-                    ClientListView()
+                        ClientListView()
                     }
                 }
-                .tabItem {
-                    Label("clients".localizedString, systemImage: "person.2")
-                }
-                .tag(5)
+                .tag(Tab.clients)
             }
-            .tint(ColorTheme.dealerGreen)
-
-            SyncHUDOverlay()
+            // Hide system tab bar so we can show ours
+            .onAppear {
+                UITabBar.appearance().isHidden = true
+            }
             
+            // Custom Tab Bar
+            CustomTabBar(selectedTab: $selectedTab)
+                .padding(.bottom, 0) // Safe area handled inside internal padding usually or implicit
+                .ignoresSafeArea(.keyboard, edges: .bottom)
+
+            // Overlays
+            SyncHUDOverlay()
+                .padding(.bottom, 60) // Lift HUD above tabbar
+
             // Error Toast Overlay
             if let errorMessage = cloudSyncManager.errorMessage {
                 VStack {
@@ -146,7 +200,7 @@ struct ContentView: View {
                         isError: true,
                         onDismiss: { cloudSyncManager.errorMessage = nil }
                     )
-                    .padding(.bottom, 60) // Above tab bar
+                    .padding(.bottom, 90) // Above tab bar
                 }
                 .zIndex(100)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -160,7 +214,7 @@ struct ContentView: View {
                         isError: sessionStore.inviteToastIsError,
                         onDismiss: { sessionStore.dismissInviteToast() }
                     )
-                    .padding(.bottom, 60) // Above tab bar
+                    .padding(.bottom, 90) // Above tab bar
                 }
                 .zIndex(100)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -174,25 +228,59 @@ struct ContentView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .currencySettingsDidComplete)) { _ in
             showProfileSheet = false // Close the Account sheet
-            selectedTab = 0 // Switch to Dashboard tab
+            selectedTab = .dashboard // Switch to Dashboard tab
         }
-        .onAppear {
-            configureTabBar()
+    }
+}
+
+struct CustomTabBar: View {
+    @Binding var selectedTab: ContentView.Tab
+    
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(ContentView.Tab.allCases) { tab in
+                Button(action: {
+                    let generator = UIImpactFeedbackGenerator(style: .light)
+                    generator.impactOccurred()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedTab = tab
+                    }
+                }) {
+                    VStack(spacing: 4) {
+                        // Icon
+                        Image(systemName: tab.icon)
+                            .font(.system(size: 22))
+                            .symbolVariant(selectedTab == tab ? .fill : .none)
+                            .scaleEffect(selectedTab == tab ? 1.1 : 1.0)
+                            .frame(height: 24)
+                        
+                        // Label - Always Visible
+                        Text(tab.title)
+                            .font(.system(size: 9, weight: selectedTab == tab ? .bold : .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                    .frame(maxWidth: .infinity) // Distribute space evenly (6 items)
+                    .padding(.vertical, 12)
+                    .foregroundColor(selectedTab == tab ? tab.color : ColorTheme.secondaryText)
+                    .contentShape(Rectangle())
+                }
+            }
         }
+        .background(
+            Capsule()
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    Capsule()
+                        .stroke(Color.white.opacity(0.2), lineWidth: 0.5)
+                )
+                .shadow(color: Color.black.opacity(0.15), radius: 20, x: 0, y: 10)
+        )
+        .padding(.horizontal, 16)
+        .padding(.bottom, 8)
     }
     
-    private func configureTabBar() {
-        let appearance = UITabBarAppearance()
-        appearance.configureWithTransparentBackground()
-        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
-        
-        let scrollingAppearance = UITabBarAppearance()
-        scrollingAppearance.configureWithDefaultBackground()
-        scrollingAppearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
-        
-        UITabBar.appearance().standardAppearance = appearance
-        UITabBar.appearance().scrollEdgeAppearance = appearance
-    }
+    @Namespace private var namespace
 }
 
 struct SyncHUDOverlay: View {

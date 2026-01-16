@@ -18,6 +18,9 @@ struct SalesListView: View {
     @ObservedObject private var permissionService = PermissionService.shared
     private let showNavigation: Bool
     @State private var selectedSection: SalesSection = .sales
+    
+    // Sheet State
+    @State private var showAddSaleSheet: Bool = false
 
     private var canDeleteRecords: Bool {
         if case .signedIn = sessionStore.status {
@@ -104,13 +107,23 @@ struct SalesListView: View {
                         .padding(.horizontal, 16)
                         .padding(.bottom, 8)
                     }
-
+                    
                     if activeSection == .sales {
+                        // Type Filter
+                        Picker("Sales Filter", selection: $viewModel.filter) {
+                            Text("all_filter".localizedString).tag(SalesViewModel.SaleTypeFilter.all)
+                            Text("vehicles".localizedString).tag(SalesViewModel.SaleTypeFilter.vehicles)
+                            Text("parts_filter".localizedString).tag(SalesViewModel.SaleTypeFilter.parts)
+                        }
+                        .pickerStyle(.segmented)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                        
                         SalesInsightsView(
-                            salesCount: viewModel.saleItems.count,
+                            salesCount: viewModel.unifiedSales.count,
                             netProfit: totalNetProfit,
                             totalReceivables: totalReceivables,
-                            showProfit: permissionService.canViewVehicleProfit()
+                            showProfit: permissionService.canViewVehicleProfit() // TODO: Check if this covers parts profit perm
                         )
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -119,13 +132,14 @@ struct SalesListView: View {
                     
                     switch activeSection {
                     case .sales:
-                        if viewModel.saleItems.isEmpty {
+                        if viewModel.unifiedSales.isEmpty {
                             EmptySalesView()
                         } else {
                             List {
-                                ForEach(viewModel.saleItems) { item in
+                                ForEach(viewModel.unifiedSales) { item in
                                     ZStack {
-                                        if let vehicle = item.sale.vehicle {
+                                        // Navigation Link only for vehicles to see details?
+                                        if case .vehicle(let sale) = item.type, let vehicle = sale.vehicle {
                                             NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
                                                 EmptyView()
                                             }
@@ -145,7 +159,7 @@ struct SalesListView: View {
                             .refreshable {
                                 if case .signedIn(let user) = sessionStore.status {
                                     await cloudSyncManager.manualSync(user: user)
-                                    viewModel.fetchSales()
+                                    viewModel.fetchAll()
                                 }
                             }
                         }
@@ -162,7 +176,9 @@ struct SalesListView: View {
                         switch activeSection {
                         case .sales:
                             if permissionService.can(.createSale) {
-                                NavigationLink(destination: AddSaleView()) {
+                                Button {
+                                    showAddSaleSheet = true
+                                } label: {
                                     Image(systemName: "plus.circle.fill")
                                         .font(.title2)
                                         .foregroundColor(ColorTheme.primary)
@@ -178,12 +194,16 @@ struct SalesListView: View {
                     }
                 }
             }
+            .sheet(isPresented: $showAddSaleSheet) {
+                AddSaleView()
+            }
         }
+    
     private func deleteItems(at offsets: IndexSet) {
         guard canDeleteRecords else { return }
         for index in offsets {
-            let sale = viewModel.saleItems[index].sale
-            viewModel.deleteSale(sale)
+            let item = viewModel.unifiedSales[index]
+            viewModel.deleteItem(item)
         }
     }
 
@@ -206,17 +226,17 @@ struct SalesListView: View {
     private var searchPlaceholder: String {
         switch activeSection {
         case .sales:
-            return "search_vehicle_or_buyer".localizedString
+            return "search".localizedString
         case .debts:
             return "search_name_or_notes".localizedString
         }
     }
     private var totalRevenue: Decimal {
-        viewModel.saleItems.reduce(Decimal(0)) { $0 + $1.salePrice }
+        viewModel.unifiedSales.reduce(Decimal(0)) { $0 + $1.amount }
     }
     
     private var totalNetProfit: Decimal {
-        viewModel.saleItems.reduce(Decimal(0)) { $0 + $1.netProfit }
+        viewModel.unifiedSales.reduce(Decimal(0)) { $0 + $1.profit }
     }
     
     private var totalReceivables: Decimal {
@@ -228,7 +248,7 @@ struct SalesListView: View {
 
 
 struct SaleCard: View {
-    let item: SaleItem
+    let item: UnifiedSaleItem
     @ObservedObject private var permissionService = PermissionService.shared
     
     private struct Metric: Identifiable {
@@ -243,7 +263,7 @@ struct SaleCard: View {
         var items: [Metric] = [
             Metric(
                 title: "revenue".localizedString,
-                amount: item.salePrice,
+                amount: item.amount,
                 color: ColorTheme.primaryText,
                 isBold: false
             )
@@ -253,7 +273,7 @@ struct SaleCard: View {
             items.append(
                 Metric(
                     title: "cost".localizedString,
-                    amount: item.costPrice,
+                    amount: item.cost,
                     color: ColorTheme.secondaryText,
                     isBold: false
                 )
@@ -264,8 +284,8 @@ struct SaleCard: View {
             items.append(
                 Metric(
                     title: "net_profit".localizedString,
-                    amount: item.netProfit,
-                    color: item.netProfit >= 0 ? ColorTheme.success : ColorTheme.danger,
+                    amount: item.profit,
+                    color: item.profit >= 0 ? ColorTheme.success : ColorTheme.danger,
                     isBold: true
                 )
             )
@@ -276,12 +296,29 @@ struct SaleCard: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Header: Vehicle & Date
+            // Header
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(item.vehicleName)
-                        .font(.headline)
-                        .foregroundColor(ColorTheme.primaryText)
+                    HStack {
+                        // Icon based on type
+                        Image(systemName: iconName)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.primary)
+                            .padding(4)
+                            .background(ColorTheme.primary.opacity(0.1))
+                            .clipShape(Circle())
+                        
+                        Text(item.title)
+                            .font(.headline)
+                            .foregroundColor(ColorTheme.primaryText)
+                    }
+                    
+                    if let subtitle = item.subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .lineLimit(1)
+                    }
                     
                     HStack(spacing: 4) {
                         Image(systemName: "person.fill")
@@ -294,7 +331,7 @@ struct SaleCard: View {
                 
                 Spacer()
                 
-                Text(item.saleDate, formatter: saleDateFormatter)
+                Text(item.date, formatter: saleDateFormatter)
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -329,6 +366,13 @@ struct SaleCard: View {
         .background(ColorTheme.secondaryBackground)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+    }
+    
+    private var iconName: String {
+        switch item.type {
+        case .vehicle: return "car.fill"
+        case .part: return "wrench.and.screwdriver.fill"
+        }
     }
     
     private var saleDateFormatter: DateFormatter {

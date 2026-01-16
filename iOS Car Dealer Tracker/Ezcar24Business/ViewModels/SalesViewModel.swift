@@ -8,73 +8,134 @@
 import Foundation
 import CoreData
 import Combine
+import SwiftUI
 
+@MainActor
 class SalesViewModel: ObservableObject {
-    @Published var sales: [Sale] = []
-    @Published var saleItems: [SaleItem] = []
+    // MARK: - Enums
+    enum SaleTypeFilter {
+        case all
+        case vehicles
+        case parts
+    }
+    
+    // MARK: - Published Properties
+    @Published var unifiedSales: [UnifiedSaleItem] = []
+    @Published var filter: SaleTypeFilter = .all {
+        didSet {
+            applyFilters()
+        }
+    }
     @Published var searchText: String = "" {
         didSet {
-            fetchSales()
+            applyFilters()
         }
     }
 
+    // MARK: - Private Properties
     private let viewContext: NSManagedObjectContext
+    private var allVehicleSales: [Sale] = []
+    private var allPartSales: [PartSale] = []
     private var cancellables = Set<AnyCancellable>()
 
+    // MARK: - Init
     init(context: NSManagedObjectContext) {
         self.viewContext = context
-        fetchSales()
+        fetchAll()
         observeContextChanges()
     }
 
-    func fetchSales() {
+    // MARK: - Fetching
+    func fetchAll() {
+        fetchVehicleSales()
+        fetchPartSales()
+        applyFilters()
+    }
+    
+    private func fetchVehicleSales() {
         let request: NSFetchRequest<Sale> = Sale.fetchRequest()
-
-        if !searchText.isEmpty {
-            request.predicate = NSPredicate(
-                format: "vehicle.make CONTAINS[c] %@ OR vehicle.model CONTAINS[c] %@ OR buyerName CONTAINS[c] %@",
-                searchText, searchText, searchText
-            )
-        }
-
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Sale.date, ascending: false)]
-
+        
         do {
-            let salesList = try viewContext.fetch(request)
-            self.sales = salesList
-            self.saleItems = salesList.map { SaleItem(sale: $0) }
+            allVehicleSales = try viewContext.fetch(request)
         } catch {
-            print("Failed to fetch sales: \(error)")
+            print("Failed to fetch vehicle sales: \(error)")
+            allVehicleSales = []
         }
     }
-
-    private func observeContextChanges() {
-        NotificationCenter.default
-            .publisher(for: .NSManagedObjectContextObjectsDidChange, object: viewContext)
-            .sink { [weak self] notification in
-                guard let self, let info = notification.userInfo else { return }
-                if Self.shouldRefresh(userInfo: info) {
-                    DispatchQueue.main.async {
-                        self.fetchSales()
-                    }
+    
+    private func fetchPartSales() {
+        let request: NSFetchRequest<PartSale> = PartSale.fetchRequest()
+        request.sortDescriptors = [NSSortDescriptor(keyPath: \PartSale.date, ascending: false)]
+        request.predicate = NSPredicate(format: "deletedAt == nil")
+        
+        do {
+            allPartSales = try viewContext.fetch(request)
+        } catch {
+            print("Failed to fetch part sales: \(error)")
+            allPartSales = []
+        }
+    }
+    
+    // MARK: - Filtering & Processing
+    private func applyFilters() {
+        var items: [UnifiedSaleItem] = []
+        
+        // 1. Process Vehicle Sales
+        if filter == .all || filter == .vehicles {
+            let filteredVehicles = allVehicleSales.filter { sale in
+                if searchText.isEmpty { return true }
+                let query = searchText.lowercased()
+                
+                let matchesVehicle = (sale.vehicle?.make?.lowercased().contains(query) ?? false) ||
+                                     (sale.vehicle?.model?.lowercased().contains(query) ?? false)
+                let matchesBuyer = sale.buyerName?.lowercased().contains(query) ?? false
+                
+                return matchesVehicle || matchesBuyer
+            }
+            items.append(contentsOf: filteredVehicles.map { UnifiedSaleItem(vehicleSale: $0) })
+        }
+        
+        // 2. Process Part Sales
+        if filter == .all || filter == .parts {
+            let filteredParts = allPartSales.filter { sale in
+                if searchText.isEmpty { return true }
+                let query = searchText.lowercased()
+                
+                let matchesBuyer = sale.buyerName?.lowercased().contains(query) ?? false
+                let matchesPhone = sale.buyerPhone?.lowercased().contains(query) ?? false
+                
+                // Search in line items
+                let lineItems = sale.lineItems as? Set<PartSaleLineItem> ?? []
+                let matchesPart = lineItems.contains { item in
+                    item.part?.displayName.lowercased().contains(query) == true
                 }
+                
+                return matchesBuyer || matchesPhone || matchesPart
             }
-            .store(in: &cancellables)
+            items.append(contentsOf: filteredParts.map { UnifiedSaleItem(partSale: $0) })
+        }
+        
+        // 3. Sort Combined List (Newest first)
+        items.sort { $0.date > $1.date }
+        
+        self.unifiedSales = items
     }
 
-    private static func shouldRefresh(userInfo: [AnyHashable: Any]) -> Bool {
-        let keys = [NSInsertedObjectsKey, NSUpdatedObjectsKey, NSDeletedObjectsKey]
-        for key in keys {
-            guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
-            if objects.contains(where: { $0 is Sale || $0 is Vehicle || $0 is Expense }) {
-                return true
-            }
+    // MARK: - Actions
+    
+    @MainActor
+    func deleteItem(_ item: UnifiedSaleItem) {
+        switch item.type {
+        case .vehicle(let sale):
+            deleteVehicleSale(sale)
+        case .part(let sale):
+            deletePartSale(sale)
         }
-        return false
     }
 
     @MainActor
-    func deleteSale(_ sale: Sale) {
+    private func deleteVehicleSale(_ sale: Sale) {
         // Revert vehicle status if linked
         if let vehicle = sale.vehicle {
             vehicle.status = "available"
@@ -85,7 +146,6 @@ class SalesViewModel: ObservableObject {
             vehicle.paymentMethod = nil
             vehicle.updatedAt = Date()
             
-            // We need to sync this vehicle update to the cloud
             if let dealerId = CloudSyncEnvironment.currentDealerId {
                 Task {
                     await CloudSyncManager.shared?.upsertVehicle(vehicle, dealerId: dealerId)
@@ -106,63 +166,187 @@ class SalesViewModel: ObservableObject {
 
         let saleId = sale.id
         viewContext.delete(sale)
+        
+        saveAndSync(saleId: saleId, isPartSale: false)
+    }
+    
+    @MainActor
+    private func deletePartSale(_ sale: PartSale) {
+        let lineItems = (sale.lineItems as? Set<PartSaleLineItem>) ?? []
+        var updatedBatches: [PartBatch] = []
+        var updatedPartsById: [UUID: Part] = [:]
+        let now = Date()
+
+        // Restore stock
+        for item in lineItems {
+            let qty = item.quantity?.decimalValue ?? 0
+            if let batch = item.batch {
+                let current = batch.quantityRemaining?.decimalValue ?? 0
+                batch.quantityRemaining = NSDecimalNumber(decimal: current + qty)
+                batch.updatedAt = now
+                updatedBatches.append(batch)
+            }
+            if let part = item.part, let partId = part.id {
+                part.updatedAt = now
+                updatedPartsById[partId] = part
+            }
+        }
+
+        // Revert account balance
+        if let account = sale.account {
+            let amount = sale.amount?.decimalValue ?? PartSaleItem(sale: sale).totalAmount
+            let currentBalance = account.balance?.decimalValue ?? 0
+            account.balance = NSDecimalNumber(decimal: currentBalance - amount)
+            account.updatedAt = now
+            
+            if let dealerId = CloudSyncEnvironment.currentDealerId {
+                Task {
+                    await CloudSyncManager.shared?.upsertFinancialAccount(account, dealerId: dealerId)
+                }
+            }
+        }
+
+        let saleId = sale.id
+        viewContext.delete(sale)
+
         do {
             try viewContext.save()
-            fetchSales()
-            
-            // Sync deletion
-            if let id = saleId, let dealerId = CloudSyncEnvironment.currentDealerId {
+            fetchAll()
+
+            if let dealerId = CloudSyncEnvironment.currentDealerId {
                 Task {
-                    await CloudSyncManager.shared?.deleteSale(id: id, dealerId: dealerId)
+                    for batch in updatedBatches {
+                        await CloudSyncManager.shared?.upsertPartBatch(batch, dealerId: dealerId)
+                    }
+                    for part in updatedPartsById.values {
+                        await CloudSyncManager.shared?.upsertPart(part, dealerId: dealerId)
+                    }
+                    if let saleId {
+                        await CloudSyncManager.shared?.deletePartSale(id: saleId, dealerId: dealerId)
+                    }
                 }
             }
         } catch {
-            print("Failed to delete sale: \(error)")
+            print("Failed to delete part sale: \(error)")
         }
+    }
+    
+    private func saveAndSync(saleId: UUID?, isPartSale: Bool) {
+        do {
+            try viewContext.save()
+            fetchAll()
+            
+            if let id = saleId, let dealerId = CloudSyncEnvironment.currentDealerId {
+                Task {
+                    if isPartSale {
+                        await CloudSyncManager.shared?.deletePartSale(id: id, dealerId: dealerId)
+                    } else {
+                        await CloudSyncManager.shared?.deleteSale(id: id, dealerId: dealerId)
+                    }
+                }
+            }
+        } catch {
+            print("Failed to save deletion context: \(error)")
+        }
+    }
+
+    // MARK: - Observer
+    private func observeContextChanges() {
+        NotificationCenter.default
+            .publisher(for: .NSManagedObjectContextObjectsDidChange, object: viewContext)
+            .sink { [weak self] notification in
+                guard let self, let info = notification.userInfo else { return }
+                if Self.shouldRefresh(userInfo: info) {
+                    DispatchQueue.main.async {
+                        self.fetchAll()
+                    }
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private static func shouldRefresh(userInfo: [AnyHashable: Any]) -> Bool {
+        let keys = [NSInsertedObjectsKey, NSUpdatedObjectsKey, NSDeletedObjectsKey]
+        for key in keys {
+            guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
+            if objects.contains(where: {
+                $0 is Sale || $0 is Vehicle || $0 is Expense ||
+                $0 is PartSale || $0 is PartSaleLineItem || $0 is PartBatch
+            }) {
+                return true
+            }
+        }
+        return false
     }
 }
 
-struct SaleItem: Identifiable {
+// MARK: - Unified Model
+struct UnifiedSaleItem: Identifiable {
+    enum SaleType {
+        case vehicle(Sale)
+        case part(PartSale)
+    }
+    
     let id: NSManagedObjectID
-    let sale: Sale
-    let vehicleName: String
+    let type: SaleType
+    
+    // Common Properties
+    let title: String
+    let subtitle: String?
     let buyerName: String
-    let saleDate: Date
-    let salePrice: Decimal
-    let costPrice: Decimal
-    let netProfit: Decimal
-    let profitMargin: Double
-
-    init(sale: Sale) {
-        self.id = sale.objectID
-        self.sale = sale
-        if let vehicle = sale.vehicle {
+    let date: Date
+    let amount: Decimal
+    let cost: Decimal
+    let profit: Decimal
+    
+    init(vehicleSale: Sale) {
+        self.id = vehicleSale.objectID
+        self.type = .vehicle(vehicleSale)
+        self.date = vehicleSale.date ?? Date()
+        self.buyerName = vehicleSale.buyerName ?? "Unknown Buyer"
+        
+        // Title
+        if let vehicle = vehicleSale.vehicle {
             let make = vehicle.make ?? ""
             let model = vehicle.model ?? ""
             let combined = "\(make) \(model)".trimmingCharacters(in: .whitespaces)
-            self.vehicleName = combined.isEmpty ? "Vehicle" : combined
+            self.title = combined.isEmpty ? "Vehicle" : combined
+            // Optional: trim name if needed
+            self.subtitle = vehicle.vin
         } else {
-            self.vehicleName = "Vehicle Removed"
+            self.title = "Vehicle Removed"
+            self.subtitle = nil
         }
-        self.buyerName = sale.buyerName ?? "Unknown Buyer"
-        self.saleDate = sale.date ?? Date()
-
-        let price = sale.amount?.decimalValue ?? 0
-        self.salePrice = price
-
-        // Calculate Cost
-        let purchasePrice = sale.vehicle?.purchasePrice?.decimalValue ?? 0
-        let expenses = (sale.vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
-        self.costPrice = purchasePrice + expenses
-
-        // Calculate Profit
-        self.netProfit = price - self.costPrice
-
-        // Calculate Margin
-        if price > 0 {
-            self.profitMargin = (NSDecimalNumber(decimal: netProfit).doubleValue / NSDecimalNumber(decimal: price).doubleValue) * 100
-        } else {
-            self.profitMargin = 0
-        }
+        
+        let price = vehicleSale.amount?.decimalValue ?? 0
+        self.amount = price
+        
+        let purchasePrice = vehicleSale.vehicle?.purchasePrice?.decimalValue ?? 0
+        let expenses = (vehicleSale.vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+        self.cost = purchasePrice + expenses
+        
+        // Include VAT refund in profit
+        let vatRefund = vehicleSale.vatRefundAmount?.decimalValue ?? 0
+        self.profit = price - self.cost + vatRefund
+    }
+    
+    @MainActor init(partSale: PartSale) {
+        self.id = partSale.objectID
+        self.type = .part(partSale)
+        self.date = partSale.date ?? Date()
+        self.buyerName = partSale.buyerName ?? "Walk-in"
+        
+        // Wrap PartSale logic
+        let wrappedPartSale = PartSaleItem(sale: partSale)
+        self.title = "parts_sale_title".localizedString
+        self.subtitle = wrappedPartSale.itemsSummary
+        
+        self.amount = wrappedPartSale.totalAmount
+        self.cost = wrappedPartSale.totalCost
+        self.profit = wrappedPartSale.profit
     }
 }
+
+// Define SaleItem alias for backward compatibility if needed, or remove if fully replaced.
+typealias SaleItem = UnifiedSaleItem
+

@@ -113,6 +113,7 @@ class DashboardViewModel: ObservableObject {
     @Published var inTransitCount: Int = 0
     @Published var underServiceCount: Int = 0
     @Published var totalSalesIncome: Decimal = 0
+    @Published var totalPartsValue: Decimal = 0
 
     // Sales performance
     @Published var totalSalesProfit: Decimal = 0
@@ -169,7 +170,8 @@ class DashboardViewModel: ObservableObject {
         for key in keys {
             guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
             if objects.contains(where: { obj in
-                obj is Expense || obj is Vehicle || obj is Sale || obj is FinancialAccount
+                obj is Expense || obj is Vehicle || obj is Sale || obj is FinancialAccount ||
+                obj is PartSale || obj is PartSaleLineItem || obj is PartBatch
             }) {
                 return true
             }
@@ -225,28 +227,52 @@ class DashboardViewModel: ObservableObject {
         }
 
         // Fetch Sales for Revenue/Profit calculations
-        let saleRequest: NSFetchRequest<Sale> = Sale.fetchRequest()
+        // Fetch Parts Inventory Value
+        let batchRequest: NSFetchRequest<PartBatch> = PartBatch.fetchRequest()
+        batchRequest.predicate = NSPredicate(format: "quantityRemaining > 0")
         do {
-            let sales = try context.fetch(saleRequest)
+            let batches = try context.fetch(batchRequest)
+            totalPartsValue = batches.reduce(Decimal(0)) { total, batch in
+                let cost = batch.unitCost?.decimalValue ?? 0
+                let qty = batch.quantityRemaining?.decimalValue ?? 0
+                return total + (cost * qty)
+            }
+        } catch {
+            print("Error fetching part batches: \(error)")
+            totalPartsValue = 0
+        }
+
+        // Fetch Sales for Revenue/Profit calculations
+        let vehicleSaleRequest: NSFetchRequest<Sale> = Sale.fetchRequest()
+        let partSaleRequest: NSFetchRequest<PartSale> = PartSale.fetchRequest()
+        partSaleRequest.predicate = NSPredicate(format: "deletedAt == nil")
+
+        do {
+            let vehicleSales = try context.fetch(vehicleSaleRequest)
+            let partSales = try context.fetch(partSaleRequest)
             
 
 
             // Calculate Revenue (Total Sales Income) - ALWAYS ALL TIME
-            totalSalesIncome = sales.reduce(Decimal(0)) { sum, sale in
+            let vehicleRevenue = vehicleSales.reduce(Decimal(0)) { sum, sale in
                 sum + (sale.amount?.decimalValue ?? 0)
             }
+            let partRevenue = partSales.reduce(Decimal(0)) { sum, sale in
+                sum + (sale.amount?.decimalValue ?? 0)
+            }
+            totalSalesIncome = vehicleRevenue + partRevenue
             
             // Calculate All-Time Profit (for the Key Metric Card)
-             let (allTimeProfit, _) = calculateProfitData(sales: sales, range: .all)
+             let (allTimeProfit, _) = calculateCombinedProfitData(vehicleSales: vehicleSales, partSales: partSales, range: .all)
              totalSalesProfit = allTimeProfit
 
             // Calculate Profit for Current Range
-            let (profit, trend) = calculateProfitData(sales: sales, range: range)
+            let (profit, trend) = calculateCombinedProfitData(vehicleSales: vehicleSales, partSales: partSales, range: range)
             periodSalesProfit = profit
             profitTrendPoints = trend
             
             // Calculate Profit for Pinned Monthly Range
-            let (moProfit, moTrend) = calculateProfitData(sales: sales, range: .month)
+            let (moProfit, moTrend) = calculateCombinedProfitData(vehicleSales: vehicleSales, partSales: partSales, range: .month)
             monthlyNetProfit = moProfit
             monthlyProfitTrendPoints = moTrend
 
@@ -338,7 +364,9 @@ class DashboardViewModel: ObservableObject {
                 let curr = (totalExpenses as NSDecimalNumber).doubleValue
                 periodChangePercent = prev > 0 ? ((curr - prev) / prev) * 100.0 : nil
                 
-                // Sales Trend
+                // Sales Trend (Count) - Vehicles only or combined?
+                // The Sold Count card typically refers to Vehicles sold.
+                // Keeping it as Vehicle Sales count for now as "Sold" usually implies Cars in this context.
                 let prevSaleReq: NSFetchRequest<Sale> = Sale.fetchRequest()
                 prevSaleReq.predicate = NSPredicate(format: "date >= %@ AND date < %@", prevStart as NSDate, start as NSDate)
                 let prevSalesCount = try context.count(for: prevSaleReq)
@@ -669,7 +697,7 @@ class DashboardViewModel: ObservableObject {
 
 
     var totalAssets: Decimal {
-        totalCash + totalBank + totalVehicleValue
+        totalCash + totalBank + totalVehicleValue + totalPartsValue
     }
     
     var totalAssetsCount: Int {
@@ -683,30 +711,203 @@ class DashboardViewModel: ObservableObject {
     
     // MARK: - Helpers
     
-    private func calculateProfitData(sales: [Sale], range: DashboardTimeRange) -> (Decimal, [TrendPoint]) {
+    private func calculateCombinedProfitData(vehicleSales: [Sale], partSales: [PartSale], range: DashboardTimeRange) -> (Decimal, [TrendPoint]) {
         let rangeStart = range.startDate
         let rangeEnd = range.endDate
         
-        let filteredSales: [Sale]
+        // Filter Vehicles
+        let filteredVehicles: [Sale]
         if let start = rangeStart {
             let end = rangeEnd ?? Date()
-            filteredSales = sales.filter { sale in
+            filteredVehicles = vehicleSales.filter { sale in
                 guard let date = sale.date else { return false }
                 return date >= start && date < end
             }
         } else {
-            filteredSales = sales
+            filteredVehicles = vehicleSales
+        }
+
+        // Filter Parts
+        let filteredParts: [PartSale]
+        if let start = rangeStart {
+            let end = rangeEnd ?? Date()
+            filteredParts = partSales.filter { sale in
+                guard let date = sale.date else { return false }
+                return date >= start && date < end
+            }
+        } else {
+            filteredParts = partSales
         }
         
-        let profit = filteredSales.reduce(Decimal(0)) { sum, sale in
+        var totalProfit: Decimal = 0
+        
+        // Sum Vehicle Profit (including VAT refund)
+        let vehicleProfit = filteredVehicles.reduce(Decimal(0)) { sum, sale in
             let revenue = sale.amount?.decimalValue ?? 0
             let vehicle = sale.vehicle
             let cost = vehicle?.purchasePrice?.decimalValue ?? 0
             let expenses = (vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
-            return sum + (revenue - (cost + expenses))
+            let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
+            return sum + (revenue - (cost + expenses) + vatRefund)
+        }
+        totalProfit += vehicleProfit
+        
+        // Sum Part Profit
+        let partProfit = filteredParts.reduce(Decimal(0)) { sum, sale in
+            let revenue = sale.amount?.decimalValue ?? 0
+            
+            // Calculate COGS
+            let lineItems = sale.lineItems as? Set<PartSaleLineItem> ?? []
+            let cogs = lineItems.reduce(Decimal(0)) { total, item in
+                let cost = item.unitCost?.decimalValue ?? 0
+                let qty = item.quantity?.decimalValue ?? 0
+                return total + (cost * qty)
+            }
+            
+            return sum + (revenue - cogs)
+        }
+        totalProfit += partProfit
+        
+        // Build Combined Trend
+        let trend = buildCombinedProfitTrendPoints(vehicleSales: filteredVehicles, partSales: filteredParts, range: range)
+        return (totalProfit, trend)
+    }
+
+    private func buildCombinedProfitTrendPoints(vehicleSales: [Sale], partSales: [PartSale], range: DashboardTimeRange) -> [TrendPoint] {
+        let cal = Calendar.current
+        var points: [TrendPoint] = []
+        
+        // Helper wrappers
+        struct ProfitItem {
+            let date: Date
+            let profit: Double
         }
         
-        let trend = buildProfitTrendPoints(sales: filteredSales, range: range)
-        return (profit, trend)
+        var items: [ProfitItem] = []
+        
+        // Process Vehicles
+        for s in vehicleSales {
+            guard let d = s.date else { continue }
+            let revenue = s.amount?.decimalValue ?? 0
+            let v = s.vehicle
+            let cost = v?.purchasePrice?.decimalValue ?? 0
+            let expenses = (v?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+            let p = NSDecimalNumber(decimal: revenue - (cost + expenses)).doubleValue
+            items.append(ProfitItem(date: d, profit: p))
+        }
+        
+        // Process Parts
+        for s in partSales {
+            guard let d = s.date else { continue }
+            let revenue = s.amount?.decimalValue ?? 0
+            let lineItems = s.lineItems as? Set<PartSaleLineItem> ?? []
+            let cogs = lineItems.reduce(Decimal(0)) { total, item in
+                let cost = item.unitCost?.decimalValue ?? 0
+                let qty = item.quantity?.decimalValue ?? 0
+                return total + (cost * qty)
+            }
+            let p = NSDecimalNumber(decimal: revenue - cogs).doubleValue
+            items.append(ProfitItem(date: d, profit: p))
+        }
+        
+        guard !items.isEmpty else { return [] }
+        
+        // Aggregate
+        // We can reuse the same logic as buildTrendPoints, but simply use the list of items
+        
+        // 1. Determine buckets
+        // 2. Aggregate
+        
+        // Helper to get bucket date
+        func getBucketDate(for date: Date) -> Date? {
+            switch range {
+            case .today:
+                return cal.date(bySettingHour: cal.component(.hour, from: date), minute: 0, second: 0, of: cal.startOfDay(for: date))
+            case .week, .month:
+                return cal.startOfDay(for: date)
+            case .threeMonths, .sixMonths:
+                // Week start
+                let weekday = cal.component(.weekday, from: date)
+                let diff = weekday - cal.firstWeekday
+                return cal.date(byAdding: .day, value: -diff, to: cal.startOfDay(for: date))
+            case .all:
+                // Month start
+                return cal.dateInterval(of: .month, for: date)?.start
+            }
+        }
+        
+        var buckets: [Date: Double] = [:]
+        for item in items {
+            if let bDate = getBucketDate(for: item.date) {
+                buckets[bDate, default: 0] += item.profit
+            }
+        }
+        
+        // 3. Generate points array based on range logic (iterating through all slots)
+        // Copy-paste logic from buildTrendPoints for iteration is safest
+        
+        var runningTotal = 0.0
+        
+        switch range {
+        case .today:
+            let start = cal.startOfDay(for: Date())
+            for hour in 0...23 {
+                if let date = cal.date(bySettingHour: hour, minute: 0, second: 0, of: start) {
+                    let delta = buckets[date] ?? 0
+                    runningTotal += delta
+                    points.append(TrendPoint(date: date, value: runningTotal, delta: delta))
+                }
+            }
+        case .week:
+            let start = cal.date(byAdding: .day, value: -6, to: cal.startOfDay(for: Date())) ?? Date()
+            for i in 0...6 {
+                if let date = cal.date(byAdding: .day, value: i, to: start) {
+                    let delta = buckets[cal.startOfDay(for: date)] ?? 0
+                    runningTotal += delta
+                    points.append(TrendPoint(date: date, value: runningTotal, delta: delta))
+                }
+            }
+        case .month:
+            let start = cal.date(byAdding: .day, value: -29, to: cal.startOfDay(for: Date())) ?? Date()
+            for i in 0...29 {
+                if let date = cal.date(byAdding: .day, value: i, to: start) {
+                    let delta = buckets[cal.startOfDay(for: date)] ?? 0
+                    runningTotal += delta
+                    points.append(TrendPoint(date: date, value: runningTotal, delta: delta))
+                }
+            }
+        case .threeMonths, .sixMonths:
+            let today = cal.startOfDay(for: Date())
+            let monthsBack = range == .threeMonths ? -3 : -6
+            let startOfPeriod = cal.date(byAdding: .month, value: monthsBack, to: today) ?? today
+            let weekday = cal.component(.weekday, from: startOfPeriod)
+            let daysToSubtract = weekday - cal.firstWeekday
+            let alignedStart = cal.date(byAdding: .day, value: -daysToSubtract, to: startOfPeriod) ?? startOfPeriod
+            
+            var currentDate = alignedStart
+            while currentDate <= today {
+                let delta = buckets[currentDate] ?? 0
+                runningTotal += delta
+                points.append(TrendPoint(date: currentDate, value: runningTotal, delta: delta))
+                currentDate = cal.date(byAdding: .weekOfYear, value: 1, to: currentDate) ?? currentDate
+            }
+        case .all:
+            let today = cal.startOfDay(for: Date())
+            let startOfYear = cal.date(byAdding: .month, value: -11, to: today) ?? today
+            let alignedStart = cal.date(from: cal.dateComponents([.year, .month], from: startOfYear)) ?? startOfYear
+            
+            for i in 0...11 {
+                if let date = cal.date(byAdding: .month, value: i, to: alignedStart) {
+                    let delta = buckets[date] ?? 0
+                    runningTotal += delta
+                    points.append(TrendPoint(date: date, value: runningTotal, delta: delta))
+                }
+            }
+        }
+
+        if let lastIndex = points.lastIndex(where: { $0.delta != 0 }) {
+            return Array(points.prefix(through: lastIndex))
+        }
+        return []
     }
 }
