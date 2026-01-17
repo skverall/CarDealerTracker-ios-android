@@ -1159,14 +1159,29 @@ struct DealerExpenseDashboardView: View {
         return df
     }()
 
-    init() {
+    var showNavigation: Bool = true
+
+    init(showNavigation: Bool = true) {
+        self.showNavigation = showNavigation
         let context = PersistenceController.shared.container.viewContext
         _viewModel = StateObject(wrappedValue: ExpenseViewModel(context: context))
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
+        Group {
+            if showNavigation {
+                NavigationStack {
+                    content
+                        .toolbar(.hidden, for: .navigationBar)
+                }
+            } else {
+                content
+            }
+        }
+    }
+
+    var content: some View {
+        ZStack(alignment: .bottomTrailing) {
                 ColorTheme.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
@@ -1262,7 +1277,7 @@ struct DealerExpenseDashboardView: View {
                     .padding(.trailing, 24)
                     .padding(.bottom, 90)
             }
-            .toolbar(.hidden, for: .navigationBar)
+
             .sheet(isPresented: $showingAddExpense) {
                 AddExpenseView(viewModel: viewModel)
             }
@@ -1282,7 +1297,7 @@ struct DealerExpenseDashboardView: View {
             }
         }
 
-    }
+
 
     private var header: some View {
 

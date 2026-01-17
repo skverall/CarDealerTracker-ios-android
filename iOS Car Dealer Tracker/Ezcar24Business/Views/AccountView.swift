@@ -20,6 +20,7 @@ struct AccountView: View {
     @AppStorage(NotificationPreference.enabledKey) private var notificationsEnabled = false
     @State private var showNotificationSettingsAlert = false
     @State private var notificationAlertMessage = ""
+    @State private var showMailError = false
 
     fileprivate enum DedupState: Equatable {
         case idle
@@ -40,140 +41,29 @@ struct AccountView: View {
                         subscriptionCard
                         
                         // MARK: - General Settings
-                        menuSection(title: "settings".localizedKey) {
-                            NavigationLink {
-                                RegionLanguageSettingsView()
-                            } label: {
-                                MenuRow(icon: "globe", title: "region_language".localizedKey, color: .indigo)
-                            }
-                            
-                            notificationsRow
-                            
-                            if permissionService.currentRole == "owner" || permissionService.currentRole == "admin" {
-                                Divider().padding(.leading, 52)
-                                NavigationLink {
-                                    FinancialAccountsView()
-                                } label: {
-                                    MenuRow(icon: "banknote", title: "financial_accounts".localizedKey, color: .green)
-                                }
-                            }
-                        }
+                        generalSettingsSection
                         
                         // MARK: - Management & Data
-                        if showManagementSection {
-                            menuSection(title: "management".localizedKey) {
-                                if permissionService.can(.manageTeam) {
-                                    NavigationLink {
-                                        TeamManagementView()
-                                    } label: {
-                                        MenuRow(icon: "person.2.fill", title: "team_members".localizedKey, color: .blue)
-                                    }
-                                    Divider().padding(.leading, 52)
-                                }
-
-                                if permissionService.currentRole == "owner" {
-                                    NavigationLink {
-                                        BackupCenterView()
-                                    } label: {
-                                        MenuRow(icon: "externaldrive.badge.checkmark", title: "backup_export".localizedKey, color: .orange)
-                                    }
-                                    Divider().padding(.leading, 52)
-                                }
-                                
-                                if permissionService.can(.manageTeam) { // Admin/Owner
-                                     NavigationLink {
-                                        DataHealthView()
-                                    } label: {
-                                        MenuRow(icon: "stethoscope", title: "data_health".localizedKey, color: .teal)
-                                    }
-                                    Divider().padding(.leading, 52)
-                                    
-                                    Button {
-                                        Task {
-                                            await runDeduplication()
-                                        }
-                                    } label: {
-                                        MenuRow(icon: "arrow.triangle.merge", title: "clean_up_duplicates".localizedKey, color: .purple)
-                                    }
-                                    Divider().padding(.leading, 52)
-                                }
-                                
-                                syncRow
-                            }
-                        } else {
-                            // Minimal sync section for regular employees if not in management
-                             menuSection(title: "sync".localizedKey) {
-                                syncRow
-                             }
-                        }
+                        managementDataSection
                         
                         // MARK: - Security
-                        menuSection(title: "security".localizedKey) {
-                            NavigationLink {
-                                ChangePasswordView()
-                            } label: {
-                                MenuRow(icon: "lock.rotation", title: "change_password".localizedKey, color: .purple)
-                            }
-                            
-                            if permissionService.currentRole == "owner" {
-                                Divider().padding(.leading, 52)
-                                NavigationLink {
-                                    DeleteAccountView()
-                                } label: {
-                                    MenuRow(icon: "trash", title: "delete_account".localizedKey, color: .red)
-                                }
-                            }
-                        }
+                        securitySection
+                        
+                        // MARK: - Support
+                        supportSection
                         
                         // MARK: - Legal
-                        menuSection(title: "legal".localizedKey) {
-                            Link(destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!) {
-                                MenuRow(icon: "doc.text", title: "terms_of_use".localizedKey, color: .gray)
-                            }
-                            Divider().padding(.leading, 52)
-                            Link(destination: URL(string: "https://www.ezcar24.com/en/privacy-policy")!) {
-                                MenuRow(icon: "hand.raised.fill", title: "privacy_policy".localizedKey, color: .gray)
-                            }
-                        }
+                        legalSection
                         
                         // MARK: - Sign Out
-                        Button(action: signOut) {
-                            HStack {
-                                Text("sign_out".localizedString)
-                                    .fontWeight(.semibold)
-                                
-                                Spacer()
-                                
-                                if isSyncing {
-                                    HStack(spacing: 8) {
-                                        ProgressView()
-                                            .progressViewStyle(.circular)
-                                            .tint(.red)
-                                        Text("syncing".localizedString)
-                                            .font(.caption)
-                                    }
-                                } else if syncComplete {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 20))
-                                } else if isSigningOut || sessionStore.isAuthenticating {
-                                    ProgressView()
-                                        .progressViewStyle(.circular)
-                                        .tint(.red)
-                                } else {
-                                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                                }
-                            }
-                            .foregroundColor(.red)
-                            .padding()
-                            .background(ColorTheme.cardBackground)
-                            .cornerRadius(16)
-                            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-                        }
-                        .disabled(isSigningOut || sessionStore.isAuthenticating || isSyncing)
-                        .padding(.bottom, 20)
+                        signOutButton
+                        
+                        // MARK: - Version
+                        appVersionView
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 20)
+                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 700 : .infinity)
                 }
             }
             .navigationTitle("account".localizedString)
@@ -227,7 +117,165 @@ struct AccountView: View {
                         .padding(.top, 8)
                 }
             }
+            .alert("contact_developer".localizedString, isPresented: $showMailError) {
+                Button("copy_email".localizedString) {
+                    UIPasteboard.general.string = "aydmaxx@gmail.com"
+                }
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(String(format: "mail_error_message".localizedString, "aydmaxx@gmail.com"))
+            }
         }
+    }
+    
+    private var generalSettingsSection: some View {
+        menuSection(title: "settings".localizedKey) {
+            NavigationLink {
+                RegionLanguageSettingsView()
+            } label: {
+                MenuRow(icon: "globe", title: "region_language".localizedKey, color: .indigo)
+            }
+            
+            notificationsRow
+            
+            if permissionService.currentRole == "owner" || permissionService.currentRole == "admin" {
+                Divider().padding(.leading, 52)
+                NavigationLink {
+                    FinancialAccountsView()
+                } label: {
+                    MenuRow(icon: "banknote", title: "financial_accounts".localizedKey, color: .green)
+                }
+            }
+        }
+    }
+    
+    private var managementDataSection: some View {
+        Group {
+            if showManagementSection {
+                menuSection(title: "management".localizedKey) {
+                    if permissionService.can(.manageTeam) {
+                        NavigationLink {
+                            TeamManagementView()
+                        } label: {
+                            MenuRow(icon: "person.2.fill", title: "team_members".localizedKey, color: .blue)
+                        }
+                        Divider().padding(.leading, 52)
+                    }
+
+                    if permissionService.currentRole == "owner" {
+                        NavigationLink {
+                            BackupCenterView()
+                        } label: {
+                            MenuRow(icon: "externaldrive.badge.checkmark", title: "backup_export".localizedKey, color: .orange)
+                        }
+                        Divider().padding(.leading, 52)
+                    }
+                    
+                    if permissionService.can(.manageTeam) { // Admin/Owner
+                         NavigationLink {
+                            DataHealthView()
+                        } label: {
+                            MenuRow(icon: "stethoscope", title: "data_health".localizedKey, color: .teal)
+                        }
+                        Divider().padding(.leading, 52)
+                        
+                        Button {
+                            Task {
+                                await runDeduplication()
+                            }
+                        } label: {
+                            MenuRow(icon: "arrow.triangle.merge", title: "clean_up_duplicates".localizedKey, color: .purple)
+                        }
+                        Divider().padding(.leading, 52)
+                    }
+                    
+                    syncRow
+                }
+            } else {
+                // Minimal sync section for regular employees if not in management
+                 menuSection(title: "sync".localizedKey) {
+                    syncRow
+                 }
+            }
+        }
+    }
+    
+    private var securitySection: some View {
+        menuSection(title: "security".localizedKey) {
+            NavigationLink {
+                ChangePasswordView()
+            } label: {
+                MenuRow(icon: "lock.rotation", title: "change_password".localizedKey, color: .purple)
+            }
+            
+            if permissionService.currentRole == "owner" {
+                Divider().padding(.leading, 52)
+                NavigationLink {
+                    DeleteAccountView()
+                } label: {
+                    MenuRow(icon: "trash", title: "delete_account".localizedKey, color: .red)
+                }
+            }
+        }
+    }
+    
+    private var supportSection: some View {
+        menuSection(title: "support_section".localizedKey) {
+            Button {
+                sendSupportEmail()
+            } label: {
+                MenuRow(icon: "envelope.fill", title: "contact_developer".localizedKey, color: .blue)
+            }
+        }
+    }
+    
+    private var legalSection: some View {
+        menuSection(title: "legal".localizedKey) {
+            Link(destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!) {
+                MenuRow(icon: "doc.text", title: "terms_of_use".localizedKey, color: .gray)
+            }
+            Divider().padding(.leading, 52)
+            Link(destination: URL(string: "https://www.ezcar24.com/en/privacy-policy")!) {
+                MenuRow(icon: "hand.raised.fill", title: "privacy_policy".localizedKey, color: .gray)
+            }
+        }
+    }
+    
+    private var signOutButton: some View {
+        Button(action: signOut) {
+            HStack {
+                Text("sign_out".localizedString)
+                    .fontWeight(.semibold)
+                
+                Spacer()
+                
+                if isSyncing {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .progressViewStyle(.circular)
+                            .tint(.red)
+                        Text("syncing".localizedString)
+                            .font(.caption)
+                    }
+                } else if syncComplete {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                } else if isSigningOut || sessionStore.isAuthenticating {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.red)
+                } else {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                }
+            }
+            .foregroundColor(.red)
+            .padding()
+            .background(ColorTheme.cardBackground)
+            .cornerRadius(16)
+            .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        }
+        .disabled(isSigningOut || sessionStore.isAuthenticating || isSyncing)
+        .padding(.bottom, 20)
     }
     
     private var showManagementSection: Bool {
@@ -452,6 +500,18 @@ struct AccountView: View {
         }
         return "never".localizedString
     }
+    
+    private var appVersionView: some View {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        
+        return Text("Car Dealer Tracker v\(version) (\(build))")
+            .font(.caption2)
+            .foregroundColor(ColorTheme.tertiaryText)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, -10)
+            .padding(.bottom, 20)
+    }
 
     private func signOut() {
         guard !isSigningOut else { return }
@@ -527,6 +587,49 @@ struct AccountView: View {
             }
         } else {
             await LocalNotificationManager.shared.clearAll()
+        }
+    }
+
+    private func sendSupportEmail() {
+        let email = "aydmaxx@gmail.com"
+        let subject = "support_email_subject".localizedString
+        
+        // Gather device info
+        let deviceModel = UIDevice.current.model
+        let systemName = UIDevice.current.systemName
+        let systemVersion = UIDevice.current.systemVersion
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "Unknown"
+        
+        var userIdString = "Not Signed In"
+        if case .signedIn(let user) = sessionStore.status {
+            userIdString = user.id.uuidString
+        }
+        
+        let body = """
+        
+        -----------------------------
+        Please write your feedback above this line.
+        
+        Device: \(deviceModel)
+        OS: \(systemName) \(systemVersion)
+        App Version: \(appVersion) (\(buildNumber))
+        User ID: \(userIdString)
+        """
+        
+        // Encode URL components safely
+        if let subjectEncoded = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+           let bodyEncoded = body.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+           let url = URL(string: "mailto:\(email)?subject=\(subjectEncoded)&body=\(bodyEncoded)") {
+            
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+            } else {
+                // Fallback or alert if Mail app is not configured?
+                // For now, simpler is usually better; if they don't have mail, they can't email.
+                print("Cannot open mail URL")
+                showMailError = true
+            }
         }
     }
 }

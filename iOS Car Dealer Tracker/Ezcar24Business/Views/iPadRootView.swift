@@ -45,7 +45,7 @@ struct iPadRootView: View {
             }
         }
         .navigationSplitViewStyle(.balanced)
-        .sheet(isPresented: $showProfileSheet) {
+        .fullScreenCover(isPresented: $showProfileSheet) {
             AccountView()
         }
         .onReceive(NotificationCenter.default.publisher(for: .dashboardDidRequestAccount)) { _ in
@@ -73,12 +73,12 @@ struct iPadRootView: View {
         case .expenses:
             if shouldGatePermissions {
                if permissionService.can(.viewExpenses) {
-                   DealerExpenseDashboardView()
+                   DealerExpenseDashboardView(showNavigation: false)
                } else {
                    RestrictedAccessView(title: "expenses".localizedString)
                }
            } else {
-               DealerExpenseDashboardView()
+               DealerExpenseDashboardView(showNavigation: false)
            }
         case .vehicles:
             if shouldGatePermissions {
@@ -113,12 +113,12 @@ struct iPadRootView: View {
         case .clients:
             if shouldGatePermissions {
              if permissionService.can(.viewLeads) {
-                 ClientListView()
+                 ClientListView(showNavigation: false)
              } else {
                  RestrictedAccessView(title: "clients".localizedString)
              }
             } else {
-             ClientListView()
+             ClientListView(showNavigation: false)
             }
         }
     }

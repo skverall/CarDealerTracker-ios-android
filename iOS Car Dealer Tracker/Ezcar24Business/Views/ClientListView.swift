@@ -31,71 +31,84 @@ struct ClientListView: View {
         }
     }
 
-    init() {
+    var showNavigation: Bool = true
+
+    init(showNavigation: Bool = true) {
+        self.showNavigation = showNavigation
         let context = PersistenceController.shared.container.viewContext
         _viewModel = StateObject(wrappedValue: ClientViewModel(context: context))
     }
 
     var body: some View {
-        NavigationView {
-            ZStack(alignment: .top) {
-                ColorTheme.background.ignoresSafeArea()
-                
+        Group {
+            if showNavigation {
+                NavigationView {
+                    contentView
+                }
+            } else {
+                contentView
+            }
+        }
+    }
+
+    private var contentView: some View {
+        ZStack(alignment: .top) {
+            ColorTheme.background.ignoresSafeArea()
+            
+            VStack(spacing: 0) {
+                // Search & Filters Area
                 VStack(spacing: 0) {
-                    // Search & Filters Area
-                    VStack(spacing: 0) {
-                        searchBar
-                        
-                        if showFilters {
-                            filtersBar
-                                .padding(.bottom, 8)
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-                    }
-                    .background(ColorTheme.background)
-                    .zIndex(1)
+                    searchBar
                     
-                    // List Content
-                    listContent
-                }
-            }
-            .navigationTitle("clients".localizedString)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                            showFilters.toggle()
-                        }
-                        if !showFilters {
-                            dateFilter = .all
-                        }
-                    } label: {
-                        Image(systemName: showFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                            .foregroundColor(ColorTheme.primary)
+                    if showFilters {
+                        filtersBar
+                            .padding(.bottom, 8)
+                            .transition(.move(edge: .top).combined(with: .opacity))
                     }
                 }
+                .background(ColorTheme.background)
+                .zIndex(1)
                 
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        activeSheet = .new
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(ColorTheme.success)
-                            .shadow(color: ColorTheme.success.opacity(0.2), radius: 4, x: 0, y: 2)
+                // List Content
+                listContent
+            }
+        }
+        .navigationTitle("clients".localizedString)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showFilters.toggle()
                     }
+                    if !showFilters {
+                        dateFilter = .all
+                    }
+                } label: {
+                    Image(systemName: showFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                        .foregroundColor(ColorTheme.primary)
                 }
             }
-            .sheet(item: $activeSheet) { item in
-                switch item {
-                case .new:
-                    ClientDetailView(client: nil, context: context) { _ in
-                        viewModel.fetchClients()
-                    }
-                case .edit(let client):
-                    ClientDetailView(client: client, context: context) { _ in
-                        viewModel.fetchClients()
-                    }
+            
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    activeSheet = .new
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(ColorTheme.success)
+                        .shadow(color: ColorTheme.success.opacity(0.2), radius: 4, x: 0, y: 2)
+                }
+            }
+        }
+        .sheet(item: $activeSheet) { item in
+            switch item {
+            case .new:
+                ClientDetailView(client: nil, context: context) { _ in
+                    viewModel.fetchClients()
+                }
+            case .edit(let client):
+                ClientDetailView(client: client, context: context) { _ in
+                    viewModel.fetchClients()
                 }
             }
         }
