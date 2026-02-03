@@ -432,7 +432,7 @@ struct ClientListView: View {
     }
 
     private func dateBucket(for date: Date?) -> String {
-        guard let date else { return "No Date" }
+        guard let date else { return "no_date".localizedString }
         let cal = Calendar.current
         let now = Date()
         if cal.isDateInToday(date) { return "today".localizedString }

@@ -109,6 +109,21 @@
 		N0000112 /* ExportProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000012 /* ExportProgressView.swift */; };
 		N0000113 /* NotionExportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000013 /* NotionExportViewModel.swift */; };
 		C0000101 /* HoldingCostCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000001 /* HoldingCostCalculator.swift */; };
+		C0000102 /* InventoryMetricsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000002 /* InventoryMetricsCalculator.swift */; };
+		C0000103 /* VehicleFinancialsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000003 /* VehicleFinancialsCalculator.swift */; };
+		D0000013 /* InventoryStatsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000004 /* InventoryStatsManager.swift */; };
+		E3000001 /* DaysInInventoryIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000000 /* DaysInInventoryIndicator.swift */; };
+		E3000003 /* HoldingCostIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000002 /* HoldingCostIndicator.swift */; };
+		E3000005 /* ROIBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000004 /* ROIBadge.swift */; };
+		M1000001 /* AgingBucket.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000000 /* AgingBucket.swift */; };
+		M1000003 /* InventoryAlertType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000002 /* InventoryAlertType.swift */; };
+		M1000005 /* ExpenseCategoryType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000004 /* ExpenseCategoryType.swift */; };
+		E3000013 /* AnalyticsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000012 /* AnalyticsHubView.swift */; };
+		E3000016 /* InventoryAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000015 /* InventoryAnalyticsView.swift */; };
+		E3000018 /* InventoryAnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000017 /* InventoryAnalyticsViewModel.swift */; };
+		E300001A /* InventoryHealthScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000019 /* InventoryHealthScore.swift */; };
+		E300001C /* AgingBucketBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E300001B /* AgingBucketBadge.swift */; };
+		E300001E /* InventoryAlertCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E300001D /* InventoryAlertCard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -213,6 +228,21 @@
 		N0000012 /* ExportProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportProgressView.swift; sourceTree = "<group>"; };
 		N0000013 /* NotionExportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionExportViewModel.swift; sourceTree = "<group>"; };
 		C0000001 /* HoldingCostCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingCostCalculator.swift; sourceTree = "<group>"; };
+		C0000002 /* InventoryMetricsCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryMetricsCalculator.swift; sourceTree = "<group>"; };
+		C0000003 /* VehicleFinancialsCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFinancialsCalculator.swift; sourceTree = "<group>"; };
+		D0000004 /* InventoryStatsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryStatsManager.swift; sourceTree = "<group>"; };
+		E3000000 /* DaysInInventoryIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaysInInventoryIndicator.swift; sourceTree = "<group>"; };
+		E3000002 /* HoldingCostIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingCostIndicator.swift; sourceTree = "<group>"; };
+		E3000004 /* ROIBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ROIBadge.swift; sourceTree = "<group>"; };
+		M1000000 /* AgingBucket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucket.swift; sourceTree = "<group>"; };
+		M1000002 /* InventoryAlertType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertType.swift; sourceTree = "<group>"; };
+		M1000004 /* ExpenseCategoryType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseCategoryType.swift; sourceTree = "<group>"; };
+		E3000012 /* AnalyticsHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsHubView.swift; sourceTree = "<group>"; };
+		E3000015 /* InventoryAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAnalyticsView.swift; sourceTree = "<group>"; };
+		E3000017 /* InventoryAnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAnalyticsViewModel.swift; sourceTree = "<group>"; };
+		E3000019 /* InventoryHealthScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryHealthScore.swift; sourceTree = "<group>"; };
+		E300001B /* AgingBucketBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucketBadge.swift; sourceTree = "<group>"; };
+		E300001D /* InventoryAlertCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertCard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -278,6 +308,7 @@
 		A1000027 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				M1000010 /* Enums */,
 				N0000021 /* NotionExport */,
 				E2460EF32F150C340048EA80 /* Part+Extensions.swift */,
 				E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */,
@@ -297,6 +328,7 @@
 			isa = PBXGroup;
 			children = (
 				N0000013 /* NotionExportViewModel.swift */,
+				E3000017 /* InventoryAnalyticsViewModel.swift */,
 				E2460EF52F150C480048EA80 /* PartSalesViewModel.swift */,
 				E2460EF62F150C480048EA80 /* PartsInventoryViewModel.swift */,
 				A1000018 /* DashboardViewModel.swift */,
@@ -315,7 +347,10 @@
 		A1000029 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E3000014 /* Analytics */,
+				E3000010 /* Components */,
 				N0000022 /* Notion */,
+				E300001F /* Inventory */,
 				E2F901042F22129600CD9D6D /* DaysSincePurchaseView.swift */,
 				E2F901022F22120300CD9D6D /* GlobalSearchView.swift */,
 				E2DC15462F1A46BC00068680 /* iPadRootView.swift */,
@@ -391,6 +426,7 @@
 				E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */,
 				E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */,
 				10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */,
+				D0000004 /* InventoryStatsManager.swift */,
 				D0000001 /* CloudSyncManager.swift */,
 				D0000002 /* CloudSyncEnvironment.swift */,
 				D0000003 /* SupabaseModels.swift */,
@@ -404,8 +440,57 @@
 			isa = PBXGroup;
 			children = (
 				C0000001 /* HoldingCostCalculator.swift */,
+				C0000002 /* InventoryMetricsCalculator.swift */,
+				C0000003 /* VehicleFinancialsCalculator.swift */,
 			);
 			path = Calculators;
+			sourceTree = "<group>";
+		};
+		E3000010 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				E3000011 /* Inventory */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		E3000011 /* Inventory */ = {
+			isa = PBXGroup;
+			children = (
+				E300001B /* AgingBucketBadge.swift */,
+				E3000000 /* DaysInInventoryIndicator.swift */,
+				E3000002 /* HoldingCostIndicator.swift */,
+				E300001D /* InventoryAlertCard.swift */,
+				E3000019 /* InventoryHealthScore.swift */,
+				E3000004 /* ROIBadge.swift */,
+			);
+			path = Inventory;
+			sourceTree = "<group>";
+		};
+		E3000014 /* Analytics */ = {
+			isa = PBXGroup;
+			children = (
+				E3000012 /* AnalyticsHubView.swift */,
+			);
+			path = Analytics;
+			sourceTree = "<group>";
+		};
+		E300001F /* Inventory */ = {
+			isa = PBXGroup;
+			children = (
+				E3000015 /* InventoryAnalyticsView.swift */,
+			);
+			path = Inventory;
+			sourceTree = "<group>";
+		};
+		M1000010 /* Enums */ = {
+			isa = PBXGroup;
+			children = (
+				M1000000 /* AgingBucket.swift */,
+				M1000004 /* ExpenseCategoryType.swift */,
+				M1000002 /* InventoryAlertType.swift */,
+			);
+			path = Enums;
 			sourceTree = "<group>";
 		};
 		N0000020 /* Notion */ = {
@@ -618,6 +703,21 @@
 				N0000112 /* ExportProgressView.swift in Sources */,
 				N0000113 /* NotionExportViewModel.swift in Sources */,
 				C0000101 /* HoldingCostCalculator.swift in Sources */,
+				C0000102 /* InventoryMetricsCalculator.swift in Sources */,
+				C0000103 /* VehicleFinancialsCalculator.swift in Sources */,
+				D0000013 /* InventoryStatsManager.swift in Sources */,
+				E3000001 /* DaysInInventoryIndicator.swift in Sources */,
+				E3000003 /* HoldingCostIndicator.swift in Sources */,
+				E3000005 /* ROIBadge.swift in Sources */,
+				E3000016 /* InventoryAnalyticsView.swift in Sources */,
+				E3000018 /* InventoryAnalyticsViewModel.swift in Sources */,
+				E300001A /* InventoryHealthScore.swift in Sources */,
+				E300001C /* AgingBucketBadge.swift in Sources */,
+				E300001E /* InventoryAlertCard.swift in Sources */,
+				M1000001 /* AgingBucket.swift in Sources */,
+				M1000003 /* InventoryAlertType.swift in Sources */,
+				M1000005 /* ExpenseCategoryType.swift in Sources */,
+				E3000013 /* AnalyticsHubView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

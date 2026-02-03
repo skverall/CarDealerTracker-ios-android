@@ -272,7 +272,13 @@ struct AddVehicleView: View {
                     await CloudSyncManager.shared?.upsertSale(createdSale, dealerId: dealerId)
                 }
                 if let imageData = selectedImageData, let id = vehicle.id {
-                    await CloudSyncManager.shared?.uploadVehicleImage(vehicleId: id, dealerId: dealerId, imageData: imageData)
+                    await CloudSyncManager.shared?.uploadVehiclePhoto(
+                        vehicleId: id,
+                        dealerId: dealerId,
+                        imageData: imageData,
+                        makePrimary: true,
+                        sortOrder: 0
+                    )
                 }
             }
         }

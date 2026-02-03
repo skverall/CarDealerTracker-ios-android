@@ -32,7 +32,7 @@ class InventoryAnalyticsViewModel: ObservableObject {
         
         var id: String { rawValue }
         
-        var displayName: String {
+        @MainActor var displayName: String {
             switch self {
             case .all:
                 return "all_vehicles".localizedString
@@ -56,7 +56,7 @@ class InventoryAnalyticsViewModel: ObservableObject {
         
         var id: String { rawValue }
         
-        var displayName: String {
+        @MainActor var displayName: String {
             switch self {
             case .daysDesc:
                 return "oldest_first".localizedString
@@ -74,8 +74,12 @@ class InventoryAnalyticsViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
     private var inventoryStatsManager: InventoryStatsManager
     
-    init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
-        self.context = context
+    var burningThreshold: Int {
+        NotificationPreference.inventoryStaleThreshold
+    }
+    
+    init(context: NSManagedObjectContext? = nil) {
+        self.context = context ?? PersistenceController.shared.container.viewContext
         self.inventoryStatsManager = InventoryStatsManager.shared
         
         setupBindings()
@@ -149,7 +153,7 @@ class InventoryAnalyticsViewModel: ObservableObject {
             filtered = vehicles.filter { vehicle in
                 guard let vehicleId = vehicle.id,
                       let stats = vehicleStats[vehicleId] else { return false }
-                return stats.daysInInventory >= 90
+                return Int(stats.daysInInventory) >= burningThreshold
             }
         case .highHoldingCost:
             filtered = vehicles.filter { vehicle in
@@ -182,7 +186,7 @@ class InventoryAnalyticsViewModel: ObservableObject {
         vehicles.filter { vehicle in
             guard let vehicleId = vehicle.id,
                   let stats = vehicleStats[vehicleId] else { return false }
-            return stats.daysInInventory >= 90
+            return Int(stats.daysInInventory) >= burningThreshold
         }
     }
     

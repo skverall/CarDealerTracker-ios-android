@@ -131,7 +131,7 @@ private struct SearchExpenseRow: View {
             }
             Spacer()
             if let amount = expense.amount {
-                Text(amount.decimalValue.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")))
+                Text(amount.decimalValue.asCurrency())
                     .font(.headline)
             }
         }

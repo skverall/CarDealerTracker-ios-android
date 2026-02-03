@@ -1,4 +1,5 @@
 import Foundation
+import CoreData
 
 class InventoryMetricsCalculator {
     
@@ -127,7 +128,8 @@ class InventoryMetricsCalculator {
     static func calculateInventoryStats(
         vehicle: Vehicle,
         expenses: [Expense],
-        settings: HoldingCostSettings
+        settings: HoldingCostSettings,
+        context: NSManagedObjectContext
     ) -> VehicleInventoryStats {
         let daysInInventory = HoldingCostCalculator.calculateDaysInInventory(vehicle: vehicle)
         let agingBucket = getAgingBucket(daysInInventory: daysInInventory)
@@ -162,7 +164,7 @@ class InventoryMetricsCalculator {
         
         let now = Date()
         
-        let stats = VehicleInventoryStats(context: PersistenceController.shared.container.viewContext)
+        let stats = VehicleInventoryStats(context: context)
         stats.id = UUID()
         stats.vehicleId = vehicle.id
         stats.daysInInventory = Int32(daysInInventory)
@@ -180,11 +182,11 @@ class InventoryMetricsCalculator {
     
     static func generateInventoryAlerts(
         stats: VehicleInventoryStats,
-        vehicle: Vehicle
+        vehicle: Vehicle,
+        context: NSManagedObjectContext
     ) -> [InventoryAlert] {
         var alerts: [InventoryAlert] = []
         let now = Date()
-        let context = PersistenceController.shared.container.viewContext
         
         let daysInInventory = Int(stats.daysInInventory)
         

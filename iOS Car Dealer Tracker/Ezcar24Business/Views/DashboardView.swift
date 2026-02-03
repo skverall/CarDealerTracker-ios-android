@@ -16,7 +16,7 @@ extension Notification.Name {
 }
 
 enum DashboardDestination: String, Identifiable, Hashable {
-    case assets, cashAccounts, bankAccounts, revenue, profit, sold, allExpenses
+    case assets, cashAccounts, bankAccounts, revenue, profit, sold, allExpenses, analytics
     var id: String { rawValue }
 }
 
@@ -61,6 +61,7 @@ struct DashboardView: View {
                     if permissionService.didLoad {
                         List {
                             financialOverviewSection
+                            analyticsSection
                             todaysExpensesSection
                             summarySection
                             recentExpensesSection
@@ -154,6 +155,8 @@ struct DashboardView: View {
             VehicleListView(presetStatus: "sold", showNavigation: false)
         case .allExpenses:
             ExpenseListView()
+        case .analytics:
+            AnalyticsHubView()
         }
     }
 }
@@ -484,6 +487,19 @@ private extension DashboardView {
         .listRowBackground(Color.clear)
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: permissionService.didLoad)
     }
+    
+    var analyticsSection: some View {
+        Section {
+            NavigationLink(value: DashboardDestination.analytics) {
+                AnalyticsEntryCard()
+            }
+            .buttonStyle(.plain)
+        }
+        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+    }
+
     var todaysExpensesSection: some View {
         Group {
             if PermissionService.shared.can(.viewExpenses) && !viewModel.todaysExpenses.isEmpty {
@@ -810,6 +826,43 @@ private struct FinancialCard: View {
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: isHero ? color.opacity(0.3) : Color.black.opacity(0.03), radius: isHero ? 8 : 4, x: 0, y: isHero ? 4 : 2)
+    }
+}
+
+private struct AnalyticsEntryCard: View {
+    var body: some View {
+        HStack(alignment: .center, spacing: 16) {
+            Image(systemName: "chart.bar.xaxis")
+                .font(.title3)
+                .foregroundColor(ColorTheme.primary)
+                .frame(width: 44, height: 44)
+                .background(ColorTheme.primary.opacity(0.12))
+                .clipShape(Circle())
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text("analytics_section_title".localizedString)
+                    .font(.headline)
+                    .foregroundColor(ColorTheme.primaryText)
+                
+                Text("analytics_section_subtitle".localizedString)
+                    .font(.caption)
+                    .foregroundColor(ColorTheme.secondaryText)
+            }
+            
+            Spacer()
+            
+            Text("view_analytics".localizedString)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(ColorTheme.primary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(ColorTheme.primary.opacity(0.12))
+                .clipShape(Capsule())
+        }
+        .padding(16)
+        .background(ColorTheme.secondaryBackground)
+        .cornerRadius(18)
+        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
     }
 }
 

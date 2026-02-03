@@ -80,7 +80,7 @@ struct ContentView: View {
             return false
         }()
 
-        ZStack(alignment: .bottom) {
+        ZStack {
             TabView(selection: $selectedTab) {
                 // 1. Dashboard
                 DashboardView()
@@ -177,16 +177,30 @@ struct ContentView: View {
                 }
                 .tag(Tab.clients)
             }
+            .alert("VIN already exists", isPresented: Binding(
+                get: { cloudSyncManager.vinConflictVehicleId != nil },
+                set: { if !$0 { cloudSyncManager.vinConflictVehicleId = nil } }
+            )) {
+                Button("Open Vehicles") {
+                    selectedTab = .vehicles
+                    cloudSyncManager.vinConflictVehicleId = nil
+                }
+                Button("OK", role: .cancel) {
+                    cloudSyncManager.vinConflictVehicleId = nil
+                }
+            } message: {
+                Text("This VIN is already in your inventory.")
+            }
             // Hide system tab bar so we can show ours
             .onAppear {
                 UITabBar.appearance().isHidden = true
             }
+            .safeAreaInset(edge: .bottom) {
+                CustomTabBar(selectedTab: $selectedTab)
+                    .padding(.bottom, 0)
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
+            }
             
-            // Custom Tab Bar
-            CustomTabBar(selectedTab: $selectedTab)
-                .padding(.bottom, 0) // Safe area handled inside internal padding usually or implicit
-                .ignoresSafeArea(.keyboard, edges: .bottom)
-
             // Overlays
             SyncHUDOverlay()
                 .padding(.bottom, 60) // Lift HUD above tabbar

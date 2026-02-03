@@ -362,6 +362,25 @@ class CloudSyncManager @Inject constructor(
         return "$dealerPart/vehicles/$vehiclePart.jpg"
     }
 
+    private fun photoPath(dealerId: UUID, vehicleId: UUID, photoId: UUID): String {
+        val dealerPart = dealerId.toString().lowercase(Locale.US)
+        val vehiclePart = vehicleId.toString().lowercase(Locale.US)
+        val photoPart = photoId.toString().lowercase(Locale.US)
+        return "$dealerPart/vehicles/$vehiclePart/$photoPart.jpg"
+    }
+
+    @Serializable
+    private data class RemoteVehiclePhotoInsert(
+        val id: String,
+        @SerialName("dealer_id") val dealerId: String,
+        @SerialName("vehicle_id") val vehicleId: String,
+        @SerialName("storage_path") val storagePath: String,
+        @SerialName("sort_order") val sortOrder: Int,
+        @SerialName("created_at") val createdAt: String,
+        @SerialName("updated_at") val updatedAt: String,
+        @SerialName("deleted_at") val deletedAt: String? = null
+    )
+
     suspend fun uploadVehicleImage(vehicleId: UUID, dealerId: UUID, imageData: ByteArray) = withContext(Dispatchers.IO) {
         val path = imagePath(dealerId, vehicleId)
         try {
@@ -373,6 +392,85 @@ class CloudSyncManager @Inject constructor(
                 }
         } catch (e: Exception) {
             Log.e(tag, "uploadVehicleImage failed: ${e.message}", e)
+        }
+    }
+
+    suspend fun fetchVehiclePhotos(dealerId: UUID, vehicleId: UUID): List<RemoteVehiclePhoto> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val result = client.postgrest
+                .from("crm_vehicle_photos")
+                .select {
+                    filter {
+                        eq("dealer_id", dealerId.toString())
+                        eq("vehicle_id", vehicleId.toString())
+                    }
+                }
+            val photos = json.decodeFromString<List<RemoteVehiclePhoto>>(result.data)
+            photos.filter { it.deletedAt == null }.sortedBy { it.sortOrder }
+        } catch (e: Exception) {
+            Log.e(tag, "fetchVehiclePhotos failed: ${e.message}", e)
+            emptyList()
+        }
+    }
+
+    suspend fun uploadVehiclePhoto(
+        vehicleId: UUID,
+        dealerId: UUID,
+        imageData: ByteArray,
+        makePrimary: Boolean,
+        sortOrder: Int
+    ) = withContext(Dispatchers.IO) {
+        val photoId = UUID.randomUUID()
+        val path = photoPath(dealerId, vehicleId, photoId)
+        try {
+            client.storage
+                .from("vehicle-images")
+                .upload(path, imageData) {
+                    upsert = true
+                    contentType = ContentType.Image.JPEG
+                }
+
+            val now = DateUtils.formatDateAndTime(Date())
+            val insert = RemoteVehiclePhotoInsert(
+                id = photoId.toString(),
+                dealerId = dealerId.toString(),
+                vehicleId = vehicleId.toString(),
+                storagePath = path,
+                sortOrder = sortOrder,
+                createdAt = now,
+                updatedAt = now
+            )
+            client.postgrest
+                .from("crm_vehicle_photos")
+                .insert(insert)
+
+            if (makePrimary) {
+                uploadVehicleImage(vehicleId, dealerId, imageData)
+            }
+        } catch (e: Exception) {
+            Log.e(tag, "uploadVehiclePhoto failed: ${e.message}", e)
+        }
+    }
+
+    suspend fun createVehicleShareLink(
+        vehicleId: UUID,
+        dealerId: UUID,
+        contactPhone: String?,
+        contactWhatsApp: String?
+    ): String? = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val params = buildJsonObject {
+                put("p_vehicle_id", vehicleId.toString())
+                put("p_dealer_id", dealerId.toString())
+                put("p_contact_phone", contactPhone ?: "")
+                put("p_contact_whatsapp", contactWhatsApp ?: "")
+            }
+            val result = client.postgrest.rpc("create_vehicle_share_link", params)
+            val token = json.decodeFromString<String>(result.data)
+            "${CloudSyncEnvironment.SUPABASE_URL}/functions/v1/vehicle_share?token=$token"
+        } catch (e: Exception) {
+            Log.e(tag, "createVehicleShareLink failed: ${e.message}", e)
+            null
         }
     }
 

@@ -48,6 +48,7 @@ struct VehicleDetailView: View {
     // Sharing
     @State private var showShareSheet: Bool = false
     @State private var shareItems: [Any] = []
+    @State private var vehiclePhotos: [RemoteVehiclePhoto] = []
 
     let paymentMethods = ["Cash", "Bank Transfer", "Cheque", "Finance", "Other"]
 
@@ -160,18 +161,26 @@ struct VehicleDetailView: View {
                 try? viewContext.save()
             }
 
-            // 2. Save image locally
             let dealerId = CloudSyncEnvironment.currentDealerId
-            ImageStore.shared.save(imageData: data, for: id, dealerId: dealerId)
-            refreshID = UUID()
+            let makePrimary = vehiclePhotos.isEmpty
+            let sortOrder = vehiclePhotos.count
 
-            // 3. Sync vehicle update & upload image
-            if let dealerId = CloudSyncEnvironment.currentDealerId {
+            // 2. Sync vehicle update & upload image
+            if let dealerId = dealerId {
                 // First push the vehicle update so other clients know something changed
                 await CloudSyncManager.shared?.upsertVehicle(vehicle, dealerId: dealerId)
-                // Then upload the image
-                await CloudSyncManager.shared?.uploadVehicleImage(vehicleId: id, dealerId: dealerId, imageData: data)
+                // Then upload the photo + metadata
+                await CloudSyncManager.shared?.uploadVehiclePhoto(
+                    vehicleId: id,
+                    dealerId: dealerId,
+                    imageData: data,
+                    makePrimary: makePrimary,
+                    sortOrder: sortOrder
+                )
             }
+
+            refreshID = UUID()
+            await refreshVehiclePhotos()
 
             await MainActor.run {
                 isUploadingImage = false
@@ -179,6 +188,43 @@ struct VehicleDetailView: View {
                 showImageConfirmation = false
             }
         }
+    }
+
+    private func refreshVehiclePhotos() async {
+        guard let id = vehicle.id, let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+        do {
+            let photos = try await CloudSyncManager.shared?.fetchVehiclePhotos(dealerId: dealerId, vehicleId: id) ?? []
+            for photo in photos {
+                await CloudSyncManager.shared?.downloadVehiclePhoto(photo, dealerId: dealerId)
+            }
+            await MainActor.run { self.vehiclePhotos = photos }
+        } catch {
+            print("Failed to refresh vehicle photos: \(error)")
+        }
+    }
+
+    private func loadPhotoImage(vehicleId: UUID, photoId: UUID, dealerId: UUID?) async -> UIImage? {
+        await withCheckedContinuation { continuation in
+            ImageStore.shared.loadPhoto(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId) { image in
+                continuation.resume(returning: image)
+            }
+        }
+    }
+
+    private func loadPrimaryImage(vehicleId: UUID, dealerId: UUID?) async -> UIImage? {
+        await withCheckedContinuation { continuation in
+            ImageStore.shared.load(id: vehicleId, dealerId: dealerId) { image in
+                continuation.resume(returning: image)
+            }
+        }
+    }
+
+    private func currentUserPhone() -> String? {
+        guard case .signedIn(let user) = sessionStore.status else { return nil }
+        let request: NSFetchRequest<User> = User.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", user.id as CVarArg)
+        request.fetchLimit = 1
+        return (try? viewContext.fetch(request).first)?.phone
     }
 
     var body: some View {
@@ -308,6 +354,8 @@ struct VehicleDetailView: View {
 
             editPaymentMethod = vehicle.paymentMethod ?? "Cash"
             
+            Task { await refreshVehiclePhotos() }
+
             if let ap = vehicle.askingPrice?.decimalValue { editAskingPrice = String(describing: ap) } else { editAskingPrice = "" }
             editReportURL = vehicle.reportURL ?? ""
             
@@ -358,67 +406,79 @@ struct VehicleDetailView: View {
                 let hasImage = ImageStore.shared.hasImage(id: id, dealerId: dealerId)
                 let addPhotoText = "add_photo".localizedString
                 let changePhotoText = "change_photo".localizedString
-                
-                PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    if isEditing && !hasImage {
-                        // Empty State for Editing
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(ColorTheme.secondaryBackground)
-                                .frame(height: 200)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(style: StrokeStyle(lineWidth: 1, dash: [6]))
+                VStack(spacing: 12) {
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        if isEditing && !hasImage {
+                            // Empty State for Editing
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(ColorTheme.secondaryBackground)
+                                    .frame(height: 200)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(style: StrokeStyle(lineWidth: 1, dash: [6]))
+                                            .foregroundColor(ColorTheme.secondary)
+                                    )
+                                
+                                VStack(spacing: 12) {
+                                    Image(systemName: "camera.fill")
+                                        .font(.system(size: 32))
                                         .foregroundColor(ColorTheme.secondary)
-                                )
-                            
-                            VStack(spacing: 12) {
-                                Image(systemName: "camera.fill")
-                                    .font(.system(size: 32))
-                                    .foregroundColor(ColorTheme.secondary)
-                                Text(addPhotoText) // Fallback: "Add Photo"
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(ColorTheme.secondary)
-                            }
-                        }
-                        .padding(.horizontal)
-                    } else {
-                        // Default / View Mode / Edit with Image
-                        ZStack {
-                            VehicleLargeImageView(vehicleID: id)
-                                .id(refreshID)
-                            
-                            if isEditing {
-                                // Overlay for existing image
-                                ZStack {
-                                    Color.black.opacity(0.2)
-                                    
-                                    VStack {
-                                        Image(systemName: "pencil")
-                                            .font(.title2)
-                                            .foregroundColor(.white)
-                                            .padding(12)
-                                            .background(.ultraThinMaterial)
-                                            .clipShape(Circle())
-                                        
-                                        Text(changePhotoText)
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .background(.ultraThinMaterial)
-                                            .cornerRadius(6)
-                                    }
+                                    Text(addPhotoText)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(ColorTheme.secondary)
                                 }
-                                .cornerRadius(12)
                             }
+                            .padding(.horizontal)
+                        } else {
+                            // Default / View Mode / Edit with Image
+                            ZStack {
+                                VehicleLargeImageView(vehicleID: id)
+                                    .id(refreshID)
+                                
+                                if isEditing {
+                                    // Overlay for existing image
+                                    ZStack {
+                                        Color.black.opacity(0.2)
+                                        
+                                        VStack {
+                                            Image(systemName: "plus")
+                                                .font(.title2)
+                                                .foregroundColor(.white)
+                                                .padding(12)
+                                                .background(.ultraThinMaterial)
+                                                .clipShape(Circle())
+                                            
+                                            Text(changePhotoText)
+                                                .font(.caption)
+                                                .fontWeight(.medium)
+                                                .foregroundColor(.white)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(.ultraThinMaterial)
+                                                .cornerRadius(6)
+                                        }
+                                    }
+                                    .cornerRadius(12)
+                                }
+                            }
+                            .padding(.horizontal)
                         }
-                        .padding(.horizontal)
+                    }
+                    .disabled(!isEditing)
+
+                    if !vehiclePhotos.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(vehiclePhotos, id: \.id) { photo in
+                                    VehiclePhotoThumbnail(vehicleId: id, photoId: photo.id)
+                                }
+                            }
+                            .padding(.horizontal)
+                        }
                     }
                 }
-                .disabled(!isEditing)
             }
     }
 
@@ -1277,52 +1337,88 @@ struct VehicleDetailView: View {
     }
 
     private func prepareShareData() {
+        Task {
+            await buildShareItems()
+        }
+    }
+
+    private func buildShareItems() async {
         guard let id = vehicle.id else { return }
-        
+
         let reportLink = vehicle.reportURL ?? ""
         let askingPrice = vehicle.askingPrice?.decimalValue ?? 0
         let make = vehicle.make ?? ""
         let model = vehicle.model ?? ""
         let year = vehicle.year
         let vin = vehicle.vin ?? ""
-        
-        // 1. Load image (async)
         let dealerId = CloudSyncEnvironment.currentDealerId
-        ImageStore.shared.load(id: id, dealerId: dealerId) { loadedImage in
-            // 2. Generate Image Card
-            let cardView = VehicleShareCard(
-                image: loadedImage,
-                make: make,
-                model: model,
-                year: year,
-                vin: vin,
-                price: askingPrice,
-                hasReport: !reportLink.isEmpty
-            )
-            
-            let renderer = ImageRenderer(content: cardView)
-            renderer.scale = UIScreen.main.scale
-            
-            var items: [Any] = []
-            
-            if let cardImage = renderer.uiImage {
-                items.append(cardImage)
+
+        var photos = vehiclePhotos
+        if photos.isEmpty, let dealerId {
+            photos = (try? await CloudSyncManager.shared?.fetchVehiclePhotos(dealerId: dealerId, vehicleId: id)) ?? []
+        }
+        if let dealerId {
+            for photo in photos {
+                await CloudSyncManager.shared?.downloadVehiclePhoto(photo, dealerId: dealerId)
             }
-            
-            // 3. Add Message text with link
-            var message = "Check out this \(year.asYear()) \(make) \(model)!"
-            if askingPrice > 0 {
-                message += " Asking: \(askingPrice.asCurrency())"
+        }
+
+        let primaryImage = await loadPrimaryImage(vehicleId: id, dealerId: dealerId)
+
+        let cardView = VehicleShareCard(
+            image: primaryImage,
+            make: make,
+            model: model,
+            year: year,
+            vin: vin,
+            price: askingPrice,
+            hasReport: !reportLink.isEmpty,
+            dealerName: sessionStore.activeOrganizationName ?? "Ezcar24"
+        )
+
+        let renderer = ImageRenderer(content: cardView)
+        renderer.scale = UIScreen.main.scale
+
+        var items: [Any] = []
+        if let cardImage = renderer.uiImage {
+            items.append(cardImage)
+        }
+
+        if let dealerId {
+            for photo in photos {
+                if let image = await loadPhotoImage(vehicleId: id, photoId: photo.id, dealerId: dealerId) {
+                    items.append(image)
+                }
             }
-            if !reportLink.isEmpty {
-                message += "\n\nFull Inspection Report: \(reportLink)"
-            }
-            items.append(message)
-            
-            if let url = URL(string: reportLink) {
-                items.append(url)
-            }
-            
+        }
+
+        let contactPhone = currentUserPhone()
+        let shareUrl = dealerId != nil ? await CloudSyncManager.shared?.createVehicleShareLink(
+            vehicleId: id,
+            dealerId: dealerId!,
+            contactPhone: contactPhone,
+            contactWhatsApp: contactPhone
+        ) : nil
+
+        var message = "Check out this \(year.asYear()) \(make) \(model)!"
+        if askingPrice > 0 {
+            message += " Asking: \(askingPrice.asCurrency())"
+        }
+        if !reportLink.isEmpty {
+            message += "\n\nFull Inspection Report: \(reportLink)"
+        }
+        if let shareUrl {
+            message += "\n\nView all photos: \(shareUrl.absoluteString)"
+        }
+        items.append(message)
+
+        if let shareUrl {
+            items.append(shareUrl)
+        } else if let url = URL(string: reportLink) {
+            items.append(url)
+        }
+
+        await MainActor.run {
             self.shareItems = items
             self.showShareSheet = true
         }
@@ -1382,6 +1478,7 @@ struct VehicleShareCard: View {
     let vin: String
     let price: Decimal
     let hasReport: Bool
+    let dealerName: String
     
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -1440,7 +1537,7 @@ struct VehicleShareCard: View {
                         
                         Spacer()
                         
-                        Text("Ezcar24")
+                        Text(dealerName)
                             .font(.system(size: 14, weight: .bold))
                             .foregroundColor(.gray)
                     }
@@ -1492,6 +1589,45 @@ struct VehicleLargeImageView: View {
     private func loadImage() {
         let dealerId = CloudSyncEnvironment.currentDealerId
         ImageStore.shared.swiftUIImage(id: vehicleID, dealerId: dealerId) { loaded in
+            self.image = loaded
+        }
+    }
+}
+
+struct VehiclePhotoThumbnail: View {
+    let vehicleId: UUID
+    let photoId: UUID
+    @State private var image: Image? = nil
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.gray.opacity(0.12))
+                .frame(width: 120, height: 80)
+            if let image {
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 120, height: 80)
+                    .clipped()
+                    .cornerRadius(10)
+            } else {
+                Image(systemName: "photo")
+                    .font(.system(size: 20))
+                    .foregroundColor(ColorTheme.secondaryText)
+            }
+        }
+        .onAppear { loadImage() }
+        .onReceive(NotificationCenter.default.publisher(for: .vehicleImageUpdated)) { notification in
+            if let updatedID = notification.object as? UUID, updatedID == vehicleId {
+                loadImage()
+            }
+        }
+    }
+
+    private func loadImage() {
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        ImageStore.shared.swiftUIImagePhoto(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId) { loaded in
             self.image = loaded
         }
     }

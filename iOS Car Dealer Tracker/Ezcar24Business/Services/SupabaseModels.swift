@@ -91,6 +91,28 @@ struct RemoteVehicle: Codable {
     }
 }
 
+struct RemoteVehiclePhoto: Codable {
+    let id: UUID
+    let dealerId: UUID
+    let vehicleId: UUID
+    let storagePath: String
+    let sortOrder: Int
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case dealerId = "dealer_id"
+        case vehicleId = "vehicle_id"
+        case storagePath = "storage_path"
+        case sortOrder = "sort_order"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
+}
+
 struct RemoteExpenseTemplate: Codable {
     let id: UUID
     let dealerId: UUID

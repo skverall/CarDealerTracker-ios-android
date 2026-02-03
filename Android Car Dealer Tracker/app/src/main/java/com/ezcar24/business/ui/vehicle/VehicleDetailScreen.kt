@@ -7,11 +7,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +31,7 @@ import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +49,7 @@ fun VehicleDetailScreen(
     val detailState by viewModel.detailUiState.collectAsState()
     val vehicle = detailState.vehicle
     var showDeleteDialog by remember { mutableStateOf(false) }
+    val shareScope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -63,14 +67,20 @@ fun VehicleDetailScreen(
                         }
                         val context = androidx.compose.ui.platform.LocalContext.current
                         IconButton(onClick = {
-                            val shareText = "Check out this vehicle: ${vehicle.make} ${vehicle.model} ${vehicle.year}\nPrice: ${formatCurrency(vehicle.salePrice ?: vehicle.askingPrice ?: vehicle.purchasePrice)}"
-                            val sendIntent = android.content.Intent().apply {
-                                action = android.content.Intent.ACTION_SEND
-                                putExtra(android.content.Intent.EXTRA_TEXT, shareText)
-                                type = "text/plain"
+                            shareScope.launch {
+                                val shareLink = viewModel.createVehicleShareLink(vehicle.id)
+                                var shareText = "Check out this vehicle: ${vehicle.make} ${vehicle.model} ${vehicle.year}\nPrice: ${formatCurrency(vehicle.salePrice ?: vehicle.askingPrice ?: vehicle.purchasePrice)}"
+                                if (!shareLink.isNullOrBlank()) {
+                                    shareText += "\n\nView all photos: $shareLink"
+                                }
+                                val sendIntent = android.content.Intent().apply {
+                                    action = android.content.Intent.ACTION_SEND
+                                    putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = android.content.Intent.createChooser(sendIntent, null)
+                                context.startActivity(shareIntent)
                             }
-                            val shareIntent = android.content.Intent.createChooser(sendIntent, null)
-                            context.startActivity(shareIntent)
                         }) {
                             Icon(Icons.Default.Share, contentDescription = "Share", tint = EzcarGreen)
                         }
@@ -98,7 +108,10 @@ fun VehicleDetailScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                VehiclePhotoSection(vehicleId = vehicle.id)
+                VehiclePhotoSection(
+                    vehicleId = vehicle.id,
+                    photoUrls = detailState.photoUrls
+                )
 
                 VehicleHeaderCard(vehicle = vehicle, detailState = detailState)
 
@@ -192,49 +205,76 @@ fun VehicleDetailScreen(
 }
 
 @Composable
-private fun VehiclePhotoSection(vehicleId: java.util.UUID) {
-    val imageUrl = CloudSyncEnvironment.vehicleImageUrl(vehicleId)
+private fun VehiclePhotoSection(vehicleId: java.util.UUID, photoUrls: List<String>) {
+    val primaryUrl = photoUrls.firstOrNull() ?: CloudSyncEnvironment.vehicleImageUrl(vehicleId)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFFE0E0E0)),
-        contentAlignment = Alignment.Center
-    ) {
-        if (imageUrl != null) {
-            SubcomposeAsyncImage(
-                model = imageUrl,
-                contentDescription = "Vehicle Photo",
-                modifier = Modifier.fillMaxSize(),
-                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                error = {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            Icons.Default.DirectionsCar,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.Gray
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("No photo available", color = Color.Gray)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color(0xFFE0E0E0)),
+            contentAlignment = Alignment.Center
+        ) {
+            if (primaryUrl != null) {
+                SubcomposeAsyncImage(
+                    model = primaryUrl,
+                    contentDescription = "Vehicle Photo",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    error = {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                Icons.Default.DirectionsCar,
+                                contentDescription = null,
+                                modifier = Modifier.size(64.dp),
+                                tint = Color.Gray
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("No photo available", color = Color.Gray)
+                        }
+                    },
+                    loading = {
+                        CircularProgressIndicator(color = EzcarGreen, modifier = Modifier.size(32.dp))
                     }
-                },
-                loading = {
-                    CircularProgressIndicator(color = EzcarGreen, modifier = Modifier.size(32.dp))
-                }
-            )
-        } else {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(
-                    Icons.Default.DirectionsCar,
-                    contentDescription = null,
-                    modifier = Modifier.size(64.dp),
-                    tint = Color.Gray
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text("Tap Edit to add photo", color = Color.Gray)
+            } else {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        Icons.Default.DirectionsCar,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Tap Edit to add photo", color = Color.Gray)
+                }
+            }
+        }
+
+        if (photoUrls.size > 1) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                photoUrls.forEach { url ->
+                    SubcomposeAsyncImage(
+                        model = url,
+                        contentDescription = "Vehicle Photo",
+                        modifier = Modifier
+                            .size(width = 120.dp, height = 80.dp)
+                            .clip(RoundedCornerShape(10.dp)),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        loading = {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = EzcarGreen, strokeWidth = 2.dp)
+                            }
+                        }
+                    )
+                }
             }
         }
     }

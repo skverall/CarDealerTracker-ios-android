@@ -34,7 +34,8 @@ class InventoryStatsManager: ObservableObject {
             let stats = InventoryMetricsCalculator.calculateInventoryStats(
                 vehicle: vehicle,
                 expenses: expenses,
-                settings: settings
+                settings: settings,
+                context: context
             )
             
             newStats[vehicleId] = stats
@@ -61,7 +62,8 @@ class InventoryStatsManager: ObservableObject {
             
             let vehicleAlerts = InventoryMetricsCalculator.generateInventoryAlerts(
                 stats: stats,
-                vehicle: vehicle
+                vehicle: vehicle,
+                context: context
             )
             newAlerts.append(contentsOf: vehicleAlerts)
         }
@@ -86,7 +88,8 @@ class InventoryStatsManager: ObservableObject {
         let stats = InventoryMetricsCalculator.calculateInventoryStats(
             vehicle: vehicle,
             expenses: expenses,
-            settings: settings
+            settings: settings,
+            context: context
         )
         
         vehicleStats[vehicleId] = stats
@@ -138,6 +141,10 @@ class InventoryStatsManager: ObservableObject {
             stats: Array(vehicleStats.values)
         )
         return InventoryMetricsCalculator.calculateTurnoverRatio(averageDaysInInventory: averageDays)
+    }
+    
+    func calculateAverageDaysInInventory(stats: [VehicleInventoryStats]) -> Int {
+        InventoryMetricsCalculator.calculateAverageDaysInInventory(stats: stats)
     }
     
     func calculateTotalInventoryValue() -> Decimal {

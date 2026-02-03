@@ -5,6 +5,7 @@ struct AddDebtPaymentView: View {
     @ObservedObject var debt: Debt
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var regionSettings: RegionSettingsManager
 
     @State private var amount: String = ""
     @State private var date: Date = Date()
@@ -149,7 +150,7 @@ struct AddDebtPaymentView: View {
 
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
-                    Text("AED")
+                    Text(regionSettings.selectedRegion.currencySymbol)
                         .font(.headline)
                         .foregroundColor(ColorTheme.tertiaryText)
                         .frame(width: 40)

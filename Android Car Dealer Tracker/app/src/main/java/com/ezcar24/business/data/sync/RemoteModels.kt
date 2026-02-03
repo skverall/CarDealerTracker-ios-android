@@ -52,6 +52,18 @@ data class RemoteVehicle(
 )
 
 @Serializable
+data class RemoteVehiclePhoto(
+    val id: String,
+    @SerialName("dealer_id") val dealerId: String,
+    @SerialName("vehicle_id") val vehicleId: String,
+    @SerialName("storage_path") val storagePath: String,
+    @SerialName("sort_order") val sortOrder: Int,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("deleted_at") val deletedAt: String? = null
+)
+
+@Serializable
 data class RemoteExpense(
     val id: String,
     @SerialName("dealer_id") val dealerId: String,

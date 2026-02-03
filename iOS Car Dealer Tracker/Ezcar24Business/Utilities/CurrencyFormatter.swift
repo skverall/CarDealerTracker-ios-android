@@ -48,7 +48,7 @@ extension Decimal {
         return CurrencyFormatter.shared.formatCompact(self)
     }
     
-    /// Static fallback for nonisolated contexts - uses default AED formatting
+    /// Static fallback for nonisolated contexts - uses stored region formatting
     func asCurrencyFallback() -> String {
         let region = AppRegion.storedRegion()
         let formatter = NumberFormatter()

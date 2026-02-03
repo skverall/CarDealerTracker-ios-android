@@ -118,9 +118,12 @@ class DashboardViewModel: ObservableObject {
     // Sales performance
     @Published var totalSalesProfit: Decimal = 0
     @Published var periodSalesProfit: Decimal = 0
+    @Published var periodSalesRevenue: Decimal = 0
     @Published var soldInPeriod: Int = 0
     @Published var avgProfitPerSale: Decimal = 0
     @Published var soldChange: Int? = nil
+    @Published var revenueChangePercent: Double? = nil
+    @Published var profitChangePercent: Double? = nil
 
     // Analytics additions
     @Published var categoryStats: [CategoryStat] = []
@@ -246,33 +249,41 @@ class DashboardViewModel: ObservableObject {
         let vehicleSaleRequest: NSFetchRequest<Sale> = Sale.fetchRequest()
         let partSaleRequest: NSFetchRequest<PartSale> = PartSale.fetchRequest()
         partSaleRequest.predicate = NSPredicate(format: "deletedAt == nil")
+        var fetchedVehicleSales: [Sale] = []
+        var fetchedPartSales: [PartSale] = []
 
         do {
-            let vehicleSales = try context.fetch(vehicleSaleRequest)
-            let partSales = try context.fetch(partSaleRequest)
+            fetchedVehicleSales = try context.fetch(vehicleSaleRequest)
+            fetchedPartSales = try context.fetch(partSaleRequest)
             
 
 
             // Calculate Revenue (Total Sales Income) - ALWAYS ALL TIME
-            let vehicleRevenue = vehicleSales.reduce(Decimal(0)) { sum, sale in
+            let vehicleRevenue = fetchedVehicleSales.reduce(Decimal(0)) { sum, sale in
                 sum + (sale.amount?.decimalValue ?? 0)
             }
-            let partRevenue = partSales.reduce(Decimal(0)) { sum, sale in
+            let partRevenue = fetchedPartSales.reduce(Decimal(0)) { sum, sale in
                 sum + (sale.amount?.decimalValue ?? 0)
             }
             totalSalesIncome = vehicleRevenue + partRevenue
             
             // Calculate All-Time Profit (for the Key Metric Card)
-             let (allTimeProfit, _) = calculateCombinedProfitData(vehicleSales: vehicleSales, partSales: partSales, range: .all)
+             let (allTimeProfit, _) = calculateCombinedProfitData(vehicleSales: fetchedVehicleSales, partSales: fetchedPartSales, range: .all)
              totalSalesProfit = allTimeProfit
 
             // Calculate Profit for Current Range
-            let (profit, trend) = calculateCombinedProfitData(vehicleSales: vehicleSales, partSales: partSales, range: range)
+            let (profit, trend) = calculateCombinedProfitData(vehicleSales: fetchedVehicleSales, partSales: fetchedPartSales, range: range)
             periodSalesProfit = profit
             profitTrendPoints = trend
+
+            let rangeVehicleSales = filterVehicleSales(fetchedVehicleSales, start: rangeStart, end: rangeEnd)
+            let rangePartSales = filterPartSales(fetchedPartSales, start: rangeStart, end: rangeEnd)
+            let rangeVehicleRevenue = rangeVehicleSales.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
+            let rangePartRevenue = rangePartSales.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
+            periodSalesRevenue = rangeVehicleRevenue + rangePartRevenue
             
             // Calculate Profit for Pinned Monthly Range
-            let (moProfit, moTrend) = calculateCombinedProfitData(vehicleSales: vehicleSales, partSales: partSales, range: .month)
+            let (moProfit, moTrend) = calculateCombinedProfitData(vehicleSales: fetchedVehicleSales, partSales: fetchedPartSales, range: .month)
             monthlyNetProfit = moProfit
             monthlyProfitTrendPoints = moTrend
 
@@ -364,6 +375,21 @@ class DashboardViewModel: ObservableObject {
                 let curr = (totalExpenses as NSDecimalNumber).doubleValue
                 periodChangePercent = prev > 0 ? ((curr - prev) / prev) * 100.0 : nil
                 
+                let prevVehicleSales = filterVehicleSales(fetchedVehicleSales, start: prevStart, end: start)
+                let prevPartSales = filterPartSales(fetchedPartSales, start: prevStart, end: start)
+
+                let prevRevenue = prevVehicleSales.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
+                    + prevPartSales.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
+                let currRevenue = periodSalesRevenue
+                let prevRevenueValue = (prevRevenue as NSDecimalNumber).doubleValue
+                let currRevenueValue = (currRevenue as NSDecimalNumber).doubleValue
+                revenueChangePercent = prevRevenueValue > 0 ? ((currRevenueValue - prevRevenueValue) / prevRevenueValue) * 100.0 : nil
+
+                let prevProfit = calculateCombinedProfitTotal(vehicleSales: prevVehicleSales, partSales: prevPartSales)
+                let prevProfitValue = (prevProfit as NSDecimalNumber).doubleValue
+                let currProfitValue = (periodSalesProfit as NSDecimalNumber).doubleValue
+                profitChangePercent = prevProfitValue > 0 ? ((currProfitValue - prevProfitValue) / prevProfitValue) * 100.0 : nil
+
                 // Sales Trend (Count) - Vehicles only or combined?
                 // The Sold Count card typically refers to Vehicles sold.
                 // Keeping it as Vehicle Sales count for now as "Sold" usually implies Cars in this context.
@@ -374,6 +400,8 @@ class DashboardViewModel: ObservableObject {
             } else {
                 periodChangePercent = nil
                 soldChange = nil
+                revenueChangePercent = nil
+                profitChangePercent = nil
             }
         } catch {
             print("Error fetching expenses: \(error)")
@@ -388,6 +416,24 @@ class DashboardViewModel: ObservableObject {
         return accounts.reduce(Decimal(0)) { total, account in
             guard account.accountType?.lowercased() == target else { return total }
             return total + (account.balance?.decimalValue ?? 0)
+        }
+    }
+    
+    private func filterVehicleSales(_ sales: [Sale], start: Date?, end: Date?) -> [Sale] {
+        guard let start else { return sales }
+        let end = end ?? Date()
+        return sales.filter { sale in
+            guard let date = sale.date else { return false }
+            return date >= start && date < end
+        }
+    }
+    
+    private func filterPartSales(_ sales: [PartSale], start: Date?, end: Date?) -> [PartSale] {
+        guard let start else { return sales }
+        let end = end ?? Date()
+        return sales.filter { sale in
+            guard let date = sale.date else { return false }
+            return date >= start && date < end
         }
     }
 
@@ -771,6 +817,31 @@ class DashboardViewModel: ObservableObject {
         // Build Combined Trend
         let trend = buildCombinedProfitTrendPoints(vehicleSales: filteredVehicles, partSales: filteredParts, range: range)
         return (totalProfit, trend)
+    }
+    
+    private func calculateCombinedProfitTotal(vehicleSales: [Sale], partSales: [PartSale]) -> Decimal {
+        let vehicleProfit = vehicleSales.reduce(Decimal(0)) { sum, sale in
+            let revenue = sale.amount?.decimalValue ?? 0
+            let vehicle = sale.vehicle
+            let cost = vehicle?.purchasePrice?.decimalValue ?? 0
+            let expenses = (vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+            let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
+            return sum + (revenue - (cost + expenses) + vatRefund)
+        }
+        
+        let partProfit = partSales.reduce(Decimal(0)) { sum, sale in
+            let revenue = sale.amount?.decimalValue ?? 0
+            let lineItems = sale.lineItems as? Set<PartSaleLineItem> ?? []
+            let cogs = lineItems.reduce(Decimal(0)) { total, item in
+                let cost = item.unitCost?.decimalValue ?? 0
+                let qty = item.quantity?.decimalValue ?? 0
+                return total + (cost * qty)
+            }
+            
+            return sum + (revenue - cogs)
+        }
+        
+        return vehicleProfit + partProfit
     }
 
     private func buildCombinedProfitTrendPoints(vehicleSales: [Sale], partSales: [PartSale], range: DashboardTimeRange) -> [TrendPoint] {

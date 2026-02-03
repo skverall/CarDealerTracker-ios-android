@@ -53,6 +53,7 @@ data class VehicleDetailUiState(
     val inventoryStats: VehicleInventoryStats? = null,
     val alerts: List<InventoryAlert> = emptyList(),
     val holdingCostSettings: HoldingCostSettings? = null,
+    val photoUrls: List<String> = emptyList(),
     val isLoading: Boolean = false
 )
 
@@ -338,10 +339,12 @@ class VehicleViewModel @Inject constructor(
                         }
 
                         _uiState.update { it.copy(selectedVehicle = vehicle) }
+                        loadVehiclePhotos(vehicle.id)
                     } else {
                         _detailUiState.update {
                             it.copy(
                                 vehicle = null,
+                                photoUrls = emptyList(),
                                 isLoading = false
                             )
                         }
@@ -353,6 +356,15 @@ class VehicleViewModel @Inject constructor(
                 _uiState.update { it.copy(selectedVehicle = null) }
                 _detailUiState.update { it.copy(vehicle = null, isLoading = false) }
             }
+        }
+    }
+
+    private fun loadVehiclePhotos(vehicleId: UUID) {
+        val dealerId = CloudSyncEnvironment.currentDealerId ?: return
+        viewModelScope.launch {
+            val photos = cloudSyncManager.fetchVehiclePhotos(dealerId, vehicleId)
+            val urls = photos.map { CloudSyncEnvironment.vehiclePhotoUrl(it.storagePath) }
+            _detailUiState.update { it.copy(photoUrls = urls) }
         }
     }
 
@@ -381,6 +393,16 @@ class VehicleViewModel @Inject constructor(
                 refreshFinancialCalculations()
             }
         }
+    }
+
+    suspend fun createVehicleShareLink(vehicleId: UUID): String? {
+        val dealerId = CloudSyncEnvironment.currentDealerId ?: return null
+        return cloudSyncManager.createVehicleShareLink(
+            vehicleId = vehicleId,
+            dealerId = dealerId,
+            contactPhone = null,
+            contactWhatsApp = null
+        )
     }
 
     fun deleteVehicle(id: UUID) {
@@ -474,12 +496,15 @@ class VehicleViewModel @Inject constructor(
         val dealerId = CloudSyncEnvironment.currentDealerId ?: return
         viewModelScope.launch {
             try {
-                cloudSyncManager.uploadVehicleImage(vehicleId, dealerId, imageData)
-                Log.i(tag, "Uploaded vehicle image for vehicleId=$vehicleId")
+                val existing = cloudSyncManager.fetchVehiclePhotos(dealerId, vehicleId)
+                val sortOrder = existing.size
+                val makePrimary = existing.isEmpty()
+                cloudSyncManager.uploadVehiclePhoto(vehicleId, dealerId, imageData, makePrimary, sortOrder)
+                Log.i(tag, "Uploaded vehicle photo for vehicleId=$vehicleId")
+                loadVehiclePhotos(vehicleId)
             } catch (e: Exception) {
                 Log.e(tag, "Failed to upload vehicle image: ${e.message}", e)
             }
         }
     }
 }
-

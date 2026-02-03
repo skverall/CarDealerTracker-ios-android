@@ -4,7 +4,7 @@ struct NotionDatabaseSelector: View {
     @ObservedObject var viewModel: NotionExportViewModel
     @State private var showCreateDatabaseSheet = false
     @State private var newDatabaseName = ""
-    @State private var selectedTemplateType: NotionDatabaseTemplates.DatabaseType = .vehicles
+    @State private var selectedTemplateType: NotionExportType = .vehicles
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -13,7 +13,7 @@ struct NotionDatabaseSelector: View {
                 Text("Select Destination Database")
                     .font(.headline)
                 Spacer()
-                Button(action: { viewModel.fetchDatabases() }) {
+                Button(action: { Task { await viewModel.fetchDatabases() } }) {
                     Image(systemName: "arrow.clockwise")
                 }
                 .disabled(viewModel.isConnecting)
@@ -122,7 +122,7 @@ struct DatabaseCard: View {
                 
                 // Database info
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(database.title)
+                    Text(database.displayTitle)
                         .font(.headline)
                         .lineLimit(1)
                     
@@ -206,7 +206,7 @@ struct CreateDatabaseSheet: View {
     @ObservedObject var viewModel: NotionExportViewModel
     @Binding var isPresented: Bool
     @Binding var databaseName: String
-    @Binding var selectedType: NotionDatabaseTemplates.DatabaseType
+    @Binding var selectedType: NotionExportType
     
     @State private var isCreating = false
     @State private var showPreview = false
@@ -221,7 +221,7 @@ struct CreateDatabaseSheet: View {
                 
                 Section("Database Type") {
                     Picker("Type", selection: $selectedType) {
-                        ForEach(NotionDatabaseTemplates.DatabaseType.allCases) { type in
+                        ForEach(NotionExportType.allCases) { type in
                             Text(type.displayName).tag(type)
                         }
                     }
@@ -294,11 +294,11 @@ struct CreateDatabaseSheet: View {
 // MARK: - Schema Preview View
 
 struct SchemaPreviewView: View {
-    let type: NotionDatabaseTemplates.DatabaseType
+    let type: NotionExportType
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            let properties = type.schemaProperties
+            let properties = NotionDatabaseTemplates.schema(for: type)
             
             ForEach(Array(properties.keys.sorted()), id: \.self) { key in
                 if let property = properties[key] {
@@ -326,7 +326,7 @@ struct SchemaPreviewView: View {
         .padding(.vertical, 4)
     }
     
-    private func iconForPropertyType(_ property: NotionPropertySchema) -> String {
+    private func iconForPropertyType(_ property: NotionPropertyDefinition) -> String {
         switch property.type {
         case "title":
             return "textformat"
@@ -348,6 +348,23 @@ struct SchemaPreviewView: View {
             return "phone"
         default:
             return "doc.text"
+        }
+    }
+}
+
+private extension NotionExportType {
+    var displayName: String {
+        rawValue
+    }
+    
+    var description: String {
+        switch self {
+        case .vehicles:
+            return "Vehicle inventory schema"
+        case .leads:
+            return "Lead management schema"
+        case .sales:
+            return "Sales history schema"
         }
     }
 }

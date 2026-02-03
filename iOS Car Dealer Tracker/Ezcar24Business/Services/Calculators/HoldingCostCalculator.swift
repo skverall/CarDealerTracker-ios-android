@@ -68,11 +68,15 @@ class HoldingCostCalculator {
     }
     
     static func getImprovementExpenses(allExpenses: [Expense]) -> [Expense] {
-        allExpenses.filter { $0.deletedAt == nil && $0.categoryTypeEnum == .improvement }
+        allExpenses.filter {
+            $0.deletedAt == nil && $0.categoryType == "improvement"
+        }
     }
     
     static func getHoldingCostBaseExpenses(allExpenses: [Expense]) -> [Expense] {
-        allExpenses.filter { $0.deletedAt == nil && $0.categoryTypeEnum != .holdingCost }
+        allExpenses.filter {
+            $0.deletedAt == nil && $0.categoryType != "holding_cost"
+        }
     }
     
     static func calculateDailyHoldingCost(

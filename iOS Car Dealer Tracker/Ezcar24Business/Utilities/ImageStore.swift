@@ -41,6 +41,15 @@ final class ImageStore {
         return dir
     }
 
+    private func photoDirectoryURL(dealerId: UUID?, vehicleId: UUID) -> URL {
+        let base = directoryURL(dealerId: dealerId)
+        let dir = base.appendingPathComponent(vehicleId.uuidString, isDirectory: true)
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        return dir
+    }
+
     func setActiveDealerId(_ id: UUID?) {
         stateQueue.async {
             self.activeDealerId = id
@@ -59,6 +68,12 @@ final class ImageStore {
     func imageURL(for id: UUID, dealerId: UUID? = nil) -> URL {
         let resolved = resolvedDealerId(dealerId)
         return directoryURL(dealerId: resolved).appendingPathComponent("\(id.uuidString).jpg")
+    }
+
+    func photoURL(vehicleId: UUID, photoId: UUID, dealerId: UUID? = nil) -> URL {
+        let resolved = resolvedDealerId(dealerId)
+        return photoDirectoryURL(dealerId: resolved, vehicleId: vehicleId)
+            .appendingPathComponent("\(photoId.uuidString).jpg")
     }
 
     // Save image data. We scale down large images and compress to JPEG to reduce IO and memory.
@@ -86,6 +101,27 @@ final class ImageStore {
         }
     }
 
+    func savePhoto(imageData: Data, vehicleId: UUID, photoId: UUID, dealerId: UUID? = nil, maxDimension: CGFloat = 1600, quality: CGFloat = 0.8) {
+        cache.removeObject(forKey: photoId.uuidString as NSString)
+        let url = photoURL(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId)
+
+        ioQueue.async { [weak self] in
+            guard let self = self else { return }
+            do {
+                let dataToWrite = self.scaleAndCompress(imageData: imageData, maxDimension: maxDimension, quality: quality) ?? imageData
+                try dataToWrite.write(to: url, options: .atomic)
+                if let uiImage = UIImage(data: dataToWrite) {
+                    self.cache.setObject(uiImage, forKey: photoId.uuidString as NSString)
+                }
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .vehicleImageUpdated, object: vehicleId)
+                }
+            } catch {
+                print("ImageStore savePhoto error:", error)
+            }
+        }
+    }
+
     // Load UIImage with in-memory cache. Completion is called on the main thread.
     // Set forceReload to true to bypass cache and load fresh from disk.
     func load(id: UUID, dealerId: UUID? = nil, forceReload: Bool = false, completion: @escaping (UIImage?) -> Void) {
@@ -103,6 +139,21 @@ final class ImageStore {
         }
     }
 
+    func loadPhoto(vehicleId: UUID, photoId: UUID, dealerId: UUID? = nil, forceReload: Bool = false, completion: @escaping (UIImage?) -> Void) {
+        if !forceReload, let cached = cache.object(forKey: photoId.uuidString as NSString) {
+            completion(cached)
+            return
+        }
+        let url = photoURL(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId)
+        ioQueue.async { [weak self] in
+            guard let self = self else { return }
+            var result: UIImage? = nil
+            if let data = try? Data(contentsOf: url) { result = UIImage(data: data) }
+            if let result { self.cache.setObject(result, forKey: photoId.uuidString as NSString) }
+            DispatchQueue.main.async { completion(result) }
+        }
+    }
+
     // Clear cache for a specific vehicle (used when syncing from cloud)
     func clearCache(for id: UUID) {
         cache.removeObject(forKey: id.uuidString as NSString)
@@ -111,6 +162,16 @@ final class ImageStore {
     // Convenience SwiftUI Image loader (scaled for thumbnails)
     func swiftUIImage(id: UUID, dealerId: UUID? = nil, completion: @escaping (Image?) -> Void) {
         load(id: id, dealerId: dealerId) { uiImage in
+            if let uiImage {
+                completion(Image(uiImage: uiImage))
+            } else {
+                completion(nil)
+            }
+        }
+    }
+
+    func swiftUIImagePhoto(vehicleId: UUID, photoId: UUID, dealerId: UUID? = nil, completion: @escaping (Image?) -> Void) {
+        loadPhoto(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId) { uiImage in
             if let uiImage {
                 completion(Image(uiImage: uiImage))
             } else {

@@ -86,7 +86,10 @@ class VehicleFinancialsCalculator {
         return expenses
             .filter { $0.deletedAt == nil }
             .compactMap { expense -> (ExpenseCategoryType, Decimal)? in
-                guard let categoryType = expense.categoryTypeEnum else { return nil }
+                guard
+                    let rawValue = expense.categoryType,
+                    let categoryType = ExpenseCategoryType(rawValue: rawValue)
+                else { return nil }
                 return (categoryType, expense.amount?.decimalValue ?? 0)
             }
             .reduce(into: [:]) { result, pair in

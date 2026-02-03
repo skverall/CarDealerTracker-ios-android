@@ -12,6 +12,7 @@ import UIKit
 struct AddExpenseView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var viewContext
+    @EnvironmentObject private var regionSettings: RegionSettingsManager
     @ObservedObject var viewModel: ExpenseViewModel
     
     // Persistence for last used values
@@ -240,7 +241,7 @@ struct AddExpenseView: View {
                 .tracking(1)
             
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("AED")
+                Text(regionSettings.selectedRegion.currencySymbol)
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(ColorTheme.tertiaryText)

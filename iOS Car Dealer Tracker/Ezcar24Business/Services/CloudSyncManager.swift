@@ -36,6 +36,7 @@ final class CloudSyncManager: ObservableObject {
     @Published private(set) var lastSyncAt: Date?
     @Published var syncHUDState: SyncHUDState?
     @Published var errorMessage: String?
+    @Published var vinConflictVehicleId: UUID?
 
     init(client: SupabaseClient, context: NSManagedObjectContext) {
         self.client = client
@@ -570,6 +571,12 @@ final class CloudSyncManager: ObservableObject {
     }
 
     private func savedLocallySyncFailureMessage(for error: Error) -> String {
+        if let vinId = vinConflictId(from: error) {
+            Task { @MainActor in
+                self.vinConflictVehicleId = vinId
+            }
+            return "VIN already exists. Open Vehicles to view it."
+        }
         if isNetworkConnectivityError(error) {
             return "Saved locally. Will sync when online."
         }
@@ -577,6 +584,15 @@ final class CloudSyncManager: ObservableObject {
             return "Saved locally. Server sync error. Will retry."
         }
         return "Saved locally. Sync failed. Will retry."
+    }
+
+    private func vinConflictId(from error: Error) -> UUID? {
+        guard let postgrestError = error as? PostgrestError else { return nil }
+        guard postgrestError.message == "VIN_CONFLICT" else { return nil }
+        if let detail = postgrestError.detail, let id = UUID(uuidString: detail) {
+            return id
+        }
+        return nil
     }
 
     private func logSyncError(
@@ -1944,8 +1960,34 @@ final class CloudSyncManager: ObservableObject {
 
     // MARK: - Vehicle images
 
+    private struct VehiclePhotoInsert: Encodable {
+        let id: UUID
+        let dealerId: UUID
+        let vehicleId: UUID
+        let storagePath: String
+        let sortOrder: Int
+        let createdAt: Date
+        let updatedAt: Date
+        let deletedAt: Date?
+
+        enum CodingKeys: String, CodingKey {
+            case id
+            case dealerId = "dealer_id"
+            case vehicleId = "vehicle_id"
+            case storagePath = "storage_path"
+            case sortOrder = "sort_order"
+            case createdAt = "created_at"
+            case updatedAt = "updated_at"
+            case deletedAt = "deleted_at"
+        }
+    }
+
     private func imagePath(dealerId: UUID, vehicleId: UUID) -> String {
         "\(dealerId.uuidString.lowercased())/vehicles/\(vehicleId.uuidString.lowercased()).jpg"
+    }
+
+    private func photoPath(dealerId: UUID, vehicleId: UUID, photoId: UUID) -> String {
+        "\(dealerId.uuidString.lowercased())/vehicles/\(vehicleId.uuidString.lowercased())/\(photoId.uuidString.lowercased()).jpg"
     }
 
     func uploadVehicleImage(vehicleId: UUID, dealerId: UUID, imageData: Data) async {
@@ -1968,6 +2010,126 @@ final class CloudSyncManager: ObservableObject {
         } catch {
             print("CloudSyncManager uploadVehicleImage: ERROR: \(error)")
             print("CloudSyncManager uploadVehicleImage: Error localizedDescription: \(error.localizedDescription)")
+        }
+    }
+
+    func fetchVehiclePhotos(dealerId: UUID, vehicleId: UUID) async throws -> [RemoteVehiclePhoto] {
+        let photos: [RemoteVehiclePhoto] = try await client
+            .from("crm_vehicle_photos")
+            .select()
+            .eq("dealer_id", value: dealerId)
+            .eq("vehicle_id", value: vehicleId)
+            .order("sort_order", ascending: true)
+            .execute()
+            .value
+        return photos.filter { $0.deletedAt == nil }
+    }
+
+    func uploadVehiclePhoto(
+        vehicleId: UUID,
+        dealerId: UUID,
+        imageData: Data,
+        makePrimary: Bool,
+        sortOrder: Int
+    ) async {
+        let photoId = UUID()
+        let path = photoPath(dealerId: dealerId, vehicleId: vehicleId, photoId: photoId)
+        print("CloudSyncManager uploadVehiclePhoto: Starting upload to path: \(path)")
+
+        do {
+            _ = try await client.storage
+                .from("vehicle-images")
+                .upload(
+                    path,
+                    data: imageData,
+                    options: FileOptions(
+                        cacheControl: "3600",
+                        contentType: "image/jpeg",
+                        upsert: true
+                    )
+                )
+
+            let now = Date()
+            let insert = VehiclePhotoInsert(
+                id: photoId,
+                dealerId: dealerId,
+                vehicleId: vehicleId,
+                storagePath: path,
+                sortOrder: sortOrder,
+                createdAt: now,
+                updatedAt: now,
+                deletedAt: nil
+            )
+
+            try await writeClient
+                .from("crm_vehicle_photos")
+                .upsert(insert)
+                .execute()
+
+            ImageStore.shared.savePhoto(imageData: imageData, vehicleId: vehicleId, photoId: photoId, dealerId: dealerId)
+
+            if makePrimary {
+                await uploadVehicleImage(vehicleId: vehicleId, dealerId: dealerId, imageData: imageData)
+                ImageStore.shared.save(imageData: imageData, for: vehicleId, dealerId: dealerId)
+            }
+        } catch {
+            print("CloudSyncManager uploadVehiclePhoto error: \(error)")
+        }
+    }
+
+    func downloadVehiclePhoto(_ photo: RemoteVehiclePhoto, dealerId: UUID) async {
+        do {
+            let data = try await client.storage
+                .from("vehicle-images")
+                .download(path: photo.storagePath)
+            ImageStore.shared.savePhoto(imageData: data, vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId)
+        } catch {
+            print("CloudSyncManager downloadVehiclePhoto error: \(error)")
+        }
+    }
+
+    private struct ShareConfig: Decodable {
+        let supabaseURL: String
+    }
+
+    private func shareBaseURL() -> String? {
+        if let envURL = ProcessInfo.processInfo.environment["SUPABASE_URL"], !envURL.isEmpty {
+            return envURL
+        }
+        guard let fileURL = Bundle.main.url(forResource: "SupabaseConfig", withExtension: "plist"),
+              let data = try? Data(contentsOf: fileURL),
+              let payload = try? PropertyListDecoder().decode(ShareConfig.self, from: data),
+              !payload.supabaseURL.isEmpty
+        else {
+            return nil
+        }
+        return payload.supabaseURL
+    }
+
+    func createVehicleShareLink(
+        vehicleId: UUID,
+        dealerId: UUID,
+        contactPhone: String?,
+        contactWhatsApp: String?
+    ) async -> URL? {
+        do {
+            let params: [String: AnyJSON] = [
+                "p_vehicle_id": .string(vehicleId.uuidString),
+                "p_dealer_id": .string(dealerId.uuidString),
+                "p_contact_phone": .string(contactPhone ?? ""),
+                "p_contact_whatsapp": .string(contactWhatsApp ?? "")
+            ]
+
+            let token: UUID = try await client
+                .rpc("create_vehicle_share_link", params: params)
+                .execute()
+                .value
+
+            guard let base = shareBaseURL() else { return nil }
+            return URL(string: "\(base)/functions/v1/vehicle_share?token=\(token.uuidString)")
+        } catch {
+            print("CloudSyncManager createVehicleShareLink error: \(error)")
+            return nil
         }
     }
 

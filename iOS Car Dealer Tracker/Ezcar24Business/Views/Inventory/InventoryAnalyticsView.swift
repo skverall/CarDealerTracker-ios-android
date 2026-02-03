@@ -10,41 +10,52 @@ import SwiftUI
 struct InventoryAnalyticsView: View {
     @StateObject private var viewModel = InventoryAnalyticsViewModel()
     @Environment(\.dismiss) private var dismiss
+    var showNavigation: Bool = true
     
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    healthScoreSection
-                    
-                    keyMetricsSection
-                    
-                    agingDistributionSection
-                    
-                    if !viewModel.alerts.isEmpty {
-                        alertsSection
-                    }
-                    
-                    burningInventorySection
+        Group {
+            if showNavigation {
+                NavigationStack {
+                    content
                 }
-                .padding(.vertical)
+            } else {
+                content
             }
-            .background(ColorTheme.secondaryBackground)
-            .navigationTitle("inventory_analytics".localizedString)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        viewModel.refreshData()
-                    }) {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                    .disabled(viewModel.isLoading)
+        }
+    }
+    
+    private var content: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                healthScoreSection
+                
+                keyMetricsSection
+                
+                agingDistributionSection
+                
+                if !viewModel.alerts.isEmpty {
+                    alertsSection
                 }
+                
+                burningInventorySection
             }
-            .refreshable {
-                viewModel.refreshData()
+            .padding(.vertical)
+        }
+        .background(ColorTheme.secondaryBackground)
+        .navigationTitle("inventory_analytics".localizedString)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button(action: {
+                    viewModel.refreshData()
+                }) {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(viewModel.isLoading)
             }
+        }
+        .refreshable {
+            viewModel.refreshData()
         }
     }
     
@@ -195,7 +206,7 @@ struct InventoryAnalyticsView: View {
                         .font(.headline)
                         .foregroundColor(ColorTheme.primaryText)
                     
-                    Text("vehicles_90_days".localizedString)
+                    Text(String(format: "vehicles_over_days".localizedString, viewModel.burningThreshold))
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                 }
