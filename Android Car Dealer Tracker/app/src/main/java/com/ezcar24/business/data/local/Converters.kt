@@ -35,4 +35,44 @@ class Converters {
     fun bigDecimalToString(value: BigDecimal?): String? {
         return value?.toPlainString()
     }
+
+    @TypeConverter
+    fun fromExpenseCategoryType(value: String?): ExpenseCategoryType? {
+        return value?.let { ExpenseCategoryType.valueOf(it) }
+    }
+
+    @TypeConverter
+    fun expenseCategoryTypeToString(type: ExpenseCategoryType?): String? {
+        return type?.name
+    }
+
+    @TypeConverter
+    fun fromLeadStage(value: String?): LeadStage? {
+        return value?.let { LeadStage.valueOf(it) }
+    }
+
+    @TypeConverter
+    fun leadStageToString(stage: LeadStage?): String? {
+        return stage?.name
+    }
+
+    @TypeConverter
+    fun fromLeadSource(value: String?): LeadSource? {
+        return value?.let { LeadSource.valueOf(it) }
+    }
+
+    @TypeConverter
+    fun leadSourceToString(source: LeadSource?): String? {
+        return source?.name
+    }
+
+    @TypeConverter
+    fun fromInventoryAlertType(value: String?): InventoryAlertType? {
+        return value?.let { InventoryAlertType.valueOf(it) }
+    }
+
+    @TypeConverter
+    fun inventoryAlertTypeToString(type: InventoryAlertType?): String? {
+        return type?.name
+    }
 }

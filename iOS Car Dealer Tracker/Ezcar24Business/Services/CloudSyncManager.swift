@@ -2560,6 +2560,9 @@ final class CloudSyncManager: ObservableObject {
             obj.make = v.make
             obj.model = v.model
             obj.year = v.year != nil ? Int32(v.year!) : 0
+            if let remoteMileage = v.mileage {
+                obj.setValue(Int32(remoteMileage), forKey: "mileage")
+            }
             obj.purchasePrice = NSDecimalNumber(decimal: v.purchasePrice ?? 0)
             obj.purchaseAccountId = v.purchaseAccountId
 
@@ -3483,6 +3486,7 @@ final class CloudSyncManager: ObservableObject {
         guard let id = vehicle.id else { return nil }
         let year = vehicle.year == 0 ? nil : Int(vehicle.year)
         let purchaseDate = Calendar.current.startOfDay(for: vehicle.purchaseDate ?? Date())
+        let mileageValue = Int(vehicle.mileage)
 
         // For now we don't persist photo URL locally. Cloud image is derived from dealer & vehicle ids.
         return RemoteVehicle(
@@ -3503,6 +3507,7 @@ final class CloudSyncManager: ObservableObject {
             photoURL: nil,
             askingPrice: vehicle.askingPrice as Decimal?,
             reportURL: vehicle.reportURL,
+            mileage: mileageValue,
             updatedAt: vehicle.updatedAt ?? Date(),
             deletedAt: vehicle.deletedAt
         )

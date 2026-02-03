@@ -131,6 +131,9 @@ final class SessionStore: ObservableObject {
             } else {
                 updateStatus(for: .initialSession, session: currentSession)
                 await loadOrganizations()
+                // Load permissions immediately after organizations to prevent UI jumping
+                let dealerId = activeOrganizationId ?? currentSession.user.id
+                await PermissionService.shared.fetchPermissions(dealerId: dealerId)
                 // Link RevenueCat user on launch
                 SubscriptionManager.shared.logIn(userId: currentSession.user.id.uuidString)
                 errorMessage = nil

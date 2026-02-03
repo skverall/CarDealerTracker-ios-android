@@ -18,6 +18,7 @@ struct AccountView: View {
     @State private var showingDeleteAlert = false
     @State private var dedupState: DedupState = .idle
     @AppStorage(NotificationPreference.enabledKey) private var notificationsEnabled = false
+    @AppStorage(NotificationPreference.inventoryStaleThresholdKey) private var inventoryStaleThreshold = NotificationPreference.defaultInventoryStaleThreshold
     @State private var showNotificationSettingsAlert = false
     @State private var notificationAlertMessage = ""
     @State private var showMailError = false
@@ -100,6 +101,12 @@ struct AccountView: View {
                     await handleNotificationsToggle(isEnabled: newValue)
                 }
             }
+            .onChange(of: inventoryStaleThreshold) { _, _ in
+                guard notificationsEnabled else { return }
+                Task {
+                    await LocalNotificationManager.shared.refreshAll(context: viewContext)
+                }
+            }
             .alert("notifications".localizedString, isPresented: $showNotificationSettingsAlert) {
                 Button("open_settings".localizedString) {
                     LocalNotificationManager.shared.openSystemSettings()
@@ -144,6 +151,13 @@ struct AccountView: View {
                     FinancialAccountsView()
                 } label: {
                     MenuRow(icon: "banknote", title: "financial_accounts".localizedKey, color: .green)
+                }
+                
+                Divider().padding(.leading, 52)
+                NavigationLink {
+                    NotionExportView()
+                } label: {
+                    MenuRow(icon: "square.and.arrow.up", title: "export_to_notion".localizedKey, color: .black)
                 }
             }
         }
@@ -456,32 +470,70 @@ struct AccountView: View {
     }
     
     private var notificationsRow: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(Color.orange.opacity(0.1))
-                    .frame(width: 36, height: 36)
-                Image(systemName: "bell.badge.fill")
-                    .font(.system(size: 16))
-                    .foregroundColor(.orange)
+        VStack(spacing: 0) {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.1))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "bell.badge.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.orange)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("notifications".localizedString)
+                        .font(.body)
+                        .foregroundColor(ColorTheme.primaryText)
+                    Text("clients_and_debts".localizedString)
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: $notificationsEnabled)
+                    .labelsHidden()
+                    .toggleStyle(SwitchToggleStyle(tint: .orange))
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("notifications".localizedString)
-                    .font(.body)
-                    .foregroundColor(ColorTheme.primaryText)
-                Text("clients_and_debts".localizedString)
-                    .font(.caption)
-                    .foregroundColor(ColorTheme.secondaryText)
+            .padding(16)
+            
+            if notificationsEnabled {
+                Divider().padding(.leading, 52)
+                
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.orange.opacity(0.1))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 16))
+                            .foregroundColor(.orange)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("inventory_alert_threshold".localizedString)
+                            .font(.body)
+                            .foregroundColor(ColorTheme.primaryText)
+                        Text("inventory_alert_threshold_hint".localizedString)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+                    
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 6) {
+                        Text("\(inventoryStaleThreshold) " + "days".localizedString)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(ColorTheme.primaryText)
+                        
+                        Stepper("", value: $inventoryStaleThreshold, in: 10...120, step: 5)
+                            .labelsHidden()
+                    }
+                }
+                .padding(16)
             }
-
-            Spacer()
-
-            Toggle("", isOn: $notificationsEnabled)
-                .labelsHidden()
-                .toggleStyle(SwitchToggleStyle(tint: .orange))
         }
-        .padding(16)
     }
 
     private var userInitials: String {

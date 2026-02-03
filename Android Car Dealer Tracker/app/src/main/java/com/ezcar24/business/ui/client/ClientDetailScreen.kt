@@ -20,7 +20,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ezcar24.business.data.local.LeadSource
+import com.ezcar24.business.data.local.LeadStage
+import com.ezcar24.business.ui.components.crm.AddInteractionSheet
+import com.ezcar24.business.ui.components.crm.InteractionItem
+import com.ezcar24.business.ui.components.crm.LeadPriorityIndicator
+import com.ezcar24.business.ui.components.crm.LeadPrioritySelector
+import com.ezcar24.business.ui.components.crm.LeadSourceBadge
+import com.ezcar24.business.ui.components.crm.LeadSourceSelector
+import com.ezcar24.business.ui.components.crm.LeadStageBadge
+import com.ezcar24.business.ui.components.crm.LeadStageSelector
 import com.ezcar24.business.ui.theme.*
+import java.math.BigDecimal
+import java.text.NumberFormat
+import java.util.Locale
+import java.util.UUID
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,8 +54,14 @@ fun ClientDetailScreen(
     var notes by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("new") }
     
-    // Dialog States
-    var showInteractionDialog by remember { mutableStateOf(false) }
+    // CRM Form State
+    var leadStage by remember { mutableStateOf(LeadStage.new) }
+    var leadSource by remember { mutableStateOf<LeadSource?>(null) }
+    var estimatedValue by remember { mutableStateOf("") }
+    var priority by remember { mutableIntStateOf(0) }
+    
+    // Sheet/Dialog States
+    var showInteractionSheet by remember { mutableStateOf(false) }
     var showReminderDialog by remember { mutableStateOf(false) }
     
     // Initialize form when data loads
@@ -50,6 +72,10 @@ fun ClientDetailScreen(
             email = it.email ?: ""
             notes = it.notes ?: ""
             status = it.status ?: "new"
+            leadStage = it.leadStage
+            leadSource = it.leadSource
+            estimatedValue = it.estimatedValue?.toString() ?: ""
+            priority = it.priority
         }
     }
 
@@ -69,7 +95,17 @@ fun ClientDetailScreen(
                     } else {
                         Button(
                             onClick = {
-                                viewModel.saveClient(name, phone, email, notes, status)
+                                viewModel.saveClient(
+                                    name = name,
+                                    phone = phone,
+                                    email = email,
+                                    notes = notes,
+                                    status = status,
+                                    leadStage = leadStage,
+                                    leadSource = leadSource,
+                                    estimatedValue = estimatedValue.toBigDecimalOrNull(),
+                                    priority = priority
+                                )
                                 onBack()
                             },
                             enabled = name.isNotBlank()
@@ -100,6 +136,60 @@ fun ClientDetailScreen(
 
             // Status Selector
             StatusSelector(selectedStatus = status, onStatusSelected = { status = it })
+
+            // CRM Section - Lead Stage, Source, Priority, Estimated Value
+            Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text("LEAD INFORMATION", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    
+                    // Lead Stage Selector
+                    Text("Lead Stage", style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray)
+                    LeadStageSelector(
+                        selectedStage = leadStage,
+                        onStageSelected = { leadStage = it },
+                        excludeClosed = false
+                    )
+                    
+                    // Lead Source Selector
+                    Text("Lead Source", style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray)
+                    LeadSourceSelector(
+                        selectedSource = leadSource,
+                        onSourceSelected = { leadSource = it },
+                        includeUnknown = true
+                    )
+                    
+                    // Priority Selector
+                    LeadPrioritySelector(
+                        priority = priority,
+                        onPriorityChange = { priority = it }
+                    )
+                    
+                    // Estimated Value
+                    OutlinedTextField(
+                        value = estimatedValue,
+                        onValueChange = { 
+                            if (it.isEmpty() || it.toBigDecimalOrNull() != null) {
+                                estimatedValue = it
+                            }
+                        },
+                        label = { Text("Estimated Value") },
+                        leadingIcon = { 
+                            Text(
+                                "$",
+                                modifier = Modifier.padding(start = 12.dp),
+                                color = EzcarBlueBright,
+                                fontWeight = FontWeight.Bold
+                            )
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                }
+            }
 
             // Contact Section
             Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
@@ -169,9 +259,9 @@ fun ClientDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("HISTORY", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-                    TextButton(onClick = { showInteractionDialog = true }) {
-                        Text("Add", color = EzcarBlueBright)
+                    Text("INTERACTIONS", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    TextButton(onClick = { showInteractionSheet = true }) {
+                        Text("Add Interaction", color = EzcarBlueBright)
                     }
                 }
                 
@@ -179,18 +269,24 @@ fun ClientDetailScreen(
                     Text("No interactions recorded", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
                 } else {
                     uiState.interactions.forEach { interaction ->
-                        InteractionItem(interaction = interaction)
+                        com.ezcar24.business.ui.components.crm.InteractionItem(interaction = interaction)
                     }
                 }
             }
         }
         
-        if (showInteractionDialog) {
-            AddInteractionDialog(
-                onDismiss = { showInteractionDialog = false },
-                onSave = { type, notes ->
-                    viewModel.addInteraction(type, notes)
-                    showInteractionDialog = false
+        if (showInteractionSheet) {
+            AddInteractionSheet(
+                onDismiss = { showInteractionSheet = false },
+                onSave = { type, title, detail, outcome, duration, followUp ->
+                    viewModel.addInteraction(
+                        type = type,
+                        title = title,
+                        detail = detail,
+                        outcome = outcome,
+                        durationMinutes = duration,
+                        isFollowUpRequired = followUp
+                    )
                 }
             )
         }
@@ -265,7 +361,7 @@ fun ReminderItem(reminder: com.ezcar24.business.data.local.ClientReminder, onTog
 }
 
 @Composable
-fun InteractionItem(interaction: com.ezcar24.business.data.local.ClientInteraction) {
+fun LegacyInteractionItem(interaction: com.ezcar24.business.data.local.ClientInteraction) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         modifier = Modifier.fillMaxWidth()
@@ -294,7 +390,7 @@ fun InteractionItem(interaction: com.ezcar24.business.data.local.ClientInteracti
 }
 
 @Composable
-fun AddInteractionDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
+fun LegacyAddInteractionDialog(onDismiss: () -> Unit, onSave: (String, String) -> Unit) {
     var type by remember { mutableStateOf("note") }
     var notes by remember { mutableStateOf("") }
     

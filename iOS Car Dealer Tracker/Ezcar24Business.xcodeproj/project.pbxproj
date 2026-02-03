@@ -71,6 +71,8 @@
 		E2C37EE82F06A77C00EA13C1 /* VehicleSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */; };
 		E2DC15452F1A1AB500068680 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */; };
 		E2DC15472F1A46BC00068680 /* iPadRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2DC15462F1A46BC00068680 /* iPadRootView.swift */; };
+		E2F901032F22120300CD9D6D /* GlobalSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F901022F22120300CD9D6D /* GlobalSearchView.swift */; };
+		E2F901052F22129600CD9D6D /* DaysSincePurchaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F901042F22129600CD9D6D /* DaysSincePurchaseView.swift */; };
 		F0000002 /* FinancialAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000001 /* FinancialAccountsView.swift */; };
 		F0000004 /* EditAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000003 /* EditAccountView.swift */; };
 		F0000006 /* FinancialAccountsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000005 /* FinancialAccountsViewModel.swift */; };
@@ -93,6 +95,20 @@
 		G0000103 /* BackupCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000003 /* BackupCenterView.swift */; };
 		H0000101 /* RegionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000001 /* RegionSettings.swift */; };
 		H0000102 /* RegionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000002 /* RegionSelectionView.swift */; };
+		N0000101 /* NotionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000001 /* NotionConfig.swift */; };
+		N0000102 /* NotionAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000002 /* NotionAuthManager.swift */; };
+		N0000103 /* NotionAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000003 /* NotionAPIService.swift */; };
+		N0000104 /* NotionModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000004 /* NotionModels.swift */; };
+		N0000105 /* NotionDatabaseTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000005 /* NotionDatabaseTemplates.swift */; };
+		N0000106 /* VehicleExportData.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000006 /* VehicleExportData.swift */; };
+		N0000107 /* LeadExportData.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000007 /* LeadExportData.swift */; };
+		N0000108 /* SaleExportData.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000008 /* SaleExportData.swift */; };
+		N0000109 /* NotionExportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000009 /* NotionExportView.swift */; };
+		N0000110 /* NotionAuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000010 /* NotionAuthView.swift */; };
+		N0000111 /* NotionDatabaseSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000011 /* NotionDatabaseSelector.swift */; };
+		N0000112 /* ExportProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000012 /* ExportProgressView.swift */; };
+		N0000113 /* NotionExportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000013 /* NotionExportViewModel.swift */; };
+		C0000101 /* HoldingCostCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000001 /* HoldingCostCalculator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -160,6 +176,8 @@
 		E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleSelectionSheet.swift; sourceTree = "<group>"; };
 		E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		E2DC15462F1A46BC00068680 /* iPadRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPadRootView.swift; sourceTree = "<group>"; };
+		E2F901022F22120300CD9D6D /* GlobalSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalSearchView.swift; sourceTree = "<group>"; };
+		E2F901042F22129600CD9D6D /* DaysSincePurchaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaysSincePurchaseView.swift; sourceTree = "<group>"; };
 		F0000001 /* FinancialAccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsView.swift; sourceTree = "<group>"; };
 		F0000003 /* EditAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditAccountView.swift; sourceTree = "<group>"; };
 		F0000005 /* FinancialAccountsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsViewModel.swift; sourceTree = "<group>"; };
@@ -181,6 +199,20 @@
 		G0000003 /* BackupCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupCenterView.swift; sourceTree = "<group>"; };
 		H0000001 /* RegionSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSettings.swift; sourceTree = "<group>"; };
 		H0000002 /* RegionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionView.swift; sourceTree = "<group>"; };
+		N0000001 /* NotionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionConfig.swift; sourceTree = "<group>"; };
+		N0000002 /* NotionAuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionAuthManager.swift; sourceTree = "<group>"; };
+		N0000003 /* NotionAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionAPIService.swift; sourceTree = "<group>"; };
+		N0000004 /* NotionModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionModels.swift; sourceTree = "<group>"; };
+		N0000005 /* NotionDatabaseTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionDatabaseTemplates.swift; sourceTree = "<group>"; };
+		N0000006 /* VehicleExportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleExportData.swift; sourceTree = "<group>"; };
+		N0000007 /* LeadExportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeadExportData.swift; sourceTree = "<group>"; };
+		N0000008 /* SaleExportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SaleExportData.swift; sourceTree = "<group>"; };
+		N0000009 /* NotionExportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionExportView.swift; sourceTree = "<group>"; };
+		N0000010 /* NotionAuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionAuthView.swift; sourceTree = "<group>"; };
+		N0000011 /* NotionDatabaseSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionDatabaseSelector.swift; sourceTree = "<group>"; };
+		N0000012 /* ExportProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportProgressView.swift; sourceTree = "<group>"; };
+		N0000013 /* NotionExportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionExportViewModel.swift; sourceTree = "<group>"; };
+		C0000001 /* HoldingCostCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingCostCalculator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -246,6 +278,7 @@
 		A1000027 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				N0000021 /* NotionExport */,
 				E2460EF32F150C340048EA80 /* Part+Extensions.swift */,
 				E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */,
 				E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */,
@@ -263,6 +296,7 @@
 		A1000028 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
+				N0000013 /* NotionExportViewModel.swift */,
 				E2460EF52F150C480048EA80 /* PartSalesViewModel.swift */,
 				E2460EF62F150C480048EA80 /* PartsInventoryViewModel.swift */,
 				A1000018 /* DashboardViewModel.swift */,
@@ -281,6 +315,9 @@
 		A1000029 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				N0000022 /* Notion */,
+				E2F901042F22129600CD9D6D /* DaysSincePurchaseView.swift */,
+				E2F901022F22120300CD9D6D /* GlobalSearchView.swift */,
 				E2DC15462F1A46BC00068680 /* iPadRootView.swift */,
 				E2460EF92F150C680048EA80 /* AddPartSaleView.swift */,
 				E2460EFA2F150C680048EA80 /* AddPartView.swift */,
@@ -348,6 +385,8 @@
 		D0000000 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				C0000010 /* Calculators */,
+				N0000020 /* Notion */,
 				E2A08AB02F1056F00071352E /* PermissionService.swift */,
 				E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */,
 				E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */,
@@ -359,6 +398,47 @@
 				E20700002F1234567890ABCD /* LocalNotificationManager.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		C0000010 /* Calculators */ = {
+			isa = PBXGroup;
+			children = (
+				C0000001 /* HoldingCostCalculator.swift */,
+			);
+			path = Calculators;
+			sourceTree = "<group>";
+		};
+		N0000020 /* Notion */ = {
+			isa = PBXGroup;
+			children = (
+				N0000001 /* NotionConfig.swift */,
+				N0000002 /* NotionAuthManager.swift */,
+				N0000003 /* NotionAPIService.swift */,
+				N0000004 /* NotionModels.swift */,
+				N0000005 /* NotionDatabaseTemplates.swift */,
+			);
+			path = Notion;
+			sourceTree = "<group>";
+		};
+		N0000021 /* NotionExport */ = {
+			isa = PBXGroup;
+			children = (
+				N0000006 /* VehicleExportData.swift */,
+				N0000007 /* LeadExportData.swift */,
+				N0000008 /* SaleExportData.swift */,
+			);
+			path = NotionExport;
+			sourceTree = "<group>";
+		};
+		N0000022 /* Notion */ = {
+			isa = PBXGroup;
+			children = (
+				N0000009 /* NotionExportView.swift */,
+				N0000010 /* NotionAuthView.swift */,
+				N0000011 /* NotionDatabaseSelector.swift */,
+				N0000012 /* ExportProgressView.swift */,
+			);
+			path = Notion;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -459,6 +539,7 @@
 				A1000015 /* AddExpenseView.swift in Sources */,
 				A1000017 /* UserManagementView.swift in Sources */,
 				101CC6762EA6B9C0005FCB41 /* DataHealthView.swift in Sources */,
+				E2F901052F22129600CD9D6D /* DaysSincePurchaseView.swift in Sources */,
 				10FA8DE12ECF7F7D00ECC6F9 /* PaywallView.swift in Sources */,
 				A1000019 /* DashboardViewModel.swift in Sources */,
 				A100001B /* VehicleViewModel.swift in Sources */,
@@ -484,6 +565,7 @@
 				D0000011 /* CloudSyncEnvironment.swift in Sources */,
 				D0000012 /* SupabaseModels.swift in Sources */,
 				E2460EF72F150C480048EA80 /* PartSalesViewModel.swift in Sources */,
+				E2F901032F22120300CD9D6D /* GlobalSearchView.swift in Sources */,
 				E2460EF82F150C480048EA80 /* PartsInventoryViewModel.swift in Sources */,
 				E1000007 /* ClientListView.swift in Sources */,
 				E1000008 /* ClientDetailView.swift in Sources */,
@@ -522,6 +604,20 @@
 				H0000101 /* RegionSettings.swift in Sources */,
 				H0000102 /* RegionSelectionView.swift in Sources */,
 				E29C0AEF2F0B92620087CEB6 /* String+Localization.swift in Sources */,
+				N0000101 /* NotionConfig.swift in Sources */,
+				N0000102 /* NotionAuthManager.swift in Sources */,
+				N0000103 /* NotionAPIService.swift in Sources */,
+				N0000104 /* NotionModels.swift in Sources */,
+				N0000105 /* NotionDatabaseTemplates.swift in Sources */,
+				N0000106 /* VehicleExportData.swift in Sources */,
+				N0000107 /* LeadExportData.swift in Sources */,
+				N0000108 /* SaleExportData.swift in Sources */,
+				N0000109 /* NotionExportView.swift in Sources */,
+				N0000110 /* NotionAuthView.swift in Sources */,
+				N0000111 /* NotionDatabaseSelector.swift in Sources */,
+				N0000112 /* ExportProgressView.swift in Sources */,
+				N0000113 /* NotionExportViewModel.swift in Sources */,
+				C0000101 /* HoldingCostCalculator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -658,7 +754,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Ezcar24Business/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -671,7 +767,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -690,7 +786,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Ezcar24Business/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -703,7 +799,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.0.1;
+				MARKETING_VERSION = 2.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

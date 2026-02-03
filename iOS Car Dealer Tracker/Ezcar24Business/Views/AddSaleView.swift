@@ -814,14 +814,14 @@ private struct VehicleSaleForm: View {
                         }
                         
                         // Update Client Status & Details
-                        clientToUse.clientStatus = .purchased
+                        clientToUse.clientStatus = .sold
                         clientToUse.vehicle = vehicle
                         
                         // Create "Closed Won" Interaction
                         let interaction = ClientInteraction(context: viewContext)
                         interaction.id = UUID()
                         interaction.title = "Vehicle Purchased"
-                        interaction.detail = "Purchased \(vehicle.make ?? "") \(vehicle.model ?? "") for \(salePrice.formatted(.currency(code: "AED")))"
+                        interaction.detail = "Purchased \(vehicle.make ?? "") \(vehicle.model ?? "") for \(salePrice.asCurrencyFallback())"
                         interaction.occurredAt = Date()
                         interaction.stage = InteractionStage.closedWon.rawValue
                         interaction.value = NSDecimalNumber(decimal: salePrice)

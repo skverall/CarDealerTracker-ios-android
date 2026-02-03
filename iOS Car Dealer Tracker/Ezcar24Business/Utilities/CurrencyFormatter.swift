@@ -50,12 +50,14 @@ extension Decimal {
     
     /// Static fallback for nonisolated contexts - uses default AED formatting
     func asCurrencyFallback() -> String {
+        let region = AppRegion.storedRegion()
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.currencyCode = "AED"
-        formatter.currencySymbol = "AED "
-        formatter.maximumFractionDigits = 0
-        formatter.minimumFractionDigits = 0
+        formatter.currencyCode = region.currencyCode
+        formatter.currencySymbol = region.currencySymbol + " "
+        formatter.maximumFractionDigits = region.currencyDecimals
+        formatter.minimumFractionDigits = region.currencyDecimals
+        formatter.locale = region.locale
         return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
     }
 }

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "rube_mcp": {
+      "type": "remote",
+      "url": "https://rube.app/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJ1c2VyXzAxS0ZKSkdQMkRFMjRDU0dOOVhUS0VEMDRUIiwib3JnSWQiOiJvcmdfMDFLRkpKR1NBRUM2R1IxSlc1QkROWkRGOUEiLCJpYXQiOjE3NjkwNzc4NDN9.t1gDAyXvc8hmc7dtxcyQO5IDx5zUHbn3HyqbyuowCu0"
+      }
+    }
+  }
+}

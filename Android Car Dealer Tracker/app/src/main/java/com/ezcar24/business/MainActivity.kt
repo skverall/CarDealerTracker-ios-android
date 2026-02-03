@@ -193,11 +193,23 @@ class MainActivity : ComponentActivity() {
                                     com.ezcar24.business.ui.settings.SettingsScreen(
                                         onBack = { navController.popBackStack() },
                                         onNavigateToFinancialAccounts = { navController.navigate("financial_accounts") },
-                                        onNavigateToTeamMembers = { navController.navigate("team_members") }
+                                        onNavigateToTeamMembers = { navController.navigate("team_members") },
+                                        onNavigateToBackupCenter = { navController.navigate("backup_center") },
+                                        onNavigateToDataHealth = { navController.navigate("data_health") }
                                     )
                                 }
                                 composable("team_members") {
                                     com.ezcar24.business.ui.settings.TeamMembersScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("backup_center") {
+                                    com.ezcar24.business.ui.settings.BackupCenterScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("data_health") {
+                                    com.ezcar24.business.ui.settings.DataHealthScreen(
                                         onBack = { navController.popBackStack() }
                                     )
                                 }

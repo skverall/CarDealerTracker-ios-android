@@ -71,9 +71,12 @@ fun DashboardScreen(
     onNavigateToAccounts: () -> Unit,
     onNavigateToDebts: () -> Unit,
     onNavigateToSettings: () -> Unit,
+    onNavigateToSearch: () -> Unit,
     onNavigateToVehicles: () -> Unit = {},
     onNavigateToSoldVehicles: () -> Unit = {},
-    onNavigateToExpenses: () -> Unit = {}
+    onNavigateToExpenses: () -> Unit = {},
+    onNavigateToLeadFunnel: () -> Unit = {},
+    onNavigateToInventoryAnalytics: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val expenseUiState by expenseViewModel.uiState.collectAsState()
@@ -102,7 +105,8 @@ fun DashboardScreen(
             item {
                 DashboardTopBar(
                     onProfileClick = onNavigateToSettings,
-                    onAddClick = { showAddExpenseSheet = true }
+                    onAddClick = { showAddExpenseSheet = true },
+                    onSearchClick = onNavigateToSearch
                 )
             }
             
@@ -160,6 +164,28 @@ fun DashboardScreen(
                     onSeeAll = { /* TODO */ }
                 )
             }
+
+            // --- CRM Summary Card ---
+            item {
+                CRMSummaryCard(
+                    newLeadsToday = uiState.newLeadsToday,
+                    callsMadeToday = uiState.callsMadeToday,
+                    pipelineValue = uiState.pipelineValue,
+                    conversionRate = uiState.conversionRate,
+                    onNavigateToLeadFunnel = onNavigateToLeadFunnel
+                )
+            }
+            
+            // --- Inventory Summary Card ---
+            item {
+                InventorySummaryCard(
+                    totalVehicles = uiState.totalVehiclesInInventory,
+                    averageDays = uiState.averageDaysInInventory,
+                    vehiclesOver90Days = uiState.vehiclesOver90Days,
+                    healthScore = uiState.inventoryHealthScore,
+                    onNavigateToInventoryAnalytics = onNavigateToInventoryAnalytics
+                )
+            }
         }
         
         PullRefreshIndicator(
@@ -190,7 +216,8 @@ fun DashboardScreen(
 @Composable
 fun DashboardTopBar(
     onProfileClick: () -> Unit,
-    onAddClick: () -> Unit
+    onAddClick: () -> Unit,
+    onSearchClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -220,7 +247,7 @@ fun DashboardTopBar(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 // Search Button
                 IconButton(
-                    onClick = { /* TODO */ },
+                    onClick = onSearchClick,
                     modifier = Modifier
                         .size(40.dp)
                         .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
@@ -1181,6 +1208,216 @@ fun SyncStatusCard(
             modifier = Modifier
                 .size(16.dp)
                 .clickable { onSyncClick() }
+        )
+    }
+}
+
+@Composable
+fun CRMSummaryCard(
+    newLeadsToday: Int,
+    callsMadeToday: Int,
+    pipelineValue: BigDecimal,
+    conversionRate: Double,
+    onNavigateToLeadFunnel: () -> Unit
+) {
+    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    
+    Card(
+        colors = CardDefaults.cardColors(containerColor = EzcarNavy),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onNavigateToLeadFunnel),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "CRM Summary",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Icon(
+                    imageVector = Icons.Default.TrendingUp,
+                    contentDescription = "View Funnel",
+                    tint = EzcarGreen,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                CRMStatItem(
+                    value = newLeadsToday.toString(),
+                    label = "New Leads",
+                    color = EzcarGreen
+                )
+                CRMStatItem(
+                    value = callsMadeToday.toString(),
+                    label = "Calls Today",
+                    color = EzcarBlueBright
+                )
+                CRMStatItem(
+                    value = currencyFormat.format(pipelineValue),
+                    label = "Pipeline",
+                    color = EzcarOrange
+                )
+                CRMStatItem(
+                    value = "${String.format("%.1f", conversionRate)}%",
+                    label = "Conversion",
+                    color = EzcarSuccess
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CRMStatItem(
+    value: String,
+    label: String,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = Color.White.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+fun InventorySummaryCard(
+    totalVehicles: Int,
+    averageDays: Int,
+    vehiclesOver90Days: Int,
+    healthScore: Int,
+    onNavigateToInventoryAnalytics: () -> Unit
+) {
+    val healthColor = when {
+        healthScore >= 80 -> EzcarGreen
+        healthScore >= 60 -> EzcarWarning
+        healthScore >= 40 -> EzcarOrange
+        else -> EzcarDanger
+    }
+    
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .clickable(onClick = onNavigateToInventoryAnalytics),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Inventory,
+                        contentDescription = null,
+                        tint = EzcarNavy,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Inventory Summary",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+                
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "View Analytics",
+                    tint = Color.Gray
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                InventoryStatItem(
+                    value = totalVehicles.toString(),
+                    label = "Vehicles",
+                    color = EzcarBlueBright
+                )
+                
+                InventoryStatItem(
+                    value = "$averageDays",
+                    label = "Avg Days",
+                    color = if (averageDays <= 60) EzcarGreen else EzcarOrange
+                )
+                
+                InventoryStatItem(
+                    value = vehiclesOver90Days.toString(),
+                    label = "90+ Days",
+                    color = if (vehiclesOver90Days == 0) EzcarGreen else EzcarDanger
+                )
+                
+                InventoryStatItem(
+                    value = "$healthScore",
+                    label = "Health",
+                    color = healthColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InventoryStatItem(
+    value: String,
+    label: String,
+    color: Color
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            color = Color.Gray
         )
     }
 }

@@ -266,7 +266,8 @@ struct ClientListView: View {
         ClientRowView(
             client: client,
             onCall: { phone in call(phone) },
-            onWhatsApp: { phone in whatsapp(phone) }
+            onWhatsApp: { phone in whatsapp(phone) },
+            onSMS: { phone in sms(phone) }
         )
         .onTapGesture {
             activeSheet = .edit(client)
@@ -275,6 +276,7 @@ struct ClientListView: View {
             if let phone = client.phone, !phone.isEmpty {
                 Button { call(phone) } label: { Label("call".localizedString, systemImage: "phone") }
                 Button { whatsapp(phone) } label: { Label("whatsapp".localizedString, systemImage: "message") }
+                Button { sms(phone) } label: { Label("sms".localizedString, systemImage: "message.fill") }
             }
             if canDeleteRecords {
                 Button(role: .destructive) { delete(client) } label: { Label("delete".localizedString, systemImage: "trash") }
@@ -294,6 +296,13 @@ struct ClientListView: View {
     private func whatsapp(_ phone: String) {
         let clean = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
         if let url = URL(string: "https://wa.me/\(clean)"), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func sms(_ phone: String) {
+        let clean = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "sms:\(clean)"), UIApplication.shared.canOpenURL(url) {
             UIApplication.shared.open(url)
         }
     }
@@ -451,6 +460,7 @@ struct ClientRowView: View {
     let client: Client
     var onCall: ((String) -> Void)?
     var onWhatsApp: ((String) -> Void)?
+    var onSMS: ((String) -> Void)?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -542,6 +552,23 @@ struct ClientRowView: View {
                                     Image(systemName: "message.circle.fill") // WhatsApp-style icon
                                         .symbolVariant(.fill) // Ensure fill
                                         .font(.system(size: 18)) // Slightly larger icon inside
+                                        .foregroundColor(.white)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            
+                            // SMS
+                            Button {
+                                if let phone = client.phone { onSMS?(phone) }
+                            } label: {
+                                ZStack {
+                                    Circle()
+                                        .fill(ColorTheme.secondary)
+                                        .frame(width: 32, height: 32)
+                                        .shadow(color: ColorTheme.secondary.opacity(0.3), radius: 4, x: 0, y: 2)
+                                    
+                                    Image(systemName: "bubble.left.and.bubble.right.fill")
+                                        .font(.system(size: 14))
                                         .foregroundColor(.white)
                                 }
                             }

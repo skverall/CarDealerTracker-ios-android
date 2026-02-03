@@ -239,6 +239,26 @@ fun VehicleListScreen(
                                         onClick = { viewModel.setSortOrder("year_desc"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "year_desc") Icon(Icons.Default.Check, null) }
                                     )
+                                    DropdownMenuItem(
+                                        text = { Text("Days: Low to High") },
+                                        onClick = { viewModel.setSortOrder("days_asc"); showSortMenu = false },
+                                        leadingIcon = { if(currentSort == "days_asc") Icon(Icons.Default.Check, null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Days: High to Low") },
+                                        onClick = { viewModel.setSortOrder("days_desc"); showSortMenu = false },
+                                        leadingIcon = { if(currentSort == "days_desc") Icon(Icons.Default.Check, null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("ROI: Low to High") },
+                                        onClick = { viewModel.setSortOrder("roi_asc"); showSortMenu = false },
+                                        leadingIcon = { if(currentSort == "roi_asc") Icon(Icons.Default.Check, null) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("ROI: High to Low") },
+                                        onClick = { viewModel.setSortOrder("roi_desc"); showSortMenu = false },
+                                        leadingIcon = { if(currentSort == "roi_desc") Icon(Icons.Default.Check, null) }
+                                    )
                                 }
                             }
                         },
@@ -314,6 +334,7 @@ fun VehicleListScreen(
                             ) {
                                 VehicleItem(
                                     item = item,
+                                    inventoryStats = uiState.inventoryStats,
                                     onClick = { onNavigateToDetail(item.vehicle.id.toString()) }
                                 )
                             }
@@ -472,16 +493,21 @@ fun StatusChip(
 @Composable
 fun VehicleItem(
     item: VehicleWithFinancials,
+    inventoryStats: Map<String, com.ezcar24.business.data.local.VehicleInventoryStats> = emptyMap(),
     onClick: () -> Unit
 ) {
     val vehicle = item.vehicle
     val totalCost = vehicle.purchasePrice.add(item.totalExpenseCost ?: java.math.BigDecimal.ZERO)
     
-    // Metrics calculations
-    val daysInStock = try {
+    // Get stats from inventory stats map
+    val vehicleStats = inventoryStats[vehicle.id.toString()]
+    val daysInStock = vehicleStats?.daysInInventory ?: try {
         val diff = Date().time - vehicle.purchaseDate.time
-        TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS)
+        TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS).toInt()
     } catch (e: Exception) { 0 }
+    
+    val roiPercent = vehicleStats?.roiPercent
+    val isBurning = daysInStock >= 90
 
     Card(
         modifier = Modifier
@@ -573,42 +599,60 @@ fun VehicleItem(
                             }
                         }
                         
-                        // Status Badge
-                        val badgeColor = when(vehicle.status) {
-                            "sold" -> EzcarBlueBright.copy(alpha = 0.15f)
-                            "owned" -> Color.Gray.copy(alpha = 0.15f)
-                            "on_sale" -> EzcarGreen.copy(alpha = 0.15f)
-                            "in_transit" -> EzcarPurple.copy(alpha = 0.15f)
-                            "under_service" -> EzcarOrange.copy(alpha = 0.15f)
-                            else -> EzcarGreen.copy(alpha = 0.15f) 
-                        }
-                        val textColor = when(vehicle.status) {
-                            "sold" -> EzcarBlueBright
-                            "owned" -> Color.Gray
-                            "on_sale" -> EzcarGreen
-                            "in_transit" -> EzcarPurple
-                            "under_service" -> EzcarOrange
-                            else -> EzcarGreen
-                        }
-                        
-                        Surface(
-                            color = badgeColor,
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                text = when(vehicle.status) {
-                                     "sold" -> "Sold"
-                                     "owned" -> "Owned"
-                                     "on_sale" -> "On Sale"
-                                     "in_transit" -> "In Transit"
-                                     "under_service" -> "Service"
-                                     else -> "On Sale"
-                                },
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = textColor,
-                                fontWeight = FontWeight.Bold
-                            )
+                        // Status Badge + Burning Badge
+                        Column(horizontalAlignment = Alignment.End) {
+                            if (isBurning && vehicle.status != "sold") {
+                                Surface(
+                                    color = EzcarDanger.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(6.dp)
+                                ) {
+                                    Text(
+                                        text = "BURNING",
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = EzcarDanger,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                            }
+                            
+                            val badgeColor = when(vehicle.status) {
+                                "sold" -> EzcarBlueBright.copy(alpha = 0.15f)
+                                "owned" -> Color.Gray.copy(alpha = 0.15f)
+                                "on_sale" -> EzcarGreen.copy(alpha = 0.15f)
+                                "in_transit" -> EzcarPurple.copy(alpha = 0.15f)
+                                "under_service" -> EzcarOrange.copy(alpha = 0.15f)
+                                else -> EzcarGreen.copy(alpha = 0.15f) 
+                            }
+                            val textColor = when(vehicle.status) {
+                                "sold" -> EzcarBlueBright
+                                "owned" -> Color.Gray
+                                "on_sale" -> EzcarGreen
+                                "in_transit" -> EzcarPurple
+                                "under_service" -> EzcarOrange
+                                else -> EzcarGreen
+                            }
+                            
+                            Surface(
+                                color = badgeColor,
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Text(
+                                    text = when(vehicle.status) {
+                                         "sold" -> "Sold"
+                                         "owned" -> "Owned"
+                                         "on_sale" -> "On Sale"
+                                         "in_transit" -> "In Transit"
+                                         "under_service" -> "Service"
+                                         else -> "On Sale"
+                                    },
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = textColor,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                     
@@ -631,11 +675,13 @@ fun VehicleItem(
             // Metrics Row
             Row(
                 modifier = Modifier.fillMaxWidth(), 
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                  MetricData(
                      label = "Stock",
-                     value = "$daysInStock days"
+                     value = "$daysInStock days",
+                     isWarning = daysInStock >= 90
                  )
                  MetricData(
                      label = "Added",
@@ -646,11 +692,17 @@ fun VehicleItem(
                      value = "${item.expenseCount}",
                      isWarning = item.expenseCount > 0
                  )
-                 MetricData(
-                     label = "Total Cost",
-                     value = NumberFormat.getCurrencyInstance(Locale.US).format(totalCost).replace("$", "").substringBefore("."), 
-                     isBold = true
-                 )
+                 
+                 // ROI Badge
+                 if (roiPercent != null && vehicle.status != "sold") {
+                     com.ezcar24.business.ui.components.ROIBadge(roiPercent = roiPercent)
+                 } else {
+                     MetricData(
+                         label = "Total Cost",
+                         value = NumberFormat.getCurrencyInstance(Locale.US).format(totalCost).replace("$", "").substringBefore("."), 
+                         isBold = true
+                     )
+                 }
             }
             
             // Profit Row (for sold vehicles)

@@ -20,7 +20,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.SubcomposeAsyncImage
 import com.ezcar24.business.ui.theme.*
+import com.ezcar24.business.ui.components.*
+import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -40,7 +43,8 @@ fun VehicleDetailScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
-    val vehicle = uiState.selectedVehicle
+    val detailState by viewModel.detailUiState.collectAsState()
+    val vehicle = detailState.vehicle
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -54,11 +58,9 @@ fun VehicleDetailScreen(
                 },
                 actions = {
                     if (vehicle != null) {
-                        // Edit Button
                         TextButton(onClick = { onEdit(vehicle.id.toString()) }) {
                             Text("Edit", color = EzcarGreen, fontWeight = FontWeight.SemiBold)
                         }
-                        // Share Button
                         val context = androidx.compose.ui.platform.LocalContext.current
                         IconButton(onClick = {
                             val shareText = "Check out this vehicle: ${vehicle.make} ${vehicle.model} ${vehicle.year}\nPrice: ${formatCurrency(vehicle.salePrice ?: vehicle.askingPrice ?: vehicle.purchasePrice)}"
@@ -79,7 +81,7 @@ fun VehicleDetailScreen(
         },
         containerColor = EzcarBackgroundLight
     ) { paddingValues ->
-        if (uiState.isLoading) {
+        if (detailState.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = EzcarGreen)
             }
@@ -88,10 +90,6 @@ fun VehicleDetailScreen(
                 Text("Vehicle not found", style = MaterialTheme.typography.bodyLarge)
             }
         } else {
-            val totalExpenses = BigDecimal.ZERO // TODO: Get from ViewModel
-            val totalCost = vehicle.purchasePrice.add(totalExpenses)
-            val profit = vehicle.salePrice?.subtract(totalCost)
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -100,201 +98,58 @@ fun VehicleDetailScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Photo Section with AsyncImage
-                val imageUrl = vehicle.photoUrl ?: com.ezcar24.business.data.sync.CloudSyncEnvironment.vehicleImageUrl(vehicle.id)
-                
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFE0E0E0)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (imageUrl != null) {
-                        coil.compose.SubcomposeAsyncImage(
-                            model = imageUrl,
-                            contentDescription = "Vehicle Photo",
-                            modifier = Modifier.fillMaxSize(),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                            error = {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Default.DirectionsCar,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(64.dp),
-                                        tint = Color.Gray
-                                    )
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                    Text("No photo available", color = Color.Gray)
-                                }
-                            },
-                            loading = {
-                                CircularProgressIndicator(color = EzcarGreen, modifier = Modifier.size(32.dp))
-                            }
-                        )
-                    } else {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.DirectionsCar,
-                                contentDescription = null,
-                                modifier = Modifier.size(64.dp),
-                                tint = Color.Gray
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("Tap Edit to add photo", color = Color.Gray)
-                        }
-                    }
+                VehiclePhotoSection(vehicleId = vehicle.id)
+
+                VehicleHeaderCard(vehicle = vehicle, detailState = detailState)
+
+                if (detailState.alerts.isNotEmpty()) {
+                    InventoryAlertList(alerts = detailState.alerts)
                 }
 
-                // Vehicle Header Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "${vehicle.make ?: ""} ${vehicle.model ?: ""}".trim().ifEmpty { "Vehicle" },
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = "Year: ${vehicle.year ?: "N/A"}",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.Gray
-                                )
-                            }
-                            VehicleStatusBadge(status = vehicle.status)
+                FinancialSummaryCard(
+                    data = FinancialSummaryData(
+                        purchasePrice = detailState.financialSummary.purchasePrice,
+                        totalExpenses = detailState.financialSummary.totalExpenses,
+                        holdingCost = detailState.financialSummary.holdingCost,
+                        totalCost = detailState.financialSummary.totalCost,
+                        expenseBreakdown = detailState.financialSummary.expenseBreakdown,
+                        askingPrice = vehicle.askingPrice,
+                        salePrice = vehicle.salePrice,
+                        projectedROI = detailState.financialSummary.projectedROI,
+                        actualROI = detailState.financialSummary.actualROI,
+                        daysInInventory = detailState.inventoryStats?.daysInInventory ?: 0,
+                        agingBucket = detailState.inventoryStats?.agingBucket ?: "0-30"
+                    ),
+                    onEditAskingPrice = if (vehicle.status != "sold") {
+                        { viewModel.updateAskingPrice(detailState.financialSummary.recommendedPrice) }
+                    } else null
+                )
+
+                if (vehicle.status != "sold") {
+                    RecommendedPricingCard(
+                        breakEvenPrice = detailState.financialSummary.breakEvenPrice,
+                        recommendedPrice = detailState.financialSummary.recommendedPrice,
+                        currentAskingPrice = vehicle.askingPrice,
+                        onUpdateAskingPrice = { newPrice ->
+                            viewModel.updateAskingPrice(newPrice)
                         }
+                    )
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFE5E5EA))
-
-                        // VIN
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("VIN:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
-                            Text(vehicle.vin, fontWeight = FontWeight.Medium)
-                        }
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        // Purchase Date
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Purchase Date:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(vehicle.purchaseDate),
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        // Notes
-                        if (!vehicle.notes.isNullOrBlank()) {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFE5E5EA))
-                            Text("Notes", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(vehicle.notes!!, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-
-                // Financial Summary Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Financial Summary",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        FinancialDetailRow("Purchase Price", vehicle.purchasePrice)
-
-                        if (vehicle.askingPrice != null && vehicle.askingPrice > BigDecimal.ZERO) {
-                            FinancialDetailRow("Asking Price", vehicle.askingPrice, color = EzcarGreen)
-                        }
-
-                        FinancialDetailRow("Total Expenses", totalExpenses, color = EzcarOrange)
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE5E5EA))
-
-                        FinancialDetailRow("Total Cost", totalCost, isBold = true, color = EzcarGreen)
-
-                        // Sale details if sold
-                        if (vehicle.status == "sold" && vehicle.salePrice != null) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                            FinancialDetailRow("Sale Price", vehicle.salePrice, color = EzcarGreen)
-                            
-                            if (vehicle.saleDate != null) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("Sale Date", color = Color.Gray)
-                                    Text(SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(vehicle.saleDate))
-                                }
-                            }
-
-                            if (!vehicle.buyerName.isNullOrBlank()) {
-                                FinancialDetailRow("Buyer", vehicle.buyerName, color = Color.Black)
-                            }
-                            if (!vehicle.buyerPhone.isNullOrBlank()) {
-                                FinancialDetailRow("Phone", vehicle.buyerPhone, color = Color.Gray)
-                            }
-                            if (!vehicle.paymentMethod.isNullOrBlank()) {
-                                FinancialDetailRow("Payment", vehicle.paymentMethod, color = Color.Gray)
-                            }
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = Color(0xFFE5E5EA))
-
-                            if (profit != null) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("Profit/Loss", fontWeight = FontWeight.Bold)
-                                    Text(
-                                        text = formatCurrency(profit),
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (profit >= BigDecimal.ZERO) EzcarGreen else Color.Red
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Expenses Section (placeholder)
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            "Expenses (0)",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            "No expenses recorded for this vehicle",
-                            color = Color.Gray,
-                            style = MaterialTheme.typography.bodyMedium
+                    if (detailState.financialSummary.holdingCost > BigDecimal.ZERO) {
+                        HoldingCostCard(
+                            holdingCost = detailState.financialSummary.holdingCost,
+                            totalCost = detailState.financialSummary.totalCost,
+                            dailyRate = detailState.financialSummary.dailyHoldingCost,
+                            daysInInventory = detailState.inventoryStats?.daysInInventory ?: 0
                         )
                     }
                 }
 
-                // Delete Button
+                ExpensesSection(
+                    expenses = detailState.expenses,
+                    totalExpenses = detailState.financialSummary.totalExpenses
+                )
+
                 OutlinedButton(
                     onClick = { showDeleteDialog = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -311,7 +166,6 @@ fun VehicleDetailScreen(
         }
     }
 
-    // Delete Confirmation Dialog
     if (showDeleteDialog && vehicle != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
@@ -333,6 +187,225 @@ fun VehicleDetailScreen(
                     Text("Cancel")
                 }
             }
+        )
+    }
+}
+
+@Composable
+private fun VehiclePhotoSection(vehicleId: java.util.UUID) {
+    val imageUrl = CloudSyncEnvironment.vehicleImageUrl(vehicleId)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color(0xFFE0E0E0)),
+        contentAlignment = Alignment.Center
+    ) {
+        if (imageUrl != null) {
+            SubcomposeAsyncImage(
+                model = imageUrl,
+                contentDescription = "Vehicle Photo",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                error = {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.DirectionsCar,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("No photo available", color = Color.Gray)
+                    }
+                },
+                loading = {
+                    CircularProgressIndicator(color = EzcarGreen, modifier = Modifier.size(32.dp))
+                }
+            )
+        } else {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    Icons.Default.DirectionsCar,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text("Tap Edit to add photo", color = Color.Gray)
+            }
+        }
+    }
+}
+
+@Composable
+private fun VehicleHeaderCard(
+    vehicle: com.ezcar24.business.data.local.Vehicle,
+    detailState: VehicleDetailUiState
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "${vehicle.make ?: ""} ${vehicle.model ?: ""}".trim().ifEmpty { "Vehicle" },
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Year: ${vehicle.year ?: "N/A"}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    VehicleStatusBadge(status = vehicle.status)
+                    detailState.inventoryStats?.let { stats ->
+                        AgingBucketBadge(daysInInventory = stats.daysInInventory)
+                    }
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFE5E5EA))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("VIN:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                Text(vehicle.vin, fontWeight = FontWeight.Medium)
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Purchase Date:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(vehicle.purchaseDate),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            detailState.inventoryStats?.let { stats ->
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Days in Inventory:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        "${stats.daysInInventory} days (${stats.agingBucket})",
+                        fontWeight = FontWeight.Medium,
+                        color = when (stats.agingBucket) {
+                            "0-30" -> EzcarGreen
+                            "31-60" -> EzcarWarning
+                            "61-90" -> EzcarOrange
+                            else -> EzcarDanger
+                        }
+                    )
+                }
+            }
+
+            if (!vehicle.notes.isNullOrBlank()) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFE5E5EA))
+                Text("Notes", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(vehicle.notes, style = MaterialTheme.typography.bodyMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpensesSection(
+    expenses: List<com.ezcar24.business.data.local.Expense>,
+    totalExpenses: BigDecimal
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Expenses (${expenses.size})",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    formatCurrency(totalExpenses),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = EzcarOrange
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (expenses.isEmpty()) {
+                Text(
+                    "No expenses recorded for this vehicle",
+                    color = Color.Gray,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            } else {
+                expenses.take(5).forEach { expense ->
+                    ExpenseRow(expense = expense)
+                    if (expense != expenses.take(5).last()) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            color = Color(0xFFE5E5EA)
+                        )
+                    }
+                }
+
+                if (expenses.size > 5) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        "+${expenses.size - 5} more expenses",
+                        color = Color.Gray,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpenseRow(expense: com.ezcar24.business.data.local.Expense) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = expense.expenseDescription ?: expense.category,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(expense.date),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
+        }
+        Text(
+            text = formatCurrency(expense.amount),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold
         )
     }
 }
@@ -382,8 +455,6 @@ fun FinancialDetailRow(
         )
     }
 }
-
-
 
 @Composable
 fun FinancialDetailRow(

@@ -47,6 +47,8 @@ final class PermissionService: ObservableObject {
         let cachedPermissions = loadCachedPermissions(userId: userId, dealerId: dealerId)
         let cachedRole = loadCachedRole(userId: userId, dealerId: dealerId)
         if applyCachedState(permissions: cachedPermissions, role: cachedRole) {
+            // If we have cached data, mark as loaded immediately
+            didLoad = true
             return
         }
         permissions = [:]

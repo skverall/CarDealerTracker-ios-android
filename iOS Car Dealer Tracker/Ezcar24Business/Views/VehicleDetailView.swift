@@ -32,6 +32,7 @@ struct VehicleDetailView: View {
     @State private var editMake: String = ""
     @State private var editModel: String = ""
     @State private var editYear: String = ""
+    @State private var editMileage: String = ""
     @State private var editPurchaseDate: Date = Date()
     @State private var editNotes: String = ""
     @State private var editBuyerName: String = ""
@@ -110,11 +111,42 @@ struct VehicleDetailView: View {
     var profit: Decimal? {
         guard let sale = vehicle.salePrice?.decimalValue else { return nil }
         let buy = vehicle.purchasePrice?.decimalValue ?? 0
-        return sale - (buy + totalExpenses)
+        return sale - (buy + totalExpenses + holdingCost)
     }
 
     var totalCost: Decimal {
-        (vehicle.purchasePrice?.decimalValue ?? 0) + totalExpenses
+        (vehicle.purchasePrice?.decimalValue ?? 0) + totalExpenses + holdingCost
+    }
+    
+    var holdingCost: Decimal {
+        guard let vehicleId = vehicle.id else { return 0 }
+        let stats = InventoryStatsManager.shared.getStats(for: vehicleId)
+        return stats?.holdingCostAccumulated?.decimalValue ?? 0
+    }
+    
+    var dailyHoldingCost: Decimal {
+        guard daysInInventory > 0 else { return 0 }
+        return holdingCost / Decimal(daysInInventory)
+    }
+    
+    var daysInInventory: Int {
+        HoldingCostCalculator.calculateDaysInInventory(vehicle: vehicle)
+    }
+    
+    var roiPercent: Decimal? {
+        guard let salePrice = vehicle.salePrice?.decimalValue else { return nil }
+        return VehicleFinancialsCalculator.calculateROI(
+            salePrice: salePrice,
+            totalCost: totalCost
+        )
+    }
+    
+    var profitEstimate: Decimal? {
+        guard let askingPrice = vehicle.askingPrice?.decimalValue else { return nil }
+        return VehicleFinancialsCalculator.calculateProfitEstimate(
+            askingPrice: askingPrice,
+            totalCost: totalCost
+        )
     }
 
     private func confirmAndUploadImage() {
@@ -171,6 +203,7 @@ struct VehicleDetailView: View {
                         editMake = vehicle.make ?? ""
                         editModel = vehicle.model ?? ""
                         editYear = vehicle.year == 0 ? "" : String(vehicle.year)
+                        editMileage = vehicle.mileage == 0 ? "" : String(vehicle.mileage)
                         editPurchaseDate = vehicle.purchaseDate ?? Date()
                         editNotes = vehicle.notes ?? ""
                         editBuyerName = vehicle.buyerName ?? ""
@@ -194,6 +227,7 @@ struct VehicleDetailView: View {
                         editMake = vehicle.make ?? ""
                         editModel = vehicle.model ?? ""
                         editYear = vehicle.year == 0 ? "" : String(vehicle.year)
+                        editMileage = vehicle.mileage == 0 ? "" : String(vehicle.mileage)
                         editPurchaseDate = vehicle.purchaseDate ?? Date()
                         editNotes = vehicle.notes ?? ""
                         editBuyerName = vehicle.buyerName ?? ""
@@ -266,6 +300,7 @@ struct VehicleDetailView: View {
             editMake = vehicle.make ?? ""
             editModel = vehicle.model ?? ""
             editYear = vehicle.year == 0 ? "" : String(vehicle.year)
+            editMileage = vehicle.mileage == 0 ? "" : String(vehicle.mileage)
             editPurchaseDate = vehicle.purchaseDate ?? Date()
             editNotes = vehicle.notes ?? ""
             editBuyerName = vehicle.buyerName ?? ""
@@ -405,6 +440,8 @@ struct VehicleDetailView: View {
                     editRow(label: "model".localizedString, text: $editModel, placeholder: "Camry")
                     Divider().padding(.leading)
                     editRow(label: "year".localizedString, text: $editYear, placeholder: "2024", keyboardType: .numberPad)
+                    Divider().padding(.leading)
+                    editRow(label: "mileage".localizedString, text: $editMileage, placeholder: "0", keyboardType: .numberPad)
                     Divider().padding(.leading)
                     editRow(label: "vin".localizedString, text: $editVIN, placeholder: "VIN...", autocapitalization: .characters)
                 }
@@ -866,6 +903,11 @@ struct VehicleDetailView: View {
                 .padding(.horizontal)
             
             VStack(spacing: 12) {
+                // Days in Inventory Indicator
+                if vehicle.status != "sold" {
+                    DaysInInventoryIndicator(days: daysInInventory, showLabel: true, isCompact: false)
+                }
+                
                 // Public Info: Asking Price & Report
                  if let asking = vehicle.askingPrice?.decimalValue, asking > 0 {
                     HStack {
@@ -914,6 +956,29 @@ struct VehicleDetailView: View {
                             .foregroundColor(ColorTheme.accent)
                     }
                     
+                    // Holding Cost
+                    if holdingCost > 0 {
+                        HStack {
+                            Text("holding_cost".localizedString)
+                                .foregroundColor(ColorTheme.secondaryText)
+                            Spacer()
+                            Text(holdingCost.asCurrency())
+                                .fontWeight(.medium)
+                                .foregroundColor(ColorTheme.warning)
+                        }
+                        
+                        if dailyHoldingCost > 0 {
+                            HStack {
+                                Text("holding_cost_per_day".localizedString)
+                                    .foregroundColor(ColorTheme.secondaryText)
+                                Spacer()
+                                Text(dailyHoldingCost.asCurrency())
+                                    .fontWeight(.medium)
+                                    .foregroundColor(ColorTheme.warning)
+                            }
+                        }
+                    }
+                    
                     Divider()
                     
                     HStack {
@@ -923,6 +988,25 @@ struct VehicleDetailView: View {
                         Text(totalCost.asCurrency())
                             .font(.headline)
                             .foregroundColor(ColorTheme.primary)
+                    }
+                    
+                    // Profit Estimate (if asking price set)
+                    if let estimate = profitEstimate, vehicle.status != "sold" {
+                        Divider()
+                        HStack {
+                            Text("estimated_profit".localizedString)
+                                .font(.subheadline)
+                                .foregroundColor(ColorTheme.secondaryText)
+                            Spacer()
+                            HStack(spacing: 4) {
+                                Image(systemName: estimate >= 0 ? "arrow.up" : "arrow.down")
+                                    .font(.caption)
+                                Text(estimate.asCurrency())
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundColor(estimate >= 0 ? ColorTheme.success : ColorTheme.danger)
+                        }
                     }
                 }
                 
@@ -944,6 +1028,16 @@ struct VehicleDetailView: View {
                             Spacer()
                             Text(d.formatted(date: .abbreviated, time: .omitted))
                                 .fontWeight(.medium)
+                        }
+                    }
+                    
+                    // ROI Display
+                    if let roi = roiPercent {
+                        HStack {
+                            Text("roi".localizedString)
+                                .foregroundColor(ColorTheme.secondaryText)
+                            Spacer()
+                            ROIBadge(roi: roi, isCompact: true, showLabel: false)
                         }
                     }
                     
@@ -1050,6 +1144,7 @@ struct VehicleDetailView: View {
         vehicle.make = editMake
         vehicle.model = editModel
         if let y = Int32(editYear) { vehicle.year = y }
+        if let m = Int32(editMileage) { vehicle.mileage = m } else { vehicle.mileage = 0 }
         vehicle.purchaseDate = editPurchaseDate
         let trimmedNotes = editNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         vehicle.notes = trimmedNotes.isEmpty ? nil : trimmedNotes

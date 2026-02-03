@@ -82,6 +82,17 @@ struct Ezcar24BusinessApp: App {
                 .id("\(regionSettings.selectedLanguage.id)-\(persistenceController.activeStoreKey)")
                 .onOpenURL { url in
                     Task {
+                        // Handle Notion OAuth callback
+                        if url.scheme == "ezcar24" && url.host == "notion" {
+                            do {
+                                try await NotionAuthManager.shared.handleCallback(url: url)
+                            } catch {
+                                print("Notion OAuth error: \(error)")
+                            }
+                            return
+                        }
+                        
+                        // Handle other deep links (Supabase auth, etc.)
                         do {
                             try await sessionStore.handleDeepLink(url)
                         } catch {

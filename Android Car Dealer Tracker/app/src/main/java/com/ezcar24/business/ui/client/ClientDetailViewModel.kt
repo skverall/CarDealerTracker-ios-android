@@ -66,7 +66,11 @@ class ClientDetailViewModel @Inject constructor(
         phone: String,
         email: String,
         notes: String,
-        status: String?
+        status: String?,
+        leadStage: LeadStage = LeadStage.new,
+        leadSource: LeadSource? = null,
+        estimatedValue: java.math.BigDecimal? = null,
+        priority: Int = 0
     ) {
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true) }
@@ -81,6 +85,10 @@ class ClientDetailViewModel @Inject constructor(
                 email = email,
                 notes = notes,
                 status = status,
+                leadStage = leadStage,
+                leadSource = leadSource,
+                estimatedValue = estimatedValue,
+                priority = priority,
                 updatedAt = now
             ) ?: Client(
                 id = id,
@@ -89,6 +97,11 @@ class ClientDetailViewModel @Inject constructor(
                 email = email,
                 notes = notes,
                 status = status ?: "new",
+                leadStage = leadStage,
+                leadSource = leadSource,
+                estimatedValue = estimatedValue,
+                priority = priority,
+                leadCreatedAt = now,
                 createdAt = now,
                 updatedAt = now,
                 deletedAt = null,
@@ -103,19 +116,36 @@ class ClientDetailViewModel @Inject constructor(
         }
     }
 
-    fun addInteraction(type: String, notes: String, date: Date = Date()) {
+    fun addInteraction(
+        type: String,
+        title: String,
+        detail: String,
+        outcome: String? = null,
+        durationMinutes: Int? = null,
+        isFollowUpRequired: Boolean = false,
+        date: Date = Date()
+    ) {
         val client = _uiState.value.client ?: return
         viewModelScope.launch {
             val interaction = ClientInteraction(
                 id = UUID.randomUUID(),
                 clientId = client.id,
-                title = type, // Mapping type to title
-                detail = notes, // Mapping notes to detail
+                title = title,
+                detail = detail,
                 occurredAt = date,
-                stage = "update",
-                value = null
+                stage = client.leadStage.name,
+                value = null,
+                interactionType = type,
+                outcome = outcome,
+                durationMinutes = durationMinutes,
+                isFollowUpRequired = isFollowUpRequired
             )
             interactionDao.upsert(interaction)
+            
+            // Update lastContactAt on the client
+            val updatedClient = client.copy(lastContactAt = date, updatedAt = date)
+            clientDao.upsert(updatedClient)
+            
             loadClient(client.id)
         }
     }
@@ -148,5 +178,59 @@ class ClientDetailViewModel @Inject constructor(
              reminderDao.upsert(reminder.copy(isCompleted = !reminder.isCompleted))
              _uiState.value.client?.let { loadClient(it.id) }
          }
+    }
+
+    fun updateLeadStage(stage: LeadStage) {
+        val client = _uiState.value.client ?: return
+        viewModelScope.launch {
+            val updatedClient = client.copy(
+                leadStage = stage,
+                updatedAt = Date()
+            )
+            clientDao.upsert(updatedClient)
+            loadClient(client.id)
+        }
+    }
+
+    fun updateLeadSource(source: LeadSource?) {
+        val client = _uiState.value.client ?: return
+        viewModelScope.launch {
+            val updatedClient = client.copy(
+                leadSource = source,
+                updatedAt = Date()
+            )
+            clientDao.upsert(updatedClient)
+            loadClient(client.id)
+        }
+    }
+
+    fun updatePriority(priority: Int) {
+        val client = _uiState.value.client ?: return
+        viewModelScope.launch {
+            val updatedClient = client.copy(
+                priority = priority,
+                updatedAt = Date()
+            )
+            clientDao.upsert(updatedClient)
+            loadClient(client.id)
+        }
+    }
+
+    fun updateEstimatedValue(value: java.math.BigDecimal?) {
+        val client = _uiState.value.client ?: return
+        viewModelScope.launch {
+            val updatedClient = client.copy(
+                estimatedValue = value,
+                updatedAt = Date()
+            )
+            clientDao.upsert(updatedClient)
+            loadClient(client.id)
+        }
+    }
+
+    fun calculateLeadScore(): Int {
+        val client = _uiState.value.client ?: return 0
+        val interactions = _uiState.value.interactions
+        return com.ezcar24.business.util.calculator.LeadFunnelCalculator.calculateLeadScore(client, interactions)
     }
 }

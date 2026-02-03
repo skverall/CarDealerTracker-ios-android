@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import CoreData
 
 struct VehicleListView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -343,65 +344,119 @@ struct VehicleCard: View {
     @ObservedObject var vehicle: Vehicle
     let viewModel: VehicleViewModel
 
+    private var daysInInventory: Int {
+        HoldingCostCalculator.calculateDaysInInventory(vehicle: vehicle)
+    }
+
+    private var holdingCost: Decimal {
+        guard let vehicleId = vehicle.id else { return 0 }
+        let stats = InventoryStatsManager.shared.getStats(for: vehicleId)
+        return stats?.holdingCostAccumulated?.decimalValue ?? 0
+    }
+    
+    private var dailyHoldingCost: Decimal {
+        guard daysInInventory > 0 else { return 0 }
+        return holdingCost / Decimal(daysInInventory)
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            // Header with Image and Basic Info
-            HStack(alignment: .top, spacing: 12) {
+            // Main Content Row
+            HStack(alignment: .top, spacing: 14) {
+                // Leading: Thumbnail
                 if let id = vehicle.id {
                     VehicleThumbnailView(vehicleID: id)
+                        .frame(width: 90, height: 70)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
                 }
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                            .font(.headline)
-                            .foregroundColor(ColorTheme.primaryText)
-                            .lineLimit(1)
+                // Center/Right: Details
+                VStack(alignment: .leading, spacing: 6) {
+                    
+                    // Top Row: Title + Status
+                    HStack(alignment: .top) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                                .font(.headline)
+                                .foregroundColor(ColorTheme.primaryText)
+                                .lineLimit(1)
+                            
+                            HStack(spacing: 8) {
+                                Text(vehicle.year.asYear())
+                                    .fontWeight(.medium)
+                                if vehicle.mileage > 0 {
+                                    Text("•")
+                                        .foregroundColor(ColorTheme.secondaryText.opacity(0.5))
+                                    Text("\(vehicle.mileage) km")
+                                }
+                            }
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondary)
+                        }
                         
                         Spacer()
+                        
+                        if vehicle.status != "sold" && daysInInventory > 0 {
+                            DaysInInventoryBadge(days: daysInInventory)
+                        }
                         
                         StatusBadge(status: vehicle.status ?? "")
                     }
                     
-                    Text("VIN: \(vehicle.vin ?? "")")
-                        .font(.caption)
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .monospacedDigit()
-                    
+                    // Second Row: VIN + Expenses Count
                     HStack(spacing: 12) {
-                        Label(vehicle.year.asYear(), systemImage: "calendar")
+                        Text("VIN: \(vehicle.vin ?? "")")
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundColor(ColorTheme.tertiaryText)
+                        
                         if permissionService.canViewVehicleCost() {
-                            Label("\(viewModel.expenseCount(for: vehicle)) exp", systemImage: "wrench.and.screwdriver")
+                            Label("\(viewModel.expenseCount(for: vehicle)) exp", systemImage: "wrench.and.screwdriver.fill")
+                                .font(.caption2)
+                                .foregroundColor(ColorTheme.tertiaryText)
                         }
                     }
-                    .font(.caption2)
-                    .foregroundColor(ColorTheme.tertiaryText)
-                    .padding(.top, 2)
                     
-                    Text("Added: \(vehicle.purchaseDate ?? Date(), formatter: dateFormatter)")
-                        .font(.caption2)
-                        .foregroundColor(ColorTheme.tertiaryText)
+                    // Third Row: Days Since Purchase Badge (Inventory) or Added Date (Sold)
+                    if vehicle.status != "sold", let purchaseDate = vehicle.purchaseDate {
+                        DaysSincePurchaseView(purchaseDate: purchaseDate)
+                            .padding(.top, 4)
+                        if holdingCost > 0 {
+                            HoldingCostMiniIndicator(
+                                dailyCost: dailyHoldingCost,
+                                accumulatedCost: holdingCost
+                            )
+                            .padding(.top, 4)
+                        }
+                    } else if let date = vehicle.purchaseDate {
+                         Text("Added: \(date, formatter: dateFormatter)")
+                            .font(.caption2)
+                            .foregroundColor(ColorTheme.tertiaryText)
+                            .padding(.top, 2)
+                    }
                 }
             }
-            .padding(12)
+            .padding(16)
             
             Divider()
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 16)
             
+            // Footer: Cost & Financials
             let canSeeCost = permissionService.canViewVehicleCost()
             let canSeeProfit = permissionService.canViewVehicleProfit()
-
-            // Financial Footer
+            
             if canSeeCost || canSeeProfit {
-                HStack {
+                HStack(alignment: .firstTextBaseline) {
                     if canSeeCost {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("purchase_price".localizedString)
-                                .font(.caption2)
+                            Text("purchase_price".localizedString.uppercased())
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(ColorTheme.secondaryText)
+                                .tracking(0.5)
+                            
                             Text((vehicle.purchasePrice as Decimal? ?? 0).asCurrency())
-                                .font(.subheadline)
-                                .fontWeight(.medium)
+                                .font(.subheadline.weight(.semibold))
                                 .foregroundColor(ColorTheme.primaryText)
                         }
                     }
@@ -410,36 +465,42 @@ struct VehicleCard: View {
                     
                     if canSeeCost {
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("total_cost".localizedString)
-                                .font(.caption2)
+                            Text("total_cost".localizedString.uppercased())
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(ColorTheme.secondaryText)
-                            Text(viewModel.totalCost(for: vehicle).asCurrency())
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
+                                .tracking(0.5)
+                            
+                            let totalCost = viewModel.totalCost(for: vehicle) + holdingCost
+                            Text(totalCost.asCurrency())
+                                .font(.subheadline.weight(.bold))
                                 .foregroundColor(ColorTheme.primary)
                         }
                     }
                     
                     if canSeeProfit, let p = profitValue() {
+                        // Adjust profit calculation to include holding cost
+                        let adjustedProfit = p - holdingCost
                         Spacer()
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("profit".localizedString)
-                                .font(.caption2)
+                            Text("profit".localizedString.uppercased())
+                                .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(ColorTheme.secondaryText)
-                            Text(p.asCurrency())
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(p >= 0 ? ColorTheme.success : ColorTheme.danger)
+                                .tracking(0.5)
+                            
+                            Text(adjustedProfit.asCurrency())
+                                .font(.subheadline.weight(.black))
+                                .foregroundColor(adjustedProfit >= 0 ? ColorTheme.success : ColorTheme.danger)
                         }
                     }
                 }
-                .padding(12)
-                .background(ColorTheme.background.opacity(0.5))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(ColorTheme.secondaryBackground.opacity(0.3))
             }
         }
         .background(ColorTheme.background)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
     }
     
     private var dateFormatter: DateFormatter {
@@ -643,6 +704,36 @@ extension VehicleListView {
                         .overlay(
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(viewModel.selectedStatus == "all" ? Color.gray.opacity(0.2) : Color.blue.opacity(0.5), lineWidth: 1)
+                        )
+                }
+                
+                // Burning Inventory Quick Filter
+                Menu {
+                    Button(action: {
+                        viewModel.sortOption = .daysDesc
+                        viewModel.selectedStatus = "all"
+                        viewModel.fetchVehicles()
+                    }) {
+                        Label("all_vehicles".localizedString, systemImage: "car.fill")
+                    }
+                    
+                    Button(action: {
+                        viewModel.sortOption = .daysDesc
+                        viewModel.selectedStatus = "all"
+                        viewModel.fetchVehicles()
+                    }) {
+                        Label("burning_inventory".localizedString, systemImage: "flame.fill")
+                    }
+                } label: {
+                    Image(systemName: "flame")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(ColorTheme.warning)
+                        .padding(10)
+                        .background(ColorTheme.background)
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
                         )
                 }
             }

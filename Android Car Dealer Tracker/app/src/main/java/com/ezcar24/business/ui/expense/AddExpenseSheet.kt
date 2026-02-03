@@ -36,6 +36,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ezcar24.business.data.local.ExpenseCategoryType
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.User
 import com.ezcar24.business.data.local.Vehicle
@@ -50,33 +51,29 @@ import java.util.Locale
 @Composable
 fun AddExpenseSheet(
     onDismiss: () -> Unit,
-    onSave: (BigDecimal, Date, String, String, Vehicle?, User?, FinancialAccount?) -> Unit,
+    onSave: (BigDecimal, Date, String, String, Vehicle?, User?, FinancialAccount?, ExpenseCategoryType) -> Unit,
     vehicles: List<Vehicle>,
     users: List<User>,
     accounts: List<FinancialAccount>
 ) {
-    // Form State
     var amountStr by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf("vehicle") } // Default to vehicle
+    var category by remember { mutableStateOf("vehicle") }
     var date by remember { mutableStateOf(Date()) }
+    var expenseType by remember { mutableStateOf(ExpenseCategoryType.OPERATIONAL) }
 
-    // Context Selection State
     var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
     var selectedUser by remember { mutableStateOf<User?>(null) }
     var selectedAccount by remember { mutableStateOf<FinancialAccount?>(null) }
 
-    // Sheet State
     var showVehicleSheet by remember { mutableStateOf(false) }
     var showUserSheet by remember { mutableStateOf(false) }
     var showAccountSheet by remember { mutableStateOf(false) }
 
-    // Helpers
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val isValid = amountStr.isNotEmpty() && (amountStr.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
-    
-    // Categories matching iOS
+
     val categories = remember {
         listOf(
             Triple("vehicle", "Vehicle", Icons.Default.DirectionsCar),
@@ -87,7 +84,12 @@ fun AddExpenseSheet(
         )
     }
 
-    // Effect: reset vehicle if not vehicle category
+    val expenseTypes = listOf(
+        Triple(ExpenseCategoryType.HOLDING_COST, "Holding Cost", Icons.Default.Schedule),
+        Triple(ExpenseCategoryType.IMPROVEMENT, "Improvement", Icons.Default.Build),
+        Triple(ExpenseCategoryType.OPERATIONAL, "Operational", Icons.Default.TrendingUp)
+    )
+
     LaunchedEffect(category) {
         if (category != "vehicle") {
             selectedVehicle = null
@@ -98,15 +100,14 @@ fun AddExpenseSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = EzcarBackgroundLight,
-        dragHandle = null // Custom header
+        dragHandle = null
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 80.dp) // Space for floating button
+                    .padding(bottom = 80.dp)
             ) {
-                // --- Header ---
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -135,9 +136,8 @@ fun AddExpenseSheet(
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    // Menu Placeholder (Templates)
                     IconButton(
-                        onClick = { /* TODO: Templates */ },
+                        onClick = { },
                         modifier = Modifier
                             .size(44.dp)
                             .background(Color.White, CircleShape)
@@ -156,7 +156,6 @@ fun AddExpenseSheet(
                     contentPadding = PaddingValues(vertical = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // --- Hero Amount Input ---
                     item {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -193,8 +192,8 @@ fun AddExpenseSheet(
                                         unfocusedIndicatorColor = Color.Transparent
                                     ),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    placeholder = { 
-                                        Text("0", style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 48.sp, color = Color.LightGray)) 
+                                    placeholder = {
+                                        Text("0", style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 48.sp, color = Color.LightGray))
                                     },
                                     modifier = Modifier.width(IntrinsicSize.Min)
                                 )
@@ -202,7 +201,6 @@ fun AddExpenseSheet(
                         }
                     }
 
-                    // --- Category Selector ---
                     item {
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 20.dp),
@@ -214,8 +212,8 @@ fun AddExpenseSheet(
                                     title = title,
                                     icon = icon,
                                     isSelected = category == key,
-                                    onClick = { 
-                                        category = key 
+                                    onClick = {
+                                        category = key
                                         focusManager.clearFocus()
                                     }
                                 )
@@ -223,7 +221,47 @@ fun AddExpenseSheet(
                         }
                     }
 
-                    // --- Details Card ---
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp)
+                                .padding(bottom = 16.dp)
+                        ) {
+                            Text(
+                                text = "Expense Type",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                items(expenseTypes) { (type, title, icon) ->
+                                    val isSelected = expenseType == type
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { expenseType = type },
+                                        label = { Text(title) },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = icon,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = EzcarNavy,
+                                            selectedLabelColor = Color.White,
+                                            selectedLeadingIconColor = Color.White
+                                        ),
+                                        border = if (!isSelected) FilterChipDefaults.filterChipBorder() else null
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     item {
                         Column(
                             modifier = Modifier
@@ -232,7 +270,6 @@ fun AddExpenseSheet(
                                 .background(Color.White, RoundedCornerShape(20.dp))
                                 .clip(RoundedCornerShape(20.dp))
                         ) {
-                            // Description
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -255,14 +292,13 @@ fun AddExpenseSheet(
                                             unfocusedIndicatorColor = Color.Transparent
                                         ),
                                         modifier = Modifier.fillMaxWidth()
-                                            .offset(x = (-12).dp, y = (-12).dp) // Adjust padding to align
+                                            .offset(x = (-12).dp, y = (-12).dp)
                                     )
                                 }
                             }
 
                             Divider(color = Color.LightGray.copy(alpha = 0.3f), modifier = Modifier.padding(start = 56.dp))
 
-                            // Date
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -273,7 +309,6 @@ fun AddExpenseSheet(
                                             context,
                                             { _, y, m, d ->
                                                 cal.set(y, m, d)
-                                                // Show TimePicker immediately after Date
                                                 TimePickerDialog(
                                                     context,
                                                     { _, hour, minute ->
@@ -283,7 +318,7 @@ fun AddExpenseSheet(
                                                     },
                                                     cal.get(Calendar.HOUR_OF_DAY),
                                                     cal.get(Calendar.MINUTE),
-                                                    true // 24h format
+                                                    true
                                                 ).show()
                                             },
                                             cal.get(Calendar.YEAR),
@@ -310,7 +345,6 @@ fun AddExpenseSheet(
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
-                    // --- Context Selectors ---
                     item {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -345,8 +379,7 @@ fun AddExpenseSheet(
                     }
                 }
             }
-            
-            // --- Save Button ---
+
             Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -357,7 +390,7 @@ fun AddExpenseSheet(
                     onClick = {
                         val amt = amountStr.toBigDecimalOrNull()
                         if (amt != null && amt > BigDecimal.ZERO) {
-                            onSave(amt, date, description, category, selectedVehicle, selectedUser, selectedAccount)
+                            onSave(amt, date, description, category, selectedVehicle, selectedUser, selectedAccount, expenseType)
                         }
                     },
                     enabled = isValid,
@@ -378,8 +411,6 @@ fun AddExpenseSheet(
             }
         }
 
-        // --- Bottom Sheets for Context ---
-        
         if (showVehicleSheet) {
             ModalBottomSheet(onDismissRequest = { showVehicleSheet = false }, containerColor = Color.White) {
                 SelectionListSheet(
@@ -391,7 +422,7 @@ fun AddExpenseSheet(
                             Text(vehicle.vin ?: "No VIN", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                         }
                     },
-                    onSelect = { 
+                    onSelect = {
                         selectedVehicle = it
                         showVehicleSheet = false
                     },
@@ -402,16 +433,16 @@ fun AddExpenseSheet(
                 )
             }
         }
-        
+
         if (showUserSheet) {
             ModalBottomSheet(onDismissRequest = { showUserSheet = false }, containerColor = Color.White) {
                 SelectionListSheet(
                     title = "Select User",
                     items = users,
                     itemContent = { user -> Text(user.name ?: "Unknown", fontWeight = FontWeight.SemiBold) },
-                    onSelect = { 
+                    onSelect = {
                         selectedUser = it
-                        showUserSheet = false 
+                        showUserSheet = false
                     },
                     onClear = {
                         selectedUser = null
@@ -420,16 +451,16 @@ fun AddExpenseSheet(
                 )
             }
         }
-        
+
         if (showAccountSheet) {
             ModalBottomSheet(onDismissRequest = { showAccountSheet = false }, containerColor = Color.White) {
                 SelectionListSheet(
                     title = "Select Account",
                     items = accounts,
                     itemContent = { account -> Text(account.accountType?.replaceFirstChar { it.titlecase() } ?: "Account", fontWeight = FontWeight.SemiBold) },
-                    onSelect = { 
+                    onSelect = {
                         selectedAccount = it
-                        showAccountSheet = false 
+                        showAccountSheet = false
                     },
                     onClear = {
                         selectedAccount = null
@@ -444,10 +475,10 @@ fun AddExpenseSheet(
 @Composable
 fun CategoryItem(title: String, icon: ImageVector, isSelected: Boolean, onClick: () -> Unit) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally, 
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.clickable(
             interactionSource = remember { MutableInteractionSource() },
-            indication = null, // No ripple for custom interaction if wanted, but standard is fine
+            indication = null,
             onClick = onClick
         )
     ) {
@@ -505,14 +536,14 @@ fun ContextSelectorButton(
                 modifier = Modifier.size(20.dp)
             )
         }
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         Column(modifier = Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1)
         }
-        
+
         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.LightGray)
     }
 }
@@ -532,7 +563,7 @@ fun <T> SelectionListSheet(
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(20.dp)
         )
-        
+
         LazyColumn {
             item {
                 Row(
@@ -546,7 +577,7 @@ fun <T> SelectionListSheet(
                 }
                 Divider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
             }
-            
+
             items(items) { item ->
                 Row(
                     modifier = Modifier

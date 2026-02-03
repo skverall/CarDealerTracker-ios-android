@@ -18,6 +18,15 @@ extension Client {
     @NSManaged public var updatedAt: Date?
     @NSManaged public var deletedAt: Date?
     @NSManaged public var status: String?
+    @NSManaged public var leadStage: String?
+    @NSManaged public var leadSource: String?
+    @NSManaged public var assignedUserId: UUID?
+    @NSManaged public var estimatedValue: NSDecimalNumber?
+    @NSManaged public var priority: Int32
+    @NSManaged public var leadScore: Int32
+    @NSManaged public var leadCreatedAt: Date?
+    @NSManaged public var lastContactAt: Date?
+    @NSManaged public var nextFollowUpAt: Date?
     @NSManaged public var interactions: NSSet?
     @NSManaged public var reminders: NSSet?
     @NSManaged public var vehicle: Vehicle?

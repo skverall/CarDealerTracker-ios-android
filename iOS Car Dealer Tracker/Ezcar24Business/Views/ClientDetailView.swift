@@ -647,14 +647,35 @@ struct ClientDetailView: View {
                     }
                     Spacer()
                     if !phone.isEmpty {
-                        Button {
-                            call(phone)
-                        } label: {
-                            Image(systemName: "phone.circle.fill")
-                                .font(.system(size: 28))
-                                .foregroundColor(ColorTheme.success)
+                        HStack(spacing: 8) {
+                            Button {
+                                call(phone)
+                            } label: {
+                                Image(systemName: "phone.circle.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundColor(ColorTheme.success)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button {
+                                whatsapp(phone)
+                            } label: {
+                                Image(systemName: "message.circle.fill")
+                                    .font(.system(size: 28))
+                                    .foregroundColor(.green)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button {
+                                sms(phone)
+                            } label: {
+                                Image(systemName: "bubble.left.and.bubble.right.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundColor(ColorTheme.secondary)
+                                    .frame(width: 28, height: 28)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 
@@ -1189,6 +1210,20 @@ struct ClientDetailView: View {
     private func call(_ phone: String) {
         let clean = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
         if let url = URL(string: "tel://\(clean)"), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func whatsapp(_ phone: String) {
+        let clean = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "https://wa.me/\(clean)"), UIApplication.shared.canOpenURL(url) {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func sms(_ phone: String) {
+        let clean = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        if let url = URL(string: "sms:\(clean)"), UIApplication.shared.canOpenURL(url) {
             UIApplication.shared.open(url)
         }
     }

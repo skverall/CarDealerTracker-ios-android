@@ -83,10 +83,7 @@ extension ClientInteraction {
 
     var formattedValue: String? {
         guard let value else { return nil }
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.currencyCode = "AED"
-        return formatter.string(from: value)
+        return value.decimalValue.asCurrencyFallback()
     }
 
     func asDraft() -> InteractionDraft {
@@ -131,44 +128,69 @@ extension ClientReminder {
 
 enum ClientStatus: String, CaseIterable, Identifiable {
     case new
-    case inProgress = "in_progress"
-    case completed
-    case purchased
+    case contacted
+    case viewing
+    case negotiation
+    case sold
 
     var id: String { rawValue }
+    
+    static func fromStoredValue(_ value: String?) -> ClientStatus {
+        switch value {
+        case "contacted":
+            return .contacted
+        case "viewing":
+            return .viewing
+        case "negotiation":
+            return .negotiation
+        case "sold":
+            return .sold
+        case "in_progress":
+            return .contacted
+        case "completed":
+            return .negotiation
+        case "purchased":
+            return .sold
+        default:
+            return .new
+        }
+    }
 
     @MainActor
     var displayName: String {
         switch self {
         case .new: return "client_status_new".localizedString
-        case .inProgress: return "client_status_in_progress".localizedString
-        case .completed: return "client_status_completed".localizedString
-        case .purchased: return "client_status_purchased".localizedString
+        case .contacted: return "client_status_contacted".localizedString
+        case .viewing: return "client_status_viewing".localizedString
+        case .negotiation: return "client_status_negotiating".localizedString
+        case .sold: return "sold".localizedString
         }
     }
 
     var sortOrder: Int {
         switch self {
         case .new: return 0
-        case .inProgress: return 1
-        case .completed: return 2
-        case .purchased: return 3
+        case .contacted: return 1
+        case .viewing: return 2
+        case .negotiation: return 3
+        case .sold: return 4
         }
     }
 
     var color: Color {
         switch self {
         case .new: return ColorTheme.primary
-        case .inProgress: return ColorTheme.warning
-        case .completed: return ColorTheme.success
-        case .purchased: return ColorTheme.success
+        case .contacted: return ColorTheme.warning
+        case .viewing: return Color.orange
+        case .negotiation: return ColorTheme.secondary
+        case .sold: return ColorTheme.success
         }
     }
 }
 
 extension Client {
     var clientStatus: ClientStatus {
-        get { ClientStatus(rawValue: status ?? "new") ?? .new }
+        get { ClientStatus.fromStoredValue(status) }
         set { status = newValue.rawValue }
     }
 }

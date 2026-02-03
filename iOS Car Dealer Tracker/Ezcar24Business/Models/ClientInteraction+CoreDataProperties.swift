@@ -13,6 +13,10 @@ extension ClientInteraction {
     @NSManaged public var occurredAt: Date?
     @NSManaged public var stage: String?
     @NSManaged public var value: NSDecimalNumber?
+    @NSManaged public var interactionType: String?
+    @NSManaged public var outcome: String?
+    @NSManaged public var durationMinutes: Int32
+    @NSManaged public var isFollowUpRequired: Bool
     @NSManaged public var client: Client?
 }
 

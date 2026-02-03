@@ -21,6 +21,7 @@
         <attribute name="salePrice" optional="YES" attributeType="Decimal"/>
         <attribute name="askingPrice" optional="YES" attributeType="Decimal"/>
         <attribute name="reportURL" optional="YES" attributeType="String"/>
+        <attribute name="mileage" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Expense" inverseName="vehicle" inverseEntity="Expense"/>
         <relationship name="clients" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Client" inverseName="vehicle" inverseEntity="Client"/>
         <relationship name="expenseTemplates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExpenseTemplate" inverseName="vehicle" inverseEntity="ExpenseTemplate"/>
@@ -32,6 +33,7 @@
         <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="expenseDescription" optional="YES" attributeType="String"/>
         <attribute name="category" optional="NO" attributeType="String"/>
+        <attribute name="categoryType" optional="YES" attributeType="String"/>
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
@@ -89,6 +91,15 @@
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="status" optional="YES" attributeType="String" defaultValueString="new" syncable="YES"/>
+        <attribute name="leadStage" optional="YES" attributeType="String"/>
+        <attribute name="leadSource" optional="YES" attributeType="String"/>
+        <attribute name="assignedUserId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="estimatedValue" optional="YES" attributeType="Decimal"/>
+        <attribute name="priority" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="leadScore" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="leadCreatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="lastContactAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="nextFollowUpAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <relationship name="interactions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClientInteraction" inverseName="client" inverseEntity="ClientInteraction"/>
         <relationship name="reminders" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClientReminder" inverseName="client" inverseEntity="ClientReminder"/>
         <relationship name="partSales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSale" inverseName="client" inverseEntity="PartSale"/>
@@ -101,6 +112,10 @@
         <attribute name="occurredAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="stage" optional="YES" attributeType="String" defaultValueString="update"/>
         <attribute name="value" optional="YES" attributeType="Decimal"/>
+        <attribute name="interactionType" optional="YES" attributeType="String"/>
+        <attribute name="outcome" optional="YES" attributeType="String"/>
+        <attribute name="durationMinutes" optional="YES" attributeType="Integer 32" usesScalarValueType="YES"/>
+        <attribute name="isFollowUpRequired" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
         <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="interactions" inverseEntity="Client"/>
     </entity>
     <entity name="ClientReminder" representedClassName="ClientReminder" syncable="YES" codeGenerationType="class">
@@ -217,6 +232,36 @@
         <relationship name="part" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Part" inverseName="saleLineItems" inverseEntity="Part"/>
         <relationship name="batch" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="PartBatch" inverseName="saleLineItems" inverseEntity="PartBatch"/>
     </entity>
-
-
+    <entity name="HoldingCostSettings" representedClassName="HoldingCostSettings" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="dealerId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="annualRatePercent" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
+        <attribute name="dailyRatePercent" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
+        <attribute name="isEnabled" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="VehicleInventoryStats" representedClassName="VehicleInventoryStats" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="vehicleId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="daysInInventory" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
+        <attribute name="agingBucket" optional="NO" attributeType="String"/>
+        <attribute name="totalCost" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
+        <attribute name="holdingCostAccumulated" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
+        <attribute name="roiPercent" optional="YES" attributeType="Decimal"/>
+        <attribute name="profitEstimate" optional="YES" attributeType="Decimal"/>
+        <attribute name="lastCalculatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
+    <entity name="InventoryAlert" representedClassName="InventoryAlert" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="vehicleId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
+        <attribute name="alertType" optional="NO" attributeType="String"/>
+        <attribute name="severity" optional="NO" attributeType="String"/>
+        <attribute name="message" optional="NO" attributeType="String"/>
+        <attribute name="isRead" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="dismissedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+    </entity>
 </model>

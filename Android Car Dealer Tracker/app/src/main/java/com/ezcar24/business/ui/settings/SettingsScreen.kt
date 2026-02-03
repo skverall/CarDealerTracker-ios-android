@@ -41,6 +41,11 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToFinancialAccounts: () -> Unit,
     onNavigateToTeamMembers: () -> Unit,
+    onNavigateToBackupCenter: () -> Unit,
+    onNavigateToDataHealth: () -> Unit,
+    onNavigateToHoldingCostSettings: () -> Unit,
+    onNavigateToCRMSettings: () -> Unit = {},
+    onNavigateToInventoryAlertsSettings: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -235,13 +240,46 @@ fun SettingsScreen(
                 }
             }
             
+            // Inventory
+            item {
+                SettingsSection(title = "Inventory") {
+                    SettingsRow(
+                        title = "Holding Cost Settings",
+                        icon = Icons.Default.Calculate,
+                        color = EzcarGreen,
+                        onClick = onNavigateToHoldingCostSettings
+                    )
+                    Divider()
+                    SettingsRow(
+                        title = "Inventory Alerts",
+                        icon = Icons.Default.NotificationsActive,
+                        color = EzcarOrange,
+                        onClick = onNavigateToInventoryAlertsSettings,
+                        subtitle = "Configure alert thresholds"
+                    )
+                }
+            }
+
+            // CRM
+            item {
+                SettingsSection(title = "CRM") {
+                    SettingsRow(
+                        title = "CRM Settings",
+                        icon = Icons.Default.People,
+                        color = EzcarBlueBright,
+                        onClick = onNavigateToCRMSettings,
+                        subtitle = "Lead stages and pipeline"
+                    )
+                }
+            }
+
             // Management
             item {
                 SettingsSection(title = "Management") {
                     SettingsRow(
                         title = "Team Members",
                         icon = Icons.Default.Group,
-                        color = EzcarBlueBright,
+                        color = EzcarPurple,
                         onClick = onNavigateToTeamMembers
                     )
                     Divider()
@@ -249,15 +287,14 @@ fun SettingsScreen(
                         title = "Backup & Export",
                         icon = Icons.Default.CloudUpload,
                         color = EzcarOrange,
-                        onClick = { viewModel.triggerBackup() }
+                        onClick = onNavigateToBackupCenter
                     )
                     Divider()
                     SettingsRow(
                         title = "Data Health",
                         icon = Icons.Default.MonitorHeart,
                         color = Color.Cyan, // Teal
-                        onClick = { viewModel.runDiagnostics() },
-                        subtitle = uiState.diagnosticsResult
+                        onClick = onNavigateToDataHealth
                     )
                     Divider()
                     SettingsRow(

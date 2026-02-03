@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
 import com.ezcar24.business.data.local.*
+import com.ezcar24.business.data.local.ExpenseCategoryType
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -30,15 +31,19 @@ data class ExpenseUiState(
     val vehicles: List<Vehicle> = emptyList(),
     val users: List<User> = emptyList(),
     val accounts: List<FinancialAccount> = emptyList(),
-    
+
     // Filters
     val dateFilter: DateFilter = DateFilter.ALL,
     val selectedCategory: String = "All",
+    val selectedExpenseType: ExpenseCategoryType? = null,
     val selectedVehicle: Vehicle? = null,
     val selectedUser: User? = null,
     val searchQuery: String = "",
     val totalAmount: BigDecimal = BigDecimal.ZERO,
-    
+
+    // Summary
+    val expenseTypeBreakdown: Map<ExpenseCategoryType, BigDecimal> = emptyMap(),
+
     val isLoading: Boolean = false
 )
 
@@ -92,6 +97,11 @@ class ExpenseViewModel @Inject constructor(
         _uiState.update { it.copy(selectedCategory = category) }
         applyFilters()
     }
+
+    fun setExpenseTypeFilter(expenseType: ExpenseCategoryType?) {
+        _uiState.update { it.copy(selectedExpenseType = expenseType) }
+        applyFilters()
+    }
     
     fun setVehicleFilter(vehicle: Vehicle?) {
         _uiState.update { it.copy(selectedVehicle = vehicle) }
@@ -108,9 +118,9 @@ class ExpenseViewModel @Inject constructor(
         val now = System.currentTimeMillis()
         val dayMillis = 86400000L
         val query = currentState.searchQuery.trim().lowercase()
-        
+
         var result = currentState.expenses
-        
+
         // Date Filter
         result = when (currentState.dateFilter) {
             DateFilter.TODAY -> result.filter { it.date.time > (now - dayMillis) }
@@ -118,13 +128,18 @@ class ExpenseViewModel @Inject constructor(
             DateFilter.MONTH -> result.filter { it.date.time > (now - (30 * dayMillis)) }
             DateFilter.ALL -> result
         }
-        
+
         // Category Filter
         if (currentState.selectedCategory != "All") {
             val filterCategory = if (currentState.selectedCategory == "Bills") "office" else currentState.selectedCategory
             result = result.filter { it.category.equals(filterCategory, ignoreCase = true) }
         }
-        
+
+        // Expense Type Filter
+        currentState.selectedExpenseType?.let { expenseType ->
+            result = result.filter { it.expenseType == expenseType }
+        }
+
         // Vehicle Filter
         currentState.selectedVehicle?.let { vehicle ->
             result = result.filter { it.vehicleId == vehicle.id }
@@ -138,9 +153,21 @@ class ExpenseViewModel @Inject constructor(
             }
         }
 
+        // Calculate breakdown by expense type
+        val expenseTypeBreakdown = result
+            .groupBy { it.expenseType }
+            .mapValues { (_, expenses) ->
+                expenses.sumOf { it.amount }
+            }
 
         val totalAmount = result.sumOf { it.amount }
-        _uiState.update { it.copy(filteredExpenses = result, totalAmount = totalAmount) }
+        _uiState.update {
+            it.copy(
+                filteredExpenses = result,
+                totalAmount = totalAmount,
+                expenseTypeBreakdown = expenseTypeBreakdown
+            )
+        }
     }
 
     private fun loadDataInternal() {
@@ -180,7 +207,8 @@ class ExpenseViewModel @Inject constructor(
         category: String,
         vehicle: Vehicle?,
         user: User?,
-        account: FinancialAccount?
+        account: FinancialAccount?,
+        expenseType: ExpenseCategoryType = ExpenseCategoryType.OPERATIONAL
     ) {
         viewModelScope.launch {
             val newExpense = Expense(
@@ -192,11 +220,11 @@ class ExpenseViewModel @Inject constructor(
                 vehicleId = vehicle?.id,
                 userId = user?.id,
                 accountId = account?.id,
+                expenseType = expenseType,
                 createdAt = Date(),
                 updatedAt = Date()
             )
             cloudSyncManager.upsertExpense(newExpense)
-            // loadData() // Flow updates automatically
         }
     }
 }

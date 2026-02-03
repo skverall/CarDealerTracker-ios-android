@@ -32,7 +32,7 @@ struct GlobalSearchView: View {
                 if !expenseResults.isEmpty {
                     Section("Expenses") {
                         ForEach(expenseResults) { expense in
-                            RecentExpenseRow(expense: expense)
+                            SearchExpenseRow(expense: expense)
                         }
                     }
                 }
@@ -65,8 +65,6 @@ struct GlobalSearchView: View {
             return
         }
         
-        let lowerQuery = query.lowercased()
-        
         // Search Vehicles
         let vehicleReq: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
         vehicleReq.predicate = NSPredicate(format: "make CONTAINS[cd] %@ OR model CONTAINS[cd] %@ OR vin CONTAINS[cd] %@", query, query, query)
@@ -74,7 +72,7 @@ struct GlobalSearchView: View {
         
         // Search Clients
         let clientReq: NSFetchRequest<Client> = Client.fetchRequest()
-        clientReq.predicate = NSPredicate(format: "firstName CONTAINS[cd] %@ OR lastName CONTAINS[cd] %@ OR phone CONTAINS[cd] %@", query, query, query)
+        clientReq.predicate = NSPredicate(format: "name CONTAINS[cd] %@ OR phone CONTAINS[cd] %@", query, query)
         clientReq.fetchLimit = 5
         
         // Search Expenses
@@ -92,10 +90,7 @@ struct GlobalSearchView: View {
     }
 }
 
-// Minimal row components for results if main ones aren't reusable easily
-// I'll assume VehicleRow and ClientRow might exist or I can make simple ones.
-// RecentExpenseRow is available from DashboardComponents.
-
+// Minimal row components for results
 private struct VehicleRow: View {
     let vehicle: Vehicle
     var body: some View {
@@ -113,11 +108,32 @@ private struct ClientRow: View {
     let client: Client
     var body: some View {
         VStack(alignment: .leading) {
-            Text("\(client.firstName ?? "") \(client.lastName ?? "")")
+            Text(client.name ?? "")
                 .font(.headline)
             Text(client.phone ?? "")
                 .font(.caption)
                 .foregroundColor(.secondary)
+        }
+    }
+}
+
+private struct SearchExpenseRow: View {
+    @ObservedObject var expense: Expense
+    
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading) {
+                Text(expense.expenseDescription ?? expense.category ?? "Expense")
+                    .font(.body)
+                Text((expense.date ?? Date()).formatted(date: .abbreviated, time: .omitted))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            if let amount = expense.amount {
+                Text(amount.decimalValue.formatted(.currency(code: Locale.current.currency?.identifier ?? "USD")))
+                    .font(.headline)
+            }
         }
     }
 }

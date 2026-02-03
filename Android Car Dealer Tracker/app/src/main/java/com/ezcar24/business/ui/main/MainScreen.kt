@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -27,16 +28,24 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.ezcar24.business.ui.client.ClientListScreen
+import com.ezcar24.business.ui.crm.LeadFunnelScreen
+import com.ezcar24.business.ui.crm.LeadManagementScreen
 import com.ezcar24.business.ui.dashboard.DashboardScreen
 import com.ezcar24.business.ui.expense.ExpenseScreen
+import com.ezcar24.business.ui.inventory.InventoryAnalyticsScreen
+import com.ezcar24.business.ui.inventory.InventoryAlertsScreen
+import com.ezcar24.business.ui.parts.PartsDashboardScreen
 import com.ezcar24.business.ui.sale.SalesScreen
+import com.ezcar24.business.ui.settings.HoldingCostSettingsScreen
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.vehicle.VehicleListScreen
+import com.ezcar24.business.ui.search.GlobalSearchScreen
 
 sealed class BottomNavItem(val route: String, val title: String, val icon: ImageVector) {
     object Dashboard : BottomNavItem("dashboard", "Home", Icons.Filled.Home)
     object Vehicles : BottomNavItem("vehicles", "Vehicles", Icons.Filled.DirectionsCar)
     object Expenses : BottomNavItem("expenses", "Expenses", Icons.Filled.CreditCard)
+    object Parts : BottomNavItem("parts", "Parts", Icons.Filled.Store)
     object Sales : BottomNavItem("sales", "Sales", Icons.Filled.AttachMoney)
     object Clients : BottomNavItem("clients", "Clients", Icons.Filled.People)
 }
@@ -55,6 +64,7 @@ fun MainScreen(
         BottomNavItem.Dashboard,
         BottomNavItem.Vehicles,
         BottomNavItem.Expenses,
+        BottomNavItem.Parts,
         BottomNavItem.Sales,
         BottomNavItem.Clients
     )
@@ -104,6 +114,7 @@ fun MainScreen(
                     onNavigateToAccounts = onNavigateToAccounts,
                     onNavigateToDebts = onNavigateToDebts,
                     onNavigateToSettings = onNavigateToSettings,
+                    onNavigateToSearch = { navController.navigate("search") },
                     onNavigateToVehicles = {
                         navController.navigate(BottomNavItem.Vehicles.route) {
                             popUpTo(navController.graph.findStartDestination().id) {
@@ -129,6 +140,16 @@ fun MainScreen(
                             }
                             launchSingleTop = true
                             restoreState = true
+                        }
+                    },
+                    onNavigateToLeadFunnel = {
+                        navController.navigate("lead_funnel") {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToInventoryAnalytics = {
+                        navController.navigate("inventory_analytics") {
+                            launchSingleTop = true
                         }
                     }
                 ) 
@@ -158,9 +179,55 @@ fun MainScreen(
                 ) 
             }
             composable(BottomNavItem.Expenses.route) { ExpenseScreen() }
+            composable(BottomNavItem.Parts.route) { PartsDashboardScreen() }
             composable(BottomNavItem.Sales.route) { SalesScreen() }
             composable(BottomNavItem.Clients.route) { 
                 ClientListScreen(onNavigateToDetail = onNavigateToClientDetail) 
+            }
+            composable("search") {
+                GlobalSearchScreen(
+                    onBack = { navController.popBackStack() },
+                    onOpenVehicle = onNavigateToVehicleDetail,
+                    onOpenClient = onNavigateToClientDetail
+                )
+            }
+            composable("lead_funnel") {
+                LeadFunnelScreen(
+                    onBack = { navController.popBackStack() },
+                    onLeadClick = { clientId ->
+                        navController.popBackStack()
+                        onNavigateToClientDetail(clientId)
+                    }
+                )
+            }
+            composable("lead_management") {
+                LeadManagementScreen(
+                    onBack = { navController.popBackStack() },
+                    onLeadClick = { clientId ->
+                        onNavigateToClientDetail(clientId)
+                    },
+                    onAddLead = {
+                        onNavigateToClientDetail(null)
+                    }
+                )
+            }
+            composable("inventory_analytics") {
+                InventoryAnalyticsScreen(
+                    onNavigateToVehicle = onNavigateToVehicleDetail,
+                    onNavigateToAlerts = { navController.navigate("inventory_alerts") },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable("inventory_alerts") {
+                InventoryAlertsScreen(
+                    onNavigateToVehicle = onNavigateToVehicleDetail,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable("holding_cost_settings") {
+                HoldingCostSettingsScreen(
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

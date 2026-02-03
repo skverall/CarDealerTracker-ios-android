@@ -75,6 +75,9 @@ class DashboardViewModel @Inject constructor(
     private val financialAccountDao: FinancialAccountDao,
     private val expenseDao: ExpenseDao,
     private val saleDao: SaleDao,
+    private val clientDao: com.ezcar24.business.data.local.ClientDao,
+    private val clientInteractionDao: com.ezcar24.business.data.local.ClientInteractionDao,
+    private val vehicleInventoryStatsDao: VehicleInventoryStatsDao,
     private val cloudSyncManager: CloudSyncManager
 ) : ViewModel() {
 
@@ -134,8 +137,9 @@ class DashboardViewModel @Inject constructor(
                 vehicleDao.getAllActive(),
                 financialAccountDao.getAll(),
                 saleDao.getAll(),
-                expenseDao.getAll()
-            ) { vehicles, accounts, sales, allExpenses ->
+                expenseDao.getAll(),
+                vehicleInventoryStatsDao.getAllIncludingDeleted()
+            ) { vehicles, accounts, sales, allExpenses, inventoryStats ->
                 val selectedRange = _uiState.value.selectedRange
                 val rangeStartDate = selectedRange.getStartDate()
 
@@ -303,6 +307,53 @@ class DashboardViewModel @Inject constructor(
                     null // 0 -> 0 is no change, or undefined
                 }
 
+                // Calculate CRM metrics
+                val todayStart = getTodayStart()
+                val tomorrowStart = getTomorrowStart()
+                val allClients = clientDao.getAllIncludingDeleted()
+                val allInteractions = mutableListOf<com.ezcar24.business.data.local.ClientInteraction>()
+                allClients.forEach { client ->
+                    allInteractions.addAll(clientInteractionDao.getByClient(client.id))
+                }
+                
+                // New leads today
+                val newLeadsToday = allClients.count { 
+                    (it.leadCreatedAt ?: it.createdAt) >= todayStart && 
+                    (it.leadCreatedAt ?: it.createdAt) < tomorrowStart 
+                }
+                
+                // Calls made today
+                val callsMadeToday = allInteractions.count {
+                    it.occurredAt >= todayStart && 
+                    it.occurredAt < tomorrowStart &&
+                    it.interactionType?.lowercase()?.contains("call") == true
+                }
+                
+                // Pipeline value (active leads only)
+                val pipelineValue = com.ezcar24.business.util.calculator.LeadFunnelCalculator.calculatePipelineValue(allClients)
+                
+                // Conversion rate
+                val wonLeads = allClients.count { it.leadStage == com.ezcar24.business.data.local.LeadStage.closed_won }
+                val conversionRate = if (allClients.isNotEmpty()) {
+                    (wonLeads.toDouble() / allClients.size * 100)
+                } else 0.0
+
+                // Calculate inventory summary metrics
+                val inventoryVehicles = vehicles.filter { it.status != "sold" }
+                val inventoryStatsList = inventoryVehicles.mapNotNull { vehicle ->
+                    inventoryStats.find { it.vehicleId == vehicle.id }
+                }
+                
+                val totalVehiclesInInventory = inventoryVehicles.size
+                val averageDaysInInventory = if (inventoryStatsList.isNotEmpty()) {
+                    inventoryStatsList.sumOf { it.daysInInventory } / inventoryStatsList.size
+                } else 0
+                val vehiclesOver90Days = inventoryStatsList.count { it.daysInInventory >= 90 }
+                val inventoryHealthScore = com.ezcar24.business.util.calculator.InventoryMetricsCalculator.calculateInventoryHealthScore(
+                    inventoryVehicles,
+                    inventoryStatsList
+                )
+
                 _uiState.update { currentState ->
                     currentState.copy(
                         totalAssets = totalAssets,
@@ -317,6 +368,14 @@ class DashboardViewModel @Inject constructor(
                         categoryStats = categoryStats,
                         trendPoints = trendPoints,
                         periodChangePercent = periodChangePercent,
+                        newLeadsToday = newLeadsToday,
+                        callsMadeToday = callsMadeToday,
+                        pipelineValue = pipelineValue,
+                        conversionRate = conversionRate,
+                        totalVehiclesInInventory = totalVehiclesInInventory,
+                        averageDaysInInventory = averageDaysInInventory,
+                        vehiclesOver90Days = vehiclesOver90Days,
+                        inventoryHealthScore = inventoryHealthScore,
                         isLoading = false
                     )
                 }
@@ -393,10 +452,20 @@ data class DashboardUiState(
     val trendPoints: List<TrendPoint> = emptyList(),
     val periodChangePercent: Double? = null,
     val isLoading: Boolean = true,
+    // CRM fields
+    val newLeadsToday: Int = 0,
+    val callsMadeToday: Int = 0,
+    val pipelineValue: BigDecimal = BigDecimal.ZERO,
+    val conversionRate: Double = 0.0,
     // Sync state fields
     val syncState: com.ezcar24.business.data.sync.SyncState = com.ezcar24.business.data.sync.SyncState.Idle,
     val lastSyncTime: Date? = null,
-    val queueCount: Int = 0
+    val queueCount: Int = 0,
+    // Inventory summary fields
+    val totalVehiclesInInventory: Int = 0,
+    val averageDaysInInventory: Int = 0,
+    val vehiclesOver90Days: Int = 0,
+    val inventoryHealthScore: Int = 100
 )
 
 data class CategoryStat(

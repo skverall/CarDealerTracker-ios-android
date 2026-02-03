@@ -69,7 +69,7 @@ object AppModule {
             "ezcar24_business.db"
         )
         .fallbackToDestructiveMigration() // For development speed
-        .addMigrations(AppDatabase.MIGRATION_1_2)
+        .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6)
         .build()
     }
 
@@ -132,4 +132,42 @@ object AppModule {
     @Provides
     @Singleton
     fun provideClientReminderDao(db: AppDatabase): com.ezcar24.business.data.local.ClientReminderDao = db.clientReminderDao()
+
+    @Provides
+    @Singleton
+    fun providePartDao(db: AppDatabase): com.ezcar24.business.data.local.PartDao = db.partDao()
+
+    @Provides
+    @Singleton
+    fun providePartBatchDao(db: AppDatabase): com.ezcar24.business.data.local.PartBatchDao = db.partBatchDao()
+
+    @Provides
+    @Singleton
+    fun providePartSaleDao(db: AppDatabase): com.ezcar24.business.data.local.PartSaleDao = db.partSaleDao()
+
+    @Provides
+    @Singleton
+    fun providePartSaleLineItemDao(db: AppDatabase): com.ezcar24.business.data.local.PartSaleLineItemDao = db.partSaleLineItemDao()
+
+    @Provides
+    @Singleton
+    fun provideHoldingCostSettingsDao(db: AppDatabase): com.ezcar24.business.data.local.HoldingCostSettingsDao = db.holdingCostSettingsDao()
+
+    @Provides
+    @Singleton
+    fun provideVehicleInventoryStatsDao(db: AppDatabase): com.ezcar24.business.data.local.VehicleInventoryStatsDao = db.vehicleInventoryStatsDao()
+
+    @Provides
+    @Singleton
+    fun provideInventoryAlertDao(db: AppDatabase): com.ezcar24.business.data.local.InventoryAlertDao = db.inventoryAlertDao()
+
+    @Provides
+    @Singleton
+    fun provideWorkManagerConfiguration(
+        @ApplicationContext context: Context
+    ): androidx.work.Configuration {
+        return androidx.work.Configuration.Builder()
+            .setMinimumLoggingLevel(android.util.Log.INFO)
+            .build()
+    }
 }

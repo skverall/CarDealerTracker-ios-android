@@ -102,6 +102,17 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+extension AppRegion {
+    static func storedRegion() -> AppRegion {
+        let key = "app_selected_region"
+        if let savedRegion = UserDefaults.standard.string(forKey: key),
+           let region = AppRegion(rawValue: savedRegion) {
+            return region
+        }
+        return .uae
+    }
+}
+
 // MARK: - Supported Languages
 
 enum AppLanguage: String, CaseIterable, Codable, Identifiable {

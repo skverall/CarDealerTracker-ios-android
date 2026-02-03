@@ -220,7 +220,11 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.USER to db.userDao().count(),
             SyncEntityType.ACCOUNT to db.financialAccountDao().countAll(),
             SyncEntityType.ACCOUNT_TRANSACTION to db.accountTransactionDao().getAllIncludingDeleted().count { it.deletedAt == null },
-            SyncEntityType.TEMPLATE to db.expenseTemplateDao().getAllIncludingDeleted().count { it.deletedAt == null }
+            SyncEntityType.TEMPLATE to db.expenseTemplateDao().getAllIncludingDeleted().count { it.deletedAt == null },
+            SyncEntityType.PART to db.partDao().count(),
+            SyncEntityType.PART_BATCH to db.partBatchDao().count(),
+            SyncEntityType.PART_SALE to db.partSaleDao().count(),
+            SyncEntityType.PART_SALE_LINE_ITEM to db.partSaleLineItemDao().count()
         )
 
         var remoteCounts: Map<SyncEntityType, Int>? = null
@@ -237,7 +241,11 @@ class CloudSyncManager @Inject constructor(
                 SyncEntityType.USER to snapshot.users.count { it.deletedAt == null },
                 SyncEntityType.ACCOUNT to snapshot.accounts.count { it.deletedAt == null },
                 SyncEntityType.ACCOUNT_TRANSACTION to snapshot.accountTransactions.count { it.deletedAt == null },
-                SyncEntityType.TEMPLATE to snapshot.templates.count { it.deletedAt == null }
+                SyncEntityType.TEMPLATE to snapshot.templates.count { it.deletedAt == null },
+                SyncEntityType.PART to snapshot.parts.count { it.deletedAt == null },
+                SyncEntityType.PART_BATCH to snapshot.partBatches.count { it.deletedAt == null },
+                SyncEntityType.PART_SALE to snapshot.partSales.count { it.deletedAt == null },
+                SyncEntityType.PART_SALE_LINE_ITEM to snapshot.partSaleLineItems.count { it.deletedAt == null }
             )
         } catch (e: Exception) {
             remoteFetchError = e.message
@@ -314,14 +322,19 @@ class CloudSyncManager @Inject constructor(
             snapshot.users.isNotEmpty() ||
             snapshot.accounts.isNotEmpty() ||
             snapshot.accountTransactions.isNotEmpty() ||
-            snapshot.templates.isNotEmpty()
+            snapshot.templates.isNotEmpty() ||
+            snapshot.parts.isNotEmpty() ||
+            snapshot.partBatches.isNotEmpty() ||
+            snapshot.partSales.isNotEmpty() ||
+            snapshot.partSaleLineItems.isNotEmpty()
     }
 
     private fun snapshotSummary(snapshot: RemoteSnapshot): String {
         return "counts vehicles=${snapshot.vehicles.size} expenses=${snapshot.expenses.size} sales=${snapshot.sales.size} " +
             "debts=${snapshot.debts.size} debtPayments=${snapshot.debtPayments.size} clients=${snapshot.clients.size} " +
             "users=${snapshot.users.size} accounts=${snapshot.accounts.size} accountTransactions=${snapshot.accountTransactions.size} " +
-            "templates=${snapshot.templates.size}"
+            "templates=${snapshot.templates.size} parts=${snapshot.parts.size} partBatches=${snapshot.partBatches.size} " +
+            "partSales=${snapshot.partSales.size} partSaleLineItems=${snapshot.partSaleLineItems.size}"
     }
 
     private fun buildRemoteIdMap(snapshot: RemoteSnapshot): Map<SyncEntityType, Set<UUID>> {
@@ -335,7 +348,11 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.USER to snapshot.users.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.ACCOUNT to snapshot.accounts.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.ACCOUNT_TRANSACTION to snapshot.accountTransactions.mapNotNull { it.id.toUUID() }.toSet(),
-            SyncEntityType.TEMPLATE to snapshot.templates.mapNotNull { it.id.toUUID() }.toSet()
+            SyncEntityType.TEMPLATE to snapshot.templates.mapNotNull { it.id.toUUID() }.toSet(),
+            SyncEntityType.PART to snapshot.parts.mapNotNull { it.id.toUUID() }.toSet(),
+            SyncEntityType.PART_BATCH to snapshot.partBatches.mapNotNull { it.id.toUUID() }.toSet(),
+            SyncEntityType.PART_SALE to snapshot.partSales.mapNotNull { it.id.toUUID() }.toSet(),
+            SyncEntityType.PART_SALE_LINE_ITEM to snapshot.partSaleLineItems.mapNotNull { it.id.toUUID() }.toSet()
         )
     }
 
@@ -382,6 +399,20 @@ class CloudSyncManager @Inject constructor(
             } catch (e: Exception) {
                 Log.d(tag, "No image for vehicle $vehicleId at $path")
             }
+        }
+    }
+
+    suspend fun uploadBackupArchive(fileName: String, dealerId: UUID, data: ByteArray) = withContext(Dispatchers.IO) {
+        val path = "${dealerId}/backups/$fileName"
+        try {
+            client.storage
+                .from("dealer-backups")
+                .upload(path, data) {
+                    upsert = true
+                    contentType = ContentType.Application.Zip
+                }
+        } catch (e: Exception) {
+            Log.e(tag, "uploadBackupArchive failed: ${e.message}", e)
         }
     }
 
@@ -437,6 +468,12 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.TEMPLATE -> "sync_templates"
             SyncEntityType.DEBT -> "sync_debts"
             SyncEntityType.DEBT_PAYMENT -> "sync_debt_payments"
+            SyncEntityType.PART -> "sync_parts"
+            SyncEntityType.PART_BATCH -> "sync_part_batches"
+            SyncEntityType.PART_SALE -> "sync_part_sales"
+            SyncEntityType.PART_SALE_LINE_ITEM -> "sync_part_sale_line_items"
+            SyncEntityType.HOLDING_COST_SETTINGS -> "sync_holding_cost_settings"
+            SyncEntityType.CLIENT_INTERACTION -> "sync_client_interactions"
         }
     }
 
@@ -452,6 +489,12 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.TEMPLATE -> "delete_crm_expense_templates"
             SyncEntityType.DEBT -> "delete_crm_debts"
             SyncEntityType.DEBT_PAYMENT -> "delete_crm_debt_payments"
+            SyncEntityType.PART -> "delete_crm_parts"
+            SyncEntityType.PART_BATCH -> "delete_crm_part_batches"
+            SyncEntityType.PART_SALE -> "delete_crm_part_sales"
+            SyncEntityType.PART_SALE_LINE_ITEM -> "delete_crm_part_sale_line_items"
+            SyncEntityType.HOLDING_COST_SETTINGS -> "delete_crm_holding_cost_settings"
+            SyncEntityType.CLIENT_INTERACTION -> "delete_crm_client_interactions"
         }
     }
 
@@ -497,6 +540,30 @@ class CloudSyncManager @Inject constructor(
                 val remote = json.decodeFromString(RemoteDebtPayment.serializer(), payload)
                 client.postgrest.rpc("sync_debt_payments", payloadParams(listOf(remote)))
             }
+            SyncEntityType.PART -> {
+                val remote = json.decodeFromString(RemotePart.serializer(), payload)
+                client.postgrest.rpc("sync_parts", payloadParams(listOf(remote)))
+            }
+            SyncEntityType.PART_BATCH -> {
+                val remote = json.decodeFromString(RemotePartBatch.serializer(), payload)
+                client.postgrest.rpc("sync_part_batches", payloadParams(listOf(remote)))
+            }
+            SyncEntityType.PART_SALE -> {
+                val remote = json.decodeFromString(RemotePartSale.serializer(), payload)
+                client.postgrest.rpc("sync_part_sales", payloadParams(listOf(remote)))
+            }
+            SyncEntityType.PART_SALE_LINE_ITEM -> {
+                val remote = json.decodeFromString(RemotePartSaleLineItem.serializer(), payload)
+                client.postgrest.rpc("sync_part_sale_line_items", payloadParams(listOf(remote)))
+            }
+            SyncEntityType.HOLDING_COST_SETTINGS -> {
+                val remote = json.decodeFromString(RemoteHoldingCostSettings.serializer(), payload)
+                client.postgrest.rpc("sync_holding_cost_settings", payloadParams(listOf(remote)))
+            }
+            SyncEntityType.CLIENT_INTERACTION -> {
+                val remote = json.decodeFromString(RemoteClientInteraction.serializer(), payload)
+                client.postgrest.rpc("sync_client_interactions", payloadParams(listOf(remote)))
+            }
         }
     }
 
@@ -517,6 +584,10 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.TEMPLATE -> db.expenseTemplateDao().getById(id)?.let { deleteTemplate(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.DEBT -> db.debtDao().getById(id)?.let { deleteDebt(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.DEBT_PAYMENT -> db.debtPaymentDao().getById(id)?.let { deleteDebtPayment(it) } ?: performDeleteRpc(entityType, id, dealerId)
+            SyncEntityType.PART -> db.partDao().getById(id)?.let { deletePart(it) } ?: performDeleteRpc(entityType, id, dealerId)
+            SyncEntityType.PART_BATCH -> db.partBatchDao().getById(id)?.let { deletePartBatch(it) } ?: performDeleteRpc(entityType, id, dealerId)
+            SyncEntityType.PART_SALE -> db.partSaleDao().getById(id)?.let { deletePartSale(it) } ?: performDeleteRpc(entityType, id, dealerId)
+            SyncEntityType.PART_SALE_LINE_ITEM -> db.partSaleLineItemDao().getById(id)?.let { deletePartSaleLineItem(it) } ?: performDeleteRpc(entityType, id, dealerId)
         }
     }
 
@@ -597,6 +668,12 @@ class CloudSyncManager @Inject constructor(
                 SyncEntityType.TEMPLATE -> json.decodeFromString(RemoteExpenseTemplate.serializer(), payload).id.toUUID()
                 SyncEntityType.DEBT -> json.decodeFromString(RemoteDebt.serializer(), payload).id.toUUID()
                 SyncEntityType.DEBT_PAYMENT -> json.decodeFromString(RemoteDebtPayment.serializer(), payload).id.toUUID()
+                SyncEntityType.PART -> json.decodeFromString(RemotePart.serializer(), payload).id.toUUID()
+                SyncEntityType.PART_BATCH -> json.decodeFromString(RemotePartBatch.serializer(), payload).id.toUUID()
+                SyncEntityType.PART_SALE -> json.decodeFromString(RemotePartSale.serializer(), payload).id.toUUID()
+                SyncEntityType.PART_SALE_LINE_ITEM -> json.decodeFromString(RemotePartSaleLineItem.serializer(), payload).id.toUUID()
+                SyncEntityType.HOLDING_COST_SETTINGS -> json.decodeFromString(RemoteHoldingCostSettings.serializer(), payload).id.toUUID()
+                SyncEntityType.CLIENT_INTERACTION -> json.decodeFromString(RemoteClientInteraction.serializer(), payload).id.toUUID()
             }
         } catch (e: Exception) {
             null
@@ -619,6 +696,10 @@ class CloudSyncManager @Inject constructor(
         val accountIds = skippingIds[SyncEntityType.ACCOUNT] ?: emptySet()
         val accountTransactionIds = skippingIds[SyncEntityType.ACCOUNT_TRANSACTION] ?: emptySet()
         val templateIds = skippingIds[SyncEntityType.TEMPLATE] ?: emptySet()
+        val partIds = skippingIds[SyncEntityType.PART] ?: emptySet()
+        val partBatchIds = skippingIds[SyncEntityType.PART_BATCH] ?: emptySet()
+        val partSaleIds = skippingIds[SyncEntityType.PART_SALE] ?: emptySet()
+        val partSaleLineItemIds = skippingIds[SyncEntityType.PART_SALE_LINE_ITEM] ?: emptySet()
 
         val filteredVehicles = snapshot.vehicles.filter { v ->
             val id = v.id.toUUID()
@@ -685,6 +766,41 @@ class CloudSyncManager @Inject constructor(
             id == null || !templateIds.contains(id)
         }
 
+        val filteredParts = snapshot.parts.filter { p ->
+            val id = p.id.toUUID()
+            id == null || !partIds.contains(id)
+        }
+
+        val filteredPartBatches = snapshot.partBatches.filter { b ->
+            val id = b.id.toUUID()
+            if (id != null && partBatchIds.contains(id)) return@filter false
+            val pId = b.partId.toUUID()
+            if (pId != null && partIds.contains(pId)) return@filter false
+            val accountId = b.purchaseAccountId?.toUUID()
+            if (accountId != null && accountIds.contains(accountId)) return@filter false
+            true
+        }
+
+        val filteredPartSales = snapshot.partSales.filter { s ->
+            val id = s.id.toUUID()
+            if (id != null && partSaleIds.contains(id)) return@filter false
+            val accountId = s.accountId?.toUUID()
+            if (accountId != null && accountIds.contains(accountId)) return@filter false
+            true
+        }
+
+        val filteredPartSaleLineItems = snapshot.partSaleLineItems.filter { item ->
+            val id = item.id.toUUID()
+            if (id != null && partSaleLineItemIds.contains(id)) return@filter false
+            val saleId = item.saleId.toUUID()
+            if (saleId != null && partSaleIds.contains(saleId)) return@filter false
+            val partId = item.partId.toUUID()
+            if (partId != null && partIds.contains(partId)) return@filter false
+            val batchId = item.batchId.toUUID()
+            if (batchId != null && partBatchIds.contains(batchId)) return@filter false
+            true
+        }
+
         return RemoteSnapshot(
             users = filteredUsers,
             accounts = filteredAccounts,
@@ -695,7 +811,11 @@ class CloudSyncManager @Inject constructor(
             sales = filteredSales,
             debts = filteredDebts,
             debtPayments = filteredDebtPayments,
-            clients = filteredClients
+            clients = filteredClients,
+            parts = filteredParts,
+            partBatches = filteredPartBatches,
+            partSales = filteredPartSales,
+            partSaleLineItems = filteredPartSaleLineItems
         )
     }
 
@@ -765,6 +885,12 @@ class CloudSyncManager @Inject constructor(
             mergeDebts(snapshot.debts)
             mergeDebtPayments(snapshot.debtPayments)
             mergeAccountTransactions(snapshot.accountTransactions)
+            mergeParts(snapshot.parts)
+            mergePartBatches(snapshot.partBatches)
+            mergePartSales(snapshot.partSales)
+            mergePartSaleLineItems(snapshot.partSaleLineItems)
+            mergeHoldingCostSettings(snapshot.holdingCostSettings)
+            mergeClientInteractions(snapshot.clientInteractions)
 
             if (missingCleanup != null) {
                 applyMissingCleanup(missingCleanup)
@@ -875,6 +1001,8 @@ class CloudSyncManager @Inject constructor(
         db.debtPaymentDao().updateAccountId(oldId, newId)
         db.accountTransactionDao().updateAccountId(oldId, newId)
         db.expenseTemplateDao().updateAccountId(oldId, newId)
+        db.partBatchDao().updateAccountId(oldId, newId)
+        db.partSaleDao().updateAccountId(oldId, newId)
     }
 
     private suspend fun mergeVehicles(remoteVehicles: List<RemoteVehicle>) {
@@ -1203,6 +1331,226 @@ class CloudSyncManager @Inject constructor(
         }
     }
 
+    private suspend fun mergeParts(remoteParts: List<RemotePart>) {
+        if (remoteParts.isEmpty()) return
+        val existing = db.partDao().getAllIncludingDeleted().associateBy { it.id }
+
+        for (remote in remoteParts) {
+            val remoteId = remote.id.toUUID() ?: continue
+            val local = existing[remoteId]
+
+            if (remote.deletedAt != null) {
+                if (local != null) db.partDao().delete(local)
+                continue
+            }
+
+            val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
+            if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
+
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: remoteUpdated
+            val newPart = Part(
+                id = remoteId,
+                name = remote.name,
+                code = remote.code,
+                category = remote.category,
+                notes = remote.notes,
+                createdAt = createdAt,
+                updatedAt = remoteUpdated,
+                deletedAt = null
+            )
+            db.partDao().upsert(newPart)
+        }
+    }
+
+    private suspend fun mergePartBatches(remoteBatches: List<RemotePartBatch>) {
+        if (remoteBatches.isEmpty()) return
+        val existing = db.partBatchDao().getAllIncludingDeleted().associateBy { it.id }
+        val partIds = db.partDao().getAllIncludingDeleted().map { it.id }.toSet()
+        val accountIds = db.financialAccountDao().getAllIncludingDeleted().map { it.id }.toSet()
+
+        for (remote in remoteBatches) {
+            val remoteId = remote.id.toUUID() ?: continue
+            val local = existing[remoteId]
+
+            if (remote.deletedAt != null) {
+                if (local != null) db.partBatchDao().delete(local)
+                continue
+            }
+
+            val partId = remote.partId.toUUID() ?: continue
+            if (!partIds.contains(partId)) continue
+
+            val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
+            if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
+
+            val purchaseDate = DateUtils.parseDateAndTime(remote.purchaseDate)
+                ?: DateUtils.parseRemoteDateOnly(remote.purchaseDate)
+                ?: remoteUpdated
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: purchaseDate
+            val purchaseAccountId = remote.purchaseAccountId?.toUUID()?.takeIf { it in accountIds }
+
+            val newBatch = PartBatch(
+                id = remoteId,
+                partId = partId,
+                batchLabel = remote.batchLabel,
+                quantityReceived = remote.quantityReceived,
+                quantityRemaining = remote.quantityRemaining,
+                unitCost = remote.unitCost,
+                purchaseDate = purchaseDate,
+                purchaseAccountId = purchaseAccountId,
+                notes = remote.notes,
+                createdAt = createdAt,
+                updatedAt = remoteUpdated,
+                deletedAt = null
+            )
+            db.partBatchDao().upsert(newBatch)
+        }
+    }
+
+    private suspend fun mergePartSales(remoteSales: List<RemotePartSale>) {
+        if (remoteSales.isEmpty()) return
+        val existing = db.partSaleDao().getAllIncludingDeleted().associateBy { it.id }
+        val accountIds = db.financialAccountDao().getAllIncludingDeleted().map { it.id }.toSet()
+
+        for (remote in remoteSales) {
+            val remoteId = remote.id.toUUID() ?: continue
+            val local = existing[remoteId]
+
+            if (remote.deletedAt != null) {
+                if (local != null) db.partSaleDao().delete(local)
+                continue
+            }
+
+            val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
+            if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
+
+            val saleDate = DateUtils.parseDateAndTime(remote.date)
+                ?: DateUtils.parseRemoteDateOnly(remote.date)
+                ?: remoteUpdated
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: saleDate
+            val accountId = remote.accountId?.toUUID()?.takeIf { it in accountIds }
+
+            val newSale = PartSale(
+                id = remoteId,
+                amount = remote.amount,
+                date = saleDate,
+                buyerName = remote.buyerName,
+                buyerPhone = remote.buyerPhone,
+                paymentMethod = remote.paymentMethod,
+                accountId = accountId,
+                notes = remote.notes,
+                createdAt = createdAt,
+                updatedAt = remoteUpdated,
+                deletedAt = null
+            )
+            db.partSaleDao().upsert(newSale)
+        }
+    }
+
+    private suspend fun mergePartSaleLineItems(remoteItems: List<RemotePartSaleLineItem>) {
+        if (remoteItems.isEmpty()) return
+        val existing = db.partSaleLineItemDao().getAllIncludingDeleted().associateBy { it.id }
+        val saleIds = db.partSaleDao().getAllIncludingDeleted().map { it.id }.toSet()
+        val partIds = db.partDao().getAllIncludingDeleted().map { it.id }.toSet()
+        val batchIds = db.partBatchDao().getAllIncludingDeleted().map { it.id }.toSet()
+
+        for (remote in remoteItems) {
+            val remoteId = remote.id.toUUID() ?: continue
+            val local = existing[remoteId]
+
+            if (remote.deletedAt != null) {
+                if (local != null) db.partSaleLineItemDao().delete(local)
+                continue
+            }
+
+            val saleId = remote.saleId.toUUID() ?: continue
+            val partId = remote.partId.toUUID() ?: continue
+            val batchId = remote.batchId.toUUID() ?: continue
+
+            if (!saleIds.contains(saleId) || !partIds.contains(partId) || !batchIds.contains(batchId)) continue
+
+            val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
+            if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
+
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: remoteUpdated
+            val newItem = PartSaleLineItem(
+                id = remoteId,
+                saleId = saleId,
+                partId = partId,
+                batchId = batchId,
+                quantity = remote.quantity,
+                unitPrice = remote.unitPrice,
+                unitCost = remote.unitCost,
+                createdAt = createdAt,
+                updatedAt = remoteUpdated,
+                deletedAt = null
+            )
+            db.partSaleLineItemDao().upsert(newItem)
+        }
+    }
+
+    private suspend fun mergeHoldingCostSettings(remoteSettings: List<RemoteHoldingCostSettings>) {
+        if (remoteSettings.isEmpty()) return
+        val existing = db.holdingCostSettingsDao().getAllIncludingDeleted().associateBy { it.id }
+
+        for (remote in remoteSettings) {
+            val remoteId = remote.id.toUUID() ?: continue
+            val local = existing[remoteId]
+
+            val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
+            if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
+
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: remoteUpdated
+            val newSettings = HoldingCostSettings(
+                id = remoteId,
+                dealerId = remote.dealerId.toUUID() ?: continue,
+                annualRatePercent = remote.annualRatePercent,
+                dailyRatePercent = remote.dailyRatePercent,
+                isEnabled = remote.isEnabled,
+                createdAt = createdAt,
+                updatedAt = remoteUpdated
+            )
+            db.holdingCostSettingsDao().upsert(newSettings)
+        }
+    }
+
+    private suspend fun mergeClientInteractions(remoteInteractions: List<RemoteClientInteraction>) {
+        if (remoteInteractions.isEmpty()) return
+        val existing = db.clientInteractionDao().getAllIncludingDeleted().associateBy { it.id }
+        val clientIds = db.clientDao().getAllIncludingDeleted().map { it.id }.toSet()
+
+        for (remote in remoteInteractions) {
+            val remoteId = remote.id.toUUID() ?: continue
+            val local = existing[remoteId]
+
+            val clientId = remote.clientId.toUUID()?.takeIf { it in clientIds } ?: continue
+
+            val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
+            if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
+
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: remoteUpdated
+            val occurredAt = DateUtils.parseDateAndTime(remote.occurredAt) ?: createdAt
+
+            val newInteraction = ClientInteraction(
+                id = remoteId,
+                clientId = clientId,
+                title = remote.title,
+                detail = remote.detail,
+                occurredAt = occurredAt,
+                stage = remote.stage,
+                value = remote.value,
+                interactionType = remote.interactionType,
+                outcome = remote.outcome,
+                durationMinutes = remote.durationMinutes,
+                isFollowUpRequired = remote.isFollowUpRequired,
+                createdAt = createdAt,
+                updatedAt = remoteUpdated,
+                deletedAt = remote.deletedAt?.let { DateUtils.parseDateAndTime(it) }
+            )
+            db.clientInteractionDao().upsert(newInteraction)
+        }
+    }
+
     private suspend fun applyMissingCleanup(cleanup: MissingCleanupContext) {
         fun shouldDelete(id: UUID, updatedAt: Date?, createdAt: Date): Boolean {
             if (updatedAt != null && updatedAt > cleanup.syncStartedAt) return false
@@ -1312,6 +1660,50 @@ class CloudSyncManager @Inject constructor(
                 }
             }
         }
+
+        val protectedParts = cleanup.protectedIds[SyncEntityType.PART].orEmpty()
+        db.partDao().getAllIncludingDeleted().forEach { part ->
+            val remoteIds = cleanup.remoteIds[SyncEntityType.PART].orEmpty()
+            if (!remoteIds.contains(part.id) && !protectedParts.contains(part.id)) {
+                val createdAt = part.createdAt
+                if (shouldDelete(part.id, part.updatedAt, createdAt)) {
+                    db.partDao().delete(part)
+                }
+            }
+        }
+
+        val protectedPartBatches = cleanup.protectedIds[SyncEntityType.PART_BATCH].orEmpty()
+        db.partBatchDao().getAllIncludingDeleted().forEach { batch ->
+            val remoteIds = cleanup.remoteIds[SyncEntityType.PART_BATCH].orEmpty()
+            if (!remoteIds.contains(batch.id) && !protectedPartBatches.contains(batch.id)) {
+                val createdAt = batch.createdAt
+                if (shouldDelete(batch.id, batch.updatedAt, createdAt)) {
+                    db.partBatchDao().delete(batch)
+                }
+            }
+        }
+
+        val protectedPartSales = cleanup.protectedIds[SyncEntityType.PART_SALE].orEmpty()
+        db.partSaleDao().getAllIncludingDeleted().forEach { sale ->
+            val remoteIds = cleanup.remoteIds[SyncEntityType.PART_SALE].orEmpty()
+            if (!remoteIds.contains(sale.id) && !protectedPartSales.contains(sale.id)) {
+                val createdAt = sale.createdAt
+                if (shouldDelete(sale.id, sale.updatedAt, createdAt)) {
+                    db.partSaleDao().delete(sale)
+                }
+            }
+        }
+
+        val protectedPartLineItems = cleanup.protectedIds[SyncEntityType.PART_SALE_LINE_ITEM].orEmpty()
+        db.partSaleLineItemDao().getAllIncludingDeleted().forEach { item ->
+            val remoteIds = cleanup.remoteIds[SyncEntityType.PART_SALE_LINE_ITEM].orEmpty()
+            if (!remoteIds.contains(item.id) && !protectedPartLineItems.contains(item.id)) {
+                val createdAt = item.createdAt
+                if (shouldDelete(item.id, item.updatedAt, createdAt)) {
+                    db.partSaleLineItemDao().delete(item)
+                }
+            }
+        }
     }
 
     private suspend fun pushLocalChanges(
@@ -1337,6 +1729,10 @@ class CloudSyncManager @Inject constructor(
             vId == null || !skippingVehicleIds.contains(vId)
         }
         val templates = db.expenseTemplateDao().getAllIncludingDeleted()
+        val parts = db.partDao().getAllIncludingDeleted()
+        val partBatches = db.partBatchDao().getAllIncludingDeleted()
+        val partSales = db.partSaleDao().getAllIncludingDeleted()
+        val partSaleLineItems = db.partSaleLineItemDao().getAllIncludingDeleted()
 
         val remoteUsers = users.map { it.toRemote(dealerId.toString()) }
 
@@ -1366,6 +1762,10 @@ class CloudSyncManager @Inject constructor(
         val remoteDebtPayments = debtPayments.mapNotNull { it.toRemote(dealerId.toString()) }
         val remoteClients = clients.map { it.toRemote(dealerId.toString()) }
         val remoteTemplates = templates.map { it.toRemote(dealerId.toString()) }
+        val remoteParts = parts.map { it.toRemote(dealerId.toString()) }
+        val remotePartBatches = partBatches.map { it.toRemote(dealerId.toString()) }
+        val remotePartSales = partSales.map { it.toRemote(dealerId.toString()) }
+        val remotePartSaleLineItems = partSaleLineItems.map { it.toRemote(dealerId.toString()) }
 
         if (remoteUsers.isNotEmpty()) {
             client.postgrest.rpc("sync_users", payloadParams(remoteUsers))
@@ -1396,6 +1796,18 @@ class CloudSyncManager @Inject constructor(
         }
         if (remoteTemplates.isNotEmpty()) {
             client.postgrest.rpc("sync_templates", payloadParams(remoteTemplates))
+        }
+        if (remoteParts.isNotEmpty()) {
+            client.postgrest.rpc("sync_parts", payloadParams(remoteParts))
+        }
+        if (remotePartBatches.isNotEmpty()) {
+            client.postgrest.rpc("sync_part_batches", payloadParams(remotePartBatches))
+        }
+        if (remotePartSales.isNotEmpty()) {
+            client.postgrest.rpc("sync_part_sales", payloadParams(remotePartSales))
+        }
+        if (remotePartSaleLineItems.isNotEmpty()) {
+            client.postgrest.rpc("sync_part_sale_line_items", payloadParams(remotePartSaleLineItems))
         }
     }
 
@@ -1469,6 +1881,65 @@ class CloudSyncManager @Inject constructor(
 
     private fun getCurrentDealerId(): UUID = CloudSyncEnvironment.currentDealerId
         ?: throw IllegalStateException("Dealer ID not set")
+
+    suspend fun upsertHoldingCostSettings(settings: HoldingCostSettings) {
+        db.holdingCostSettingsDao().upsert(settings)
+        val dealerId = getCurrentDealerId()
+        val remote = settings.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_holding_cost_settings", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_holding_cost_settings",
+                dealerId = dealerId,
+                entityType = SyncEntityType.HOLDING_COST_SETTINGS,
+                payloadId = settings.id,
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.HOLDING_COST_SETTINGS, remote, dealerId)
+        }
+    }
+
+    suspend fun upsertClientInteraction(interaction: ClientInteraction) {
+        db.clientInteractionDao().upsert(interaction)
+        val dealerId = getCurrentDealerId()
+        val remote = interaction.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_client_interactions", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_client_interactions",
+                dealerId = dealerId,
+                entityType = SyncEntityType.CLIENT_INTERACTION,
+                payloadId = interaction.id,
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.CLIENT_INTERACTION, remote, dealerId)
+        }
+    }
+
+    suspend fun deleteClientInteraction(interaction: ClientInteraction) {
+        val deleted = interaction.copy(deletedAt = Date(), updatedAt = Date())
+        db.clientInteractionDao().upsert(deleted)
+        val dealerId = getCurrentDealerId()
+        val remote = deleted.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_client_interactions", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_client_interactions",
+                dealerId = dealerId,
+                entityType = SyncEntityType.CLIENT_INTERACTION,
+                payloadId = interaction.id,
+                extraContext = mapOf("operation" to "delete"),
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.CLIENT_INTERACTION, remote, dealerId)
+        }
+    }
 
     suspend fun upsertClient(clientRecord: Client) {
         db.clientDao().upsert(clientRecord)
@@ -1872,6 +2343,166 @@ class CloudSyncManager @Inject constructor(
         }
     }
 
+    suspend fun upsertPart(part: Part) {
+        db.partDao().upsert(part)
+        val dealerId = getCurrentDealerId()
+        val remote = part.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_parts", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_parts",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART,
+                payloadId = part.id,
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.PART, remote, dealerId)
+        }
+    }
+
+    suspend fun deletePart(part: Part) {
+        val deleted = part.copy(deletedAt = Date(), updatedAt = Date())
+        db.partDao().upsert(deleted)
+        val dealerId = getCurrentDealerId()
+        val remote = deleted.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_parts", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_parts",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART,
+                payloadId = part.id,
+                extraContext = mapOf("operation" to "delete"),
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.PART, remote, dealerId)
+        }
+    }
+
+    suspend fun upsertPartBatch(batch: PartBatch) {
+        db.partBatchDao().upsert(batch)
+        val dealerId = getCurrentDealerId()
+        val remote = batch.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_part_batches", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_part_batches",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_BATCH,
+                payloadId = batch.id,
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.PART_BATCH, remote, dealerId)
+        }
+    }
+
+    suspend fun deletePartBatch(batch: PartBatch) {
+        val deleted = batch.copy(deletedAt = Date(), updatedAt = Date())
+        db.partBatchDao().upsert(deleted)
+        val dealerId = getCurrentDealerId()
+        val remote = deleted.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_part_batches", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_part_batches",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_BATCH,
+                payloadId = batch.id,
+                extraContext = mapOf("operation" to "delete"),
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.PART_BATCH, remote, dealerId)
+        }
+    }
+
+    suspend fun upsertPartSale(sale: PartSale) {
+        db.partSaleDao().upsert(sale)
+        val dealerId = getCurrentDealerId()
+        val remote = sale.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_part_sales", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_part_sales",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_SALE,
+                payloadId = sale.id,
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.PART_SALE, remote, dealerId)
+        }
+    }
+
+    suspend fun deletePartSale(sale: PartSale) {
+        val deleted = sale.copy(deletedAt = Date(), updatedAt = Date())
+        db.partSaleDao().upsert(deleted)
+        val dealerId = getCurrentDealerId()
+        val remote = deleted.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_part_sales", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_part_sales",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_SALE,
+                payloadId = sale.id,
+                extraContext = mapOf("operation" to "delete"),
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.PART_SALE, remote, dealerId)
+        }
+    }
+
+    suspend fun upsertPartSaleLineItem(item: PartSaleLineItem) {
+        db.partSaleLineItemDao().upsert(item)
+        val dealerId = getCurrentDealerId()
+        val remote = item.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_part_sale_line_items", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_part_sale_line_items",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_SALE_LINE_ITEM,
+                payloadId = item.id,
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.PART_SALE_LINE_ITEM, remote, dealerId)
+        }
+    }
+
+    suspend fun deletePartSaleLineItem(item: PartSaleLineItem) {
+        val deleted = item.copy(deletedAt = Date(), updatedAt = Date())
+        db.partSaleLineItemDao().upsert(deleted)
+        val dealerId = getCurrentDealerId()
+        val remote = deleted.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_part_sale_line_items", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_part_sale_line_items",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_SALE_LINE_ITEM,
+                payloadId = item.id,
+                extraContext = mapOf("operation" to "delete"),
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.PART_SALE_LINE_ITEM, remote, dealerId)
+        }
+    }
+
     private suspend inline fun <reified T : Any> enqueueUpsert(
         entityType: SyncEntityType,
         remote: T,
@@ -2039,6 +2670,66 @@ class CloudSyncManager @Inject constructor(
         }
     }
 
+    suspend fun deletePart(id: UUID, dealerId: UUID) {
+        try {
+            performDeleteRpc(SyncEntityType.PART, id, dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "delete_crm_parts",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART,
+                payloadId = id,
+                error = e
+            )
+            enqueueDelete(SyncEntityType.PART, id, dealerId)
+        }
+    }
+
+    suspend fun deletePartBatch(id: UUID, dealerId: UUID) {
+        try {
+            performDeleteRpc(SyncEntityType.PART_BATCH, id, dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "delete_crm_part_batches",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_BATCH,
+                payloadId = id,
+                error = e
+            )
+            enqueueDelete(SyncEntityType.PART_BATCH, id, dealerId)
+        }
+    }
+
+    suspend fun deletePartSale(id: UUID, dealerId: UUID) {
+        try {
+            performDeleteRpc(SyncEntityType.PART_SALE, id, dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "delete_crm_part_sales",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_SALE,
+                payloadId = id,
+                error = e
+            )
+            enqueueDelete(SyncEntityType.PART_SALE, id, dealerId)
+        }
+    }
+
+    suspend fun deletePartSaleLineItem(id: UUID, dealerId: UUID) {
+        try {
+            performDeleteRpc(SyncEntityType.PART_SALE_LINE_ITEM, id, dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "delete_crm_part_sale_line_items",
+                dealerId = dealerId,
+                entityType = SyncEntityType.PART_SALE_LINE_ITEM,
+                payloadId = id,
+                error = e
+            )
+            enqueueDelete(SyncEntityType.PART_SALE_LINE_ITEM, id, dealerId)
+        }
+    }
+
     suspend fun deduplicateData(dealerId: UUID) = withContext(Dispatchers.IO) {
         val vehiclesResult = client.postgrest
             .from("crm_vehicles")
@@ -2140,6 +2831,10 @@ class CloudSyncManager @Inject constructor(
     }
 
     suspend fun deleteAllRemoteData(dealerId: UUID) = withContext(Dispatchers.IO) {
+        client.postgrest.from("crm_part_sale_line_items").delete { filter { eq("dealer_id", dealerId.toString()) } }
+        client.postgrest.from("crm_part_sales").delete { filter { eq("dealer_id", dealerId.toString()) } }
+        client.postgrest.from("crm_part_batches").delete { filter { eq("dealer_id", dealerId.toString()) } }
+        client.postgrest.from("crm_parts").delete { filter { eq("dealer_id", dealerId.toString()) } }
         client.postgrest.from("crm_expenses").delete { filter { eq("dealer_id", dealerId.toString()) } }
         client.postgrest.from("crm_debt_payments").delete { filter { eq("dealer_id", dealerId.toString()) } }
         client.postgrest.from("crm_sales").delete { filter { eq("dealer_id", dealerId.toString()) } }
@@ -2192,7 +2887,13 @@ enum class SyncEntityType(val rawValue: String, val displayName: String, val sor
     USER("user", "Users", 6),
     ACCOUNT("account", "Accounts", 7),
     ACCOUNT_TRANSACTION("accountTransaction", "Account Transactions", 8),
-    TEMPLATE("template", "Expense Templates", 9);
+    TEMPLATE("template", "Expense Templates", 9),
+    PART("part", "Parts", 10),
+    PART_BATCH("partBatch", "Part Batches", 11),
+    PART_SALE("partSale", "Part Sales", 12),
+    PART_SALE_LINE_ITEM("partSaleLineItem", "Part Sale Line Items", 13),
+    HOLDING_COST_SETTINGS("holdingCostSettings", "Holding Cost Settings", 14),
+    CLIENT_INTERACTION("clientInteraction", "Client Interactions", 15);
 
     companion object {
         fun fromRaw(value: String): SyncEntityType? {
@@ -2209,6 +2910,12 @@ enum class SyncEntityType(val rawValue: String, val displayName: String, val sor
                 "accountTransaction" -> ACCOUNT_TRANSACTION
                 "template" -> TEMPLATE
                 "expenseTemplate" -> TEMPLATE
+                "part" -> PART
+                "partBatch" -> PART_BATCH
+                "partSale" -> PART_SALE
+                "partSaleLineItem" -> PART_SALE_LINE_ITEM
+                "holdingCostSettings" -> HOLDING_COST_SETTINGS
+                "clientInteraction" -> CLIENT_INTERACTION
                 else -> null
             }
         }
@@ -2390,6 +3097,91 @@ fun ExpenseTemplate.toRemote(dealerId: String) = RemoteExpenseTemplate(
     category = category ?: "",
     defaultDescription = defaultDescription,
     defaultAmount = defaultAmount,
+    updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
+    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
+)
+
+fun Part.toRemote(dealerId: String) = RemotePart(
+    id = id.toString(),
+    dealerId = dealerId,
+    name = name,
+    code = code,
+    category = category,
+    notes = notes,
+    createdAt = DateUtils.formatDateAndTime(createdAt),
+    updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
+    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
+)
+
+fun PartBatch.toRemote(dealerId: String) = RemotePartBatch(
+    id = id.toString(),
+    dealerId = dealerId,
+    partId = partId.toString(),
+    batchLabel = batchLabel,
+    quantityReceived = quantityReceived,
+    quantityRemaining = quantityRemaining,
+    unitCost = unitCost,
+    purchaseDate = DateUtils.formatDateOnly(purchaseDate),
+    purchaseAccountId = purchaseAccountId?.toString(),
+    notes = notes,
+    createdAt = DateUtils.formatDateAndTime(createdAt),
+    updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
+    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
+)
+
+fun PartSale.toRemote(dealerId: String) = RemotePartSale(
+    id = id.toString(),
+    dealerId = dealerId,
+    amount = amount,
+    date = DateUtils.formatDateAndTime(date),
+    buyerName = buyerName,
+    buyerPhone = buyerPhone,
+    paymentMethod = paymentMethod,
+    accountId = accountId?.toString(),
+    notes = notes,
+    createdAt = DateUtils.formatDateAndTime(createdAt),
+    updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
+    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
+)
+
+fun PartSaleLineItem.toRemote(dealerId: String) = RemotePartSaleLineItem(
+    id = id.toString(),
+    dealerId = dealerId,
+    saleId = saleId.toString(),
+    partId = partId.toString(),
+    batchId = batchId.toString(),
+    quantity = quantity,
+    unitPrice = unitPrice,
+    unitCost = unitCost,
+    createdAt = DateUtils.formatDateAndTime(createdAt),
+    updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
+    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
+)
+
+fun HoldingCostSettings.toRemote(dealerId: String) = RemoteHoldingCostSettings(
+    id = id.toString(),
+    dealerId = dealerId,
+    annualRatePercent = annualRatePercent,
+    dailyRatePercent = dailyRatePercent,
+    isEnabled = isEnabled,
+    createdAt = DateUtils.formatDateAndTime(createdAt),
+    updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date())
+)
+
+fun ClientInteraction.toRemote(dealerId: String) = RemoteClientInteraction(
+    id = id.toString(),
+    dealerId = dealerId,
+    clientId = clientId.toString(),
+    title = title,
+    detail = detail,
+    occurredAt = DateUtils.formatDateAndTime(occurredAt),
+    stage = stage,
+    value = value,
+    interactionType = interactionType,
+    outcome = outcome,
+    durationMinutes = durationMinutes,
+    isFollowUpRequired = isFollowUpRequired,
+    createdAt = DateUtils.formatDateAndTime(createdAt),
     updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
     deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
 )

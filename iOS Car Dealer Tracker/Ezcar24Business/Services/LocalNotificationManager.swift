@@ -5,6 +5,8 @@ import UserNotifications
 
 enum NotificationPreference {
     static let enabledKey = "notificationsEnabled"
+    static let inventoryStaleThresholdKey = "inventoryStaleThresholdDays"
+    static let defaultInventoryStaleThreshold = 40
 
     static var isEnabled: Bool {
         UserDefaults.standard.bool(forKey: enabledKey)
@@ -12,6 +14,15 @@ enum NotificationPreference {
 
     static func setEnabled(_ value: Bool) {
         UserDefaults.standard.set(value, forKey: enabledKey)
+    }
+    
+    static var inventoryStaleThreshold: Int {
+        let value = UserDefaults.standard.integer(forKey: inventoryStaleThresholdKey)
+        return value == 0 ? defaultInventoryStaleThreshold : value
+    }
+    
+    static func setInventoryStaleThreshold(_ value: Int) {
+        UserDefaults.standard.set(value, forKey: inventoryStaleThresholdKey)
     }
 }
 
@@ -80,6 +91,22 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         for debt in debts {
             guard let dueDate = debt.dueDate, dueDate > now, !debt.isPaid else { continue }
             await scheduleDebtDue(debt)
+        }
+        
+        let vehicles: [Vehicle] = await context.perform {
+            let request: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
+            request.predicate = NSPredicate(format: "deletedAt == nil AND status != %@", "sold")
+            request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.purchaseDate, ascending: true)]
+            return (try? context.fetch(request)) ?? []
+        }
+        
+        let inventoryThreshold = NotificationPreference.inventoryStaleThreshold
+        
+        for vehicle in vehicles {
+            let days = HoldingCostCalculator.calculateDaysInInventory(vehicle: vehicle)
+            guard HoldingCostCalculator.isHoldingCostEligible(vehicle: vehicle) else { continue }
+            guard days >= inventoryThreshold else { continue }
+            await scheduleInventoryStaleAlert(vehicle: vehicle, daysInInventory: days)
         }
         
         await scheduleDailyExpenseReminder()
@@ -167,6 +194,48 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         try? await center.add(request)
     }
+    
+    private func scheduleInventoryStaleAlert(vehicle: Vehicle, daysInInventory: Int) async {
+        guard let id = vehicle.id else { return }
+        
+        let identifier = NotificationIdentifier.inventoryStale(id: id)
+        let content = UNMutableNotificationContent()
+        let name = [vehicle.make, vehicle.model]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        
+        let title = await MainActor.run { "inventory_alert_title".localizedString }
+        let bodyFormat = await MainActor.run { "inventory_alert_body".localizedString }
+        let defaultVehicleName = await MainActor.run { "vehicle".localizedString }
+        let vehicleName = name.isEmpty ? defaultVehicleName : name
+        
+        content.title = title
+        content.body = String(format: bodyFormat, vehicleName, daysInInventory)
+        content.sound = .default
+        
+        let triggerDate = nextInventoryAlertDate()
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate),
+            repeats: false
+        )
+        
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        try? await center.add(request)
+    }
+    
+    private func nextInventoryAlertDate() -> Date {
+        let now = Date()
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: now)
+        components.hour = 9
+        components.minute = 0
+        
+        let todayAtNine = Calendar.current.date(from: components) ?? now
+        if todayAtNine > now {
+            return todayAtNine
+        }
+        return Calendar.current.date(byAdding: .day, value: 1, to: todayAtNine) ?? now.addingTimeInterval(3600)
+    }
 
     private func clearAllPending() async {
         let requests = await center.pendingNotificationRequests()
@@ -187,5 +256,9 @@ enum NotificationIdentifier {
 
     static func debtDue(id: UUID) -> String {
         "\(prefix).debt.\(id.uuidString)"
+    }
+    
+    static func inventoryStale(id: UUID) -> String {
+        "\(prefix).inventory.\(id.uuidString)"
     }
 }

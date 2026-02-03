@@ -25,6 +25,7 @@ extension Vehicle {
     @NSManaged public var buyerPhone: String?
     @NSManaged public var paymentMethod: String?
     @NSManaged public var salePrice: NSDecimalNumber?
+    @NSManaged public var mileage: Int32 // Stored in KM
     
     // New Feature Fields
     @NSManaged public var askingPrice: NSDecimalNumber?

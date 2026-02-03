@@ -21,6 +21,7 @@ struct AddVehicleView: View {
     @State private var make = ""
     @State private var model = ""
     @State private var year = ""
+    @State private var mileage = ""
     @State private var purchasePrice = ""
     @State private var purchaseDate = Date()
     @State private var status = "owned"
@@ -60,6 +61,7 @@ struct AddVehicleView: View {
 
     var isFormValid: Bool {
         let baseValid = !vin.isEmpty && !make.isEmpty && !model.isEmpty && !year.isEmpty && !purchasePrice.isEmpty && selectedAccount != nil
+        // Mileage is optional, but if entered it should be numeric. Not strictly checking validity here for now.
         if status == "sold" { return baseValid && !salePrice.isEmpty }
         return baseValid
     }
@@ -84,6 +86,9 @@ struct AddVehicleView: View {
                                 }
                                 
                                 CustomTextField(title: "year", text: $year, icon: "calendar")
+                                    .keyboardType(.numberPad)
+                                
+                                CustomTextField(title: "mileage", placeholder: "0", text: $mileage, icon: "speedometer")
                                     .keyboardType(.numberPad)
                             }
                             .padding(.vertical, 8)
@@ -239,6 +244,8 @@ struct AddVehicleView: View {
 
         let salePriceDecimal: Decimal? = (status == "sold") ? Decimal(string: salePrice) : nil
 
+        let mileageInt = Int32(mileage) ?? 0
+
         let vehicle = viewModel.addVehicle(
             vin: vin,
             make: make,
@@ -251,7 +258,8 @@ struct AddVehicleView: View {
             account: account,
             imageData: selectedImageData,
             salePrice: salePriceDecimal,
-            saleDate: (status == "sold") ? saleDate : nil
+            saleDate: (status == "sold") ? saleDate : nil,
+            mileage: mileageInt
         )
         
         let createdSale = (vehicle.sales as? Set<Sale>)?.first(where: { $0.deletedAt == nil })

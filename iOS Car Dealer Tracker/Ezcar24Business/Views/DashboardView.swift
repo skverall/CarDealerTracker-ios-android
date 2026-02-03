@@ -58,22 +58,29 @@ struct DashboardView: View {
                     .padding(.bottom, 10)
                 
                 ZStack(alignment: .bottom) {
-                    List {
-                        financialOverviewSection
-                        todaysExpensesSection
-                        summarySection
-                        recentExpensesSection
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .listSectionSpacing(20)
-                    .listSectionSpacing(20)
-                    .background(ColorTheme.background)
-                    .refreshable {
-                        if case .signedIn(let user) = sessionStore.status {
-                            await cloudSyncManager.manualSync(user: user)
-                            viewModel.fetchFinancialData(range: selectedRange)
+                    if permissionService.didLoad {
+                        List {
+                            financialOverviewSection
+                            todaysExpensesSection
+                            summarySection
+                            recentExpensesSection
                         }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                        .listSectionSpacing(20)
+                        .listSectionSpacing(20)
+                        .background(ColorTheme.background)
+                        .refreshable {
+                            if case .signedIn(let user) = sessionStore.status {
+                                await cloudSyncManager.manualSync(user: user)
+                                viewModel.fetchFinancialData(range: selectedRange)
+                            }
+                        }
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    } else {
+                        dashboardLoadingView
+                            .background(ColorTheme.background)
+                            .transition(.opacity)
                     }
 
                     bottomFade
@@ -395,48 +402,49 @@ private extension DashboardView {
                         .buttonStyle(.plain)
                     }
                     
-                    // Second row: Income and Profit from Sales
-                    HStack(spacing: 12) {
-                        Button {
-                            navPath.append(.revenue)
-                        } label: {
-                            FinancialCard(
-                                title: "total_revenue".localizedString,
-                                amount: viewModel.totalSalesIncome,
-                                icon: "chart.line.uptrend.xyaxis",
-                                color: .orange
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        
-                        if canViewProfit {
+                            // Second row: Income and Profit from Sales
+                        HStack(spacing: 12) {
                             Button {
-                                navPath.append(.profit)
+                                navPath.append(.revenue)
                             } label: {
                                 FinancialCard(
-                                    title: "net_profit".localizedString,
-                                    amount: viewModel.totalSalesProfit,
-                                    icon: "dollarsign.circle.fill",
-                                    color: viewModel.totalSalesProfit >= 0 ? .green : .red,
-                                    isHero: true
+                                    title: "total_revenue".localizedString,
+                                    amount: viewModel.totalSalesIncome,
+                                    icon: "chart.line.uptrend.xyaxis",
+                                    color: .orange
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            
+                            if canViewProfit {
+                                Button {
+                                    navPath.append(.profit)
+                                } label: {
+                                    FinancialCard(
+                                        title: "net_profit".localizedString,
+                                        amount: viewModel.totalSalesProfit,
+                                        icon: "dollarsign.circle.fill",
+                                        color: viewModel.totalSalesProfit >= 0 ? .green : .red,
+                                        isHero: true
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                                .transition(.scale.combined(with: .opacity))
+                            }
+                            
+                            Button {
+                                navPath.append(.sold)
+                            } label: {
+                                FinancialCard(
+                                    title: "sold".localizedString,
+                                    amount: Decimal(viewModel.soldCount), // Match the Sold list count to avoid Sales-vs-Status mismatch
+                                    icon: "checkmark.circle.fill",
+                                    color: .cyan,
+                                    isCount: true
                                 )
                             }
                             .buttonStyle(.plain)
                         }
-                        
-                        Button {
-                            navPath.append(.sold)
-                        } label: {
-                            FinancialCard(
-                                title: "sold".localizedString,
-                                amount: Decimal(viewModel.soldCount), // Match the Sold list count to avoid Sales-vs-Status mismatch
-                                icon: "checkmark.circle.fill",
-                                color: .cyan,
-                                isCount: true
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
                 } else {
                     // Non-Financial View (Sales Person Mode)
                      HStack(spacing: 12) {
@@ -474,6 +482,7 @@ private extension DashboardView {
         }
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
+        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: permissionService.didLoad)
     }
     var todaysExpensesSection: some View {
         Group {
@@ -729,121 +738,7 @@ private extension DashboardView {
 
 // MARK: - Components
 
-struct GlobalSearchView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.managedObjectContext) private var viewContext
-    
-    @State private var searchText = ""
-    @State private var vehicleResults: [Vehicle] = []
-    @State private var clientResults: [Client] = []
-    @State private var expenseResults: [Expense] = []
-    
-    var body: some View {
-        NavigationStack {
-            List {
-                if !vehicleResults.isEmpty {
-                    Section("Vehicles") {
-                        ForEach(vehicleResults) { vehicle in
-                            VehicleRow(vehicle: vehicle)
-                        }
-                    }
-                }
-                
-                if !clientResults.isEmpty {
-                    Section("Clients") {
-                        ForEach(clientResults) { client in
-                            ClientRow(client: client)
-                        }
-                    }
-                }
-                
-                if !expenseResults.isEmpty {
-                    Section("Expenses") {
-                        ForEach(expenseResults) { expense in
-                            RecentExpenseRow(expense: expense)
-                        }
-                    }
-                }
-                
-                if !searchText.isEmpty && vehicleResults.isEmpty && clientResults.isEmpty && expenseResults.isEmpty {
-                    ContentUnavailableView.search
-                }
-            }
-            .searchable(text: $searchText, prompt: "Search vehicles, clients, expenses...")
-            .onChange(of: searchText) { _, newValue in
-                performSearch(query: newValue)
-            }
-            .navigationTitle("search".localizedString)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("done".localizedString) {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-    
-    private func performSearch(query: String) {
-        guard !query.isEmpty else {
-            vehicleResults = []
-            clientResults = []
-            expenseResults = []
-            return
-        }
-        
-        
-        // Search Vehicles
-        let vehicleReq: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
-        vehicleReq.predicate = NSPredicate(format: "make CONTAINS[cd] %@ OR model CONTAINS[cd] %@ OR vin CONTAINS[cd] %@", query, query, query)
-        vehicleReq.fetchLimit = 5
-        
-        // Search Clients
-        let clientReq: NSFetchRequest<Client> = Client.fetchRequest()
-        clientReq.predicate = NSPredicate(format: "name CONTAINS[cd] %@ OR phone CONTAINS[cd] %@", query, query)
-        clientReq.fetchLimit = 5
-        
-        // Search Expenses
-        let expenseReq: NSFetchRequest<Expense> = Expense.fetchRequest()
-        expenseReq.predicate = NSPredicate(format: "expenseDescription CONTAINS[cd] %@ OR category CONTAINS[cd] %@", query, query)
-        expenseReq.fetchLimit = 5
-        
-        do {
-            vehicleResults = try viewContext.fetch(vehicleReq)
-            clientResults = try viewContext.fetch(clientReq)
-            expenseResults = try viewContext.fetch(expenseReq)
-        } catch {
-            print("Search failed: \(error)")
-        }
-    }
-}
 
-private struct VehicleRow: View {
-    let vehicle: Vehicle
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                .font(.headline)
-            Text(vehicle.vin ?? "")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
-}
-
-private struct ClientRow: View {
-    let client: Client
-    var body: some View {
-        VStack(alignment: .leading) {
-            Text(client.name ?? "")
-                .font(.headline)
-            Text(client.phone ?? "")
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-    }
-}
 
 private struct FinancialCard: View {
     let title: String
@@ -1753,6 +1648,171 @@ struct OrganizationSwitcherView: View {
 }
 
 
+
+// MARK: - Loading View
+
+private extension DashboardView {
+    var dashboardLoadingView: some View {
+        ScrollView {
+            VStack(spacing: 20) {
+                // Skeleton cards for financial overview
+                HStack(spacing: 12) {
+                    skeletonCard
+                    skeletonCard
+                    skeletonCard
+                }
+                
+                HStack(spacing: 12) {
+                    skeletonCard
+                    skeletonCard
+                    skeletonCard
+                }
+                
+                // Skeleton for summary cards
+                VStack(spacing: 16) {
+                    skeletonSummaryCard
+                    skeletonSummaryCard
+                }
+                
+                // Skeleton for expenses
+                VStack(spacing: 12) {
+                    ForEach(0..<3) { _ in
+                        skeletonExpenseRow
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+        }
+    }
+    
+    var skeletonCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(width: 28, height: 28)
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(height: 12)
+                    .frame(maxWidth: .infinity)
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(height: 20)
+                    .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity)
+        .background(ColorTheme.secondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shimmering()
+    }
+    
+    var skeletonSummaryCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: 8) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(height: 14)
+                    .frame(maxWidth: 120)
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(height: 32)
+                    .frame(maxWidth: 150)
+            }
+            
+            RoundedRectangle(cornerRadius: 4)
+                .fill(ColorTheme.secondaryBackground.opacity(0.3))
+                .frame(height: 220)
+                .frame(maxWidth: .infinity)
+        }
+        .padding(24)
+        .background(ColorTheme.secondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shimmering()
+    }
+    
+    var skeletonExpenseRow: some View {
+        HStack(spacing: 16) {
+            RoundedRectangle(cornerRadius: 24)
+                .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                .frame(width: 48, height: 48)
+            
+            VStack(alignment: .leading, spacing: 4) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(height: 18)
+                    .frame(maxWidth: 150)
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(height: 14)
+                    .frame(maxWidth: 200)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(height: 20)
+                    .frame(maxWidth: 80)
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(ColorTheme.secondaryBackground.opacity(0.5))
+                    .frame(height: 14)
+                    .frame(maxWidth: 60)
+            }
+        }
+        .padding(16)
+        .background(ColorTheme.secondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shimmering()
+    }
+}
+
+// MARK: - Shimmer Effect
+
+struct ShimmerModifier: ViewModifier {
+    @State private var phase: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content.overlay(
+            GeometryReader { geometry in
+                LinearGradient(
+                    colors: [
+                        .clear,
+                        .white.opacity(0.3),
+                        .clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: geometry.size.width * 2)
+                .offset(x: phase * geometry.size.width * 2 - geometry.size.width * 2)
+            }
+            .mask(content)
+            .onAppear {
+                withAnimation(.linear(duration: 1.5).repeatForever(autoreverses: false)) {
+                    phase = 1
+                }
+            }
+        )
+    }
+}
+
+extension View {
+    func shimmering() -> some View {
+        self.modifier(ShimmerModifier())
+    }
+}
 
 // MARK: - Helpers
 

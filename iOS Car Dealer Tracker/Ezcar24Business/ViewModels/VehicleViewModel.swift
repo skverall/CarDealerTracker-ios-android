@@ -44,6 +44,8 @@ class VehicleViewModel: ObservableObject {
         case dateAsc = "Oldest First"
         case priceDesc = "Price: High to Low"
         case priceAsc = "Price: Low to High"
+        case daysDesc = "Days: High to Low"
+        case daysAsc = "Days: Low to High"
         
         var id: String { self.rawValue }
         
@@ -53,6 +55,8 @@ class VehicleViewModel: ObservableObject {
             case .dateAsc: return "oldest_first".localizedString
             case .priceDesc: return "price_high_to_low".localizedString
             case .priceAsc: return "price_low_to_high".localizedString
+            case .daysDesc: return "oldest_inventory".localizedString
+            case .daysAsc: return "newest_inventory".localizedString
             }
         }
     }
@@ -135,6 +139,10 @@ class VehicleViewModel: ObservableObject {
             request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.purchasePrice, ascending: false)]
         case .priceAsc:
             request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.purchasePrice, ascending: true)]
+        case .daysDesc:
+            request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.purchaseDate, ascending: true)]
+        case .daysAsc:
+            request.sortDescriptors = [NSSortDescriptor(keyPath: \Vehicle.purchaseDate, ascending: false)]
         }
 
         // Filtering
@@ -260,7 +268,8 @@ class VehicleViewModel: ObservableObject {
         account: FinancialAccount? = nil,
         imageData: Data? = nil,
         salePrice: Decimal? = nil,
-        saleDate: Date? = nil
+        saleDate: Date? = nil,
+        mileage: Int32 = 0
     ) -> Vehicle {
         let vehicle = Vehicle(context: context)
         vehicle.id = UUID()
@@ -276,6 +285,7 @@ class VehicleViewModel: ObservableObject {
         vehicle.updatedAt = vehicle.createdAt
         if let salePrice { vehicle.salePrice = NSDecimalNumber(decimal: salePrice) }
         if let saleDate { vehicle.saleDate = saleDate }
+        vehicle.mileage = mileage
 
         // Deduct purchase amount from selected account (if provided)
         if let account {

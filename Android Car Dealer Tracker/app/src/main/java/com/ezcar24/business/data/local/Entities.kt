@@ -8,6 +8,42 @@ import java.math.BigDecimal
 import java.util.Date
 import java.util.UUID
 
+enum class ExpenseCategoryType {
+    HOLDING_COST,
+    IMPROVEMENT,
+    OPERATIONAL
+}
+
+enum class LeadStage {
+    new,
+    contacted,
+    qualified,
+    negotiation,
+    offer,
+    test_drive,
+    closed_won,
+    closed_lost
+}
+
+enum class LeadSource {
+    facebook,
+    dubizzle,
+    instagram,
+    referral,
+    walk_in,
+    phone,
+    website,
+    other
+}
+
+enum class InventoryAlertType {
+    aging_60_days,
+    aging_90_days,
+    low_roi,
+    high_holding_cost,
+    price_reduction_needed
+}
+
 @Entity(tableName = "users")
 data class User(
     @PrimaryKey val id: UUID,
@@ -73,7 +109,8 @@ data class Expense(
     val deletedAt: Date? = null,
     val vehicleId: UUID?,
     val userId: UUID?,
-    val accountId: UUID?
+    val accountId: UUID?,
+    val expenseType: ExpenseCategoryType = ExpenseCategoryType.HOLDING_COST
 )
 
 @Entity(
@@ -103,7 +140,7 @@ data class Sale(
     foreignKeys = [
         ForeignKey(entity = Vehicle::class, parentColumns = ["id"], childColumns = ["vehicleId"], onDelete = ForeignKey.SET_NULL)
     ],
-    indices = [Index("vehicleId")]
+    indices = [Index("vehicleId"), Index("leadStage"), Index("assignedUserId")]
 )
 data class Client(
     @PrimaryKey val id: UUID,
@@ -117,7 +154,15 @@ data class Client(
     val createdAt: Date,
     val updatedAt: Date?,
     val deletedAt: Date? = null,
-    val vehicleId: UUID?
+    val vehicleId: UUID?,
+    val leadStage: LeadStage = LeadStage.new,
+    val leadSource: LeadSource? = null,
+    val assignedUserId: UUID? = null,
+    val estimatedValue: BigDecimal? = null,
+    val priority: Int = 0,
+    val leadCreatedAt: Date? = null,
+    val lastContactAt: Date? = null,
+    val nextFollowUpAt: Date? = null
 )
 
 @Entity(
@@ -134,7 +179,11 @@ data class ClientInteraction(
     val occurredAt: Date,
     val stage: String? = "update",
     val value: BigDecimal?,
-    val clientId: UUID?
+    val clientId: UUID?,
+    val interactionType: String? = null,
+    val outcome: String? = null,
+    val durationMinutes: Int? = null,
+    val isFollowUpRequired: Boolean = false
 )
 
 @Entity(
@@ -174,6 +223,84 @@ data class ExpenseTemplate(
     val vehicleId: UUID?,
     val userId: UUID?,
     val accountId: UUID?
+)
+
+@Entity(tableName = "parts")
+data class Part(
+    @PrimaryKey val id: UUID,
+    val name: String,
+    val code: String?,
+    val category: String?,
+    val notes: String?,
+    val createdAt: Date,
+    val updatedAt: Date?,
+    val deletedAt: Date? = null
+)
+
+@Entity(
+    tableName = "part_batches",
+    foreignKeys = [
+        ForeignKey(entity = Part::class, parentColumns = ["id"], childColumns = ["partId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = FinancialAccount::class, parentColumns = ["id"], childColumns = ["purchaseAccountId"], onDelete = ForeignKey.SET_NULL)
+    ],
+    indices = [Index("partId"), Index("purchaseAccountId")]
+)
+data class PartBatch(
+    @PrimaryKey val id: UUID,
+    val partId: UUID,
+    val batchLabel: String?,
+    val quantityReceived: BigDecimal = BigDecimal.ZERO,
+    val quantityRemaining: BigDecimal = BigDecimal.ZERO,
+    val unitCost: BigDecimal = BigDecimal.ZERO,
+    val purchaseDate: Date,
+    val purchaseAccountId: UUID?,
+    val notes: String?,
+    val createdAt: Date,
+    val updatedAt: Date?,
+    val deletedAt: Date? = null
+)
+
+@Entity(
+    tableName = "part_sales",
+    foreignKeys = [
+        ForeignKey(entity = FinancialAccount::class, parentColumns = ["id"], childColumns = ["accountId"], onDelete = ForeignKey.SET_NULL)
+    ],
+    indices = [Index("accountId")]
+)
+data class PartSale(
+    @PrimaryKey val id: UUID,
+    val amount: BigDecimal = BigDecimal.ZERO,
+    val date: Date,
+    val buyerName: String?,
+    val buyerPhone: String?,
+    val paymentMethod: String?,
+    val accountId: UUID?,
+    val notes: String?,
+    val createdAt: Date,
+    val updatedAt: Date?,
+    val deletedAt: Date? = null
+)
+
+@Entity(
+    tableName = "part_sale_line_items",
+    foreignKeys = [
+        ForeignKey(entity = PartSale::class, parentColumns = ["id"], childColumns = ["saleId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = Part::class, parentColumns = ["id"], childColumns = ["partId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = PartBatch::class, parentColumns = ["id"], childColumns = ["batchId"], onDelete = ForeignKey.CASCADE)
+    ],
+    indices = [Index("saleId"), Index("partId"), Index("batchId")]
+)
+data class PartSaleLineItem(
+    @PrimaryKey val id: UUID,
+    val saleId: UUID,
+    val partId: UUID,
+    val batchId: UUID,
+    val quantity: BigDecimal = BigDecimal.ZERO,
+    val unitPrice: BigDecimal = BigDecimal.ZERO,
+    val unitCost: BigDecimal = BigDecimal.ZERO,
+    val createdAt: Date,
+    val updatedAt: Date?,
+    val deletedAt: Date? = null
 )
 
 @Entity(
@@ -242,3 +369,55 @@ data class SyncQueueItem(
     val createdAt: Date
 )
 
+@Entity(
+    tableName = "holding_cost_settings",
+    indices = [Index("dealerId")]
+)
+data class HoldingCostSettings(
+    @PrimaryKey val id: UUID,
+    val dealerId: UUID,
+    val annualRatePercent: BigDecimal = BigDecimal("15.00"),
+    val dailyRatePercent: BigDecimal = BigDecimal("0.04109589"),
+    val isEnabled: Boolean = true,
+    val createdAt: Date,
+    val updatedAt: Date?
+)
+
+@Entity(
+    tableName = "vehicle_inventory_stats",
+    foreignKeys = [
+        ForeignKey(entity = Vehicle::class, parentColumns = ["id"], childColumns = ["vehicleId"], onDelete = ForeignKey.CASCADE)
+    ],
+    indices = [Index("vehicleId")]
+)
+data class VehicleInventoryStats(
+    @PrimaryKey val id: UUID,
+    val vehicleId: UUID,
+    val daysInInventory: Int,
+    val agingBucket: String,
+    val totalCost: BigDecimal,
+    val holdingCostAccumulated: BigDecimal,
+    val roiPercent: BigDecimal?,
+    val profitEstimate: BigDecimal?,
+    val lastCalculatedAt: Date,
+    val createdAt: Date,
+    val updatedAt: Date?
+)
+
+@Entity(
+    tableName = "inventory_alerts",
+    foreignKeys = [
+        ForeignKey(entity = Vehicle::class, parentColumns = ["id"], childColumns = ["vehicleId"], onDelete = ForeignKey.CASCADE)
+    ],
+    indices = [Index("vehicleId"), Index("alertType"), Index("isRead")]
+)
+data class InventoryAlert(
+    @PrimaryKey val id: UUID,
+    val vehicleId: UUID,
+    val alertType: InventoryAlertType,
+    val severity: String,
+    val message: String,
+    val isRead: Boolean = false,
+    val createdAt: Date,
+    val dismissedAt: Date?
+)

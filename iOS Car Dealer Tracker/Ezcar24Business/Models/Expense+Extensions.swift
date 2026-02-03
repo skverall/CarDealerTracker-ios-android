@@ -1,5 +1,6 @@
 
 import Foundation
+import CoreData
 
 // MARK: - Expense Extensions
 
@@ -24,6 +25,11 @@ extension Expense {
         case "employee": return "briefcase"
         default: return "tag"
         }
+    }
+
+    var categoryTypeEnum: ExpenseCategoryType? {
+        guard let categoryType = categoryType else { return nil }
+        return ExpenseCategoryType(rawValue: categoryType)
     }
 
     var vehicleTitle: String {
