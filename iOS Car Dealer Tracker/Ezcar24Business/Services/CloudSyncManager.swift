@@ -37,6 +37,8 @@ final class CloudSyncManager: ObservableObject {
     @Published var syncHUDState: SyncHUDState?
     @Published var errorMessage: String?
     @Published var vinConflictVehicleId: UUID?
+    private let pendingProfilePhoneKeyPrefix = "pendingProfilePhone_"
+    private let pendingProfileEmailKeyPrefix = "pendingProfileEmail_"
 
     init(client: SupabaseClient, context: NSManagedObjectContext) {
         self.client = client
@@ -1676,6 +1678,7 @@ final class CloudSyncManager: ObservableObject {
             name: user.name ?? "",
             firstName: user.firstName,
             lastName: user.lastName,
+            email: user.email,
             phone: user.phone,
             avatarURL: user.avatarUrl,
             createdAt: iso8601Formatter.string(from: createdAt),
@@ -1722,6 +1725,7 @@ final class CloudSyncManager: ObservableObject {
             name: user.name ?? "",
             firstName: user.firstName,
             lastName: user.lastName,
+            email: user.email,
             phone: user.phone,
             avatarURL: user.avatarUrl,
             createdAt: iso8601Formatter.string(from: createdAt),
@@ -1982,6 +1986,14 @@ final class CloudSyncManager: ObservableObject {
         }
     }
 
+    private struct VehiclePhotoUpdate: Encodable {
+        let deletedAt: Date?
+
+        enum CodingKeys: String, CodingKey {
+            case deletedAt = "deleted_at"
+        }
+    }
+
     private func imagePath(dealerId: UUID, vehicleId: UUID) -> String {
         "\(dealerId.uuidString.lowercased())/vehicles/\(vehicleId.uuidString.lowercased()).jpg"
     }
@@ -2085,6 +2097,26 @@ final class CloudSyncManager: ObservableObject {
             ImageStore.shared.savePhoto(imageData: data, vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId)
         } catch {
             print("CloudSyncManager downloadVehiclePhoto error: \(error)")
+        }
+    }
+
+    func deleteVehiclePhoto(photo: RemoteVehiclePhoto, dealerId: UUID) async {
+        do {
+            let update = VehiclePhotoUpdate(deletedAt: Date())
+            try await writeClient
+                .from("crm_vehicle_photos")
+                .update(update)
+                .eq("id", value: photo.id)
+                .eq("dealer_id", value: dealerId)
+                .execute()
+
+            _ = try await client.storage
+                .from("vehicle-images")
+                .remove(paths: [photo.storagePath])
+
+            ImageStore.shared.deletePhoto(vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId)
+        } catch {
+            print("CloudSyncManager deleteVehiclePhoto error: \(error)")
         }
     }
 
@@ -2629,6 +2661,7 @@ final class CloudSyncManager: ObservableObject {
             user.name = u.name
             user.firstName = u.firstName
             user.lastName = u.lastName
+            user.email = u.email
             user.phone = u.phone
             user.avatarUrl = u.avatarURL
             user.createdAt = CloudSyncManager.parseDateAndTime(u.createdAt)
@@ -3245,18 +3278,45 @@ final class CloudSyncManager: ObservableObject {
         request.predicate = NSPredicate(format: "id == %@", user.id as CVarArg)
         
         do {
-            let count = try context.count(for: request)
-            if count == 0 {
+            let results = try context.fetch(request)
+            let now = Date()
+            let localUser = results.first ?? User(context: context)
+            if results.isEmpty {
                 print("CloudSyncManager: Creating missing local User record for \(user.id)")
-                let localUser = User(context: context)
                 localUser.id = user.id
-                localUser.createdAt = Date()
-                localUser.updatedAt = Date()
-                // Default name from email if available, to have something
-                if let email = user.email {
+                localUser.createdAt = now
+                localUser.updatedAt = now
+                if let email = user.email, !email.isEmpty {
                     let prefix = email.components(separatedBy: "@").first ?? "User"
                     localUser.name = prefix.capitalized
                 }
+            }
+
+            let defaults = UserDefaults.standard
+            var didUpdate = false
+            if (localUser.email ?? "").isEmpty {
+                if let authEmail = user.email, !authEmail.isEmpty {
+                    localUser.email = authEmail
+                    didUpdate = true
+                } else {
+                    let emailKey = "\(pendingProfileEmailKeyPrefix)\(user.id.uuidString)"
+                    if let pendingEmail = defaults.string(forKey: emailKey), !pendingEmail.isEmpty {
+                        localUser.email = pendingEmail
+                        defaults.removeObject(forKey: emailKey)
+                        didUpdate = true
+                    }
+                }
+            }
+            if (localUser.phone ?? "").isEmpty {
+                let phoneKey = "\(pendingProfilePhoneKeyPrefix)\(user.id.uuidString)"
+                if let pendingPhone = defaults.string(forKey: phoneKey), !pendingPhone.isEmpty {
+                    localUser.phone = pendingPhone
+                    defaults.removeObject(forKey: phoneKey)
+                    didUpdate = true
+                }
+            }
+            if didUpdate {
+                localUser.updatedAt = now
             }
         } catch {
              print("Error checking for local user: \(error)")
@@ -3375,6 +3435,7 @@ final class CloudSyncManager: ObservableObject {
                     name: user.name ?? "",
                     firstName: user.firstName,
                     lastName: user.lastName,
+                    email: user.email,
                     phone: user.phone,
                     avatarURL: user.avatarUrl,
                     createdAt: CloudSyncManager.formatDateAndTime(user.createdAt ?? Date()),

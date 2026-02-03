@@ -83,6 +83,7 @@ class SalesViewModel: ObservableObject {
         
         // 1. Process Vehicle Sales
         if filter == .all || filter == .vehicles {
+            let settings = fetchHoldingCostSettings()
             let filteredVehicles = allVehicleSales.filter { sale in
                 if searchText.isEmpty { return true }
                 let query = searchText.lowercased()
@@ -93,7 +94,10 @@ class SalesViewModel: ObservableObject {
                 
                 return matchesVehicle || matchesBuyer
             }
-            items.append(contentsOf: filteredVehicles.map { UnifiedSaleItem(vehicleSale: $0) })
+            items.append(contentsOf: filteredVehicles.map { sale in
+                let holdingCost = holdingCostForSale(sale, settings: settings)
+                return UnifiedSaleItem(vehicleSale: sale, holdingCost: holdingCost)
+            })
         }
         
         // 2. Process Part Sales
@@ -230,7 +234,33 @@ class SalesViewModel: ObservableObject {
             print("Failed to delete part sale: \(error)")
         }
     }
-    
+
+    private func holdingCostForSale(_ sale: Sale, settings: HoldingCostSettings?) -> Decimal {
+        guard let vehicle = sale.vehicle else { return 0 }
+        guard let settings, settings.isEnabled else { return 0 }
+        let calculator = HoldingCostCalculator(settings: settings)
+        let date = sale.date ?? vehicle.saleDate ?? Date()
+        return calculator.calculateHoldingCost(for: vehicle, asOfDate: date)
+    }
+
+    private func fetchHoldingCostSettings() -> HoldingCostSettings? {
+        let request = HoldingCostSettings.fetchRequest()
+        request.fetchLimit = 1
+        if let settings = try? viewContext.fetch(request).first {
+            return settings
+        }
+
+        let settings = HoldingCostSettings(context: viewContext)
+        settings.id = UUID()
+        settings.isEnabled = true
+        settings.annualRatePercent = NSDecimalNumber(decimal: 15.0)
+        settings.dailyRatePercent = NSDecimalNumber(decimal: 0.0411)
+        settings.createdAt = Date()
+        settings.updatedAt = Date()
+        try? viewContext.save()
+        return settings
+    }
+
     private func saveAndSync(saleId: UUID?, isPartSale: Bool) {
         do {
             try viewContext.save()
@@ -271,7 +301,8 @@ class SalesViewModel: ObservableObject {
             guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
             if objects.contains(where: {
                 $0 is Sale || $0 is Vehicle || $0 is Expense ||
-                $0 is PartSale || $0 is PartSaleLineItem || $0 is PartBatch
+                $0 is PartSale || $0 is PartSaleLineItem || $0 is PartBatch ||
+                $0 is HoldingCostSettings
             }) {
                 return true
             }
@@ -299,7 +330,7 @@ struct UnifiedSaleItem: Identifiable {
     let cost: Decimal
     let profit: Decimal
     
-    init(vehicleSale: Sale) {
+    init(vehicleSale: Sale, holdingCost: Decimal = 0) {
         self.id = vehicleSale.objectID
         self.type = .vehicle(vehicleSale)
         self.date = vehicleSale.date ?? Date()
@@ -323,7 +354,7 @@ struct UnifiedSaleItem: Identifiable {
         
         let purchasePrice = vehicleSale.vehicle?.purchasePrice?.decimalValue ?? 0
         let expenses = (vehicleSale.vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
-        self.cost = purchasePrice + expenses
+        self.cost = purchasePrice + expenses + holdingCost
         
         // Include VAT refund in profit
         let vatRefund = vehicleSale.vatRefundAmount?.decimalValue ?? 0
@@ -349,4 +380,3 @@ struct UnifiedSaleItem: Identifiable {
 
 // Define SaleItem alias for backward compatibility if needed, or remove if fully replaced.
 typealias SaleItem = UnifiedSaleItem
-

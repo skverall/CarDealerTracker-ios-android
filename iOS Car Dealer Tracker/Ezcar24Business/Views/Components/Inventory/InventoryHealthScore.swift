@@ -140,7 +140,7 @@ struct InventoryHealthScoreCompact: View {
                 .rotationEffect(.degrees(-90))
             
             Text("\(score)")
-                .font(.system(size: size * 0.35, weight: .bold, design: .rounded))
+                .font(.system(size: size * 0.40, weight: .bold, design: .rounded))
                 .foregroundColor(color)
         }
     }

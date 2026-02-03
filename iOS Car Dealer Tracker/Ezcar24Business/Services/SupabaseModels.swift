@@ -6,6 +6,7 @@ struct RemoteDealerUser: Codable {
     let name: String
     let firstName: String?
     let lastName: String?
+    let email: String?
     let phone: String?
     let avatarURL: String?
     let createdAt: String
@@ -18,6 +19,7 @@ struct RemoteDealerUser: Codable {
         case name
         case firstName = "first_name"
         case lastName = "last_name"
+        case email
         case phone
         case avatarURL = "avatar_url"
         case createdAt = "created_at"

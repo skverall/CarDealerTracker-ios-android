@@ -191,6 +191,16 @@ final class ImageStore {
         }
     }
 
+    func deletePhoto(vehicleId: UUID, photoId: UUID, dealerId: UUID? = nil, completion: (() -> Void)? = nil) {
+        let url = photoURL(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId)
+        ioQueue.async { [weak self] in
+            guard let self = self else { return }
+            try? FileManager.default.removeItem(at: url)
+            self.cache.removeObject(forKey: photoId.uuidString as NSString)
+            DispatchQueue.main.async { completion?() }
+        }
+    }
+
     // Remove all images from disk and memory cache (used on sign-out/guest reset)
     func clearAll() {
         ioQueue.async { [weak self] in

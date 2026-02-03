@@ -1,6 +1,15 @@
 import Foundation
 import Supabase
 
+struct ReferralStats: Equatable {
+    let totalRewards: Int
+    let lastRewardedAt: Date?
+    let bonusAccessUntil: Date?
+    let totalMonths: Int
+
+    static let empty = ReferralStats(totalRewards: 0, lastRewardedAt: nil, bonusAccessUntil: nil, totalMonths: 0)
+}
+
 @MainActor
 final class SessionStore: ObservableObject {
     enum Status: Equatable {
@@ -18,12 +27,17 @@ final class SessionStore: ObservableObject {
     @Published private(set) var inviteToastMessage: String?
     @Published private(set) var inviteToastIsError = false
     @Published private(set) var isAcceptingInvite = false
+    @Published private(set) var pendingReferralCode: String?
     
     private var isPasswordRecoverySessionActive = false
     private let passwordRecoveryFlagKey = "passwordRecoveryInProgress"
     private let lastSignedInUserIdKey = "lastSignedInUserId"
     private let pendingInviteTokenKey = "pendingInviteToken"
     private let pendingInviteTokenTimestampKey = "pendingInviteTokenTimestamp"
+    private let pendingReferralCodeKey = "pendingReferralCode"
+    private let pendingReferralCodeTimestampKey = "pendingReferralCodeTimestamp"
+    private let pendingProfilePhoneKeyPrefix = "pendingProfilePhone_"
+    private let pendingProfileEmailKeyPrefix = "pendingProfileEmail_"
     private let activeOrganizationKeyPrefix = "activeOrganizationId"
 
     private let client: SupabaseClient
@@ -41,6 +55,7 @@ final class SessionStore: ObservableObject {
 
     init(client: SupabaseClient) {
         self.client = client
+        self.pendingReferralCode = UserDefaults.standard.string(forKey: pendingReferralCodeKey)
         
         if UserDefaults.standard.bool(forKey: passwordRecoveryFlagKey) {
             beginPasswordRecoveryFlow()
@@ -161,16 +176,20 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    func signUp(email: String, password: String) async throws {
+    func signUp(email: String, password: String, phone: String?, referralCode: String?) async throws {
         isAuthenticating = true
         defer { isAuthenticating = false }
         do {
+            if let referralCode, !referralCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                cachePendingReferralCode(referralCode)
+            }
             let response = try await client.auth.signUp(email: email, password: password)
 
             if let session = response.session {
                 updateStatus(for: .signedIn, session: session)
                 // Link RevenueCat user
                 SubscriptionManager.shared.logIn(userId: session.user.id.uuidString)
+                cachePendingProfile(userId: session.user.id, phone: phone, email: session.user.email ?? email)
                 errorMessage = nil
                 return
             }
@@ -180,6 +199,16 @@ final class SessionStore: ObservableObject {
         } catch {
             errorMessage = localized(error)
             throw error
+        }
+    }
+
+    private func cachePendingProfile(userId: UUID, phone: String?, email: String?) {
+        let defaults = UserDefaults.standard
+        if let phone, !phone.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            defaults.set(phone, forKey: "\(pendingProfilePhoneKeyPrefix)\(userId.uuidString)")
+        }
+        if let email, !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            defaults.set(email, forKey: "\(pendingProfileEmailKeyPrefix)\(userId.uuidString)")
         }
     }
 
@@ -317,6 +346,9 @@ final class SessionStore: ObservableObject {
     }
 
     func handleDeepLink(_ url: URL) async throws {
+        if await handleReferralDeepLink(url) {
+            return
+        }
         if await handleInviteDeepLink(url) {
             return
         }
@@ -355,8 +387,85 @@ final class SessionStore: ObservableObject {
             await loadOrganizations()
         }
 
+        if storedReferralCode() != nil {
+            _ = await claimPendingReferralIfPossible()
+        }
+
+        await refreshReferralBonus()
+
         if pendingInviteToken() != nil {
             clearPendingInviteToken()
+        }
+    }
+
+    func getDealerReferralCode(dealerId: UUID) async -> String? {
+        do {
+            let params: [String: AnyJSON] = [
+                "p_dealer_id": .string(dealerId.uuidString)
+            ]
+            let code: String = try await client
+                .rpc("get_or_create_dealer_referral_code", params: params)
+                .execute()
+                .value
+            return code
+        } catch {
+            return nil
+        }
+    }
+
+    func refreshReferralBonus() async {
+        guard case .signedIn(let user) = status else { return }
+        struct BonusRow: Decodable {
+            let bonusAccessUntil: Date
+            let totalMonths: Int
+            enum CodingKeys: String, CodingKey {
+                case bonusAccessUntil = "bonus_access_until"
+                case totalMonths = "total_months"
+            }
+        }
+        do {
+            let row: BonusRow = try await client
+                .from("referral_bonus_access")
+                .select("bonus_access_until,total_months")
+                .eq("user_id", value: user.id)
+                .single()
+                .execute()
+                .value
+            SubscriptionManager.shared.updateReferralBonus(until: row.bonusAccessUntil, months: row.totalMonths)
+        } catch {
+            SubscriptionManager.shared.updateReferralBonus(until: nil, months: nil)
+        }
+    }
+
+    func fetchReferralStats() async -> ReferralStats {
+        guard case .signedIn = status else { return .empty }
+        struct StatsRow: Decodable {
+            let totalRewards: Int
+            let lastRewardedAt: Date?
+            let bonusAccessUntil: Date?
+            let totalMonths: Int
+
+            enum CodingKeys: String, CodingKey {
+                case totalRewards = "total_rewards"
+                case lastRewardedAt = "last_rewarded_at"
+                case bonusAccessUntil = "bonus_access_until"
+                case totalMonths = "total_months"
+            }
+        }
+
+        do {
+            let row: StatsRow = try await client
+                .rpc("get_referral_stats")
+                .execute()
+                .value
+            return ReferralStats(
+                totalRewards: row.totalRewards,
+                lastRewardedAt: row.lastRewardedAt,
+                bonusAccessUntil: row.bonusAccessUntil,
+                totalMonths: row.totalMonths
+            )
+        } catch {
+            return .empty
         }
     }
 
@@ -476,6 +585,20 @@ final class SessionStore: ObservableObject {
         return true
     }
 
+    private func handleReferralDeepLink(_ url: URL) async -> Bool {
+        guard let code = extractReferralCode(from: url) else { return false }
+        cachePendingReferralCode(code)
+
+        switch status {
+        case .signedIn:
+            _ = await claimPendingReferralIfPossible()
+        default:
+            showInviteToast(message: "Referral code saved. Sign in to claim.", isError: false)
+        }
+
+        return true
+    }
+
     private func extractInviteToken(from url: URL) -> String? {
         let host = url.host?.lowercased() ?? ""
         let path = url.path.lowercased()
@@ -488,9 +611,27 @@ final class SessionStore: ObservableObject {
         return components?.queryItems?.first(where: { $0.name == "token" })?.value
     }
 
+    private func extractReferralCode(from url: URL) -> String? {
+        let host = url.host?.lowercased() ?? ""
+        let path = url.path.lowercased()
+        let isUniversal = host.contains("ezcar24.com") && (path.contains("dealer-invite") || path.contains("referral"))
+        let isCustom = host.contains("dealer-invite") || host.contains("referral")
+        guard isUniversal || isCustom else { return nil }
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let code = components?.queryItems?.first(where: { $0.name == "code" })?.value
+            ?? components?.queryItems?.first(where: { $0.name == "ref" })?.value
+        let trimmed = code?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
     private func acceptPendingInviteIfPossible() async -> Bool {
         guard let token = pendingInviteToken() else { return false }
         return await acceptInvite(token: token)
+    }
+
+    private func claimPendingReferralIfPossible() async -> Bool {
+        guard let code = storedReferralCode() else { return false }
+        return await claimReferral(code: code)
     }
 
     private func acceptInvite(token: String) async -> Bool {
@@ -517,9 +658,47 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    private func claimReferral(code: String) async -> Bool {
+        guard case .signedIn = status else { return false }
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !trimmed.isEmpty else { return false }
+
+        do {
+            let params: [String: AnyJSON] = [
+                "p_code": .string(trimmed)
+            ]
+            let result: Bool = try await client
+                .rpc("claim_dealer_referral", params: params)
+                .execute()
+                .value
+            if result {
+                clearPendingReferralCode()
+                showInviteToast(message: "Referral applied. Thanks for joining.", isError: false)
+            } else {
+                showInviteToast(message: "Referral already used.", isError: true)
+            }
+            return result
+        } catch {
+            let message = localized(error)
+            if shouldClearPendingReferralCode(message: message) {
+                clearPendingReferralCode()
+            }
+            showInviteToast(message: message, isError: true)
+            return false
+        }
+    }
+
     private func cachePendingInviteToken(_ token: String) {
         UserDefaults.standard.set(token, forKey: pendingInviteTokenKey)
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: pendingInviteTokenTimestampKey)
+    }
+
+    private func cachePendingReferralCode(_ code: String) {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !trimmed.isEmpty else { return }
+        pendingReferralCode = trimmed
+        UserDefaults.standard.set(trimmed, forKey: pendingReferralCodeKey)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: pendingReferralCodeTimestampKey)
     }
 
     private func pendingInviteToken() -> String? {
@@ -537,9 +716,34 @@ final class SessionStore: ObservableObject {
         return token
     }
 
+    private func storedReferralCode() -> String? {
+        if let cached = pendingReferralCode, !cached.isEmpty {
+            return cached
+        }
+        guard let code = UserDefaults.standard.string(forKey: pendingReferralCodeKey) else { return nil }
+        let timestamp = UserDefaults.standard.object(forKey: pendingReferralCodeTimestampKey) as? Double
+        guard let timestamp else {
+            clearPendingReferralCode()
+            return nil
+        }
+        let maxAge: TimeInterval = 30 * 24 * 60 * 60
+        if Date().timeIntervalSince1970 - timestamp > maxAge {
+            clearPendingReferralCode()
+            return nil
+        }
+        pendingReferralCode = code
+        return code
+    }
+
     private func clearPendingInviteToken() {
         UserDefaults.standard.removeObject(forKey: pendingInviteTokenKey)
         UserDefaults.standard.removeObject(forKey: pendingInviteTokenTimestampKey)
+    }
+
+    private func clearPendingReferralCode() {
+        pendingReferralCode = nil
+        UserDefaults.standard.removeObject(forKey: pendingReferralCodeKey)
+        UserDefaults.standard.removeObject(forKey: pendingReferralCodeTimestampKey)
     }
 
     private func showInviteToast(message: String, isError: Bool) {
@@ -585,6 +789,14 @@ final class SessionStore: ObservableObject {
             lower.contains("expired") ||
             lower.contains("already") ||
             lower.contains("mismatch")
+    }
+
+    private func shouldClearPendingReferralCode(message: String) -> Bool {
+        let lower = message.lowercased()
+        return lower.contains("invalid") ||
+            lower.contains("expired") ||
+            lower.contains("self") ||
+            lower.contains("not allowed")
     }
 
     private func listenForAuthChanges() {
@@ -662,6 +874,8 @@ final class SessionStore: ObservableObject {
         inviteToastMessage = nil
         inviteToastIsError = false
         isAcceptingInvite = false
+        pendingReferralCode = nil
+        clearPendingReferralCode()
         PermissionService.shared.resetSession()
         UserDefaults.standard.removeObject(forKey: passwordRecoveryFlagKey)
         ImageStore.shared.setActiveDealerId(nil)

@@ -8,16 +8,18 @@
 import SwiftUI
 import PhotosUI
 import CoreData
+import UIKit
 
 struct VehicleDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var sessionStore: SessionStore
     @ObservedObject private var permissionService = PermissionService.shared
     let vehicle: Vehicle
-    @State private var selectedPhoto: PhotosPickerItem? = nil
-    @State private var pendingImageData: Data? = nil // Image data waiting for confirmation
-    @State private var showImageConfirmation: Bool = false
-    @State private var isUploadingImage: Bool = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var pendingPhotos: [PendingVehiclePhoto] = []
+    @State private var showPhotoUploadSheet: Bool = false
+    @State private var isUploadingPhotos: Bool = false
+    @State private var replaceCoverOnUpload: Bool = false
     @State private var refreshID = UUID()
     @State private var editStatus: String = ""
     @State private var editPurchasePrice: String = ""
@@ -49,10 +51,13 @@ struct VehicleDetailView: View {
     @State private var showShareSheet: Bool = false
     @State private var shareItems: [Any] = []
     @State private var vehiclePhotos: [RemoteVehiclePhoto] = []
+    @State private var photoPendingDelete: RemoteVehiclePhoto? = nil
+    @State private var showPhotoDeleteDialog: Bool = false
 
     let paymentMethods = ["Cash", "Bank Transfer", "Cheque", "Finance", "Other"]
 
     @State private var isEditing: Bool = false
+
 
     private var canDeleteRecords: Bool {
         if case .signedIn = sessionStore.status {
@@ -150,42 +155,72 @@ struct VehicleDetailView: View {
         )
     }
 
-    private func confirmAndUploadImage() {
-        guard let data = pendingImageData, let id = vehicle.id else { return }
-        isUploadingImage = true
+    private func preparePendingPhotos(items: [PhotosPickerItem]) async {
+        var pending: [PendingVehiclePhoto] = []
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let uiImage = UIImage(data: data) {
+                pending.append(PendingVehiclePhoto(id: UUID(), data: data, image: Image(uiImage: uiImage)))
+            }
+        }
+        await MainActor.run {
+            pendingPhotos = pending
+            selectedPhotos = []
+            if let id = vehicle.id {
+                let dealerId = CloudSyncEnvironment.currentDealerId
+                replaceCoverOnUpload = !ImageStore.shared.hasImage(id: id, dealerId: dealerId)
+            } else {
+                replaceCoverOnUpload = false
+            }
+            showPhotoUploadSheet = !pending.isEmpty
+        }
+    }
+
+    private func uploadPendingPhotos() {
+        guard let id = vehicle.id, !pendingPhotos.isEmpty else { return }
+        isUploadingPhotos = true
 
         Task {
-            // 1. Update local timestamp to trigger sync logic
             await viewContext.perform {
                 vehicle.updatedAt = Date()
                 try? viewContext.save()
             }
 
-            let dealerId = CloudSyncEnvironment.currentDealerId
-            let makePrimary = vehiclePhotos.isEmpty
-            let sortOrder = vehiclePhotos.count
+            guard let dealerId = CloudSyncEnvironment.currentDealerId else {
+                await MainActor.run {
+                    isUploadingPhotos = false
+                    pendingPhotos = []
+                    showPhotoUploadSheet = false
+                }
+                return
+            }
 
-            // 2. Sync vehicle update & upload image
-            if let dealerId = dealerId {
-                // First push the vehicle update so other clients know something changed
-                await CloudSyncManager.shared?.upsertVehicle(vehicle, dealerId: dealerId)
-                // Then upload the photo + metadata
+            let hasCover = ImageStore.shared.hasImage(id: id, dealerId: dealerId)
+            let shouldSetCover = replaceCoverOnUpload || !hasCover
+            var sortOrder = vehiclePhotos.count
+            var isFirst = true
+
+            await CloudSyncManager.shared?.upsertVehicle(vehicle, dealerId: dealerId)
+
+            for photo in pendingPhotos {
                 await CloudSyncManager.shared?.uploadVehiclePhoto(
                     vehicleId: id,
                     dealerId: dealerId,
-                    imageData: data,
-                    makePrimary: makePrimary,
+                    imageData: photo.data,
+                    makePrimary: shouldSetCover && isFirst,
                     sortOrder: sortOrder
                 )
+                sortOrder += 1
+                isFirst = false
             }
 
             refreshID = UUID()
             await refreshVehiclePhotos()
 
             await MainActor.run {
-                isUploadingImage = false
-                pendingImageData = nil
-                showImageConfirmation = false
+                isUploadingPhotos = false
+                pendingPhotos = []
+                showPhotoUploadSheet = false
             }
         }
     }
@@ -201,6 +236,24 @@ struct VehicleDetailView: View {
         } catch {
             print("Failed to refresh vehicle photos: \(error)")
         }
+    }
+
+    private func setCoverPhoto(_ photo: RemoteVehiclePhoto) async {
+        guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+        if let image = await loadPhotoImage(vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId),
+           let data = image.jpegData(compressionQuality: 0.9) {
+            await CloudSyncManager.shared?.uploadVehicleImage(vehicleId: photo.vehicleId, dealerId: dealerId, imageData: data)
+            ImageStore.shared.save(imageData: data, for: photo.vehicleId, dealerId: dealerId)
+            await MainActor.run {
+                refreshID = UUID()
+            }
+        }
+    }
+
+    private func deleteVehiclePhoto(_ photo: RemoteVehiclePhoto) async {
+        guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+        await CloudSyncManager.shared?.deleteVehiclePhoto(photo: photo, dealerId: dealerId)
+        await refreshVehiclePhotos()
     }
 
     private func loadPhotoImage(vehicleId: UUID, photoId: UUID, dealerId: UUID?) async -> UIImage? {
@@ -292,6 +345,9 @@ struct VehicleDetailView: View {
                         ImageStore.shared.delete(id: id, dealerId: dealerId) {
                             refreshID = UUID()
                         }
+                        if let dealerId {
+                            Task { await CloudSyncManager.shared?.deleteVehicleImage(vehicleId: id, dealerId: dealerId) }
+                        }
                     } label: {
                         Image(systemName: "trash")
                             .foregroundColor(.red)
@@ -308,31 +364,40 @@ struct VehicleDetailView: View {
                  }
             }
         }
-        .onChange(of: selectedPhoto) { _, item in
-            guard let item, let _ = vehicle.id else { return }
+        .onChange(of: selectedPhotos) { _, items in
+            guard !items.isEmpty else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self) {
-                    // Store the image data for preview, don't upload yet
-                    pendingImageData = data
-                    showImageConfirmation = true
-                }
+                await preparePendingPhotos(items: items)
             }
         }
-        .sheet(isPresented: $showImageConfirmation) {
-            ImageConfirmationSheet(
-                imageData: pendingImageData,
-                isUploading: $isUploadingImage,
+        .sheet(isPresented: $showPhotoUploadSheet) {
+            PhotoUploadSheet(
+                photos: pendingPhotos,
+                replaceCover: $replaceCoverOnUpload,
+                isUploading: $isUploadingPhotos,
                 onConfirm: {
-                    confirmAndUploadImage()
+                    uploadPendingPhotos()
                 },
                 onCancel: {
-                    pendingImageData = nil
-                    showImageConfirmation = false
+                    pendingPhotos = []
+                    selectedPhotos = []
+                    showPhotoUploadSheet = false
                 }
             )
         }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: shareItems)
+        }
+        .confirmationDialog("delete_photo_confirm".localizedString, isPresented: $showPhotoDeleteDialog) {
+            Button("delete_photo".localizedString, role: .destructive) {
+                if let photo = photoPendingDelete {
+                    Task { await deleteVehiclePhoto(photo) }
+                }
+                photoPendingDelete = nil
+            }
+            Button("cancel".localizedString, role: .cancel) {
+                photoPendingDelete = nil
+            }
         }
         .onAppear {
             // Initialize edit fields
@@ -402,84 +467,80 @@ struct VehicleDetailView: View {
     @ViewBuilder
     private var vehiclePhotoView: some View {
         if let id = vehicle.id {
-                let dealerId = CloudSyncEnvironment.currentDealerId
-                let hasImage = ImageStore.shared.hasImage(id: id, dealerId: dealerId)
-                let addPhotoText = "add_photo".localizedString
-                let changePhotoText = "change_photo".localizedString
-                VStack(spacing: 12) {
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        if isEditing && !hasImage {
-                            // Empty State for Editing
-                            ZStack {
+            let dealerId = CloudSyncEnvironment.currentDealerId
+            let hasImage = ImageStore.shared.hasImage(id: id, dealerId: dealerId)
+            let addPhotosText = "add_photos".localizedString
+            VStack(spacing: 12) {
+                ZStack {
+                    if hasImage {
+                        VehicleLargeImageView(vehicleID: id)
+                            .id(refreshID)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(ColorTheme.secondaryBackground)
+                            .frame(height: 200)
+                            .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .fill(ColorTheme.secondaryBackground)
-                                    .frame(height: 200)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .stroke(style: StrokeStyle(lineWidth: 1, dash: [6]))
-                                            .foregroundColor(ColorTheme.secondary)
-                                    )
-                                
+                                    .stroke(style: StrokeStyle(lineWidth: 1, dash: [6]))
+                                    .foregroundColor(ColorTheme.secondary)
+                            )
+                            .overlay(
                                 VStack(spacing: 12) {
                                     Image(systemName: "camera.fill")
                                         .font(.system(size: 32))
                                         .foregroundColor(ColorTheme.secondary)
-                                    Text(addPhotoText)
+                                    Text(addPhotosText)
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundColor(ColorTheme.secondary)
                                 }
-                            }
-                            .padding(.horizontal)
-                        } else {
-                            // Default / View Mode / Edit with Image
-                            ZStack {
-                                VehicleLargeImageView(vehicleID: id)
-                                    .id(refreshID)
-                                
-                                if isEditing {
-                                    // Overlay for existing image
-                                    ZStack {
-                                        Color.black.opacity(0.2)
-                                        
-                                        VStack {
-                                            Image(systemName: "plus")
-                                                .font(.title2)
-                                                .foregroundColor(.white)
-                                                .padding(12)
-                                                .background(.ultraThinMaterial)
-                                                .clipShape(Circle())
-                                            
-                                            Text(changePhotoText)
-                                                .font(.caption)
-                                                .fontWeight(.medium)
-                                                .foregroundColor(.white)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .background(.ultraThinMaterial)
-                                                .cornerRadius(6)
-                                        }
-                                    }
-                                    .cornerRadius(12)
-                                }
-                            }
-                            .padding(.horizontal)
-                        }
+                            )
                     }
-                    .disabled(!isEditing)
+                }
+                .padding(.horizontal)
 
-                    if !vehiclePhotos.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 12) {
-                                ForEach(vehiclePhotos, id: \.id) { photo in
-                                    VehiclePhotoThumbnail(vehicleId: id, photoId: photo.id)
-                                }
-                            }
-                            .padding(.horizontal)
+                if isEditing {
+                    HStack(spacing: 12) {
+                        PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 20, matching: .images) {
+                            Label(addPhotosText, systemImage: "photo.on.rectangle.angled")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(ColorTheme.primary.opacity(0.12))
+                                .foregroundColor(ColorTheme.primary)
+                                .cornerRadius(12)
                         }
+                        .disabled(isUploadingPhotos)
+
+                        
+                    }
+                    .padding(.horizontal)
+                }
+
+                if !vehiclePhotos.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(vehiclePhotos, id: \.id) { photo in
+                                VehiclePhotoThumbnail(
+                                    vehicleId: id,
+                                    photoId: photo.id,
+                                    isEditing: isEditing,
+                                    onSetCover: {
+                                        Task { await setCoverPhoto(photo) }
+                                    },
+                                    onDelete: {
+                                        photoPendingDelete = photo
+                                        showPhotoDeleteDialog = true
+                                    }
+                                )
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
             }
+        }
     }
 
     @ViewBuilder
@@ -1594,9 +1655,83 @@ struct VehicleLargeImageView: View {
     }
 }
 
+struct PendingVehiclePhoto: Identifiable {
+    let id: UUID
+    let data: Data
+    let image: Image
+}
+
+struct PhotoUploadSheet: View {
+    let photos: [PendingVehiclePhoto]
+    @Binding var replaceCover: Bool
+    @Binding var isUploading: Bool
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                if photos.isEmpty {
+                    Text("no_photos_selected".localizedString)
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .padding(.top, 24)
+                } else {
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(photos) { photo in
+                                photo.image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: 100)
+                                    .clipped()
+                                    .cornerRadius(10)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                    }
+                }
+
+                Toggle("replace_cover_photo".localizedString, isOn: $replaceCover)
+                    .padding(.horizontal, 16)
+
+                if isUploading {
+                    ProgressView()
+                        .padding(.bottom, 8)
+                }
+            }
+            .navigationTitle("upload_photos".localizedString)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("cancel".localizedString) {
+                        onCancel()
+                    }
+                    .disabled(isUploading)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("upload".localizedString) {
+                        onConfirm()
+                    }
+                    .disabled(isUploading || photos.isEmpty)
+                }
+            }
+        }
+        .interactiveDismissDisabled(isUploading)
+    }
+}
+
 struct VehiclePhotoThumbnail: View {
     let vehicleId: UUID
     let photoId: UUID
+    let isEditing: Bool
+    let onSetCover: (() -> Void)?
+    let onDelete: (() -> Void)?
     @State private var image: Image? = nil
 
     var body: some View {
@@ -1617,10 +1752,36 @@ struct VehiclePhotoThumbnail: View {
                     .foregroundColor(ColorTheme.secondaryText)
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if isEditing {
+                Button {
+                    onDelete?()
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.white)
+                        .background(Color.black.opacity(0.6))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .padding(6)
+            }
+        }
         .onAppear { loadImage() }
         .onReceive(NotificationCenter.default.publisher(for: .vehicleImageUpdated)) { notification in
             if let updatedID = notification.object as? UUID, updatedID == vehicleId {
                 loadImage()
+            }
+        }
+        .contextMenu {
+            if isEditing {
+                Button("set_as_cover".localizedString) {
+                    onSetCover?()
+                }
+                Button(role: .destructive) {
+                    onDelete?()
+                } label: {
+                    Text("delete_photo".localizedString)
+                }
             }
         }
     }
@@ -1665,107 +1826,6 @@ struct VehicleExpenseRow: View {
             }
 
         }
-    }
-}
-
-// MARK: - Image Confirmation Sheet
-struct ImageConfirmationSheet: View {
-    let imageData: Data?
-    @Binding var isUploading: Bool
-    let onConfirm: () -> Void
-    let onCancel: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                Text("Preview Photo")
-                    .font(.headline)
-                    .padding(.top)
-
-                // Image Preview
-                if let data = imageData, let uiImage = UIImage(data: data) {
-                    Image(uiImage: uiImage)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 400)
-                        .cornerRadius(12)
-                        .padding(.horizontal)
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.gray.opacity(0.2))
-                        .frame(height: 300)
-                        .overlay {
-                            Image(systemName: "photo")
-                                .font(.system(size: 50))
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.horizontal)
-                }
-
-                Text("Do you want to use this photo?")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                // Action Buttons
-                VStack(spacing: 12) {
-                    Button(action: onConfirm) {
-                        HStack {
-                            if isUploading {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                    .scaleEffect(0.8)
-                            }
-                            Text(isUploading ? "Uploading..." : "Confirm")
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(ColorTheme.primary)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                    }
-                    .disabled(isUploading)
-
-                    Button(action: onCancel) {
-                        Text("cancel".localizedString)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.gray.opacity(0.15))
-                            .foregroundColor(.primary)
-                            .cornerRadius(12)
-                    }
-                    .disabled(isUploading)
-                }
-                .padding(.horizontal)
-                .padding(.bottom, 30)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("cancel".localizedString) {
-                        onCancel()
-                    }
-                    .disabled(isUploading)
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        onConfirm()
-                    } label: {
-                        if isUploading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle())
-                        } else {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(ColorTheme.primary)
-                        }
-                    }
-                    .disabled(isUploading)
-                }
-            }
-        }
-        .interactiveDismissDisabled(isUploading)
     }
 }
 

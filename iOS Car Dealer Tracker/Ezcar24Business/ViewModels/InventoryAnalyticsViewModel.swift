@@ -8,6 +8,7 @@
 import Foundation
 import CoreData
 import Combine
+import SwiftUI
 
 @MainActor
 class InventoryAnalyticsViewModel: ObservableObject {
@@ -253,6 +254,57 @@ class InventoryAnalyticsViewModel: ObservableObject {
                 let roi1 = vehicleStats[v1.id ?? UUID()]?.roiPercent?.decimalValue ?? 0
                 let roi2 = vehicleStats[v2.id ?? UUID()]?.roiPercent?.decimalValue ?? 0
                 return roi1 < roi2
+            }
+        }
+    }
+
+    
+    // MARK: - Insights & Helpers
+    
+    var healthStatusTitle: String {
+        switch healthScore {
+        case 90...100: return "Excellent Health"
+        case 75..<90: return "Good Health"
+        case 60..<75: return "Fair Health"
+        default: return "Needs Attention"
+        }
+    }
+    
+    var healthStatusMessage: String {
+        switch healthScore {
+        case 90...100: return "Your inventory efficiency is top tier."
+        case 75..<90: return "Inventory flow is healthy."
+        case 60..<75: return "Consider discounting older units."
+        default: return "High holding costs detected."
+        }
+    }
+    
+    var healthColor: ColorTheme.Key {
+        switch healthScore {
+        case 90...100: return .success
+        case 75..<90: return .warning
+        case 60..<75: return .orange
+        default: return .danger
+        }
+    }
+    
+    func getTurnoverStatus() -> (String, ColorTheme.Key) {
+        if averageDaysInInventory < 30 { return ("Fast", .success) }
+        if averageDaysInInventory < 60 { return ("Normal", .warning) }
+        return ("Slow", .danger)
+    }
+}
+
+extension ColorTheme {
+    enum Key {
+        case success, warning, danger, orange
+        
+        var color: SwiftUI.Color {
+            switch self {
+            case .success: return ColorTheme.success
+            case .warning: return ColorTheme.warning
+            case .danger: return ColorTheme.danger
+            case .orange: return Color.orange
             }
         }
     }

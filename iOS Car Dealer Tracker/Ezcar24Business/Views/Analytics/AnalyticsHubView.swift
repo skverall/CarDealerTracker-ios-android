@@ -127,8 +127,9 @@ struct AnalyticsHubView: View {
                     AnalyticsRestrictedCard(title: "crm_analytics".localizedString)
                 }
             }
-            .padding(.vertical)
+            .padding(.top)
             .padding(.horizontal, 20)
+            .padding(.bottom, 100) // Extra padding for tab bar visibility
         }
         .background(ColorTheme.background)
         .navigationTitle("analytics_title".localizedString)
@@ -177,33 +178,57 @@ struct AnalyticsHubView: View {
     private var inventoryCard: some View {
         AnalyticsSectionCard(
             title: "inventory_analytics".localizedString,
-            subtitle: "analytics_inventory_subtitle".localizedString,
+            subtitle: nil, // Subtitle moved to insight text
             icon: "car.fill",
             accent: ColorTheme.primary
         ) {
-            HStack(spacing: 16) {
-                InventoryHealthScoreCompact(score: inventoryViewModel.healthScore, size: 56)
-
-                VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 16) {
+                // Insight Header
+                HStack(spacing: 12) {
+                    InventoryHealthScoreCompact(score: inventoryViewModel.healthScore, size: 50)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(inventoryViewModel.healthStatusTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(ColorTheme.primaryText)
+                        
+                        Text(inventoryViewModel.healthStatusMessage)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                
+                Divider()
+                
+                // Detailed Metrics
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), alignment: .leading),
+                        GridItem(.flexible(), alignment: .leading)
+                    ],
+                    alignment: .leading,
+                    spacing: 16
+                ) {
                     MetricLine(
-                        title: "avg_days_inventory".localizedString,
-                        value: "\(inventoryViewModel.averageDaysInInventory)"
+                        title: "Turnover Speed",
+                        value: "\(inventoryViewModel.averageDaysInInventory) Days",
+                        statusColor: inventoryViewModel.getTurnoverStatus().1.color
                     )
+                    
                     MetricLine(
-                        title: "total_holding_cost".localizedString,
+                        title: "Aging Stock (>60d)",
+                        value: "\(inventoryViewModel.burningVehicles.count) Units",
+                        statusColor: inventoryViewModel.burningVehicles.count > 0 ? ColorTheme.danger : ColorTheme.success
+                    )
+                    
+                    MetricLine(
+                        title: "Capital Stuck",
                         value: inventoryViewModel.totalHoldingCost.asCurrencyCompact()
                     )
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 8) {
+                    
                     MetricLine(
-                        title: "burning_inventory".localizedString,
-                        value: "\(inventoryViewModel.burningVehicles.count)"
-                    )
-                    MetricLine(
-                        title: "vehicles".localizedString,
+                        title: "Total Vehicles",
                         value: "\(inventoryViewModel.totalVehicles)"
                     )
                 }
@@ -248,32 +273,36 @@ struct AnalyticsHubView: View {
 
     private var crmCard: some View {
         AnalyticsSectionCard(
-            title: "crm_analytics".localizedString,
-            subtitle: "analytics_crm_subtitle".localizedString,
+            title: "Sales Pipeline", // Renamed for clarity
+            subtitle: "Lead conversion performance",
             icon: "person.2.fill",
             accent: ColorTheme.primary
         ) {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    MetricLine(
-                        title: "total_leads".localizedString,
-                        value: "\(crmViewModel.totalLeads)"
-                    )
-                    MetricLine(
-                        title: "active_leads".localizedString,
-                        value: "\(crmViewModel.activeLeads)"
-                    )
-                }
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(), alignment: .leading),
+                    GridItem(.flexible(), alignment: .leading)
+                ],
+                alignment: .leading,
+                spacing: 12
+            ) {
+                MetricLine(
+                    title: "Total Inquiries",
+                    value: "\(crmViewModel.totalLeads)"
+                )
+                
+                MetricLine(
+                    title: "Conversion Rate",
+                    value: String(format: "%.1f%%", crmViewModel.conversionRate),
+                    statusColor: crmViewModel.conversionRate > 5.0 ? ColorTheme.success : nil
+                )
 
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 6) {
-                    MetricLine(
-                        title: "conversion_rate".localizedString,
-                        value: String(format: "%.1f%%", crmViewModel.conversionRate)
-                    )
-                }
+                MetricLine(
+                    title: "Active Opportunities",
+                    value: "\(crmViewModel.activeLeads)"
+                )
             }
+            .padding(.bottom, 8)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(ClientStatus.allCases) { status in
@@ -340,23 +369,24 @@ private struct AnalyticsSectionCard<Content: View>: View {
         .padding(16)
         .background(ColorTheme.cardBackground)
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
     }
 }
 
 private struct MetricLine: View {
     let title: String
     let value: String
+    var statusColor: Color? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(title)
-                .font(.caption2)
+                .font(.caption)
                 .foregroundColor(ColorTheme.secondaryText)
 
             Text(value)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(ColorTheme.primaryText)
+                .font(.body.weight(.semibold))
+                .foregroundColor(statusColor ?? ColorTheme.primaryText)
         }
     }
 }
@@ -376,7 +406,7 @@ private struct AnalyticsMetricRow: View {
                     .foregroundColor(ColorTheme.secondaryText)
 
                 Text(value)
-                    .font(.headline)
+                    .font(.body.weight(.semibold))
                     .foregroundColor(ColorTheme.primaryText)
             }
 

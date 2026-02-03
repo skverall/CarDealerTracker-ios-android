@@ -174,7 +174,8 @@ class DashboardViewModel: ObservableObject {
             guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
             if objects.contains(where: { obj in
                 obj is Expense || obj is Vehicle || obj is Sale || obj is FinancialAccount ||
-                obj is PartSale || obj is PartSaleLineItem || obj is PartBatch
+                obj is PartSale || obj is PartSaleLineItem || obj is PartBatch ||
+                obj is HoldingCostSettings
             }) {
                 return true
             }
@@ -572,12 +573,16 @@ class DashboardViewModel: ObservableObject {
         guard !sales.isEmpty else { return [] }
         
         // Helper to calculate profit for a single sale
+        let settings = fetchHoldingCostSettings()
+
         func calculateProfit(sale: Sale) -> Double {
             let revenue = sale.amount?.decimalValue ?? 0
             let vehicle = sale.vehicle
             let cost = vehicle?.purchasePrice?.decimalValue ?? 0
             let expenses = (vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
-            return NSDecimalNumber(decimal: revenue - (cost + expenses)).doubleValue
+            let holdingCost = holdingCostForSale(sale, settings: settings)
+            let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
+            return NSDecimalNumber(decimal: revenue - (cost + expenses + holdingCost) + vatRefund).doubleValue
         }
 
         switch range {
@@ -760,6 +765,7 @@ class DashboardViewModel: ObservableObject {
     private func calculateCombinedProfitData(vehicleSales: [Sale], partSales: [PartSale], range: DashboardTimeRange) -> (Decimal, [TrendPoint]) {
         let rangeStart = range.startDate
         let rangeEnd = range.endDate
+        let settings = fetchHoldingCostSettings()
         
         // Filter Vehicles
         let filteredVehicles: [Sale]
@@ -794,7 +800,8 @@ class DashboardViewModel: ObservableObject {
             let cost = vehicle?.purchasePrice?.decimalValue ?? 0
             let expenses = (vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
             let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
-            return sum + (revenue - (cost + expenses) + vatRefund)
+            let holdingCost = holdingCostForSale(sale, settings: settings)
+            return sum + (revenue - (cost + expenses + holdingCost) + vatRefund)
         }
         totalProfit += vehicleProfit
         
@@ -820,13 +827,15 @@ class DashboardViewModel: ObservableObject {
     }
     
     private func calculateCombinedProfitTotal(vehicleSales: [Sale], partSales: [PartSale]) -> Decimal {
+        let settings = fetchHoldingCostSettings()
         let vehicleProfit = vehicleSales.reduce(Decimal(0)) { sum, sale in
             let revenue = sale.amount?.decimalValue ?? 0
             let vehicle = sale.vehicle
             let cost = vehicle?.purchasePrice?.decimalValue ?? 0
             let expenses = (vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
             let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
-            return sum + (revenue - (cost + expenses) + vatRefund)
+            let holdingCost = holdingCostForSale(sale, settings: settings)
+            return sum + (revenue - (cost + expenses + holdingCost) + vatRefund)
         }
         
         let partProfit = partSales.reduce(Decimal(0)) { sum, sale in
@@ -847,6 +856,7 @@ class DashboardViewModel: ObservableObject {
     private func buildCombinedProfitTrendPoints(vehicleSales: [Sale], partSales: [PartSale], range: DashboardTimeRange) -> [TrendPoint] {
         let cal = Calendar.current
         var points: [TrendPoint] = []
+        let settings = fetchHoldingCostSettings()
         
         // Helper wrappers
         struct ProfitItem {
@@ -863,7 +873,9 @@ class DashboardViewModel: ObservableObject {
             let v = s.vehicle
             let cost = v?.purchasePrice?.decimalValue ?? 0
             let expenses = (v?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
-            let p = NSDecimalNumber(decimal: revenue - (cost + expenses)).doubleValue
+            let holdingCost = holdingCostForSale(s, settings: settings)
+            let vatRefund = s.vatRefundAmount?.decimalValue ?? 0
+            let p = NSDecimalNumber(decimal: revenue - (cost + expenses + holdingCost) + vatRefund).doubleValue
             items.append(ProfitItem(date: d, profit: p))
         }
         
@@ -980,5 +992,31 @@ class DashboardViewModel: ObservableObject {
             return Array(points.prefix(through: lastIndex))
         }
         return []
+    }
+
+    private func holdingCostForSale(_ sale: Sale, settings: HoldingCostSettings?) -> Decimal {
+        guard let vehicle = sale.vehicle else { return 0 }
+        guard let settings, settings.isEnabled else { return 0 }
+        let calculator = HoldingCostCalculator(settings: settings)
+        let date = sale.date ?? vehicle.saleDate ?? Date()
+        return calculator.calculateHoldingCost(for: vehicle, asOfDate: date)
+    }
+
+    private func fetchHoldingCostSettings() -> HoldingCostSettings? {
+        let request = HoldingCostSettings.fetchRequest()
+        request.fetchLimit = 1
+        if let settings = try? context.fetch(request).first {
+            return settings
+        }
+
+        let settings = HoldingCostSettings(context: context)
+        settings.id = UUID()
+        settings.isEnabled = true
+        settings.annualRatePercent = NSDecimalNumber(decimal: 15.0)
+        settings.dailyRatePercent = NSDecimalNumber(decimal: 0.0411)
+        settings.createdAt = Date()
+        settings.updatedAt = Date()
+        try? context.save()
+        return settings
     }
 }

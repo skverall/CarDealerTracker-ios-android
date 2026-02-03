@@ -71,7 +71,8 @@ class NotionAPIService {
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = headers
         
-        let titleContent = NotionTitleContent(text: NotionTextContent(content: name))
+        // titleContent initialization removed as it was unused
+
         let propertyDict = properties.reduce(into: [String: Any]()) { result, pair in
             result[pair.key] = encodePropertyDefinition(pair.value)
         }

@@ -14,6 +14,8 @@ class SubscriptionManager: ObservableObject {
     @Published var isRestoring: Bool = false
     @Published var isCheckingStatus: Bool = true
     @Published var introEligibility: [String: IntroEligibility] = [:]
+    @Published var bonusAccessUntil: Date?
+    @Published var bonusMonths: Int = 0
     
     private var expectedAppUserId: String?
     
@@ -179,23 +181,15 @@ class SubscriptionManager: ObservableObject {
             self.isRestoring = false
             self.isLoading = false
             self.isCheckingStatus = false
+            self.bonusAccessUntil = nil
+            self.bonusMonths = 0
         }
     }
     
     private func updateProStatus(from customerInfo: CustomerInfo) {
         DispatchQueue.main.async {
             self.customerInfo = customerInfo
-            if let expected = self.expectedAppUserId {
-                let currentAppUser = Purchases.shared.appUserID
-                guard currentAppUser == expected else {
-                    self.isProAccessActive = false
-                    return
-                }
-            }
-            // CRITICAL FIX: Check if ANY entitlement is active.
-            // This solves the issue where the specific entitlement name might differ (e.g. "pro" vs "monthly").
-            // If the user has paid for ANYTHING that is currently active, they get access.
-            self.isProAccessActive = !customerInfo.entitlements.active.isEmpty
+            self.recomputeProAccess()
         }
     }
     
@@ -215,6 +209,28 @@ class SubscriptionManager: ObservableObject {
         DispatchQueue.main.async {
             self.isProAccessActive = false
             self.customerInfo = nil
+            self.recomputeProAccess()
         }
+    }
+
+    func updateReferralBonus(until date: Date?, months: Int?) {
+        DispatchQueue.main.async {
+            self.bonusAccessUntil = date
+            self.bonusMonths = months ?? 0
+            self.recomputeProAccess()
+        }
+    }
+
+    private func recomputeProAccess() {
+        if let expected = expectedAppUserId {
+            let currentAppUser = Purchases.shared.appUserID
+            if currentAppUser != expected {
+                self.isProAccessActive = (bonusAccessUntil ?? .distantPast) > Date()
+                return
+            }
+        }
+        let hasRevenueCat = !(customerInfo?.entitlements.active.isEmpty ?? true)
+        let hasBonus = (bonusAccessUntil ?? .distantPast) > Date()
+        self.isProAccessActive = hasRevenueCat || hasBonus
     }
 }

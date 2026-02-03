@@ -37,6 +37,18 @@ struct LoginView: View {
                 }
             }
             .navigationBarHidden(true)
+            .onReceive(sessionStore.$pendingReferralCode) { code in
+                guard appSessionState.mode == .signUp else { return }
+                if let code, !code.isEmpty, appSessionState.referralCode.isEmpty {
+                    appSessionState.referralCode = code
+                }
+            }
+            .onChange(of: appSessionState.mode) { _, newMode in
+                guard newMode == .signUp else { return }
+                if let code = sessionStore.pendingReferralCode, !code.isEmpty, appSessionState.referralCode.isEmpty {
+                    appSessionState.referralCode = code
+                }
+            }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
             }
@@ -174,7 +186,35 @@ struct LoginView: View {
             // InputsContainer
             VStack(spacing: 16) {
                 if appSessionState.mode == .signUp {
-                     // Potential future name fields
+                    HStack {
+                        Image(systemName: "phone.fill")
+                            .foregroundColor(.secondary)
+                            .frame(width: 20)
+
+                        TextField("Phone", text: $appSessionState.phone)
+                            .keyboardType(.phonePad)
+                            .textContentType(.telephoneNumber)
+                    }
+                    .padding()
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.03), radius: 1, x: 0, y: 1)
+
+                    HStack {
+                        Image(systemName: "gift.fill")
+                            .foregroundColor(.secondary)
+                            .frame(width: 20)
+
+                        TextField("Referral Code (optional)", text: $appSessionState.referralCode)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled(true)
+                            .keyboardType(.asciiCapable)
+                            .textContentType(.oneTimeCode)
+                    }
+                    .padding()
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.03), radius: 1, x: 0, y: 1)
                 }
                 
                 // Email Input
@@ -356,4 +396,3 @@ struct LoginView: View {
         }
     }
 }
-

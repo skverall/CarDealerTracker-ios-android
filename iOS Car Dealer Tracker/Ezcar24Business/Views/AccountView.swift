@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import UIKit
 
 struct AccountView: View {
     @EnvironmentObject private var sessionStore: SessionStore
@@ -22,6 +23,10 @@ struct AccountView: View {
     @State private var showNotificationSettingsAlert = false
     @State private var notificationAlertMessage = ""
     @State private var showMailError = false
+    @State private var showInviteShareSheet = false
+    @State private var inviteShareItems: [Any] = []
+    @State private var referralCode: String?
+    @State private var isFetchingReferralCode = false
 
     fileprivate enum DedupState: Equatable {
         case idle
@@ -40,6 +45,8 @@ struct AccountView: View {
                         accountHeader
                         
                         subscriptionCard
+
+                        referralCard
                         
                         // MARK: - General Settings
                         generalSettingsSection
@@ -70,6 +77,9 @@ struct AccountView: View {
             .navigationTitle("account".localizedString)
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showInviteShareSheet) {
+                ShareSheet(items: inviteShareItems)
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -144,6 +154,15 @@ struct AccountView: View {
             }
             
             notificationsRow
+
+            if permissionService.can(.viewFinancials) {
+                Divider().padding(.leading, 52)
+                NavigationLink {
+                    HoldingCostSettingsView()
+                } label: {
+                    MenuRow(icon: "flame.fill", title: "holding_cost_settings".localizedKey, color: .orange)
+                }
+            }
             
             if permissionService.currentRole == "owner" || permissionService.currentRole == "admin" {
                 Divider().padding(.leading, 52)
@@ -251,6 +270,12 @@ struct AccountView: View {
             Divider().padding(.leading, 52)
             Link(destination: URL(string: "https://www.ezcar24.com/en/privacy-policy")!) {
                 MenuRow(icon: "hand.raised.fill", title: "privacy_policy".localizedKey, color: .gray)
+            }
+            Divider().padding(.leading, 52)
+            NavigationLink {
+                UserGuideView()
+            } label: {
+                MenuRow(icon: "book.closed", title: "user_guide".localizedKey, color: .gray)
             }
         }
     }
@@ -401,6 +426,80 @@ struct AccountView: View {
                     .padding(.vertical, 8)
                     .background(subscriptionManager.isProAccessActive ? Color.blue.opacity(0.1) : Color.blue)
                     .cornerRadius(20)
+            }
+        }
+        .padding(16)
+        .background(ColorTheme.cardBackground)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    private var referralCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "gift.fill")
+                    .foregroundColor(.pink)
+                Text("invite_dealer".localizedString)
+                    .font(.headline)
+                    .foregroundColor(ColorTheme.primaryText)
+            }
+
+            Text("invite_dealer_subtitle".localizedString)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            if let bonusUntil = subscriptionManager.bonusAccessUntil, bonusUntil > Date() {
+                Text(String(format: "referral_bonus_until".localizedString, bonusUntil.formatted(date: .numeric, time: .omitted)))
+                    .font(.caption)
+                    .foregroundColor(.green)
+            }
+
+            if let code = referralCode {
+                HStack {
+                    Text(code)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(ColorTheme.primaryText)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(ColorTheme.background.opacity(0.7))
+                        .cornerRadius(10)
+
+                    Spacer()
+
+                    Button("copy".localizedString) {
+                        UIPasteboard.general.string = code
+                    }
+                    .font(.caption.weight(.semibold))
+                }
+            }
+
+            Button {
+                Task { await shareDealerInvite() }
+            } label: {
+                HStack {
+                    if isFetchingReferralCode {
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    Text("invite_dealer".localizedString)
+                        .font(.subheadline.weight(.semibold))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(ColorTheme.primary)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+            }
+            .disabled(isFetchingReferralCode || sessionStore.activeOrganizationId == nil)
+
+            NavigationLink {
+                ReferralStatsView()
+            } label: {
+                Text("referral_view_stats".localizedString)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(ColorTheme.primary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding(16)
@@ -579,7 +678,7 @@ struct AccountView: View {
             await sessionStore.signOut()
             await MainActor.run {
                 appSessionState.mode = .signIn
-                appSessionState.email = ""; appSessionState.password = ""
+                appSessionState.email = ""; appSessionState.password = ""; appSessionState.phone = ""
                 isSigningOut = false
                 syncComplete = false
             }
@@ -592,11 +691,33 @@ struct AccountView: View {
                 try await sessionStore.deleteAccount()
                 await MainActor.run {
                     appSessionState.mode = .signIn
-                    appSessionState.email = ""; appSessionState.password = ""
+                    appSessionState.email = ""; appSessionState.password = ""; appSessionState.phone = ""
                 }
             } catch {
                 print("Error deleting account: \(error)")
             }
+        }
+    }
+
+    private func shareDealerInvite() async {
+        guard let dealerId = sessionStore.activeOrganizationId else { return }
+        await MainActor.run { isFetchingReferralCode = true }
+        let code = await sessionStore.getDealerReferralCode(dealerId: dealerId)
+        await MainActor.run {
+            isFetchingReferralCode = false
+            referralCode = code
+        }
+        guard let code else { return }
+
+        let link = "https://ezcar24.com/dealer-invite?code=\(code)"
+        let message = "Join EZCar24 Business using my invite code \(code). Subscribe and we both get an extra month free."
+        var items: [Any] = [message]
+        if let url = URL(string: link) {
+            items.append(url)
+        }
+        await MainActor.run {
+            inviteShareItems = items
+            showInviteShareSheet = true
         }
     }
     
@@ -910,7 +1031,7 @@ struct DeleteAccountView: View {
                 await MainActor.run {
                     isDeleting = false; showSuccess = true
                     appSessionState.mode = .signIn
-                    appSessionState.email = ""; appSessionState.password = ""
+                    appSessionState.email = ""; appSessionState.password = ""; appSessionState.phone = ""
                 }
             } catch {
                 await MainActor.run { isDeleting = false; errorMessage = error.localizedDescription }
@@ -1054,6 +1175,13 @@ struct AccountUserProfileView: View {
     }
     
     var body: some View {
+        let displayEmail: String? = {
+            if let user = users.first, let email = user.email, !email.isEmpty {
+                return email
+            }
+            return authEmail
+        }()
+
         VStack(spacing: 12) {
             // Avatar
             Button {
@@ -1110,11 +1238,13 @@ struct AccountUserProfileView: View {
                         .foregroundColor(ColorTheme.primaryText)
                         .multilineTextAlignment(.center)
                     
-                    Text(authEmail ?? "")
-                        .font(.subheadline)
-                        .foregroundColor(ColorTheme.secondaryText)
+                    if let displayEmail, !displayEmail.isEmpty {
+                        Text(displayEmail)
+                            .font(.subheadline)
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
                 } else {
-                    Text(authEmail ?? "User")
+                    Text(displayEmail ?? "User")
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(ColorTheme.primaryText)
@@ -1152,7 +1282,7 @@ struct AccountUserProfileView: View {
             }
         }
     }
-    
+
     private func getInitials() -> String {
         if let user = users.first, let name = user.name, !name.isEmpty {
              let components = name.components(separatedBy: " ")

@@ -28,7 +28,7 @@ class NotionAuthManager: ObservableObject {
             throw NotionError.invalidResponse
         }
         
-        if let error = queryItems.first(where: { $0.name == "error" })?.value {
+        if queryItems.contains(where: { $0.name == "error" }) {
             throw NotionError.exportFailed
         }
         
@@ -126,7 +126,7 @@ class NotionAuthManager: ObservableObject {
     }
     
     private func performTokenRefresh() async throws {
-        guard let token = accessToken else {
+        guard accessToken != nil else {
             throw NotionError.notAuthenticated
         }
         

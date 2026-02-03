@@ -84,6 +84,7 @@ struct AuthGateView: View {
         guard !appSessionState.isGuestMode, !sessionStore.showPasswordReset else { return }
         guard case .signedIn(let user) = sessionStore.status else { return }
         Task {
+            await sessionStore.refreshReferralBonus()
             await cloudSyncManager.manualSync(user: user)
         }
     }

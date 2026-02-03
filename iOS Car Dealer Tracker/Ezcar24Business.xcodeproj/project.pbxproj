@@ -22,6 +22,8 @@
 		A100000D /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000C /* DashboardView.swift */; };
 		A100000F /* VehicleListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A100000E /* VehicleListView.swift */; };
 		A1000011 /* VehicleDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010 /* VehicleDetailView.swift */; };
+		E50010022F3B4C5D00A1B2C3 /* UserGuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50010012F3B4C5D00A1B2C3 /* UserGuideView.swift */; };
+		E50010042F3B4C5D00A1B2C3 /* HoldingCostSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E50010032F3B4C5D00A1B2C3 /* HoldingCostSettingsView.swift */; };
 		A1000013 /* ExpenseListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000012 /* ExpenseListView.swift */; };
 		A1000015 /* AddExpenseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000014 /* AddExpenseView.swift */; };
 		A1000017 /* UserManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016 /* UserManagementView.swift */; };
@@ -39,10 +41,14 @@
 		B2000104 /* SupabaseClientProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2000005 /* SupabaseClientProvider.swift */; };
 		B2000105 /* SupabaseConfig.plist in Resources */ = {isa = PBXBuildFile; fileRef = B2000006 /* SupabaseConfig.plist */; };
 		B2000106 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = B2000200 /* Supabase */; };
+		C0000101 /* HoldingCostCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000001 /* HoldingCostCalculator.swift */; };
+		C0000102 /* InventoryMetricsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000002 /* InventoryMetricsCalculator.swift */; };
+		C0000103 /* VehicleFinancialsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000003 /* VehicleFinancialsCalculator.swift */; };
 		C3000001 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3000000 /* AccountView.swift */; };
 		D0000010 /* CloudSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000001 /* CloudSyncManager.swift */; };
 		D0000011 /* CloudSyncEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000002 /* CloudSyncEnvironment.swift */; };
 		D0000012 /* SupabaseModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000003 /* SupabaseModels.swift */; };
+		D0000013 /* InventoryStatsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000004 /* InventoryStatsManager.swift */; };
 		E1000007 /* ClientListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000001 /* ClientListView.swift */; };
 		E1000008 /* ClientDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000002 /* ClientDetailView.swift */; };
 		E1000009 /* ClientViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000004 /* ClientViewModel.swift */; };
@@ -51,6 +57,7 @@
 		E100000C /* ClientCRMModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E0000009 /* ClientCRMModels.swift */; };
 		E20653BA2EED8B6F00C1002F /* ForceUpdateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */; };
 		E20700012F1234567890ABCD /* LocalNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E20700002F1234567890ABCD /* LocalNotificationManager.swift */; };
+		E215B0722F32166C007E0585 /* ReferralStatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E215B0712F32166C007E0585 /* ReferralStatsView.swift */; };
 		E2460EEE2F14089A0048EA80 /* EditProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EED2F14089A0048EA80 /* EditProfileView.swift */; };
 		E2460EF12F1408C10048EA80 /* User+CoreDataProperties.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */; };
 		E2460EF22F1408C10048EA80 /* User+CoreDataClass.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */; };
@@ -73,6 +80,15 @@
 		E2DC15472F1A46BC00068680 /* iPadRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2DC15462F1A46BC00068680 /* iPadRootView.swift */; };
 		E2F901032F22120300CD9D6D /* GlobalSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F901022F22120300CD9D6D /* GlobalSearchView.swift */; };
 		E2F901052F22129600CD9D6D /* DaysSincePurchaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F901042F22129600CD9D6D /* DaysSincePurchaseView.swift */; };
+		E3000001 /* DaysInInventoryIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000000 /* DaysInInventoryIndicator.swift */; };
+		E3000003 /* HoldingCostIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000002 /* HoldingCostIndicator.swift */; };
+		E3000005 /* ROIBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000004 /* ROIBadge.swift */; };
+		E3000013 /* AnalyticsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000012 /* AnalyticsHubView.swift */; };
+		E3000016 /* InventoryAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000015 /* InventoryAnalyticsView.swift */; };
+		E3000018 /* InventoryAnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000017 /* InventoryAnalyticsViewModel.swift */; };
+		E300001A /* InventoryHealthScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000019 /* InventoryHealthScore.swift */; };
+		E300001C /* AgingBucketBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E300001B /* AgingBucketBadge.swift */; };
+		E300001E /* InventoryAlertCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E300001D /* InventoryAlertCard.swift */; };
 		F0000002 /* FinancialAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000001 /* FinancialAccountsView.swift */; };
 		F0000004 /* EditAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000003 /* EditAccountView.swift */; };
 		F0000006 /* FinancialAccountsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000005 /* FinancialAccountsViewModel.swift */; };
@@ -95,6 +111,9 @@
 		G0000103 /* BackupCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000003 /* BackupCenterView.swift */; };
 		H0000101 /* RegionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000001 /* RegionSettings.swift */; };
 		H0000102 /* RegionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000002 /* RegionSelectionView.swift */; };
+		M1000001 /* AgingBucket.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000000 /* AgingBucket.swift */; };
+		M1000003 /* InventoryAlertType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000002 /* InventoryAlertType.swift */; };
+		M1000005 /* ExpenseCategoryType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000004 /* ExpenseCategoryType.swift */; };
 		N0000101 /* NotionConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000001 /* NotionConfig.swift */; };
 		N0000102 /* NotionAuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000002 /* NotionAuthManager.swift */; };
 		N0000103 /* NotionAPIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000003 /* NotionAPIService.swift */; };
@@ -108,22 +127,6 @@
 		N0000111 /* NotionDatabaseSelector.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000011 /* NotionDatabaseSelector.swift */; };
 		N0000112 /* ExportProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000012 /* ExportProgressView.swift */; };
 		N0000113 /* NotionExportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = N0000013 /* NotionExportViewModel.swift */; };
-		C0000101 /* HoldingCostCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000001 /* HoldingCostCalculator.swift */; };
-		C0000102 /* InventoryMetricsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000002 /* InventoryMetricsCalculator.swift */; };
-		C0000103 /* VehicleFinancialsCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0000003 /* VehicleFinancialsCalculator.swift */; };
-		D0000013 /* InventoryStatsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0000004 /* InventoryStatsManager.swift */; };
-		E3000001 /* DaysInInventoryIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000000 /* DaysInInventoryIndicator.swift */; };
-		E3000003 /* HoldingCostIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000002 /* HoldingCostIndicator.swift */; };
-		E3000005 /* ROIBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000004 /* ROIBadge.swift */; };
-		M1000001 /* AgingBucket.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000000 /* AgingBucket.swift */; };
-		M1000003 /* InventoryAlertType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000002 /* InventoryAlertType.swift */; };
-		M1000005 /* ExpenseCategoryType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000004 /* ExpenseCategoryType.swift */; };
-		E3000013 /* AnalyticsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000012 /* AnalyticsHubView.swift */; };
-		E3000016 /* InventoryAnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000015 /* InventoryAnalyticsView.swift */; };
-		E3000018 /* InventoryAnalyticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000017 /* InventoryAnalyticsViewModel.swift */; };
-		E300001A /* InventoryHealthScore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000019 /* InventoryHealthScore.swift */; };
-		E300001C /* AgingBucketBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = E300001B /* AgingBucketBadge.swift */; };
-		E300001E /* InventoryAlertCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = E300001D /* InventoryAlertCard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -141,6 +144,8 @@
 		A100000C /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		A100000E /* VehicleListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleListView.swift; sourceTree = "<group>"; };
 		A1000010 /* VehicleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleDetailView.swift; sourceTree = "<group>"; };
+		E50010012F3B4C5D00A1B2C3 /* UserGuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserGuideView.swift; sourceTree = "<group>"; };
+		E50010032F3B4C5D00A1B2C3 /* HoldingCostSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings/HoldingCostSettingsView.swift; sourceTree = "<group>"; };
 		A1000012 /* ExpenseListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseListView.swift; sourceTree = "<group>"; };
 		A1000014 /* AddExpenseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddExpenseView.swift; sourceTree = "<group>"; };
 		A1000016 /* UserManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserManagementView.swift; sourceTree = "<group>"; };
@@ -159,10 +164,14 @@
 		B2000005 /* SupabaseClientProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseClientProvider.swift; sourceTree = "<group>"; };
 		B2000006 /* SupabaseConfig.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = SupabaseConfig.plist; sourceTree = "<group>"; };
 		B2000008 /* Ezcar24Business.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Ezcar24Business.entitlements; sourceTree = "<group>"; };
+		C0000001 /* HoldingCostCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingCostCalculator.swift; sourceTree = "<group>"; };
+		C0000002 /* InventoryMetricsCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryMetricsCalculator.swift; sourceTree = "<group>"; };
+		C0000003 /* VehicleFinancialsCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFinancialsCalculator.swift; sourceTree = "<group>"; };
 		C3000000 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		D0000001 /* CloudSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncManager.swift; sourceTree = "<group>"; };
 		D0000002 /* CloudSyncEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncEnvironment.swift; sourceTree = "<group>"; };
 		D0000003 /* SupabaseModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseModels.swift; sourceTree = "<group>"; };
+		D0000004 /* InventoryStatsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryStatsManager.swift; sourceTree = "<group>"; };
 		E0000001 /* ClientListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientListView.swift; sourceTree = "<group>"; };
 		E0000002 /* ClientDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientDetailView.swift; sourceTree = "<group>"; };
 		E0000004 /* ClientViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientViewModel.swift; sourceTree = "<group>"; };
@@ -171,6 +180,7 @@
 		E0000009 /* ClientCRMModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClientCRMModels.swift; sourceTree = "<group>"; };
 		E20653B92EED8B6F00C1002F /* ForceUpdateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForceUpdateView.swift; sourceTree = "<group>"; };
 		E20700002F1234567890ABCD /* LocalNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalNotificationManager.swift; sourceTree = "<group>"; };
+		E215B0712F32166C007E0585 /* ReferralStatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReferralStatsView.swift; sourceTree = "<group>"; };
 		E2460EED2F14089A0048EA80 /* EditProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditProfileView.swift; sourceTree = "<group>"; };
 		E2460EEF2F1408C10048EA80 /* User+CoreDataClass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "User+CoreDataClass.swift"; sourceTree = "<group>"; };
 		E2460EF02F1408C10048EA80 /* User+CoreDataProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "User+CoreDataProperties.swift"; sourceTree = "<group>"; };
@@ -193,6 +203,15 @@
 		E2DC15462F1A46BC00068680 /* iPadRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPadRootView.swift; sourceTree = "<group>"; };
 		E2F901022F22120300CD9D6D /* GlobalSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalSearchView.swift; sourceTree = "<group>"; };
 		E2F901042F22129600CD9D6D /* DaysSincePurchaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaysSincePurchaseView.swift; sourceTree = "<group>"; };
+		E3000000 /* DaysInInventoryIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaysInInventoryIndicator.swift; sourceTree = "<group>"; };
+		E3000002 /* HoldingCostIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingCostIndicator.swift; sourceTree = "<group>"; };
+		E3000004 /* ROIBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ROIBadge.swift; sourceTree = "<group>"; };
+		E3000012 /* AnalyticsHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsHubView.swift; sourceTree = "<group>"; };
+		E3000015 /* InventoryAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAnalyticsView.swift; sourceTree = "<group>"; };
+		E3000017 /* InventoryAnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAnalyticsViewModel.swift; sourceTree = "<group>"; };
+		E3000019 /* InventoryHealthScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryHealthScore.swift; sourceTree = "<group>"; };
+		E300001B /* AgingBucketBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucketBadge.swift; sourceTree = "<group>"; };
+		E300001D /* InventoryAlertCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertCard.swift; sourceTree = "<group>"; };
 		F0000001 /* FinancialAccountsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsView.swift; sourceTree = "<group>"; };
 		F0000003 /* EditAccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditAccountView.swift; sourceTree = "<group>"; };
 		F0000005 /* FinancialAccountsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinancialAccountsViewModel.swift; sourceTree = "<group>"; };
@@ -214,6 +233,9 @@
 		G0000003 /* BackupCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupCenterView.swift; sourceTree = "<group>"; };
 		H0000001 /* RegionSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSettings.swift; sourceTree = "<group>"; };
 		H0000002 /* RegionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionView.swift; sourceTree = "<group>"; };
+		M1000000 /* AgingBucket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucket.swift; sourceTree = "<group>"; };
+		M1000002 /* InventoryAlertType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertType.swift; sourceTree = "<group>"; };
+		M1000004 /* ExpenseCategoryType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseCategoryType.swift; sourceTree = "<group>"; };
 		N0000001 /* NotionConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionConfig.swift; sourceTree = "<group>"; };
 		N0000002 /* NotionAuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionAuthManager.swift; sourceTree = "<group>"; };
 		N0000003 /* NotionAPIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionAPIService.swift; sourceTree = "<group>"; };
@@ -227,22 +249,6 @@
 		N0000011 /* NotionDatabaseSelector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionDatabaseSelector.swift; sourceTree = "<group>"; };
 		N0000012 /* ExportProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportProgressView.swift; sourceTree = "<group>"; };
 		N0000013 /* NotionExportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotionExportViewModel.swift; sourceTree = "<group>"; };
-		C0000001 /* HoldingCostCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingCostCalculator.swift; sourceTree = "<group>"; };
-		C0000002 /* InventoryMetricsCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryMetricsCalculator.swift; sourceTree = "<group>"; };
-		C0000003 /* VehicleFinancialsCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleFinancialsCalculator.swift; sourceTree = "<group>"; };
-		D0000004 /* InventoryStatsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryStatsManager.swift; sourceTree = "<group>"; };
-		E3000000 /* DaysInInventoryIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaysInInventoryIndicator.swift; sourceTree = "<group>"; };
-		E3000002 /* HoldingCostIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoldingCostIndicator.swift; sourceTree = "<group>"; };
-		E3000004 /* ROIBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ROIBadge.swift; sourceTree = "<group>"; };
-		M1000000 /* AgingBucket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucket.swift; sourceTree = "<group>"; };
-		M1000002 /* InventoryAlertType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertType.swift; sourceTree = "<group>"; };
-		M1000004 /* ExpenseCategoryType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseCategoryType.swift; sourceTree = "<group>"; };
-		E3000012 /* AnalyticsHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsHubView.swift; sourceTree = "<group>"; };
-		E3000015 /* InventoryAnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAnalyticsView.swift; sourceTree = "<group>"; };
-		E3000017 /* InventoryAnalyticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAnalyticsViewModel.swift; sourceTree = "<group>"; };
-		E3000019 /* InventoryHealthScore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryHealthScore.swift; sourceTree = "<group>"; };
-		E300001B /* AgingBucketBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucketBadge.swift; sourceTree = "<group>"; };
-		E300001D /* InventoryAlertCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertCard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -347,6 +353,7 @@
 		A1000029 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E215B0712F32166C007E0585 /* ReferralStatsView.swift */,
 				E3000014 /* Analytics */,
 				E3000010 /* Components */,
 				N0000022 /* Notion */,
@@ -373,6 +380,8 @@
 				A1000014 /* AddExpenseView.swift */,
 				A1000016 /* UserManagementView.swift */,
 				C3000000 /* AccountView.swift */,
+				E50010012F3B4C5D00A1B2C3 /* UserGuideView.swift */,
+				E50010032F3B4C5D00A1B2C3 /* HoldingCostSettingsView.swift */,
 				E0000001 /* ClientListView.swift */,
 				E0000002 /* ClientDetailView.swift */,
 				F0000001 /* FinancialAccountsView.swift */,
@@ -417,6 +426,16 @@
 			path = Auth;
 			sourceTree = "<group>";
 		};
+		C0000010 /* Calculators */ = {
+			isa = PBXGroup;
+			children = (
+				C0000001 /* HoldingCostCalculator.swift */,
+				C0000002 /* InventoryMetricsCalculator.swift */,
+				C0000003 /* VehicleFinancialsCalculator.swift */,
+			);
+			path = Calculators;
+			sourceTree = "<group>";
+		};
 		D0000000 /* Services */ = {
 			isa = PBXGroup;
 			children = (
@@ -434,16 +453,6 @@
 				E20700002F1234567890ABCD /* LocalNotificationManager.swift */,
 			);
 			path = Services;
-			sourceTree = "<group>";
-		};
-		C0000010 /* Calculators */ = {
-			isa = PBXGroup;
-			children = (
-				C0000001 /* HoldingCostCalculator.swift */,
-				C0000002 /* InventoryMetricsCalculator.swift */,
-				C0000003 /* VehicleFinancialsCalculator.swift */,
-			);
-			path = Calculators;
 			sourceTree = "<group>";
 		};
 		E3000010 /* Components */ = {
@@ -635,6 +644,8 @@
 				A1000023 /* CurrencyFormatter.swift in Sources */,
 				A1000025 /* AddVehicleView.swift in Sources */,
 				C3000001 /* AccountView.swift in Sources */,
+				E50010022F3B4C5D00A1B2C3 /* UserGuideView.swift in Sources */,
+				E50010042F3B4C5D00A1B2C3 /* HoldingCostSettingsView.swift in Sources */,
 				E2460EFE2F150C680048EA80 /* PartDetailView.swift in Sources */,
 				E2DC15472F1A46BC00068680 /* iPadRootView.swift in Sources */,
 				E2460EFF2F150C680048EA80 /* PartsDashboardView.swift in Sources */,
@@ -710,6 +721,7 @@
 				E3000003 /* HoldingCostIndicator.swift in Sources */,
 				E3000005 /* ROIBadge.swift in Sources */,
 				E3000016 /* InventoryAnalyticsView.swift in Sources */,
+				E215B0722F32166C007E0585 /* ReferralStatsView.swift in Sources */,
 				E3000018 /* InventoryAnalyticsViewModel.swift in Sources */,
 				E300001A /* InventoryHealthScore.swift in Sources */,
 				E300001C /* AgingBucketBadge.swift in Sources */,

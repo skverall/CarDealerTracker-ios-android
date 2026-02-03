@@ -71,6 +71,8 @@ struct EditProfileView: View {
                 Section(header: Text("Personal Information")) {
                     TextField("First Name", text: $firstName)
                     TextField("Last Name", text: $lastName)
+                    TextField("Email", text: .constant(user.email ?? ""))
+                        .disabled(true)
                     TextField("Phone", text: $phone)
                         .keyboardType(.phonePad)
                 }

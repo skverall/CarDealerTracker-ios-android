@@ -12,6 +12,9 @@ final class AppSessionState: ObservableObject {
         didSet { recalculateValidation() }
     }
 
+    @Published var phone: String = ""
+    @Published var referralCode: String = ""
+
     @Published var password: String = "" {
         didSet { recalculateValidation() }
     }
@@ -24,6 +27,7 @@ final class AppSessionState: ObservableObject {
 
     init(sessionStore: SessionStore) {
         self.sessionStore = sessionStore
+        self.referralCode = sessionStore.pendingReferralCode ?? ""
         recalculateValidation()
     }
 
@@ -38,7 +42,9 @@ final class AppSessionState: ObservableObject {
             case .signIn:
                 try await sessionStore.signIn(email: trimmedEmail, password: password)
             case .signUp:
-                try await sessionStore.signUp(email: trimmedEmail, password: password)
+                let phoneValue = trimmedPhone.isEmpty ? nil : trimmedPhone
+                let codeValue = trimmedReferralCode.isEmpty ? nil : trimmedReferralCode
+                try await sessionStore.signUp(email: trimmedEmail, password: password, phone: phoneValue, referralCode: codeValue)
             }
             isGuestMode = false
             clearSensitiveFields()
@@ -57,6 +63,8 @@ final class AppSessionState: ObservableObject {
         mode = .signIn
         email = ""
         password = ""
+        phone = ""
+        referralCode = ""
         // Drop any cached RevenueCat state so guests never inherit a previous user's subscription
         SubscriptionManager.shared.logOut()
     }
@@ -64,13 +72,24 @@ final class AppSessionState: ObservableObject {
     func exitGuestModeForLogin() {
         isGuestMode = false
         mode = .signIn
+        phone = ""
     }
 
     private var trimmedEmail: String {
         email.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private var trimmedPhone: String {
+        phone.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func clearSensitiveFields() {
         password = ""
+        phone = ""
+        referralCode = ""
+    }
+
+    private var trimmedReferralCode: String {
+        referralCode.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
