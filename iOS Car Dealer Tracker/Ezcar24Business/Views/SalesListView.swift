@@ -21,6 +21,7 @@ struct SalesListView: View {
     
     // Sheet State
     @State private var showAddSaleSheet: Bool = false
+    @State private var showAddDebtSheet: Bool = false
 
     private var canDeleteRecords: Bool {
         if case .signedIn = sessionStore.status {
@@ -185,7 +186,9 @@ struct SalesListView: View {
                                 }
                             }
                         case .debts:
-                            NavigationLink(destination: AddDebtView()) {
+                            Button {
+                                showAddDebtSheet = true
+                            } label: {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title2)
                                     .foregroundColor(ColorTheme.primary)
@@ -196,6 +199,9 @@ struct SalesListView: View {
             }
             .sheet(isPresented: $showAddSaleSheet) {
                 AddSaleView()
+            }
+            .sheet(isPresented: $showAddDebtSheet) {
+                AddDebtView()
             }
         }
     

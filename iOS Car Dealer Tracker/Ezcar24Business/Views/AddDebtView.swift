@@ -26,36 +26,35 @@ struct AddDebtView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                ColorTheme.background.ignoresSafeArea()
-                    .onTapToDismissKeyboard()
+        ZStack {
+            ColorTheme.background.ignoresSafeArea()
+                .onTapToDismissKeyboard()
 
-                VStack(spacing: 0) {
-                    headerView
+            VStack(spacing: 0) {
+                headerView
 
-                    ScrollView {
-                        VStack(spacing: 24) {
-                            counterpartySection
-                            detailsSection
-                            notesSection
-                            Spacer(minLength: 100)
-                        }
-                        .padding(.vertical, 20)
+                ScrollView {
+                    VStack(spacing: 24) {
+                        counterpartySection
+                        detailsSection
+                        notesSection
+                        Spacer(minLength: 100)
                     }
-                    .scrollDismissesKeyboard(.interactively)
+                    .padding(.vertical, 20)
                 }
-
-                if showSavedToast {
-                    savedToast
-                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .safeAreaInset(edge: .bottom) {
+
+            if showSavedToast {
+                savedToast
+            }
+            
+            // Floating Save Button
+            VStack {
+                Spacer()
                 saveButton
                     .padding(.horizontal, 20)
-                    .padding(.top, 8)
-                    .padding(.bottom, 12)
-                    .background(ColorTheme.background)
+                    .padding(.bottom, 20)
             }
         }
     }
