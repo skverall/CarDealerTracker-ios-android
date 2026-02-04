@@ -3,11 +3,11 @@ import UIKit
 import Supabase
 
 struct RemoteAppConfig: Codable {
-    let minVersion: String
-    let latestVersion: String
-    let forceUpdate: Bool
-    let maintenanceMode: Bool
-    let blockLevel: String
+    let minVersion: String?
+    let latestVersion: String?
+    let forceUpdate: Bool?
+    let maintenanceMode: Bool?
+    let blockLevel: String?
     let message: String?
     
     enum CodingKeys: String, CodingKey {
@@ -54,50 +54,69 @@ final class RemoteConfigService: ObservableObject {
         
         print("🔄 [RemoteConfig] Checking for updates...")
         
+        var requiresUpdate = false
+        var maintenance = false
+        var configLatest: String?
+        var configMin: String?
+        var configMessage: String?
+        var configForce = false
+        var configBlockLevel: String?
+
         do {
-            // Fetch Config from Supabase
             let configJson: RemoteAppConfig = try await client
                 .rpc("get_app_config", params: ["config_key": "ios_kill_switch"])
                 .execute()
                 .value
-            
+
             print("✅ [RemoteConfig] Fetched: \(configJson)")
-            
-            self.latestVersion = configJson.latestVersion
-            self.configMessage = configJson.message
-            
-            // Check Maintenance Mode
-            if configJson.maintenanceMode {
-                self.isMaintenanceMode = true
-                self.isUpdateRequired = true // Or handle separate blocking view
-                return
-            }
-            
-            // Check Min Version (Kill Switch)
-            if isVersion(currentVersion, lessThan: configJson.minVersion) {
-                print("🛑 [RemoteConfig] Kill Switch Active. Current: \(currentVersion) < Min: \(configJson.minVersion)")
-                self.isUpdateRequired = true
-                return
-            }
-            
-            // Check Force Update Flag
-            if configJson.forceUpdate && isVersion(currentVersion, lessThan: configJson.latestVersion) {
-                 print("⚠️ [RemoteConfig] Force Update Active.")
-                 self.isUpdateRequired = true
-                 return
-            }
-            
-            self.isUpdateRequired = false
-            
+
+            configLatest = configJson.latestVersion?.trimmingCharacters(in: .whitespacesAndNewlines)
+            configMin = configJson.minVersion?.trimmingCharacters(in: .whitespacesAndNewlines)
+            configMessage = configJson.message
+            configForce = configJson.forceUpdate ?? false
+            configBlockLevel = configJson.blockLevel
+            maintenance = configJson.maintenanceMode ?? false
         } catch {
             print("❌ [RemoteConfig] Failed to fetch config: \(error)")
         }
-        
-        // Use App Store check as fallback for URL?
-        // Fetch URL dynamically from iTunes API to avoid hardcoding ID
-        if appStoreURL == nil {
-            await fetchAppStoreInfo()
+
+        self.configMessage = configMessage
+
+        if maintenance {
+            self.isMaintenanceMode = true
+            self.isUpdateRequired = true
+            await ensureAppStoreInfo()
+            return
+        } else {
+            self.isMaintenanceMode = false
         }
+
+        let blockLevel = (configBlockLevel ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let blockRequiresUpdate = ["hard", "force", "required", "block"].contains(blockLevel)
+
+        if let min = configMin, !min.isEmpty, isVersion(currentVersion, lessThan: min) {
+            print("🛑 [RemoteConfig] Kill Switch Active. Current: \(currentVersion) < Min: \(min)")
+            requiresUpdate = true
+        }
+
+        if let latest = configLatest, !latest.isEmpty {
+            self.latestVersion = latest
+            if (configForce || blockRequiresUpdate) && isVersion(currentVersion, lessThan: latest) {
+                print("⚠️ [RemoteConfig] Force Update Active.")
+                requiresUpdate = true
+            }
+        }
+
+        await ensureAppStoreInfo()
+
+        if let storeVersion = appStoreVersion, isVersion(currentVersion, lessThan: storeVersion) {
+            if latestVersion == nil || latestVersion?.isEmpty == true || isVersion(latestVersion ?? "0.0.0", lessThan: storeVersion) {
+                latestVersion = storeVersion
+            }
+            requiresUpdate = true
+        }
+
+        self.isUpdateRequired = requiresUpdate
     }
     
     // MARK: - App Store Lookup
@@ -111,6 +130,7 @@ final class RemoteConfigService: ObservableObject {
             let result = try JSONDecoder().decode(AppStoreLookupResponse.self, from: data)
             
             if let first = result.results.first {
+                self.appStoreVersion = first.version
                 self.appStoreTrackId = first.trackId
                 self.appStoreURL = makeAppStoreURL(trackId: first.trackId, trackViewUrl: first.trackViewUrl)
                 print("✅ [RemoteConfig] Found App Store URL: \(self.appStoreURL?.absoluteString ?? "nil")")
@@ -121,6 +141,13 @@ final class RemoteConfigService: ObservableObject {
     }
     
     @Published private(set) var appStoreTrackId: Int?
+    @Published private(set) var appStoreVersion: String?
+
+    private func ensureAppStoreInfo() async {
+        if appStoreURL == nil || appStoreVersion == nil {
+            await fetchAppStoreInfo()
+        }
+    }
     
     private func makeAppStoreURL(trackId: Int?, trackViewUrl: String?) -> URL? {
         if let trackId, let url = URL(string: "itms-apps://itunes.apple.com/app/id\(trackId)") {

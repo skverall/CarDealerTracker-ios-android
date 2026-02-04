@@ -35,19 +35,59 @@ class FinancialAccountsViewModel: ObservableObject {
     func createDefaultAccounts() {
         let cashAccount = FinancialAccount(context: context)
         cashAccount.id = UUID()
-        cashAccount.accountType = "Cash"
+        cashAccount.accountType = FinancialAccountKind.compose(kind: .cash, name: nil)
         cashAccount.balance = NSDecimalNumber(value: 0)
         cashAccount.updatedAt = Date()
 
         let bankAccount = FinancialAccount(context: context)
         bankAccount.id = UUID()
-        bankAccount.accountType = "Bank"
+        bankAccount.accountType = FinancialAccountKind.compose(kind: .bank, name: nil)
         bankAccount.balance = NSDecimalNumber(value: 0)
         bankAccount.updatedAt = Date()
 
         saveContext()
         fetchAccounts()
         syncAccountsIfPossible([cashAccount, bankAccount])
+    }
+
+    func createAccount(kind: FinancialAccountKind, name: String?, startingBalance: Decimal) -> String? {
+        let accountType = FinancialAccountKind.compose(kind: kind, name: name)
+        let normalized = accountType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if normalized.isEmpty {
+            return "Account name is required."
+        }
+        if accounts.contains(where: { ($0.accountType ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized }) {
+            return "An account with this name already exists."
+        }
+
+        let account = FinancialAccount(context: context)
+        account.id = UUID()
+        account.accountType = accountType
+        account.balance = NSDecimalNumber(decimal: startingBalance)
+        account.updatedAt = Date()
+
+        saveContext()
+        fetchAccounts()
+        syncAccountsIfPossible([account])
+        return nil
+    }
+
+    func updateAccount(_ account: FinancialAccount, kind: FinancialAccountKind, name: String?) -> String? {
+        let accountType = FinancialAccountKind.compose(kind: kind, name: name)
+        let normalized = accountType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if normalized.isEmpty {
+            return "Account name is required."
+        }
+        if accounts.contains(where: { $0.objectID != account.objectID && ($0.accountType ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized }) {
+            return "An account with this name already exists."
+        }
+
+        account.accountType = accountType
+        account.updatedAt = Date()
+        saveContext()
+        fetchAccounts()
+        syncAccountsIfPossible([account])
+        return nil
     }
     
     func updateBalance(account: FinancialAccount, newBalance: Decimal) {

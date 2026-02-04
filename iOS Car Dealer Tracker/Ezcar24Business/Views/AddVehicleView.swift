@@ -102,7 +102,7 @@ struct AddVehicleView: View {
 
                                 Picker("paid_from", selection: $selectedAccount) {
                                     ForEach(accounts) { account in
-                                        Text(account.accountType ?? "Unknown").tag(account as FinancialAccount?)
+                                        Text(account.displayTitle).tag(account as FinancialAccount?)
                                     }
                                 }
                                 .pickerStyle(.menu)
@@ -311,7 +311,7 @@ struct AddVehicleView: View {
 
     private func applyDefaultAccountIfNeeded() {
         guard selectedAccount == nil, !accounts.isEmpty else { return }
-        selectedAccount = accounts.first(where: { ($0.accountType ?? "").lowercased() == "cash" }) ?? accounts.first
+        selectedAccount = accounts.first(where: { $0.kind == .cash }) ?? accounts.first
     }
 
     private func createDefaultAccounts() {

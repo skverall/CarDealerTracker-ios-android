@@ -56,6 +56,7 @@ struct VehicleDetailView: View {
     // Sharing
     @State private var showShareSheet: Bool = false
     @State private var shareItems: [Any] = []
+    @State private var isPreparingShare: Bool = false
     @State private var vehiclePhotos: [RemoteVehiclePhoto] = []
     @State private var photoPendingDelete: RemoteVehiclePhoto? = nil
     @State private var showPhotoDeleteDialog: Bool = false
@@ -402,8 +403,13 @@ struct VehicleDetailView: View {
                  Button {
                      prepareShareData()
                  } label: {
-                     Image(systemName: "square.and.arrow.up")
+                     if isPreparingShare {
+                         ProgressView()
+                     } else {
+                         Image(systemName: "square.and.arrow.up")
+                     }
                  }
+                 .disabled(isPreparingShare)
             }
         }
         .onChange(of: selectedPhotos) { _, items in
@@ -772,7 +778,7 @@ struct VehicleDetailView: View {
                             Picker("", selection: $selectedAccount) {
                                 Text("select_account".localizedString).tag(nil as FinancialAccount?)
                                 ForEach(accounts) { account in
-                                    Text(account.accountType ?? "Unknown").tag(account as FinancialAccount?)
+                                    Text(account.displayTitle).tag(account as FinancialAccount?)
                                 }
                             }
                             .pickerStyle(.menu)
@@ -1017,7 +1023,7 @@ struct VehicleDetailView: View {
                             Picker("Account", selection: $selectedAccount) {
                                 Text("select_account".localizedString).tag(nil as FinancialAccount?)
                                 ForEach(accounts) { account in
-                                    Text(account.accountType ?? "Unknown").tag(account as FinancialAccount?)
+                                    Text(account.displayTitle).tag(account as FinancialAccount?)
                                 }
                             }
                             .pickerStyle(.menu)
@@ -1511,8 +1517,13 @@ struct VehicleDetailView: View {
     }
 
     private func prepareShareData() {
+        guard !isPreparingShare else { return }
+        isPreparingShare = true
         Task {
             await buildShareItems()
+            await MainActor.run {
+                isPreparingShare = false
+            }
         }
     }
 
@@ -1550,11 +1561,13 @@ struct VehicleDetailView: View {
             dealerName: sessionStore.activeOrganizationName ?? "Ezcar24"
         )
 
-        let renderer = ImageRenderer(content: cardView)
-        renderer.scale = UIScreen.main.scale
-
         var items: [Any] = []
-        if let cardImage = renderer.uiImage {
+        let cardImage: UIImage? = await MainActor.run {
+            let renderer = ImageRenderer(content: cardView)
+            renderer.scale = UIScreen.main.scale
+            return renderer.uiImage
+        }
+        if let cardImage {
             items.append(cardImage)
         }
 
@@ -1611,7 +1624,7 @@ struct VehicleDetailView: View {
     }
     
     private func defaultSaleAccount() -> FinancialAccount? {
-        accounts.first(where: { ($0.accountType ?? "").lowercased() == "cash" }) ?? accounts.first
+        accounts.first(where: { $0.kind == .cash }) ?? accounts.first
     }
     
     private func applyDefaultSaleAccountIfNeeded() {

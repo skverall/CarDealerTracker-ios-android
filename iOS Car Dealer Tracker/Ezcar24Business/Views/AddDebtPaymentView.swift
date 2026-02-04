@@ -44,7 +44,7 @@ struct AddDebtPaymentView: View {
     }
 
     private var selectedAccountLabel: String {
-        selectedAccount?.accountType ?? "None"
+        selectedAccount?.displayTitle ?? "None"
     }
 
     var body: some View {
@@ -69,13 +69,13 @@ struct AddDebtPaymentView: View {
                     .scrollDismissesKeyboard(.interactively)
                     .scrollIndicators(.hidden)
                 }
-
-                VStack {
-                    Spacer()
-                    saveButton
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                saveButton
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+                    .background(ColorTheme.background)
             }
         }
     }
@@ -229,13 +229,13 @@ struct AddDebtPaymentView: View {
             Menu {
                 Button("none".localizedString) { selectedAccount = nil }
                 ForEach(accounts) { account in
-                    Button(account.accountType ?? "Unknown") {
+                    Button(account.displayTitle) {
                         selectedAccount = account
                     }
                 }
             } label: {
                 HStack(spacing: 12) {
-                    Image(systemName: "building.columns.fill")
+                    Image(systemName: selectedAccount?.kind.iconName ?? "building.columns.fill")
                         .foregroundColor(ColorTheme.secondaryText)
                         .frame(width: 24)
 

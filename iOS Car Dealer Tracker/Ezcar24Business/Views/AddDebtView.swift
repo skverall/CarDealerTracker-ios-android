@@ -4,6 +4,7 @@ import CoreData
 struct AddDebtView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var regionSettings: RegionSettingsManager
 
     @State private var counterpartyName: String = ""
     @State private var counterpartyPhone: String = ""
@@ -45,16 +46,16 @@ struct AddDebtView: View {
                     .scrollDismissesKeyboard(.interactively)
                 }
 
-                VStack {
-                    Spacer()
-                    saveButton
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-                }
-
                 if showSavedToast {
                     savedToast
                 }
+            }
+            .safeAreaInset(edge: .bottom) {
+                saveButton
+                    .padding(.horizontal, 20)
+                    .padding(.top, 8)
+                    .padding(.bottom, 12)
+                    .background(ColorTheme.background)
             }
         }
     }
@@ -125,7 +126,7 @@ struct AddDebtView: View {
 
             VStack(spacing: 0) {
                 HStack(spacing: 12) {
-                    Text("aed_or_symbol".localizedString) // Use generic or keep hardcoded if mapped
+                    Text(regionSettings.selectedRegion.currencySymbol)
                         .font(.headline)
                         .foregroundColor(ColorTheme.tertiaryText)
                         .frame(width: 40)

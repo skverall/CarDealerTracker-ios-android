@@ -174,7 +174,7 @@ struct VehicleListView: View {
                             Picker("account_label".localizedString, selection: $sellAccount) {
                                 Text("select_account".localizedString).tag(nil as FinancialAccount?)
                                 ForEach(accounts) { account in
-                                    Text(account.accountType ?? "Unknown").tag(account as FinancialAccount?)
+                                    Text(account.displayTitle).tag(account as FinancialAccount?)
                                 }
                             }
                         }
@@ -268,7 +268,7 @@ struct VehicleListView: View {
 
     private func applyDefaultSellAccountIfNeeded() {
         guard sellAccount == nil, !accounts.isEmpty else { return }
-        sellAccount = accounts.first(where: { ($0.accountType ?? "").lowercased() == "cash" }) ?? accounts.first
+        sellAccount = accounts.first(where: { $0.kind == .cash }) ?? accounts.first
     }
 
     private func createDefaultAccountsIfNeeded() {

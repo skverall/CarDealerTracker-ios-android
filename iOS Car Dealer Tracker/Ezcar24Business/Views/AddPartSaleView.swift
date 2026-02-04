@@ -93,7 +93,7 @@ struct AddPartSaleView: View {
         }
         .onAppear {
             if selectedAccount == nil {
-                selectedAccount = accounts.first(where: { ($0.accountType ?? "").lowercased() == "cash" }) ?? accounts.first
+                selectedAccount = accounts.first(where: { $0.kind == .cash }) ?? accounts.first
             }
             if accounts.isEmpty {
                 createDefaultAccountsIfNeeded()
@@ -101,7 +101,7 @@ struct AddPartSaleView: View {
         }
         .onChange(of: accounts.count) { _, _ in
             if selectedAccount == nil {
-                selectedAccount = accounts.first(where: { ($0.accountType ?? "").lowercased() == "cash" }) ?? accounts.first
+                selectedAccount = accounts.first(where: { $0.kind == .cash }) ?? accounts.first
             }
         }
     }
@@ -231,7 +231,7 @@ struct AddPartSaleView: View {
                     Picker("deposit_to_section".localizedString, selection: $selectedAccount) {
                         Text("select_account".localizedString).tag(nil as FinancialAccount?)
                         ForEach(accounts) { account in
-                            Text(account.accountType ?? "Account").tag(account as FinancialAccount?)
+                            Text(account.displayTitle).tag(account as FinancialAccount?)
                         }
                     }
                     .pickerStyle(.menu)

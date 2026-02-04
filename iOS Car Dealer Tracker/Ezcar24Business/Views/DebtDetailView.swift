@@ -219,8 +219,8 @@ private struct DebtPaymentRow: View {
                         .foregroundColor(ColorTheme.secondaryText)
                 }
 
-                if let account = payment.account?.accountType, !account.isEmpty {
-                    Label(account, systemImage: "building.columns.fill")
+                if let account = payment.account {
+                    Label(account.displayTitle, systemImage: account.kind.iconName)
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                 }

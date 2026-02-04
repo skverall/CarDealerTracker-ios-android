@@ -85,6 +85,7 @@ struct AddSaleView: View {
 private struct VehicleSaleForm: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var regionSettings: RegionSettingsManager
     @ObservedObject private var permissionService = PermissionService.shared
     var showHeader: Bool = true
     
@@ -404,7 +405,7 @@ private struct VehicleSaleForm: View {
             VStack(spacing: 0) {
                 // Amount Input
                 HStack(spacing: 12) {
-                    Text("aed_or_symbol".localizedString) // Use generic currency symbol or maintain hardcode if specific
+                    Text(regionSettings.selectedRegion.currencySymbol)
                         .font(.headline)
                         .foregroundColor(ColorTheme.tertiaryText)
                         .frame(width: 40)
@@ -553,7 +554,7 @@ private struct VehicleSaleForm: View {
                     Picker("Account", selection: $selectedAccount) {
                         Text("none".localizedString).tag(nil as FinancialAccount?)
                         ForEach(accounts) { account in
-                            Text(account.accountType ?? "unknown".localizedString).tag(account as FinancialAccount?)
+                            Text(account.displayTitle).tag(account as FinancialAccount?)
                         }
                     }
                     .pickerStyle(.menu)

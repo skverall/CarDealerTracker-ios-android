@@ -117,7 +117,7 @@ struct AddPartView: View {
         }
         .onAppear {
             if selectedAccount == nil {
-                selectedAccount = accounts.first(where: { ($0.accountType ?? "").lowercased() == "cash" }) ?? accounts.first
+                selectedAccount = accounts.first(where: { $0.kind == .cash }) ?? accounts.first
             }
         }
     }
@@ -391,7 +391,7 @@ struct AddPartView: View {
                 Picker("account_label".localizedString, selection: $selectedAccount) {
                     Text("select_account".localizedString).tag(nil as FinancialAccount?)
                     ForEach(accounts) { account in
-                        Text(account.accountType ?? "Account").tag(account as FinancialAccount?)
+                        Text(account.displayTitle).tag(account as FinancialAccount?)
                     }
                 }
                 .pickerStyle(.menu)

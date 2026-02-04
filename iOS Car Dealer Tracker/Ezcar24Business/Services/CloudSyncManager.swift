@@ -2152,7 +2152,11 @@ final class CloudSyncManager: ObservableObject {
 
     private func shareBaseURL() -> String? {
         if let envURL = ProcessInfo.processInfo.environment["SUPABASE_URL"], !envURL.isEmpty {
-            return envURL
+            let trimmed = envURL.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.hasSuffix("/") {
+                return String(trimmed.dropLast())
+            }
+            return trimmed
         }
         guard let fileURL = Bundle.main.url(forResource: "SupabaseConfig", withExtension: "plist"),
               let data = try? Data(contentsOf: fileURL),
@@ -2161,7 +2165,11 @@ final class CloudSyncManager: ObservableObject {
         else {
             return nil
         }
-        return payload.supabaseURL
+        let trimmed = payload.supabaseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasSuffix("/") {
+            return String(trimmed.dropLast())
+        }
+        return trimmed
     }
 
     func createVehicleShareLink(
@@ -2171,11 +2179,21 @@ final class CloudSyncManager: ObservableObject {
         contactWhatsApp: String?
     ) async -> URL? {
         do {
+            let trimmedPhone = contactPhone?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trimmedWhatsApp = contactWhatsApp?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let phoneValue: AnyJSON = {
+                if let value = trimmedPhone, !value.isEmpty { return .string(value) }
+                return .null
+            }()
+            let whatsappValue: AnyJSON = {
+                if let value = trimmedWhatsApp, !value.isEmpty { return .string(value) }
+                return .null
+            }()
             let params: [String: AnyJSON] = [
                 "p_vehicle_id": .string(vehicleId.uuidString),
                 "p_dealer_id": .string(dealerId.uuidString),
-                "p_contact_phone": .string(contactPhone ?? ""),
-                "p_contact_whatsapp": .string(contactWhatsApp ?? "")
+                "p_contact_phone": phoneValue,
+                "p_contact_whatsapp": whatsappValue
             ]
 
             let token: UUID = try await client
@@ -2494,8 +2512,8 @@ final class CloudSyncManager: ObservableObject {
     // We only create defaults if none exist remotely.
     nonisolated private func ensureDefaultAccounts(context _: NSManagedObjectContext, for dealerId: UUID, existingAccounts: [RemoteFinancialAccount], writeClient: SupabaseClient) async -> [RemoteFinancialAccount] {
         // Check if we already have Cash or Bank accounts (including deleted ones to avoid recreating)
-        let hasCash = existingAccounts.contains { $0.accountType.lowercased() == "cash" }
-        let hasBank = existingAccounts.contains { $0.accountType.lowercased() == "bank" }
+        let hasCash = existingAccounts.contains { FinancialAccountKind.parse($0.accountType).kind == .cash }
+        let hasBank = existingAccounts.contains { FinancialAccountKind.parse($0.accountType).kind == .bank }
 
         // If accounts already exist remotely, return them (don't create duplicates)
         if hasCash && hasBank {

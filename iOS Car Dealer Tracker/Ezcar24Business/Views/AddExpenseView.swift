@@ -765,8 +765,7 @@ struct AddExpenseView: View {
     }
     
     private func accountDisplayName(_ account: FinancialAccount) -> String {
-        let raw = account.accountType?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return raw.isEmpty ? "Account" : raw.capitalized
+        account.displayTitle
     }
 
     private var hasReceipt: Bool {

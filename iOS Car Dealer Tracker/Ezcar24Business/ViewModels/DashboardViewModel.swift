@@ -195,8 +195,8 @@ class DashboardViewModel: ObservableObject {
 
         do {
             let accounts = try context.fetch(accountRequest)
-            totalCash = sumAccountBalances(accounts, type: "cash")
-            totalBank = sumAccountBalances(accounts, type: "bank")
+            totalCash = sumAccountBalances(accounts, kind: .cash)
+            totalBank = sumAccountBalances(accounts, kind: .bank)
         } catch {
             print("Error fetching accounts: \(error)")
         }
@@ -412,10 +412,9 @@ class DashboardViewModel: ObservableObject {
         loadRecentExpenses()
     }
 
-    private func sumAccountBalances(_ accounts: [FinancialAccount], type: String) -> Decimal {
-        let target = type.lowercased()
-        return accounts.reduce(Decimal(0)) { total, account in
-            guard account.accountType?.lowercased() == target else { return total }
+    private func sumAccountBalances(_ accounts: [FinancialAccount], kind: FinancialAccountKind) -> Decimal {
+        accounts.reduce(Decimal(0)) { total, account in
+            guard account.kind == kind else { return total }
             return total + (account.balance?.decimalValue ?? 0)
         }
     }

@@ -39,6 +39,7 @@ final class SessionStore: ObservableObject {
     private let pendingProfilePhoneKeyPrefix = "pendingProfilePhone_"
     private let pendingProfileEmailKeyPrefix = "pendingProfileEmail_"
     private let activeOrganizationKeyPrefix = "activeOrganizationId"
+    private let dealerReferralCodeKeyPrefix = "dealerReferralCode_"
 
     private let client: SupabaseClient
     private var authChangeTask: Task<Void, Never>?
@@ -399,6 +400,7 @@ final class SessionStore: ObservableObject {
     }
 
     func getDealerReferralCode(dealerId: UUID) async -> String? {
+        let cached = cachedDealerReferralCode(dealerId: dealerId)
         do {
             let params: [String: AnyJSON] = [
                 "p_dealer_id": .string(dealerId.uuidString)
@@ -407,9 +409,11 @@ final class SessionStore: ObservableObject {
                 .rpc("get_or_create_dealer_referral_code", params: params)
                 .execute()
                 .value
+            cacheDealerReferralCode(code, dealerId: dealerId)
             return code
         } catch {
-            return nil
+            print("getDealerReferralCode error: \(error)")
+            return cached
         }
     }
 
@@ -699,6 +703,20 @@ final class SessionStore: ObservableObject {
         pendingReferralCode = trimmed
         UserDefaults.standard.set(trimmed, forKey: pendingReferralCodeKey)
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: pendingReferralCodeTimestampKey)
+    }
+
+    private func dealerReferralCodeKey(for dealerId: UUID) -> String {
+        dealerReferralCodeKeyPrefix + dealerId.uuidString
+    }
+
+    private func cachedDealerReferralCode(dealerId: UUID) -> String? {
+        UserDefaults.standard.string(forKey: dealerReferralCodeKey(for: dealerId))
+    }
+
+    private func cacheDealerReferralCode(_ code: String, dealerId: UUID) {
+        let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        guard !trimmed.isEmpty else { return }
+        UserDefaults.standard.set(trimmed, forKey: dealerReferralCodeKey(for: dealerId))
     }
 
     private func pendingInviteToken() -> String? {

@@ -16,6 +16,9 @@ struct EditAccountView: View {
 
     @StateObject private var transactionsViewModel: AccountTransactionsViewModel
     @State private var showAddTransaction = false
+    @State private var editedKind: FinancialAccountKind
+    @State private var editedName: String
+    @State private var errorMessage: String?
 
     private var canDeleteRecords: Bool {
         if case .signedIn = sessionStore.status {
@@ -33,24 +36,37 @@ struct EditAccountView: View {
             viewModel?.fetchAccounts()
         }
         _transactionsViewModel = StateObject(wrappedValue: transactionsVM)
+        let parsed = FinancialAccountKind.parse(account.accountType)
+        _editedKind = State(initialValue: parsed.kind)
+        _editedName = State(initialValue: parsed.name ?? (parsed.kind == .other ? (account.accountType ?? "") : ""))
     }
     
     var body: some View {
         NavigationStack {
             List {
                 Section("Account Details") {
-                    HStack {
-                        Text("Account Type")
-                        Spacer()
-                        Text(account.accountType?.capitalized ?? "Unknown")
-                            .foregroundColor(.secondary)
+                    Picker("Account Type", selection: $editedKind) {
+                        ForEach(FinancialAccountKind.allCases) { kind in
+                            Text(kind.title).tag(kind)
+                        }
                     }
+                    
+                    TextField(editedKind == .cash ? "Account Name (optional)" : "Account Name", text: $editedName)
 
                     HStack {
                         Text("Balance")
                         Spacer()
                         Text((account.balance?.decimalValue ?? 0).asCurrency())
                             .foregroundColor(ColorTheme.primaryText)
+                    }
+                    
+                    Button("Save Changes") {
+                        let error = viewModel.updateAccount(account, kind: editedKind, name: editedName)
+                        if let error {
+                            errorMessage = error
+                        } else {
+                            dismiss()
+                        }
                     }
                 }
 
@@ -93,6 +109,15 @@ struct EditAccountView: View {
                     transactionsViewModel.addTransaction(type: type, amount: amount, date: date, note: note)
                 }
                 .presentationDetents([.medium, .large])
+            }
+            .alert("Account Error", isPresented: Binding(get: {
+                errorMessage != nil
+            }, set: { _ in
+                errorMessage = nil
+            })) {
+                Button("ok".localizedString, role: .cancel) {}
+            } message: {
+                Text(errorMessage ?? "")
             }
         }
     }
