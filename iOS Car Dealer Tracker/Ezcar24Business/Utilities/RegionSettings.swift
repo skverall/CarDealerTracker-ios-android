@@ -14,6 +14,7 @@ import SwiftUI
 enum AppRegion: String, CaseIterable, Codable, Identifiable {
     case uae = "UAE"
     case usa = "USA"
+    case canada = "Canada"
     case uk = "UK"
     case europe = "Europe"
     case russia = "Russia"
@@ -25,17 +26,18 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
     var id: String { rawValue }
     
     /// Display name for UI
-    var displayName: String {
+    @MainActor var displayName: String {
         switch self {
-        case .uae: return "UAE Dirham"
-        case .usa: return "US Dollar"
-        case .uk: return "British Pound"
-        case .europe: return "Euro"
-        case .russia: return "Russian Ruble"
-        case .turkey: return "Turkish Lira"
-        case .japan: return "Japanese Yen"
-        case .india: return "Indian Rupee"
-        case .korea: return "Korean Won"
+        case .uae: return "region_uae".localizedString
+        case .usa: return "region_usa".localizedString
+        case .canada: return "region_canada".localizedString
+        case .uk: return "region_uk".localizedString
+        case .europe: return "region_europe".localizedString
+        case .russia: return "region_russia".localizedString
+        case .turkey: return "region_turkey".localizedString
+        case .japan: return "region_japan".localizedString
+        case .india: return "region_india".localizedString
+        case .korea: return "region_korea".localizedString
         }
     }
     
@@ -44,6 +46,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .uae: return "AED"
         case .usa: return "USD"
+        case .canada: return "CAD"
         case .uk: return "GBP"
         case .europe: return "EUR"
         case .russia: return "RUB"
@@ -59,6 +62,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .uae: return "AED"
         case .usa: return "$"
+        case .canada: return "CA$"
         case .uk: return "£"
         case .europe: return "€"
         case .russia: return "₽"
@@ -74,6 +78,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         switch self {
         case .uae: return "en_AE"
         case .usa: return "en_US"
+        case .canada: return "en_CA"
         case .uk: return "en_GB"
         case .europe: return "en_IE" // Ireland uses Euro and English
         case .russia: return "ru_RU"

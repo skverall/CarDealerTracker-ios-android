@@ -4,7 +4,30 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="e7d65bf1-1412-4f9e-8286-172092b3e465" name="Changes" comment="" />
+    <list default="true" id="e7d65bf1-1412-4f9e-8286-172092b3e465" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleAddEditScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleAddEditScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleDetailScreen.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business.xcodeproj/project.pbxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business.xcodeproj/project.xcworkspace/xcuserdata/aydmaxx.xcuserdatad/UserInterfaceState.xcuserstate" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business.xcodeproj/project.xcworkspace/xcuserdata/aydmaxx.xcuserdatad/UserInterfaceState.xcuserstate" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/ContentView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/ContentView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Info.plist" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Localizable.xcstrings" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Localizable.xcstrings" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Models/Ezcar24Business.xcdatamodeld/Ezcar24Business.xcdatamodel/contents" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Models/Ezcar24Business.xcdatamodeld/Ezcar24Business.xcdatamodel/contents" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/CloudSyncManager.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/CloudSyncManager.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/InventoryStatsManager.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/InventoryStatsManager.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/SupabaseModels.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/SupabaseModels.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Utilities/RegionSettings.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Utilities/RegionSettings.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/ViewModels/DashboardViewModel.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/ViewModels/DashboardViewModel.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/ViewModels/HoldingCostSettingsViewModel.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/ViewModels/HoldingCostSettingsViewModel.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/ViewModels/SalesViewModel.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/ViewModels/SalesViewModel.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/AccountView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/AccountView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/AddExpenseView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/AddExpenseView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/DashboardView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/DashboardView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/ExpenseListView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/ExpenseListView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/Settings/HoldingCostSettingsView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/Settings/HoldingCostSettingsView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/VehicleDetailView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/VehicleDetailView.swift" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,7 +36,7 @@
   <component name="ClangdSettings">
     <option name="formatViaClangd" value="false" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[DeviceId(pluginId=LocalEmulator, isTemplate=false, identifier=path=/Users/aydmaxx/.android/avd/Pixel_9_Pro.avd)]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -32,7 +55,7 @@
     </system>
   </component>
   <component name="Git.Settings">
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
   <component name="GradleScriptDefinitionsStorage" workingDir="$PROJECT_DIR$" gradleHome="$USER_HOME$/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13" javaHome="$APPLICATION_HOME_DIR$/jbr/Contents/Home" gradleVersion="8.13" />
   <component name="ProblemsViewState">
@@ -53,6 +76,7 @@
     "RunOnceActivity.cidr.known.project.marker": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
+    "android.gradle.sync.needed": "true",
     "cf.first.check.clang-format": "false",
     "cidr.known.project.marker": "true",
     "git-widget-placeholder": "main",

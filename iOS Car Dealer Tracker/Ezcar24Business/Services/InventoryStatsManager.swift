@@ -176,10 +176,21 @@ class InventoryStatsManager: ObservableObject {
     
     private func fetchHoldingCostSettings() -> HoldingCostSettings {
         let request = HoldingCostSettings.fetchRequest()
+        if let dealerId = CloudSyncEnvironment.currentDealerId {
+            request.predicate = NSPredicate(format: "dealerId == %@", dealerId as CVarArg)
+        }
         
         do {
             let results = try context.fetch(request)
-            return results.first ?? createDefaultHoldingCostSettings()
+            if let settings = results.first {
+                if settings.dealerId == nil, let dealerId = CloudSyncEnvironment.currentDealerId {
+                    settings.dealerId = dealerId
+                    settings.updatedAt = Date()
+                    try? context.save()
+                }
+                return settings
+            }
+            return createDefaultHoldingCostSettings()
         } catch {
             print("Error fetching holding cost settings: \(error)")
             return createDefaultHoldingCostSettings()
@@ -189,6 +200,7 @@ class InventoryStatsManager: ObservableObject {
     private func createDefaultHoldingCostSettings() -> HoldingCostSettings {
         let settings = HoldingCostSettings(context: context)
         settings.id = UUID()
+        settings.dealerId = CloudSyncEnvironment.currentDealerId
         settings.annualRatePercent = NSDecimalNumber(decimal: 12.0)
         settings.dailyRatePercent = NSDecimalNumber(decimal: 0.0329)
         settings.isEnabled = true

@@ -46,6 +46,13 @@ data class VehicleFinancialSummary(
     val dailyHoldingCost: BigDecimal = BigDecimal.ZERO
 )
 
+data class VehiclePhotoItem(
+    val id: String,
+    val url: String,
+    val sortOrder: Int,
+    val storagePath: String
+)
+
 data class VehicleDetailUiState(
     val vehicle: Vehicle? = null,
     val expenses: List<Expense> = emptyList(),
@@ -54,6 +61,7 @@ data class VehicleDetailUiState(
     val alerts: List<InventoryAlert> = emptyList(),
     val holdingCostSettings: HoldingCostSettings? = null,
     val photoUrls: List<String> = emptyList(),
+    val photoItems: List<VehiclePhotoItem> = emptyList(),
     val isLoading: Boolean = false
 )
 
@@ -363,8 +371,15 @@ class VehicleViewModel @Inject constructor(
         val dealerId = CloudSyncEnvironment.currentDealerId ?: return
         viewModelScope.launch {
             val photos = cloudSyncManager.fetchVehiclePhotos(dealerId, vehicleId)
-            val urls = photos.map { CloudSyncEnvironment.vehiclePhotoUrl(it.storagePath) }
-            _detailUiState.update { it.copy(photoUrls = urls) }
+            val items = photos.map {
+                VehiclePhotoItem(
+                    id = it.id,
+                    url = CloudSyncEnvironment.vehiclePhotoUrl(it.storagePath),
+                    sortOrder = it.sortOrder,
+                    storagePath = it.storagePath
+                )
+            }
+            _detailUiState.update { it.copy(photoUrls = items.map { item -> item.url }, photoItems = items) }
         }
     }
 
@@ -505,6 +520,77 @@ class VehicleViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e(tag, "Failed to upload vehicle image: ${e.message}", e)
             }
+        }
+    }
+
+    fun uploadVehicleImages(vehicleId: UUID, images: List<ByteArray>, replaceCover: Boolean) {
+        val dealerId = CloudSyncEnvironment.currentDealerId ?: return
+        if (images.isEmpty()) return
+        viewModelScope.launch {
+            try {
+                val existing = cloudSyncManager.fetchVehiclePhotos(dealerId, vehicleId)
+                var sortOrder = existing.size
+                val shouldSetCover = replaceCover || existing.isEmpty()
+                var first = true
+                for (data in images) {
+                    cloudSyncManager.uploadVehiclePhoto(
+                        vehicleId = vehicleId,
+                        dealerId = dealerId,
+                        imageData = data,
+                        makePrimary = shouldSetCover && first,
+                        sortOrder = sortOrder
+                    )
+                    sortOrder += 1
+                    first = false
+                }
+                loadVehiclePhotos(vehicleId)
+            } catch (e: Exception) {
+                Log.e(tag, "Failed to upload vehicle images: ${e.message}", e)
+            }
+        }
+    }
+
+    fun deleteVehiclePhoto(vehicleId: UUID, photo: VehiclePhotoItem) {
+        val dealerId = CloudSyncEnvironment.currentDealerId ?: return
+        viewModelScope.launch {
+            try {
+                cloudSyncManager.deleteVehiclePhoto(photoId = photo.id, dealerId = dealerId, storagePath = photo.storagePath)
+                loadVehiclePhotos(vehicleId)
+            } catch (e: Exception) {
+                Log.e(tag, "Failed to delete vehicle photo: ${e.message}", e)
+            }
+        }
+    }
+
+    fun setCoverPhoto(vehicleId: UUID, photo: VehiclePhotoItem) {
+        val dealerId = CloudSyncEnvironment.currentDealerId ?: return
+        viewModelScope.launch {
+            try {
+                cloudSyncManager.setVehiclePhotoAsCover(dealerId = dealerId, storagePath = photo.storagePath, vehicleId = vehicleId)
+            } catch (e: Exception) {
+                Log.e(tag, "Failed to set cover photo: ${e.message}", e)
+            }
+        }
+    }
+
+    fun updateVehiclePhotoOrder(vehicleId: UUID, ordered: List<VehiclePhotoItem>) {
+        val dealerId = CloudSyncEnvironment.currentDealerId ?: return
+        viewModelScope.launch {
+            try {
+                ordered.forEachIndexed { index, photo ->
+                    cloudSyncManager.updateVehiclePhotoOrder(photoId = photo.id, dealerId = dealerId, sortOrder = index)
+                }
+                loadVehiclePhotos(vehicleId)
+            } catch (e: Exception) {
+                Log.e(tag, "Failed to update vehicle photo order: ${e.message}", e)
+            }
+        }
+    }
+
+    fun deleteVehicleCover(vehicleId: UUID) {
+        val dealerId = CloudSyncEnvironment.currentDealerId ?: return
+        viewModelScope.launch {
+            cloudSyncManager.deleteVehicleImage(vehicleId, dealerId)
         }
     }
 }

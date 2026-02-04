@@ -13,7 +13,7 @@ struct HoldingCostSettingsView: View {
     
     var body: some View {
         NavigationStack {
-            Form {
+            SwiftUI.Form {
                 Section {
                     Toggle(isOn: $viewModel.isEnabled) {
                         HStack {

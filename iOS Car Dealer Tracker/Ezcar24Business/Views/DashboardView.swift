@@ -1424,6 +1424,8 @@ private struct ExpenseDetailSheet: View {
     @State private var isSaving: Bool = false
     @State private var saveError: String? = nil
     @State private var showSavedToast: Bool = false
+    @State private var receiptShareUrl: URL? = nil
+    @State private var showReceiptShare: Bool = false
 
     init(expense: Expense) {
         self.expense = expense
@@ -1449,6 +1451,26 @@ private struct ExpenseDetailSheet: View {
                         DetailRow(title: "Category", value: expense.categoryTitle, icon: "tag")
                         DetailRow(title: "Vehicle", value: expense.vehicleSubtitle, icon: "car.fill")
                         DetailRow(title: "Date", value: expense.dateString, icon: "calendar")
+                    }
+
+                    if expense.receiptPath != nil {
+                        Button {
+                            openReceipt()
+                        } label: {
+                            HStack {
+                                Image(systemName: "paperclip")
+                                Text("view_receipt".localizedString)
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundColor(ColorTheme.tertiaryText)
+                            }
+                            .padding(12)
+                            .background(ColorTheme.secondaryBackground)
+                            .cornerRadius(12)
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -1491,6 +1513,11 @@ private struct ExpenseDetailSheet: View {
                 .padding(24)
             }
             .scrollDismissesKeyboard(.interactively)
+            .sheet(isPresented: $showReceiptShare) {
+                if let url = receiptShareUrl {
+                    ActivityView(activityItems: [url])
+                }
+            }
             
             // Sticky Footer
             VStack {
@@ -1525,6 +1552,25 @@ private struct ExpenseDetailSheet: View {
             if !isSaving, trimmed != current {
                 // Background save if dismissed without clicking button
                 saveComment(shouldDismiss: false)
+            }
+        }
+    }
+
+    private func openReceipt() {
+        guard let path = expense.receiptPath else { return }
+        Task {
+            if let data = await CloudSyncManager.shared?.downloadExpenseReceipt(path: path) {
+                let fileName = URL(fileURLWithPath: path).lastPathComponent
+                let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+                do {
+                    try data.write(to: tempUrl, options: .atomic)
+                    await MainActor.run {
+                        receiptShareUrl = tempUrl
+                        showReceiptShare = true
+                    }
+                } catch {
+                    print("Failed to write receipt: \(error)")
+                }
             }
         }
     }

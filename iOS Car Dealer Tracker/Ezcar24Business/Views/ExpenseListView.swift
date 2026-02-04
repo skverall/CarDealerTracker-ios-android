@@ -1024,6 +1024,12 @@ struct ExpenseRow: View {
 
                 Spacer()
 
+                if expense.receiptPath != nil {
+                    Image(systemName: "paperclip")
+                        .font(.caption2)
+                        .foregroundColor(ColorTheme.tertiaryText)
+                }
+
                 // Show date from expense.date combined with time from createdAt
                 Text(combinedDateTime(for: expense), formatter: shortDateFormatter)
                     .font(.caption2)
@@ -1474,6 +1480,12 @@ struct DealerExpenseDashboardView: View {
                         .font(.subheadline)
                         .fontWeight(.bold)
                         .foregroundColor(ColorTheme.primaryText)
+
+                    if expense.receiptPath != nil {
+                        Image(systemName: "paperclip")
+                            .font(.caption2)
+                            .foregroundColor(ColorTheme.tertiaryText)
+                    }
                     
                     CategoryBadge(category: expense.category ?? "")
                         .scaleEffect(0.8, anchor: .trailing)

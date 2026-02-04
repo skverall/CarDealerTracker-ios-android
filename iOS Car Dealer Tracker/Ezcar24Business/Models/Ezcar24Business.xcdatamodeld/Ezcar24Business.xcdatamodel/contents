@@ -1,268 +1,267 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <model type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="22225" systemVersion="23A344" minimumToolsVersion="Automatic" sourceLanguage="Swift" userDefinedModelVersionIdentifier="">
     <entity name="Vehicle" representedClassName="Vehicle" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="vin" optional="NO" attributeType="String"/>
-        <attribute name="make" optional="YES" attributeType="String"/>
-        <attribute name="model" optional="YES" attributeType="String"/>
-        <attribute name="year" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="purchasePrice" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="purchaseDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="purchaseAccountId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="status" optional="NO" attributeType="String" defaultValueString="owned"/>
-        <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="saleDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="buyerName" optional="YES" attributeType="String"/>
-        <attribute name="buyerPhone" optional="YES" attributeType="String"/>
-        <attribute name="paymentMethod" optional="YES" attributeType="String"/>
-        <attribute name="salePrice" optional="YES" attributeType="Decimal"/>
-        <attribute name="askingPrice" optional="YES" attributeType="Decimal"/>
-        <attribute name="reportURL" optional="YES" attributeType="String"/>
-        <attribute name="mileage" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Expense" inverseName="vehicle" inverseEntity="Expense"/>
-        <relationship name="clients" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Client" inverseName="vehicle" inverseEntity="Client"/>
-        <relationship name="expenseTemplates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExpenseTemplate" inverseName="vehicle" inverseEntity="ExpenseTemplate"/>
-        <relationship name="sales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sale" inverseName="vehicle" inverseEntity="Sale"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="vin" optional="NO" attributeType="String" />
+        <attribute name="make" optional="YES" attributeType="String" />
+        <attribute name="model" optional="YES" attributeType="String" />
+        <attribute name="year" optional="YES" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" />
+        <attribute name="purchasePrice" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="purchaseDate" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="purchaseAccountId" optional="YES" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="status" optional="NO" attributeType="String" defaultValueString="owned" />
+        <attribute name="notes" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="saleDate" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="buyerName" optional="YES" attributeType="String" />
+        <attribute name="buyerPhone" optional="YES" attributeType="String" />
+        <attribute name="paymentMethod" optional="YES" attributeType="String" />
+        <attribute name="salePrice" optional="YES" attributeType="Decimal" />
+        <attribute name="askingPrice" optional="YES" attributeType="Decimal" />
+        <attribute name="reportURL" optional="YES" attributeType="String" />
+        <attribute name="mileage" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" />
+        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Expense" inverseName="vehicle" inverseEntity="Expense" />
+        <relationship name="clients" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Client" inverseName="vehicle" inverseEntity="Client" />
+        <relationship name="expenseTemplates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExpenseTemplate" inverseName="vehicle" inverseEntity="ExpenseTemplate" />
+        <relationship name="sales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sale" inverseName="vehicle" inverseEntity="Sale" />
     </entity>
     <entity name="Expense" representedClassName="Expense" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="expenseDescription" optional="YES" attributeType="String"/>
-        <attribute name="category" optional="NO" attributeType="String"/>
-        <attribute name="categoryType" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="expenses" inverseEntity="Vehicle"/>
-        <relationship name="user" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="User" inverseName="expenses" inverseEntity="User"/>
-        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="expenses" inverseEntity="FinancialAccount"/>
-    </entity>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="expenseDescription" optional="YES" attributeType="String" />
+        <attribute name="category" optional="NO" attributeType="String" />
+        <attribute name="categoryType" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="expenses" inverseEntity="Vehicle" />
+        <relationship name="user" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="User" inverseName="expenses" inverseEntity="User" />
+        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="expenses" inverseEntity="FinancialAccount" />
+    <attribute name="receiptPath" optional="YES" attributeType="String" /></entity>
     <entity name="User" representedClassName="User" syncable="YES" codeGenerationType="none">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="name" optional="NO" attributeType="String"/>
-        <attribute name="firstName" optional="YES" attributeType="String"/>
-        <attribute name="lastName" optional="YES" attributeType="String"/>
-        <attribute name="email" optional="YES" attributeType="String"/>
-        <attribute name="phone" optional="YES" attributeType="String"/>
-        <attribute name="avatarUrl" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Expense" inverseName="user" inverseEntity="Expense"/>
-        <relationship name="expenseTemplates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExpenseTemplate" inverseName="user" inverseEntity="ExpenseTemplate"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="name" optional="NO" attributeType="String" />
+        <attribute name="firstName" optional="YES" attributeType="String" />
+        <attribute name="lastName" optional="YES" attributeType="String" />
+        <attribute name="email" optional="YES" attributeType="String" />
+        <attribute name="phone" optional="YES" attributeType="String" />
+        <attribute name="avatarUrl" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Expense" inverseName="user" inverseEntity="Expense" />
+        <relationship name="expenseTemplates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExpenseTemplate" inverseName="user" inverseEntity="ExpenseTemplate" />
     </entity>
     <entity name="FinancialAccount" representedClassName="FinancialAccount" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="accountType" optional="NO" attributeType="String"/>
-        <attribute name="balance" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Expense" inverseName="account" inverseEntity="Expense"/>
-        <relationship name="expenseTemplates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExpenseTemplate" inverseName="account" inverseEntity="ExpenseTemplate"/>
-        <relationship name="debtPayments" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="DebtPayment" inverseName="account" inverseEntity="DebtPayment"/>
-        <relationship name="transactions" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="AccountTransaction" inverseName="account" inverseEntity="AccountTransaction"/>
-        <relationship name="sales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sale" inverseName="account" inverseEntity="Sale"/>
-        <relationship name="partSales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSale" inverseName="account" inverseEntity="PartSale"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="accountType" optional="NO" attributeType="String" />
+        <attribute name="balance" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Expense" inverseName="account" inverseEntity="Expense" />
+        <relationship name="expenseTemplates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExpenseTemplate" inverseName="account" inverseEntity="ExpenseTemplate" />
+        <relationship name="debtPayments" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="DebtPayment" inverseName="account" inverseEntity="DebtPayment" />
+        <relationship name="transactions" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="AccountTransaction" inverseName="account" inverseEntity="AccountTransaction" />
+        <relationship name="sales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sale" inverseName="account" inverseEntity="Sale" />
+        <relationship name="partSales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSale" inverseName="account" inverseEntity="PartSale" />
     </entity>
     <entity name="ExpenseTemplate" representedClassName="ExpenseTemplate" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="name" optional="NO" attributeType="String"/>
-        <attribute name="category" optional="YES" attributeType="String"/>
-        <attribute name="defaultDescription" optional="YES" attributeType="String"/>
-        <attribute name="defaultAmount" optional="YES" attributeType="Decimal"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="expenseTemplates" inverseEntity="Vehicle"/>
-        <relationship name="user" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="User" inverseName="expenseTemplates" inverseEntity="User"/>
-        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="expenseTemplates" inverseEntity="FinancialAccount"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="name" optional="NO" attributeType="String" />
+        <attribute name="category" optional="YES" attributeType="String" />
+        <attribute name="defaultDescription" optional="YES" attributeType="String" />
+        <attribute name="defaultAmount" optional="YES" attributeType="Decimal" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="expenseTemplates" inverseEntity="Vehicle" />
+        <relationship name="user" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="User" inverseName="expenseTemplates" inverseEntity="User" />
+        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="expenseTemplates" inverseEntity="FinancialAccount" />
     </entity>
     <entity name="Client" representedClassName="Client" syncable="YES" codeGenerationType="none">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="name" optional="NO" attributeType="String"/>
-        <attribute name="phone" optional="YES" attributeType="String"/>
-        <attribute name="email" optional="YES" attributeType="String"/>
-        <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="requestDetails" optional="YES" attributeType="String"/>
-        <attribute name="preferredDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="status" optional="YES" attributeType="String" defaultValueString="new" syncable="YES"/>
-        <attribute name="leadStage" optional="YES" attributeType="String"/>
-        <attribute name="leadSource" optional="YES" attributeType="String"/>
-        <attribute name="assignedUserId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="estimatedValue" optional="YES" attributeType="Decimal"/>
-        <attribute name="priority" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="leadScore" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="leadCreatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="lastContactAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="nextFollowUpAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="interactions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClientInteraction" inverseName="client" inverseEntity="ClientInteraction"/>
-        <relationship name="reminders" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClientReminder" inverseName="client" inverseEntity="ClientReminder"/>
-        <relationship name="partSales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSale" inverseName="client" inverseEntity="PartSale"/>
-        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="clients" inverseEntity="Vehicle"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="name" optional="NO" attributeType="String" />
+        <attribute name="phone" optional="YES" attributeType="String" />
+        <attribute name="email" optional="YES" attributeType="String" />
+        <attribute name="notes" optional="YES" attributeType="String" />
+        <attribute name="requestDetails" optional="YES" attributeType="String" />
+        <attribute name="preferredDate" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="status" optional="YES" attributeType="String" defaultValueString="new" syncable="YES" />
+        <attribute name="leadStage" optional="YES" attributeType="String" />
+        <attribute name="leadSource" optional="YES" attributeType="String" />
+        <attribute name="assignedUserId" optional="YES" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="estimatedValue" optional="YES" attributeType="Decimal" />
+        <attribute name="priority" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" />
+        <attribute name="leadScore" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" />
+        <attribute name="leadCreatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="lastContactAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="nextFollowUpAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="interactions" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClientInteraction" inverseName="client" inverseEntity="ClientInteraction" />
+        <relationship name="reminders" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="ClientReminder" inverseName="client" inverseEntity="ClientReminder" />
+        <relationship name="partSales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSale" inverseName="client" inverseEntity="PartSale" />
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="clients" inverseEntity="Vehicle" />
     </entity>
     <entity name="ClientInteraction" representedClassName="ClientInteraction" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="title" optional="YES" attributeType="String"/>
-        <attribute name="detail" optional="YES" attributeType="String"/>
-        <attribute name="occurredAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="stage" optional="YES" attributeType="String" defaultValueString="update"/>
-        <attribute name="value" optional="YES" attributeType="Decimal"/>
-        <attribute name="interactionType" optional="YES" attributeType="String"/>
-        <attribute name="outcome" optional="YES" attributeType="String"/>
-        <attribute name="durationMinutes" optional="YES" attributeType="Integer 32" usesScalarValueType="YES"/>
-        <attribute name="isFollowUpRequired" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
-        <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="interactions" inverseEntity="Client"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="title" optional="YES" attributeType="String" />
+        <attribute name="detail" optional="YES" attributeType="String" />
+        <attribute name="occurredAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="stage" optional="YES" attributeType="String" defaultValueString="update" />
+        <attribute name="value" optional="YES" attributeType="Decimal" />
+        <attribute name="interactionType" optional="YES" attributeType="String" />
+        <attribute name="outcome" optional="YES" attributeType="String" />
+        <attribute name="durationMinutes" optional="YES" attributeType="Integer 32" usesScalarValueType="YES" />
+        <attribute name="isFollowUpRequired" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" />
+        <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="interactions" inverseEntity="Client" />
     </entity>
     <entity name="ClientReminder" representedClassName="ClientReminder" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="title" optional="NO" attributeType="String"/>
-        <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="dueDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="isCompleted" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="reminders" inverseEntity="Client"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="title" optional="NO" attributeType="String" />
+        <attribute name="notes" optional="YES" attributeType="String" />
+        <attribute name="dueDate" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="isCompleted" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="reminders" inverseEntity="Client" />
     </entity>
     <entity name="Sale" representedClassName="Sale" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="amount" optional="YES" attributeType="Decimal"/>
-        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="buyerName" optional="YES" attributeType="String"/>
-        <attribute name="buyerPhone" optional="YES" attributeType="String"/>
-        <attribute name="paymentMethod" optional="YES" attributeType="String"/>
-        <attribute name="vatRefundPercent" optional="YES" attributeType="Decimal"/>
-        <attribute name="vatRefundAmount" optional="YES" attributeType="Decimal"/>
-        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="sales" inverseEntity="Vehicle"/>
-        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="sales" inverseEntity="FinancialAccount"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="amount" optional="YES" attributeType="Decimal" />
+        <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="buyerName" optional="YES" attributeType="String" />
+        <attribute name="buyerPhone" optional="YES" attributeType="String" />
+        <attribute name="paymentMethod" optional="YES" attributeType="String" />
+        <attribute name="vatRefundPercent" optional="YES" attributeType="Decimal" />
+        <attribute name="vatRefundAmount" optional="YES" attributeType="Decimal" />
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="sales" inverseEntity="Vehicle" />
+        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="sales" inverseEntity="FinancialAccount" />
     </entity>
     <entity name="Debt" representedClassName="Debt" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="counterpartyName" optional="NO" attributeType="String"/>
-        <attribute name="counterpartyPhone" optional="YES" attributeType="String"/>
-        <attribute name="direction" optional="NO" attributeType="String" defaultValueString="owed_to_me"/>
-        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="dueDate" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="payments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DebtPayment" inverseName="debt" inverseEntity="DebtPayment"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="counterpartyName" optional="NO" attributeType="String" />
+        <attribute name="counterpartyPhone" optional="YES" attributeType="String" />
+        <attribute name="direction" optional="NO" attributeType="String" defaultValueString="owed_to_me" />
+        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="notes" optional="YES" attributeType="String" />
+        <attribute name="dueDate" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="payments" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="DebtPayment" inverseName="debt" inverseEntity="DebtPayment" />
     </entity>
     <entity name="DebtPayment" representedClassName="DebtPayment" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="note" optional="YES" attributeType="String"/>
-        <attribute name="paymentMethod" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="debt" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Debt" inverseName="payments" inverseEntity="Debt"/>
-        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="debtPayments" inverseEntity="FinancialAccount"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="note" optional="YES" attributeType="String" />
+        <attribute name="paymentMethod" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="debt" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Debt" inverseName="payments" inverseEntity="Debt" />
+        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="debtPayments" inverseEntity="FinancialAccount" />
     </entity>
     <entity name="AccountTransaction" representedClassName="AccountTransaction" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="transactionType" optional="NO" attributeType="String" defaultValueString="deposit"/>
-        <attribute name="note" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="transactions" inverseEntity="FinancialAccount"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="transactionType" optional="NO" attributeType="String" defaultValueString="deposit" />
+        <attribute name="note" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="transactions" inverseEntity="FinancialAccount" />
     </entity>
     <entity name="Part" representedClassName="Part" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="name" optional="NO" attributeType="String"/>
-        <attribute name="code" optional="YES" attributeType="String"/>
-        <attribute name="category" optional="YES" attributeType="String"/>
-        <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="batches" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PartBatch" inverseName="part" inverseEntity="PartBatch"/>
-        <relationship name="saleLineItems" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSaleLineItem" inverseName="part" inverseEntity="PartSaleLineItem"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="name" optional="NO" attributeType="String" />
+        <attribute name="code" optional="YES" attributeType="String" />
+        <attribute name="category" optional="YES" attributeType="String" />
+        <attribute name="notes" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="batches" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PartBatch" inverseName="part" inverseEntity="PartBatch" />
+        <relationship name="saleLineItems" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSaleLineItem" inverseName="part" inverseEntity="PartSaleLineItem" />
     </entity>
     <entity name="PartBatch" representedClassName="PartBatch" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="batchLabel" optional="YES" attributeType="String"/>
-        <attribute name="quantityReceived" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="quantityRemaining" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="unitCost" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="purchaseDate" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="purchaseAccountId" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="part" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Part" inverseName="batches" inverseEntity="Part"/>
-        <relationship name="saleLineItems" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSaleLineItem" inverseName="batch" inverseEntity="PartSaleLineItem"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="batchLabel" optional="YES" attributeType="String" />
+        <attribute name="quantityReceived" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="quantityRemaining" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="unitCost" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="purchaseDate" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="purchaseAccountId" optional="YES" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="notes" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="part" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Part" inverseName="batches" inverseEntity="Part" />
+        <relationship name="saleLineItems" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSaleLineItem" inverseName="batch" inverseEntity="PartSaleLineItem" />
     </entity>
     <entity name="PartSale" representedClassName="PartSale" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="buyerName" optional="YES" attributeType="String"/>
-        <attribute name="buyerPhone" optional="YES" attributeType="String"/>
-        <attribute name="paymentMethod" optional="YES" attributeType="String"/>
-        <attribute name="notes" optional="YES" attributeType="String"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="partSales" inverseEntity="FinancialAccount"/>
-        <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="partSales" inverseEntity="Client"/>
-        <relationship name="lineItems" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PartSaleLineItem" inverseName="sale" inverseEntity="PartSaleLineItem"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="buyerName" optional="YES" attributeType="String" />
+        <attribute name="buyerPhone" optional="YES" attributeType="String" />
+        <attribute name="paymentMethod" optional="YES" attributeType="String" />
+        <attribute name="notes" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="partSales" inverseEntity="FinancialAccount" />
+        <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="partSales" inverseEntity="Client" />
+        <relationship name="lineItems" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="PartSaleLineItem" inverseName="sale" inverseEntity="PartSaleLineItem" />
     </entity>
     <entity name="PartSaleLineItem" representedClassName="PartSaleLineItem" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="quantity" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="unitPrice" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="unitCost" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <relationship name="sale" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="PartSale" inverseName="lineItems" inverseEntity="PartSale"/>
-        <relationship name="part" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Part" inverseName="saleLineItems" inverseEntity="Part"/>
-        <relationship name="batch" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="PartBatch" inverseName="saleLineItems" inverseEntity="PartBatch"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="quantity" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="unitPrice" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="unitCost" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="sale" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="PartSale" inverseName="lineItems" inverseEntity="PartSale" />
+        <relationship name="part" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="Part" inverseName="saleLineItems" inverseEntity="Part" />
+        <relationship name="batch" optional="NO" maxCount="1" deletionRule="Nullify" destinationEntity="PartBatch" inverseName="saleLineItems" inverseEntity="PartBatch" />
     </entity>
     <entity name="HoldingCostSettings" representedClassName="HoldingCostSettings" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="dealerId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="annualRatePercent" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="dailyRatePercent" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="isEnabled" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="dealerId" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="annualRatePercent" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="dailyRatePercent" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="isEnabled" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
     </entity>
     <entity name="VehicleInventoryStats" representedClassName="VehicleInventoryStats" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="vehicleId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="daysInInventory" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
-        <attribute name="agingBucket" optional="NO" attributeType="String"/>
-        <attribute name="totalCost" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="holdingCostAccumulated" optional="NO" attributeType="Decimal" defaultValueString="0.0"/>
-        <attribute name="roiPercent" optional="YES" attributeType="Decimal"/>
-        <attribute name="profitEstimate" optional="YES" attributeType="Decimal"/>
-        <attribute name="lastCalculatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="vehicleId" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="daysInInventory" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" />
+        <attribute name="agingBucket" optional="NO" attributeType="String" />
+        <attribute name="totalCost" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="holdingCostAccumulated" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="roiPercent" optional="YES" attributeType="Decimal" />
+        <attribute name="profitEstimate" optional="YES" attributeType="Decimal" />
+        <attribute name="lastCalculatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
     </entity>
     <entity name="InventoryAlert" representedClassName="InventoryAlert" syncable="YES" codeGenerationType="class">
-        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="vehicleId" optional="NO" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="alertType" optional="NO" attributeType="String"/>
-        <attribute name="severity" optional="NO" attributeType="String"/>
-        <attribute name="message" optional="NO" attributeType="String"/>
-        <attribute name="isRead" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES"/>
-        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="dismissedAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="vehicleId" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="alertType" optional="NO" attributeType="String" />
+        <attribute name="severity" optional="NO" attributeType="String" />
+        <attribute name="message" optional="NO" attributeType="String" />
+        <attribute name="isRead" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="dismissedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
     </entity>
 </model>

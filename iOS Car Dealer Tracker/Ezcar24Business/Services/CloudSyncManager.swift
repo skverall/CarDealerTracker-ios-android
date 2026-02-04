@@ -1994,6 +1994,16 @@ final class CloudSyncManager: ObservableObject {
         }
     }
 
+    private struct VehiclePhotoOrderUpdate: Encodable {
+        let sortOrder: Int
+        let updatedAt: Date
+
+        enum CodingKeys: String, CodingKey {
+            case sortOrder = "sort_order"
+            case updatedAt = "updated_at"
+        }
+    }
+
     private func imagePath(dealerId: UUID, vehicleId: UUID) -> String {
         "\(dealerId.uuidString.lowercased())/vehicles/\(vehicleId.uuidString.lowercased()).jpg"
     }
@@ -2117,6 +2127,22 @@ final class CloudSyncManager: ObservableObject {
             ImageStore.shared.deletePhoto(vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteVehiclePhoto error: \(error)")
+        }
+    }
+
+    func updateVehiclePhotoOrder(photos: [RemoteVehiclePhoto], dealerId: UUID) async {
+        do {
+            for (index, photo) in photos.enumerated() {
+                let update = VehiclePhotoOrderUpdate(sortOrder: index, updatedAt: Date())
+                try await writeClient
+                    .from("crm_vehicle_photos")
+                    .update(update)
+                    .eq("id", value: photo.id)
+                    .eq("dealer_id", value: dealerId)
+                    .execute()
+            }
+        } catch {
+            print("CloudSyncManager updateVehiclePhotoOrder error: \(error)")
         }
     }
 
@@ -2249,6 +2275,61 @@ final class CloudSyncManager: ObservableObject {
             }
         }
         print("CloudSyncManager: Finished downloading images")
+    }
+
+    // MARK: - Expense receipts
+
+    private func receiptPath(dealerId: UUID, expenseId: UUID, fileExtension: String) -> String {
+        let ext = fileExtension.isEmpty ? "jpg" : fileExtension
+        return "\(dealerId.uuidString.lowercased())/expenses/\(expenseId.uuidString.lowercased()).\(ext)"
+    }
+
+    func uploadExpenseReceipt(
+        expenseId: UUID,
+        dealerId: UUID,
+        data: Data,
+        contentType: String,
+        fileExtension: String
+    ) async -> String? {
+        let path = receiptPath(dealerId: dealerId, expenseId: expenseId, fileExtension: fileExtension)
+        do {
+            try await client.storage
+                .from("expense-receipts")
+                .upload(
+                    path,
+                    data: data,
+                    options: FileOptions(
+                        cacheControl: "3600",
+                        contentType: contentType,
+                        upsert: true
+                    )
+                )
+            return path
+        } catch {
+            print("CloudSyncManager uploadExpenseReceipt error: \(error)")
+            return nil
+        }
+    }
+
+    func downloadExpenseReceipt(path: String) async -> Data? {
+        do {
+            return try await client.storage
+                .from("expense-receipts")
+                .download(path: path)
+        } catch {
+            print("CloudSyncManager downloadExpenseReceipt error: \(error)")
+            return nil
+        }
+    }
+
+    func deleteExpenseReceipt(path: String) async {
+        do {
+            _ = try await client.storage
+                .from("expense-receipts")
+                .remove(paths: [path])
+        } catch {
+            print("CloudSyncManager deleteExpenseReceipt error: \(error)")
+        }
     }
 
     // MARK: - Backups
@@ -3002,6 +3083,7 @@ final class CloudSyncManager: ObservableObject {
                 
                 obj.expenseDescription = e.expenseDescription
                 obj.category = e.category
+                obj.receiptPath = e.receiptPath
                 obj.createdAt = e.createdAt
                 obj.updatedAt = e.updatedAt
                 obj.deletedAt = nil
@@ -3746,6 +3828,7 @@ final class CloudSyncManager: ObservableObject {
             date: CloudSyncManager.formatDateOnly(date),
             expenseDescription: expense.expenseDescription,
             category: expense.category ?? "",
+            receiptPath: expense.receiptPath,
             createdAt: expense.createdAt ?? Date(),
             vehicleId: (expense.vehicle?.id),
             userId: (expense.user?.id),

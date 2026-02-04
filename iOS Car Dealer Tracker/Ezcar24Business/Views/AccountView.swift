@@ -27,6 +27,14 @@ struct AccountView: View {
     @State private var inviteShareItems: [Any] = []
     @State private var referralCode: String?
     @State private var isFetchingReferralCode = false
+    @State private var inviteAlertMessage: String?
+
+    private var inviteAlertBinding: Binding<Bool> {
+        Binding(
+            get: { inviteAlertMessage != nil },
+            set: { if !$0 { inviteAlertMessage = nil } }
+        )
+    }
 
     fileprivate enum DedupState: Equatable {
         case idle
@@ -80,6 +88,13 @@ struct AccountView: View {
             }
             .sheet(isPresented: $showInviteShareSheet) {
                 ShareSheet(items: inviteShareItems)
+            }
+            .alert("invite_dealer".localizedString, isPresented: inviteAlertBinding) {
+                Button("OK") {
+                    inviteAlertMessage = nil
+                }
+            } message: {
+                Text(inviteAlertMessage ?? "")
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -491,7 +506,7 @@ struct AccountView: View {
                 .foregroundColor(.white)
                 .cornerRadius(12)
             }
-            .disabled(isFetchingReferralCode || sessionStore.activeOrganizationId == nil)
+            .disabled(isFetchingReferralCode)
 
             NavigationLink {
                 ReferralStatsView()
@@ -700,14 +715,23 @@ struct AccountView: View {
     }
 
     private func shareDealerInvite() async {
-        guard let dealerId = sessionStore.activeOrganizationId else { return }
+        guard case .signedIn(let user) = sessionStore.status else {
+            await MainActor.run { inviteAlertMessage = "Please sign in to generate an invite link." }
+            return
+        }
+        let dealerId = sessionStore.activeOrganizationId ?? CloudSyncEnvironment.currentDealerId ?? user.id
         await MainActor.run { isFetchingReferralCode = true }
         let code = await sessionStore.getDealerReferralCode(dealerId: dealerId)
         await MainActor.run {
             isFetchingReferralCode = false
             referralCode = code
         }
-        guard let code else { return }
+        guard let code else {
+            await MainActor.run {
+                inviteAlertMessage = "Unable to generate an invite link. Please try again."
+            }
+            return
+        }
 
         let link = "https://ezcar24.com/dealer-invite?code=\(code)"
         let message = "Join EZCar24 Business using my invite code \(code). Subscribe and we both get an extra month free."

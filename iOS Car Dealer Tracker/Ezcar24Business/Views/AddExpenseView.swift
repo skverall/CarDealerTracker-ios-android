@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreData
 import UIKit
+import UniformTypeIdentifiers
 
 struct AddExpenseView: View {
     @Environment(\.dismiss) private var dismiss
@@ -39,6 +40,12 @@ struct AddExpenseView: View {
     @State private var showSavedToast: Bool = false
     @State private var showDatePicker: Bool = false
     @State private var vehicleSearchText: String = ""
+    @State private var showReceiptImporter: Bool = false
+    @State private var receiptAttachment: ReceiptAttachment? = nil
+    @State private var receiptPath: String? = nil
+    @State private var receiptRemoved: Bool = false
+    @State private var receiptShareUrl: URL? = nil
+    @State private var showReceiptShare: Bool = false
     
     // Quick Add States
     @State private var showAddVehicleSheet: Bool = false
@@ -52,6 +59,13 @@ struct AddExpenseView: View {
     enum ActiveSheet: Identifiable {
         case vehicle, user, account
         var id: Int { hashValue }
+    }
+
+    private struct ReceiptAttachment {
+        let data: Data
+        let fileName: String
+        let contentType: String
+        let fileExtension: String
     }
 
     @FetchRequest(
@@ -114,6 +128,8 @@ struct AddExpenseView: View {
                             
                             // Context Selectors (Vehicle, User, Account)
                             contextSection
+
+                            receiptSection
                             
                             Spacer(minLength: 100) // Space for bottom button
                         }
@@ -166,6 +182,18 @@ struct AddExpenseView: View {
                                 Button("done".localizedString) { showDatePicker = false }
                             }
                         }
+                }
+            }
+            .fileImporter(
+                isPresented: $showReceiptImporter,
+                allowedContentTypes: [.image, .pdf],
+                allowsMultipleSelection: false
+            ) { result in
+                handleReceiptImport(result)
+            }
+            .sheet(isPresented: $showReceiptShare) {
+                if let url = receiptShareUrl {
+                    ActivityView(activityItems: [url])
                 }
             }
             .alert("Add New User", isPresented: $showAddUserAlert) {
@@ -408,6 +436,70 @@ struct AddExpenseView: View {
                 isActive: selectedAccount != nil
             ) {
                 activeSheet = .account
+            }
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private var receiptSection: some View {
+        VStack(spacing: 12) {
+            Button {
+                showReceiptImporter = true
+            } label: {
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(ColorTheme.secondaryBackground)
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "paperclip")
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("receipt".localizedString)
+                            .font(.headline)
+                            .foregroundColor(ColorTheme.primaryText)
+                        Text(receiptLabelText)
+                            .font(.subheadline)
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(ColorTheme.tertiaryText)
+                }
+                .padding(16)
+                .background(ColorTheme.cardBackground)
+                .cornerRadius(16)
+            }
+            .buttonStyle(.plain)
+
+            if hasReceipt {
+                HStack(spacing: 12) {
+                    Button {
+                        openReceipt()
+                    } label: {
+                        Text("view_receipt".localizedString)
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(ColorTheme.secondaryBackground)
+                            .cornerRadius(12)
+                    }
+
+                    Button {
+                        removeReceipt()
+                    } label: {
+                        Text("remove_receipt".localizedString)
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(ColorTheme.secondaryBackground)
+                            .cornerRadius(12)
+                    }
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -676,6 +768,20 @@ struct AddExpenseView: View {
         let raw = account.accountType?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         return raw.isEmpty ? "Account" : raw.capitalized
     }
+
+    private var hasReceipt: Bool {
+        receiptAttachment != nil || receiptPath != nil
+    }
+
+    private var receiptLabelText: String {
+        if let attachment = receiptAttachment {
+            return attachment.fileName
+        }
+        if let path = receiptPath {
+            return URL(fileURLWithPath: path).lastPathComponent
+        }
+        return "attach_receipt".localizedString
+    }
     
     private func prefillIfNeeded() {
         if let exp = editingExpense {
@@ -687,6 +793,7 @@ struct AddExpenseView: View {
             selectedVehicle = exp.vehicle
             selectedUser = exp.user
             selectedAccount = exp.account
+            receiptPath = exp.receiptPath
         } else {
             // Prefill from last used
             category = lastExpenseCategory
@@ -728,6 +835,106 @@ struct AddExpenseView: View {
             print("Failed to save template: \(error)")
         }
     }
+
+    private func handleReceiptImport(_ result: Result<[URL], Error>) {
+        switch result {
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            do {
+                let data = try Data(contentsOf: url)
+                let fileName = url.lastPathComponent
+                let fileExtension = url.pathExtension.lowercased()
+                let contentType = UTType(filenameExtension: fileExtension)?.preferredMIMEType ?? "application/octet-stream"
+                receiptAttachment = ReceiptAttachment(
+                    data: data,
+                    fileName: fileName,
+                    contentType: contentType,
+                    fileExtension: fileExtension
+                )
+                receiptRemoved = false
+            } catch {
+                print("Failed to load receipt: \(error)")
+            }
+        case .failure(let error):
+            print("Receipt import failed: \(error)")
+        }
+    }
+
+    private func removeReceipt() {
+        if receiptPath != nil {
+            receiptRemoved = true
+        }
+        receiptAttachment = nil
+        receiptPath = nil
+    }
+
+    private func openReceipt() {
+        if let attachment = receiptAttachment {
+            if let url = writeReceiptTempFile(data: attachment.data, fileName: attachment.fileName) {
+                receiptShareUrl = url
+                showReceiptShare = true
+            }
+            return
+        }
+
+        guard let path = receiptPath else { return }
+        Task {
+            if let data = await CloudSyncManager.shared?.downloadExpenseReceipt(path: path) {
+                let fileName = URL(fileURLWithPath: path).lastPathComponent
+                let url = writeReceiptTempFile(data: data, fileName: fileName)
+                await MainActor.run {
+                    receiptShareUrl = url
+                    showReceiptShare = url != nil
+                }
+            }
+        }
+    }
+
+    private func writeReceiptTempFile(data: Data, fileName: String) -> URL? {
+        let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        do {
+            try data.write(to: tempUrl, options: .atomic)
+            return tempUrl
+        } catch {
+            print("Failed to write receipt temp file: \(error)")
+            return nil
+        }
+    }
+
+    private func syncReceiptChanges(for expense: Expense, previousPath: String?) async {
+        guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+
+        if receiptRemoved {
+            await MainActor.run {
+                expense.receiptPath = nil
+                expense.updatedAt = Date()
+                try? viewContext.save()
+            }
+            if let previousPath {
+                await CloudSyncManager.shared?.deleteExpenseReceipt(path: previousPath)
+            }
+        }
+
+        if let attachment = receiptAttachment,
+           let newPath = await CloudSyncManager.shared?.uploadExpenseReceipt(
+                expenseId: expense.id ?? UUID(),
+                dealerId: dealerId,
+                data: attachment.data,
+                contentType: attachment.contentType,
+                fileExtension: attachment.fileExtension
+           ) {
+            await MainActor.run {
+                expense.receiptPath = newPath
+                expense.updatedAt = Date()
+                try? viewContext.save()
+            }
+            if let previousPath, previousPath != newPath {
+                await CloudSyncManager.shared?.deleteExpenseReceipt(path: previousPath)
+            }
+        }
+
+        await CloudSyncManager.shared?.upsertExpense(expense, dealerId: dealerId)
+    }
     
     private func saveExpense() {
         guard let amountDecimal = Decimal(string: amount), amountDecimal > 0 else { return }
@@ -736,6 +943,7 @@ struct AddExpenseView: View {
         generator.prepare()
         
         let normalizedDate = Calendar.current.startOfDay(for: date)
+        let previousReceiptPath = editingExpense?.receiptPath
 
         // Simulate network/save delay for better UX feel
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -752,10 +960,8 @@ struct AddExpenseView: View {
                         account: selectedAccount
                     )
                     
-                    if let dealerId = CloudSyncEnvironment.currentDealerId {
-                        Task {
-                            await CloudSyncManager.shared?.upsertExpense(exp, dealerId: dealerId)
-                        }
+                    Task {
+                        await syncReceiptChanges(for: exp, previousPath: previousReceiptPath)
                     }
                 } else {
                     let expense = try viewModel.addExpense(
@@ -771,10 +977,8 @@ struct AddExpenseView: View {
                     viewModel.fetchExpenses()
                     AppReviewManager.shared.handleExpenseAdded(context: viewContext)
                     
-                    if let dealerId = CloudSyncEnvironment.currentDealerId {
-                        Task {
-                            await CloudSyncManager.shared?.upsertExpense(expense, dealerId: dealerId)
-                        }
+                    Task {
+                        await syncReceiptChanges(for: expense, previousPath: nil)
                     }
                     
                     // Remember last used

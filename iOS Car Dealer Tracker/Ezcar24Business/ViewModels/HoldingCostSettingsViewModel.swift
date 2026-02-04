@@ -24,21 +24,33 @@ class HoldingCostSettingsViewModel: ObservableObject {
     private var settings: HoldingCostSettings?
     private var cancellables = Set<AnyCancellable>()
     
-    init(context: NSManagedObjectContext = PersistenceController.shared.container.viewContext) {
+    init(context: NSManagedObjectContext) {
         self.context = context
         loadSettings()
+    }
+
+    convenience init() {
+        self.init(context: PersistenceController.shared.container.viewContext)
     }
     
     func loadSettings() {
         isLoading = true
         
         let request = HoldingCostSettings.fetchRequest()
+        if let dealerId = CloudSyncEnvironment.currentDealerId {
+            request.predicate = NSPredicate(format: "dealerId == %@", dealerId as CVarArg)
+        }
         
         do {
             let results = try context.fetch(request)
             
             if let existingSettings = results.first {
                 settings = existingSettings
+                if settings?.dealerId == nil, let dealerId = CloudSyncEnvironment.currentDealerId {
+                    settings?.dealerId = dealerId
+                    settings?.updatedAt = Date()
+                    try? context.save()
+                }
                 isEnabled = existingSettings.isEnabled
                 annualRatePercent = existingSettings.annualRatePercent?.decimalValue ?? 15.0
             } else {
@@ -64,9 +76,13 @@ class HoldingCostSettingsViewModel: ObservableObject {
             if settings == nil {
                 settings = HoldingCostSettings(context: context)
                 settings?.id = UUID()
+                settings?.dealerId = CloudSyncEnvironment.currentDealerId
                 settings?.createdAt = Date()
             }
             
+            if settings?.dealerId == nil {
+                settings?.dealerId = CloudSyncEnvironment.currentDealerId
+            }
             settings?.isEnabled = isEnabled
             settings?.annualRatePercent = NSDecimalNumber(decimal: annualRatePercent)
             settings?.dailyRatePercent = NSDecimalNumber(decimal: dailyRatePercent)
@@ -118,6 +134,7 @@ class HoldingCostSettingsViewModel: ObservableObject {
     private func createDefaultSettings() {
         settings = HoldingCostSettings(context: context)
         settings?.id = UUID()
+        settings?.dealerId = CloudSyncEnvironment.currentDealerId
         settings?.isEnabled = true
         settings?.annualRatePercent = NSDecimalNumber(decimal: 15.0)
         settings?.dailyRatePercent = NSDecimalNumber(decimal: 0.0411)

@@ -16,6 +16,7 @@ struct ContentView: View {
     @ObservedObject private var permissionService = PermissionService.shared
     @State private var selectedTab: Tab = .dashboard
     @State private var showProfileSheet = false
+    @State private var tabBarHeight: CGFloat = 72
 
     enum Tab: Int, CaseIterable, Identifiable {
         case dashboard = 0
@@ -79,6 +80,7 @@ struct ContentView: View {
             }
             return false
         }()
+        let overlayBottomPadding = max(tabBarHeight, 60)
 
         ZStack {
             TabView(selection: $selectedTab) {
@@ -177,6 +179,9 @@ struct ContentView: View {
                 }
                 .tag(Tab.clients)
             }
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: tabBarHeight)
+            }
             .alert("VIN already exists", isPresented: Binding(
                 get: { cloudSyncManager.vinConflictVehicleId != nil },
                 set: { if !$0 { cloudSyncManager.vinConflictVehicleId = nil } }
@@ -195,15 +200,19 @@ struct ContentView: View {
             .onAppear {
                 UITabBar.appearance().isHidden = true
             }
-            .safeAreaInset(edge: .bottom) {
+            .overlay(alignment: .bottom) {
                 CustomTabBar(selectedTab: $selectedTab)
-                    .padding(.bottom, 0)
+                    .readSize { size in
+                        if abs(tabBarHeight - size.height) > 0.5 {
+                            tabBarHeight = size.height
+                        }
+                    }
                     .ignoresSafeArea(.keyboard, edges: .bottom)
             }
             
             // Overlays
             SyncHUDOverlay()
-                .padding(.bottom, 60) // Lift HUD above tabbar
+                .padding(.bottom, overlayBottomPadding)
 
             // Error Toast Overlay
             if let errorMessage = cloudSyncManager.errorMessage {
@@ -214,7 +223,7 @@ struct ContentView: View {
                         isError: true,
                         onDismiss: { cloudSyncManager.errorMessage = nil }
                     )
-                    .padding(.bottom, 90) // Above tab bar
+                    .padding(.bottom, overlayBottomPadding + 24)
                 }
                 .zIndex(100)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -228,7 +237,7 @@ struct ContentView: View {
                         isError: sessionStore.inviteToastIsError,
                         onDismiss: { sessionStore.dismissInviteToast() }
                     )
-                    .padding(.bottom, 90) // Above tab bar
+                    .padding(.bottom, overlayBottomPadding + 24)
                 }
                 .zIndex(100)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -470,5 +479,25 @@ struct PermissionLoadingView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(ColorTheme.background)
+    }
+}
+
+private struct SizePreferenceKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) {
+        value = nextValue()
+    }
+}
+
+extension View {
+    func readSize(onChange: @escaping (CGSize) -> Void) -> some View {
+        background(
+            GeometryReader { proxy in
+                Color.clear
+                    .preference(key: SizePreferenceKey.self, value: proxy.size)
+            }
+        )
+        .onPreferenceChange(SizePreferenceKey.self, perform: onChange)
     }
 }

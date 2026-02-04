@@ -144,6 +144,7 @@ struct RemoteExpense: Codable {
     let date: String
     let expenseDescription: String?
     let category: String
+    let receiptPath: String?
     let createdAt: Date
     let vehicleId: UUID?
     let userId: UUID?
@@ -158,6 +159,7 @@ struct RemoteExpense: Codable {
         case date
         case expenseDescription = "description"
         case category
+        case receiptPath = "receipt_path"
         case createdAt = "created_at"
         case vehicleId = "vehicle_id"
         case userId = "user_id"

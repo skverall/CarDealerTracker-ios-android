@@ -9,6 +9,7 @@ import SwiftUI
 import PhotosUI
 import CoreData
 import UIKit
+import UniformTypeIdentifiers
 
 struct VehicleDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
@@ -20,8 +21,13 @@ struct VehicleDetailView: View {
     @State private var showPhotoUploadSheet: Bool = false
     @State private var isUploadingPhotos: Bool = false
     @State private var replaceCoverOnUpload: Bool = false
+    @State private var showPhotoManager: Bool = false
+    @State private var showPhotoViewer: Bool = false
+    @State private var photoViewerItems: [PhotoViewerItem] = []
+    @State private var photoViewerIndex: Int = 0
+    @State private var isSavingPhotoOrder: Bool = false
     @State private var refreshID = UUID()
-    @State private var editStatus: String = ""
+    @State private var editStatus: String = "owned"
     @State private var editPurchasePrice: String = ""
     @State private var editSalePrice: String = ""
     @State private var editSaleDate: Date = Date()
@@ -82,6 +88,11 @@ struct VehicleDetailView: View {
             }
         }
         return result
+    }
+
+    private func normalizedStatus(_ status: String?) -> String {
+        let value = status ?? "owned"
+        return value == "reserved" ? "owned" : value
     }
 
     private func sanitizedDecimal(from s: String) -> Decimal? {
@@ -238,6 +249,37 @@ struct VehicleDetailView: View {
         }
     }
 
+    private func buildViewerItems() -> [PhotoViewerItem] {
+        guard let id = vehicle.id else { return [] }
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        var items: [PhotoViewerItem] = []
+        if ImageStore.shared.hasImage(id: id, dealerId: dealerId) {
+            items.append(PhotoViewerItem(id: "cover", kind: .cover))
+        }
+        items.append(contentsOf: vehiclePhotos.map { PhotoViewerItem(id: $0.id.uuidString, kind: .photo($0)) })
+        return items
+    }
+
+    private func openPhotoViewer(startingAt index: Int) {
+        let items = buildViewerItems()
+        guard !items.isEmpty else { return }
+        photoViewerItems = items
+        photoViewerIndex = min(max(0, index), items.count - 1)
+        showPhotoViewer = true
+    }
+
+    private func savePhotoOrder(_ ordered: [RemoteVehiclePhoto]) {
+        guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+        isSavingPhotoOrder = true
+        Task {
+            await CloudSyncManager.shared?.updateVehiclePhotoOrder(photos: ordered, dealerId: dealerId)
+            await refreshVehiclePhotos()
+            await MainActor.run {
+                isSavingPhotoOrder = false
+            }
+        }
+    }
+
     private func setCoverPhoto(_ photo: RemoteVehiclePhoto) async {
         guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
         if let image = await loadPhotoImage(vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId),
@@ -294,7 +336,7 @@ struct VehicleDetailView: View {
                 if isEditing {
                     Button("cancel".localizedString) {
                         // discard edits and exit mode
-                        editStatus = vehicle.status ?? "reserved"
+                        editStatus = normalizedStatus(vehicle.status)
                         if let pp = vehicle.purchasePrice?.decimalValue { editPurchasePrice = String(describing: pp) } else { editPurchasePrice = "" }
                         if let sp = vehicle.salePrice?.decimalValue { editSalePrice = String(describing: sp) } else { editSalePrice = "" }
                         if let sd = vehicle.saleDate { editSaleDate = sd }
@@ -388,6 +430,57 @@ struct VehicleDetailView: View {
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: shareItems)
         }
+        .sheet(isPresented: $showPhotoManager) {
+            if let id = vehicle.id {
+                PhotoManagerSheet(
+                    vehicleId: id,
+                    photos: vehiclePhotos,
+                    hasCover: ImageStore.shared.hasImage(id: id, dealerId: CloudSyncEnvironment.currentDealerId),
+                    isSaving: $isSavingPhotoOrder,
+                    onSave: { ordered in
+                        savePhotoOrder(ordered)
+                    },
+                    onSetCover: { photo in
+                        Task { await setCoverPhoto(photo) }
+                    },
+                    onDelete: { photo in
+                        photoPendingDelete = photo
+                        showPhotoDeleteDialog = true
+                    },
+                    onClose: {
+                        showPhotoManager = false
+                    }
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $showPhotoViewer) {
+            if let id = vehicle.id {
+                VehiclePhotoViewer(
+                    vehicleId: id,
+                    items: photoViewerItems,
+                    startIndex: photoViewerIndex,
+                    onClose: { showPhotoViewer = false },
+                    onSetCover: { photo in
+                        Task { await setCoverPhoto(photo) }
+                        showPhotoViewer = false
+                    },
+                    onDeletePhoto: { photo in
+                        photoPendingDelete = photo
+                        showPhotoDeleteDialog = true
+                        showPhotoViewer = false
+                    },
+                    onDeleteCover: {
+                        if let dealerId = CloudSyncEnvironment.currentDealerId {
+                            Task { await CloudSyncManager.shared?.deleteVehicleImage(vehicleId: id, dealerId: dealerId) }
+                        }
+                        ImageStore.shared.delete(id: id, dealerId: CloudSyncEnvironment.currentDealerId) {
+                            refreshID = UUID()
+                        }
+                        showPhotoViewer = false
+                    }
+                )
+            }
+        }
         .confirmationDialog("delete_photo_confirm".localizedString, isPresented: $showPhotoDeleteDialog) {
             Button("delete_photo".localizedString, role: .destructive) {
                 if let photo = photoPendingDelete {
@@ -401,7 +494,7 @@ struct VehicleDetailView: View {
         }
         .onAppear {
             // Initialize edit fields
-            editStatus = vehicle.status ?? "reserved"
+            editStatus = normalizedStatus(vehicle.status)
             if let pp = vehicle.purchasePrice?.decimalValue { editPurchasePrice = String(describing: pp) } else { editPurchasePrice = "" }
             if let sp = vehicle.salePrice?.decimalValue { editSalePrice = String(describing: sp) }
             if let sd = vehicle.saleDate { editSaleDate = sd }
@@ -498,6 +591,11 @@ struct VehicleDetailView: View {
                     }
                 }
                 .padding(.horizontal)
+                .onTapGesture {
+                    if hasImage || !vehiclePhotos.isEmpty {
+                        openPhotoViewer(startingAt: 0)
+                    }
+                }
 
                 if isEditing {
                     HStack(spacing: 12) {
@@ -512,8 +610,19 @@ struct VehicleDetailView: View {
                                 .cornerRadius(12)
                         }
                         .disabled(isUploadingPhotos)
-
-                        
+                        Button {
+                            showPhotoManager = true
+                        } label: {
+                            Label("manage_photos".localizedString, systemImage: "square.grid.2x2")
+                                .font(.subheadline.weight(.semibold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .frame(maxWidth: .infinity)
+                                .background(ColorTheme.cardBackground)
+                                .foregroundColor(ColorTheme.primaryText)
+                                .cornerRadius(12)
+                        }
+                        .disabled(isUploadingPhotos || (!hasImage && vehiclePhotos.isEmpty))
                     }
                     .padding(.horizontal)
                 }
@@ -521,11 +630,15 @@ struct VehicleDetailView: View {
                 if !vehiclePhotos.isEmpty {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 12) {
-                            ForEach(vehiclePhotos, id: \.id) { photo in
+                            ForEach(Array(vehiclePhotos.enumerated()), id: \.element.id) { index, photo in
                                 VehiclePhotoThumbnail(
                                     vehicleId: id,
                                     photoId: photo.id,
                                     isEditing: isEditing,
+                                    onTap: {
+                                        let start = (hasImage ? 1 : 0) + index
+                                        openPhotoViewer(startingAt: start)
+                                    },
                                     onSetCover: {
                                         Task { await setCoverPhoto(photo) }
                                     },
@@ -609,7 +722,7 @@ struct VehicleDetailView: View {
                             .foregroundColor(ColorTheme.primaryText)
                         Spacer()
                         Picker("Status", selection: $editStatus) {
-                            Text("status_reserved".localizedString).tag("reserved")
+                            Text("status_owned".localizedString).tag("owned")
                             Text("on_sale".localizedString).tag("on_sale")
                             Text("in_transit".localizedString).tag("in_transit")
                             Text("under_service".localizedString).tag("under_service")
@@ -1726,10 +1839,610 @@ struct PhotoUploadSheet: View {
     }
 }
 
+struct PhotoViewerItem: Identifiable {
+    enum Kind {
+        case cover
+        case photo(RemoteVehiclePhoto)
+    }
+
+    let id: String
+    let kind: Kind
+}
+
+struct VehiclePhotoViewer: View {
+    let vehicleId: UUID
+    let items: [PhotoViewerItem]
+    let startIndex: Int
+    let onClose: () -> Void
+    let onSetCover: (RemoteVehiclePhoto) -> Void
+    let onDeletePhoto: (RemoteVehiclePhoto) -> Void
+    let onDeleteCover: () -> Void
+
+    @State private var index: Int = 0
+
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            TabView(selection: $index) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
+                    PhotoViewerPage(vehicleId: vehicleId, item: item)
+                        .tag(idx)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+
+            VStack {
+                HStack {
+                    Button(action: onClose) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                    }
+                    Spacer()
+                    Text("\(index + 1)/\(items.count)")
+                        .foregroundColor(.white.opacity(0.8))
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    if let current = currentPhotoItem {
+                        Menu {
+                            Button("set_as_cover".localizedString) {
+                                onSetCover(current)
+                            }
+                            Button("delete_photo".localizedString, role: .destructive) {
+                                onDeletePhoto(current)
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                        }
+                    } else {
+                        Menu {
+                            Button("remove_cover".localizedString, role: .destructive) {
+                                onDeleteCover()
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .font(.title2)
+                                .foregroundColor(.white)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                Spacer()
+            }
+        }
+        .onAppear { index = startIndex }
+    }
+
+    private var currentPhotoItem: RemoteVehiclePhoto? {
+        guard index >= 0, index < items.count else { return nil }
+        if case .photo(let photo) = items[index].kind {
+            return photo
+        }
+        return nil
+    }
+}
+
+struct PhotoViewerPage: View {
+    let vehicleId: UUID
+    let item: PhotoViewerItem
+    @State private var uiImage: UIImage? = nil
+    @State private var isLoading: Bool = true
+
+    var body: some View {
+        ZStack {
+            if let uiImage {
+                ZoomableImage(uiImage: uiImage)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if isLoading {
+                ProgressView()
+                    .tint(.white)
+            } else {
+                Image(systemName: "photo")
+                    .font(.system(size: 40))
+                    .foregroundColor(.white.opacity(0.7))
+            }
+        }
+        .onAppear { loadImage() }
+    }
+
+    private func loadImage() {
+        isLoading = true
+        uiImage = nil
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        switch item.kind {
+        case .cover:
+            ImageStore.shared.load(id: vehicleId, dealerId: dealerId) { loaded in
+                self.uiImage = loaded
+                self.isLoading = false
+            }
+        case .photo(let photo):
+            ImageStore.shared.loadPhoto(vehicleId: vehicleId, photoId: photo.id, dealerId: dealerId) { loaded in
+                self.uiImage = loaded
+                self.isLoading = false
+            }
+        }
+    }
+}
+
+struct ZoomableImage: View {
+    let uiImage: UIImage
+    @State private var scale: CGFloat = 1.0
+    @State private var lastScale: CGFloat = 1.0
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    private let minScale: CGFloat = 1.0
+    private let maxScale: CGFloat = 4.0
+
+    var body: some View {
+        GeometryReader { geo in
+            let container = geo.size
+            let baseSize = aspectFitSize(imageSize: uiImage.size, in: container)
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFit()
+                .scaleEffect(scale)
+                .offset(offset)
+                .gesture(magnificationGesture(baseSize: baseSize, container: container))
+                .simultaneousGesture(dragGesture(baseSize: baseSize, container: container))
+                .onTapGesture(count: 2) {
+                    reset()
+                }
+                .frame(width: container.width, height: container.height)
+        }
+    }
+
+    private func magnificationGesture(baseSize: CGSize, container: CGSize) -> some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                let proposed = lastScale * value
+                scale = min(max(proposed, minScale), maxScale)
+                offset = clampOffset(offset, baseSize: baseSize, container: container, scale: scale)
+            }
+            .onEnded { _ in
+                lastScale = scale
+                if scale <= minScale {
+                    reset()
+                } else {
+                    let clamped = clampOffset(offset, baseSize: baseSize, container: container, scale: scale)
+                    if clamped != offset {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                            offset = clamped
+                        }
+                    } else {
+                        offset = clamped
+                    }
+                }
+            }
+    }
+
+    private func dragGesture(baseSize: CGSize, container: CGSize) -> some Gesture {
+        DragGesture()
+            .onChanged { value in
+                guard scale > minScale else { return }
+                let proposed = CGSize(
+                    width: lastOffset.width + value.translation.width,
+                    height: lastOffset.height + value.translation.height
+                )
+                offset = rubberBandOffset(proposed, baseSize: baseSize, container: container, scale: scale)
+            }
+            .onEnded { _ in
+                guard scale > minScale else {
+                    reset()
+                    return
+                }
+                let clamped = clampOffset(offset, baseSize: baseSize, container: container, scale: scale)
+                withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                    offset = clamped
+                }
+                lastOffset = clamped
+            }
+    }
+
+    private func reset() {
+        withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+            scale = minScale
+            lastScale = minScale
+            offset = .zero
+            lastOffset = .zero
+        }
+    }
+
+    private func clampOffset(_ offset: CGSize, baseSize: CGSize, container: CGSize, scale: CGFloat) -> CGSize {
+        guard scale > minScale else { return .zero }
+        let maxX = max(0, (baseSize.width * scale - container.width) / 2)
+        let maxY = max(0, (baseSize.height * scale - container.height) / 2)
+        let clampedX = min(max(offset.width, -maxX), maxX)
+        let clampedY = min(max(offset.height, -maxY), maxY)
+        return CGSize(width: clampedX, height: clampedY)
+    }
+
+    private func rubberBandOffset(_ offset: CGSize, baseSize: CGSize, container: CGSize, scale: CGFloat) -> CGSize {
+        guard scale > minScale else { return .zero }
+        let maxX = max(0, (baseSize.width * scale - container.width) / 2)
+        let maxY = max(0, (baseSize.height * scale - container.height) / 2)
+        return CGSize(
+            width: rubberBand(offset.width, limit: maxX),
+            height: rubberBand(offset.height, limit: maxY)
+        )
+    }
+
+    private func rubberBand(_ value: CGFloat, limit: CGFloat) -> CGFloat {
+        guard limit > 0 else { return 0 }
+        let magnitude = abs(value)
+        guard magnitude > limit else { return value }
+        let excess = magnitude - limit
+        let damped = limit + (excess * 0.25)
+        return value < 0 ? -damped : damped
+    }
+
+    private func aspectFitSize(imageSize: CGSize, in container: CGSize) -> CGSize {
+        guard imageSize.width > 0, imageSize.height > 0, container.width > 0, container.height > 0 else {
+            return container
+        }
+        let imageAspect = imageSize.width / imageSize.height
+        let containerAspect = container.width / container.height
+        if imageAspect > containerAspect {
+            let width = container.width
+            let height = width / imageAspect
+            return CGSize(width: width, height: height)
+        } else {
+            let height = container.height
+            let width = height * imageAspect
+            return CGSize(width: width, height: height)
+        }
+    }
+}
+
+struct PhotoManagerSheet: View {
+    let vehicleId: UUID
+    let photos: [RemoteVehiclePhoto]
+    let hasCover: Bool
+    @Binding var isSaving: Bool
+    let onSave: ([RemoteVehiclePhoto]) -> Void
+    let onSetCover: (RemoteVehiclePhoto) -> Void
+    let onDelete: (RemoteVehiclePhoto) -> Void
+    let onClose: () -> Void
+
+    @State private var workingPhotos: [RemoteVehiclePhoto]
+    @State private var draggingPhoto: RemoteVehiclePhoto? = nil
+    @State private var didReorder: Bool = false
+    @State private var photoFrames: [UUID: CGRect] = [:]
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    init(
+        vehicleId: UUID,
+        photos: [RemoteVehiclePhoto],
+        hasCover: Bool,
+        isSaving: Binding<Bool>,
+        onSave: @escaping ([RemoteVehiclePhoto]) -> Void,
+        onSetCover: @escaping (RemoteVehiclePhoto) -> Void,
+        onDelete: @escaping (RemoteVehiclePhoto) -> Void,
+        onClose: @escaping () -> Void
+    ) {
+        self.vehicleId = vehicleId
+        self.photos = photos
+        self.hasCover = hasCover
+        self._isSaving = isSaving
+        self.onSave = onSave
+        self.onSetCover = onSetCover
+        self.onDelete = onDelete
+        self.onClose = onClose
+        _workingPhotos = State(initialValue: photos)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    if hasCover {
+                        CoverPhotoTile(vehicleId: vehicleId)
+                            .padding(.horizontal, 16)
+                    }
+
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(Array(workingPhotos.enumerated()), id: \.element.id) { index, photo in
+                            PhotoGridCell(
+                                vehicleId: vehicleId,
+                                photo: photo,
+                                index: index + 1,
+                                isDragging: draggingPhoto?.id == photo.id,
+                                onSetCover: {
+                                    onSetCover(photo)
+                                },
+                                onDelete: {
+                                    onDelete(photo)
+                                }
+                            )
+                            .onDrag {
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.prepare()
+                                generator.impactOccurred()
+                                draggingPhoto = photo
+                                return NSItemProvider(object: photo.id.uuidString as NSString)
+                            }
+                            .onDrop(of: [UTType.text], delegate: PhotoDropDelegate(
+                                item: photo,
+                                items: $workingPhotos,
+                                dragging: $draggingPhoto,
+                                didReorder: $didReorder
+                            ))
+                        }
+                    }
+                    .coordinateSpace(name: "PhotoGrid")
+                    .onPreferenceChange(PhotoFramePreferenceKey.self) { values in
+                        var updated: [UUID: CGRect] = [:]
+                        for value in values {
+                            updated[value.id] = value.frame
+                        }
+                        photoFrames = updated
+                    }
+                    .onDrop(of: [UTType.text], delegate: PhotoGridDropDelegate(
+                        items: $workingPhotos,
+                        frames: $photoFrames,
+                        dragging: $draggingPhoto,
+                        didReorder: $didReorder
+                    ))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+                }
+                .padding(.top, 12)
+            }
+            .navigationTitle("photo_gallery".localizedString)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("cancel".localizedString) {
+                        onClose()
+                    }
+                    .disabled(isSaving)
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("save_order".localizedString) {
+                        onSave(workingPhotos)
+                    }
+                    .disabled(isSaving || workingPhotos.isEmpty)
+                }
+            }
+        }
+        .interactiveDismissDisabled(isSaving)
+        .animation(.spring(response: 0.3, dampingFraction: 0.85), value: workingPhotos.map { $0.id })
+        .onChange(of: photos.map { $0.id }) { _, _ in
+            workingPhotos = photos
+        }
+    }
+}
+
+struct PhotoDropDelegate: DropDelegate {
+    let item: RemoteVehiclePhoto
+    @Binding var items: [RemoteVehiclePhoto]
+    @Binding var dragging: RemoteVehiclePhoto?
+    @Binding var didReorder: Bool
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging.id != item.id else { return }
+        guard let from = items.firstIndex(where: { $0.id == dragging.id }),
+              let to = items.firstIndex(where: { $0.id == item.id }) else { return }
+        withAnimation {
+            items.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+        }
+        didReorder = true
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        if didReorder {
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        }
+        dragging = nil
+        didReorder = false
+        return true
+    }
+}
+
+struct PhotoFrameData: Equatable {
+    let id: UUID
+    let frame: CGRect
+}
+
+struct PhotoFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [PhotoFrameData] = []
+    static func reduce(value: inout [PhotoFrameData], nextValue: () -> [PhotoFrameData]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+struct PhotoGridDropDelegate: DropDelegate {
+    @Binding var items: [RemoteVehiclePhoto]
+    @Binding var frames: [UUID: CGRect]
+    @Binding var dragging: RemoteVehiclePhoto?
+    @Binding var didReorder: Bool
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let dragging, !frames.isEmpty else {
+            self.dragging = nil
+            didReorder = false
+            return true
+        }
+        let location = info.location
+        if let targetId = nearestPhotoId(to: location), let from = items.firstIndex(where: { $0.id == dragging.id }),
+           let to = items.firstIndex(where: { $0.id == targetId }), from != to {
+            withAnimation {
+                items.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
+            }
+            didReorder = true
+        }
+        if didReorder {
+            let generator = UINotificationFeedbackGenerator()
+            generator.notificationOccurred(.success)
+        }
+        self.dragging = nil
+        didReorder = false
+        return true
+    }
+
+    private func nearestPhotoId(to point: CGPoint) -> UUID? {
+        frames.min(by: { lhs, rhs in
+            let leftCenter = CGPoint(x: lhs.value.midX, y: lhs.value.midY)
+            let rightCenter = CGPoint(x: rhs.value.midX, y: rhs.value.midY)
+            let left = distance(from: leftCenter, to: point)
+            let right = distance(from: rightCenter, to: point)
+            return left < right
+        })?.key
+    }
+
+    private func distance(from a: CGPoint, to b: CGPoint) -> CGFloat {
+        let dx = a.x - b.x
+        let dy = a.y - b.y
+        return (dx * dx + dy * dy).squareRoot()
+    }
+}
+
+struct CoverPhotoTile: View {
+    let vehicleId: UUID
+    @State private var image: Image? = nil
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(ColorTheme.secondaryBackground)
+                .frame(height: 160)
+            if let image {
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 160)
+                    .clipped()
+                    .cornerRadius(14)
+            }
+            Text("cover_photo".localizedString)
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Color.black.opacity(0.5))
+                .cornerRadius(10)
+                .padding(10)
+        }
+        .onAppear { loadImage() }
+        .onReceive(NotificationCenter.default.publisher(for: .vehicleImageUpdated)) { notification in
+            if let updatedID = notification.object as? UUID, updatedID == vehicleId {
+                loadImage()
+            }
+        }
+    }
+
+    private func loadImage() {
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        ImageStore.shared.swiftUIImage(id: vehicleId, dealerId: dealerId) { loaded in
+            self.image = loaded
+        }
+    }
+}
+
+struct PhotoGridCell: View {
+    let vehicleId: UUID
+    let photo: RemoteVehiclePhoto
+    let index: Int
+    let isDragging: Bool
+    let onSetCover: () -> Void
+    let onDelete: () -> Void
+
+    @State private var image: Image? = nil
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(ColorTheme.secondaryBackground)
+                .frame(height: 110)
+            if let image {
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .frame(height: 110)
+                    .clipped()
+                    .cornerRadius(12)
+            } else {
+                Image(systemName: "photo")
+                    .font(.system(size: 24))
+                    .foregroundColor(ColorTheme.secondaryText)
+            }
+
+            HStack(spacing: 6) {
+                Text("\(index)")
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(8)
+                Menu {
+                    Button("set_as_cover".localizedString) {
+                        onSetCover()
+                    }
+                    Button("delete_photo".localizedString, role: .destructive) {
+                        onDelete()
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .foregroundColor(.white)
+                        .font(.title3)
+                }
+            }
+            .padding(6)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "line.3.horizontal")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(.white)
+                .padding(6)
+                .background(Color.black.opacity(0.5))
+                .cornerRadius(8)
+                .padding(6)
+        }
+        .scaleEffect(isDragging ? 1.03 : 1.0)
+        .opacity(isDragging ? 0.88 : 1.0)
+        .shadow(color: Color.black.opacity(isDragging ? 0.2 : 0.0), radius: isDragging ? 10 : 0, x: 0, y: 6)
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: PhotoFramePreferenceKey.self,
+                    value: [PhotoFrameData(id: photo.id, frame: geo.frame(in: .named("PhotoGrid")))]
+                )
+            }
+        )
+        .onAppear { loadImage() }
+    }
+
+    private func loadImage() {
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        ImageStore.shared.swiftUIImagePhoto(vehicleId: vehicleId, photoId: photo.id, dealerId: dealerId) { loaded in
+            self.image = loaded
+        }
+    }
+}
+
 struct VehiclePhotoThumbnail: View {
     let vehicleId: UUID
     let photoId: UUID
     let isEditing: Bool
+    let onTap: (() -> Void)?
     let onSetCover: (() -> Void)?
     let onDelete: (() -> Void)?
     @State private var image: Image? = nil
@@ -1765,6 +2478,13 @@ struct VehiclePhotoThumbnail: View {
                 .buttonStyle(.plain)
                 .padding(6)
             }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 10))
+        .onTapGesture {
+            if !isEditing { onTap?() }
+        }
+        .onLongPressGesture {
+            if isEditing { onTap?() }
         }
         .onAppear { loadImage() }
         .onReceive(NotificationCenter.default.publisher(for: .vehicleImageUpdated)) { notification in
@@ -1839,7 +2559,7 @@ struct VehicleExpenseRow: View {
     vehicle.year = 2022
     vehicle.purchasePrice = NSDecimalNumber(value: 185000.0)
     vehicle.purchaseDate = Date()
-    vehicle.status = "reserved"
+    vehicle.status = "owned"
     vehicle.createdAt = Date()
 
     return NavigationStack {

@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.ui.theme.*
+import android.net.Uri
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -77,7 +78,8 @@ fun VehicleAddEditScreen(
     var salePrice by remember { mutableStateOf("") }
     var saleDate by remember { mutableStateOf(Date()) }
     var selectedAccount by remember { mutableStateOf<FinancialAccount?>(null) }
-    var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
+    var replaceCoverOnUpload by remember { mutableStateOf(!isEditing) }
 
     // New Fields
     var buyerName by remember { mutableStateOf("") }
@@ -172,13 +174,13 @@ fun VehicleAddEditScreen(
                                 )
                                 
                                 // Upload image if selected
-                                if (selectedImageUri != null) {
+                                if (selectedImageUris.isNotEmpty()) {
                                     coroutineScope.launch {
-                                        val compressedBytes = com.ezcar24.business.util.ImageUtils.compressImage(context, selectedImageUri!!)
-                                        if (compressedBytes != null) {
-                                            viewModel.uploadVehicleImage(targetVehicleId, compressedBytes)
-                                        } else {
-                                            // Handle error if needed (toast?)
+                                        val images = selectedImageUris.mapNotNull { uri ->
+                                            com.ezcar24.business.util.ImageUtils.compressImage(context, uri)
+                                        }
+                                        if (images.isNotEmpty()) {
+                                            viewModel.uploadVehicleImages(targetVehicleId, images, replaceCoverOnUpload)
                                         }
                                     }
                                 }
@@ -204,9 +206,9 @@ fun VehicleAddEditScreen(
     ) { paddingValues ->
         // Photo picker launcher
         val photoPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
-            contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
-        ) { uri: android.net.Uri? ->
-            selectedImageUri = uri
+            contract = androidx.activity.result.contract.ActivityResultContracts.GetMultipleContents()
+        ) { uris: List<Uri> ->
+            selectedImageUris = uris
         }
         
         Column(
@@ -231,10 +233,10 @@ fun VehicleAddEditScreen(
                     .clickable { photoPickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
-                if (selectedImageUri != null) {
+                if (selectedImageUris.isNotEmpty()) {
                     // Show selected image
                     androidx.compose.foundation.Image(
-                        painter = coil.compose.rememberAsyncImagePainter(selectedImageUri),
+                        painter = coil.compose.rememberAsyncImagePainter(selectedImageUris.first()),
                         contentDescription = "Vehicle Photo",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
@@ -298,6 +300,36 @@ fun VehicleAddEditScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         Text("Tap to add photo", color = Color.Gray)
                     }
+                }
+            }
+            if (selectedImageUris.size > 1) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    selectedImageUris.drop(1).forEach { uri ->
+                        androidx.compose.foundation.Image(
+                            painter = coil.compose.rememberAsyncImagePainter(uri),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop
+                        )
+                    }
+                }
+            }
+
+            if (selectedImageUris.isNotEmpty()) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Set first photo as cover")
+                    Switch(checked = replaceCoverOnUpload, onCheckedChange = { replaceCoverOnUpload = it })
                 }
             }
 
