@@ -6,6 +6,8 @@ import UserNotifications
 enum NotificationPreference {
     static let enabledKey = "notificationsEnabled"
     static let inventoryStaleThresholdKey = "inventoryStaleThresholdDays"
+    static let inventoryDigestLastSignatureKey = "inventoryDigestLastSignature"
+    static let inventoryDigestLastSnapshotDayKey = "inventoryDigestLastSnapshotDay"
     static let defaultInventoryStaleThreshold = 40
 
     static var isEnabled: Bool {
@@ -23,6 +25,35 @@ enum NotificationPreference {
     
     static func setInventoryStaleThreshold(_ value: Int) {
         UserDefaults.standard.set(value, forKey: inventoryStaleThresholdKey)
+    }
+
+    static var inventoryDigestLastSignature: String? {
+        UserDefaults.standard.string(forKey: inventoryDigestLastSignatureKey)
+    }
+
+    static var inventoryDigestLastSnapshotDay: String? {
+        UserDefaults.standard.string(forKey: inventoryDigestLastSnapshotDayKey)
+    }
+
+    static func setInventoryDigestLastSignature(_ value: String?) {
+        if let value {
+            UserDefaults.standard.set(value, forKey: inventoryDigestLastSignatureKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: inventoryDigestLastSignatureKey)
+        }
+    }
+
+    static func setInventoryDigestLastSnapshotDay(_ value: String?) {
+        if let value {
+            UserDefaults.standard.set(value, forKey: inventoryDigestLastSnapshotDayKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: inventoryDigestLastSnapshotDayKey)
+        }
+    }
+
+    static func clearInventoryDigestSnapshot() {
+        setInventoryDigestLastSignature(nil)
+        setInventoryDigestLastSnapshotDay(nil)
     }
 }
 
@@ -102,12 +133,26 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         
         let inventoryThreshold = NotificationPreference.inventoryStaleThreshold
         
+        var staleVehicles: [(vehicle: Vehicle, days: Int)] = []
+
         for vehicle in vehicles {
             let days = HoldingCostCalculator.calculateDaysInInventory(vehicle: vehicle)
             guard HoldingCostCalculator.isHoldingCostEligible(vehicle: vehicle) else { continue }
             guard days >= inventoryThreshold else { continue }
-            await scheduleInventoryStaleAlert(vehicle: vehicle, daysInInventory: days)
+            staleVehicles.append((vehicle, days))
         }
+
+        guard !staleVehicles.isEmpty else {
+            NotificationPreference.clearInventoryDigestSnapshot()
+            await scheduleDailyExpenseReminder()
+            return
+        }
+
+        let digestSignature = inventoryDigestSignature(staleVehicles)
+        if shouldSendInventoryDigest(currentSignature: digestSignature, now: now) {
+            await scheduleInventoryDigestAlert(staleVehicles, threshold: inventoryThreshold)
+        }
+        rememberInventoryDigestSnapshot(signature: digestSignature, date: now)
         
         await scheduleDailyExpenseReminder()
     }
@@ -115,6 +160,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
     func clearAll() async {
         await clearAllPending()
         center.removeAllDeliveredNotifications()
+        NotificationPreference.clearInventoryDigestSnapshot()
     }
 
     @MainActor
@@ -195,24 +241,37 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         try? await center.add(request)
     }
     
-    private func scheduleInventoryStaleAlert(vehicle: Vehicle, daysInInventory: Int) async {
-        guard let id = vehicle.id else { return }
-        
-        let identifier = NotificationIdentifier.inventoryStale(id: id)
+    private func scheduleInventoryDigestAlert(
+        _ staleVehicles: [(vehicle: Vehicle, days: Int)],
+        threshold: Int
+    ) async {
+        guard !staleVehicles.isEmpty else { return }
+
+        let identifier = NotificationIdentifier.inventoryDigest
         let content = UNMutableNotificationContent()
-        let name = [vehicle.make, vehicle.model]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
         
         let title = await MainActor.run { "inventory_alert_title".localizedString }
-        let bodyFormat = await MainActor.run { "inventory_alert_body".localizedString }
         let defaultVehicleName = await MainActor.run { "vehicle".localizedString }
-        let vehicleName = name.isEmpty ? defaultVehicleName : name
+
+        let sortedVehicles = staleVehicles.sorted { $0.days > $1.days }
+        let criticalThreshold = max(90, threshold + 30)
+        let criticalCount = sortedVehicles.filter { $0.days >= criticalThreshold }.count
+        let topVehicles = sortedVehicles
+            .prefix(3)
+            .map { "\(vehicleDisplayName(for: $0.vehicle, defaultName: defaultVehicleName)) (\($0.days)d)" }
+            .joined(separator: ", ")
+        let body = inventoryDigestBody(
+            totalCount: sortedVehicles.count,
+            threshold: threshold,
+            criticalCount: criticalCount,
+            criticalThreshold: criticalThreshold,
+            topVehicles: topVehicles
+        )
         
         content.title = title
-        content.body = String(format: bodyFormat, vehicleName, daysInInventory)
+        content.body = body
         content.sound = .default
+        content.badge = NSNumber(value: sortedVehicles.count)
         
         let triggerDate = nextInventoryAlertDate()
         let trigger = UNCalendarNotificationTrigger(
@@ -220,8 +279,70 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
             repeats: false
         )
         
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         try? await center.add(request)
+    }
+
+    private func vehicleDisplayName(for vehicle: Vehicle, defaultName: String) -> String {
+        let name = [vehicle.make, vehicle.model]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return name.isEmpty ? defaultName : name
+    }
+
+    private func inventoryDigestBody(
+        totalCount: Int,
+        threshold: Int,
+        criticalCount: Int,
+        criticalThreshold: Int,
+        topVehicles: String
+    ) -> String {
+        let languageCode = Locale.current.identifier.lowercased()
+
+        if languageCode.hasPrefix("ru") {
+            return "\(totalCount) авто > \(threshold) дн.; \(criticalCount) авто > \(criticalThreshold) дн. Топ: \(topVehicles)"
+        }
+
+        return "\(totalCount) vehicles over \(threshold)d; \(criticalCount) over \(criticalThreshold)d. Top: \(topVehicles)"
+    }
+
+    private func inventoryDigestSignature(_ staleVehicles: [(vehicle: Vehicle, days: Int)]) -> String {
+        staleVehicles
+            .map { $0.vehicle.id?.uuidString ?? $0.vehicle.objectID.uriRepresentation().absoluteString }
+            .sorted()
+            .joined(separator: ",")
+    }
+
+    private func shouldSendInventoryDigest(currentSignature: String, now: Date) -> Bool {
+        guard let previousSignature = NotificationPreference.inventoryDigestLastSignature,
+              let previousSnapshotDay = NotificationPreference.inventoryDigestLastSnapshotDay else {
+            return true
+        }
+
+        guard previousSignature == currentSignature else {
+            return true
+        }
+
+        return previousSnapshotDay != dayString(for: calendarDate(byAddingDays: -1, from: now))
+    }
+
+    private func rememberInventoryDigestSnapshot(signature: String, date: Date) {
+        NotificationPreference.setInventoryDigestLastSignature(signature)
+        NotificationPreference.setInventoryDigestLastSnapshotDay(dayString(for: date))
+    }
+
+    private func calendarDate(byAddingDays days: Int, from date: Date) -> Date {
+        Calendar.current.date(byAdding: .day, value: days, to: date) ?? date
+    }
+
+    private func dayString(for date: Date) -> String {
+        let components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        let year = components.year ?? 0
+        let month = components.month ?? 0
+        let day = components.day ?? 0
+        return String(format: "%04d-%02d-%02d", year, month, day)
     }
     
     private func nextInventoryAlertDate() -> Date {
@@ -249,6 +370,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
 enum NotificationIdentifier {
     static let prefix = "ezcar24.notification"
     static let dailyReminder = "\(prefix).dailyReminder"
+    static let inventoryDigest = "\(prefix).inventory.digest"
 
     static func clientReminder(id: UUID) -> String {
         "\(prefix).client.\(id.uuidString)"
@@ -258,7 +380,4 @@ enum NotificationIdentifier {
         "\(prefix).debt.\(id.uuidString)"
     }
     
-    static func inventoryStale(id: UUID) -> String {
-        "\(prefix).inventory.\(id.uuidString)"
-    }
 }
