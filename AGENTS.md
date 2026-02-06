@@ -236,6 +236,7 @@ app/src/main/java/com/ezcar24/business/
 │   ├── repository/     # Data repositories
 │   └── sync/           # Supabase sync logic
 ├── di/                 # Hilt dependency injection modules
+├── notification/       # Notification handling
 ├── ui/
 │   ├── vehicle/        # Vehicle screens and ViewModels
 │   ├── dashboard/      # Dashboard
@@ -247,6 +248,7 @@ app/src/main/java/com/ezcar24/business/
 │   ├── settings/       # Settings
 │   ├── theme/          # Compose theme
 │   └── main/           # Navigation shell
+├── worker/             # Background workers
 └── util/               # Utilities, extensions
 ```
 
@@ -258,6 +260,7 @@ Ezcar24Business/
 ├── Models/             # CoreData models
 ├── Services/           # Supabase, sync, permissions
 ├── Auth/               # Authentication
+├── Config/             # Configuration
 ├── Utilities/          # Extensions, formatters
 └── Assets.xcassets     # Images, colors
 ```
@@ -288,12 +291,12 @@ Ezcar24Business/
 - Hilt 2.51.1 for DI
 - Coil 2.7.0 for image loading
 - Kotlin Serialization 1.7.3
-- Kotlin 2.0.21
+- Kotlin 2.2.10
 
 ### iOS (see `Package.resolved`)
-- Supabase Swift SDK
-- RevenueCat for subscriptions
-- Firebase for remote config/analytics
+- Supabase Swift SDK 2.37.0
+- RevenueCat 5.48.0 for subscriptions
+- Firebase 12.7.0 for remote config/analytics
 
 ---
 
