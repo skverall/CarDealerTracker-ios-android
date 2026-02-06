@@ -2057,13 +2057,18 @@ final class CloudSyncManager: ObservableObject {
         let photoId = UUID()
         let path = photoPath(dealerId: dealerId, vehicleId: vehicleId, photoId: photoId)
         print("CloudSyncManager uploadVehiclePhoto: Starting upload to path: \(path)")
+        let optimizedImageData = ImageStore.shared.normalizedJPEGData(
+            imageData: imageData,
+            maxDimension: 1600,
+            quality: 0.8
+        ) ?? imageData
 
         do {
             _ = try await client.storage
                 .from("vehicle-images")
                 .upload(
                     path,
-                    data: imageData,
+                    data: optimizedImageData,
                     options: FileOptions(
                         cacheControl: "3600",
                         contentType: "image/jpeg",
@@ -2088,11 +2093,11 @@ final class CloudSyncManager: ObservableObject {
                 .upsert(insert)
                 .execute()
 
-            ImageStore.shared.savePhoto(imageData: imageData, vehicleId: vehicleId, photoId: photoId, dealerId: dealerId)
+            ImageStore.shared.savePhoto(imageData: optimizedImageData, vehicleId: vehicleId, photoId: photoId, dealerId: dealerId)
 
             if makePrimary {
-                await uploadVehicleImage(vehicleId: vehicleId, dealerId: dealerId, imageData: imageData)
-                ImageStore.shared.save(imageData: imageData, for: vehicleId, dealerId: dealerId)
+                await uploadVehicleImage(vehicleId: vehicleId, dealerId: dealerId, imageData: optimizedImageData)
+                ImageStore.shared.save(imageData: optimizedImageData, for: vehicleId, dealerId: dealerId)
             }
         } catch {
             print("CloudSyncManager uploadVehiclePhoto error: \(error)")
@@ -2100,6 +2105,9 @@ final class CloudSyncManager: ObservableObject {
     }
 
     func downloadVehiclePhoto(_ photo: RemoteVehiclePhoto, dealerId: UUID) async {
+        if ImageStore.shared.hasPhoto(vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId) {
+            return
+        }
         do {
             let data = try await client.storage
                 .from("vehicle-images")
@@ -2130,19 +2138,16 @@ final class CloudSyncManager: ObservableObject {
         }
     }
 
-    func updateVehiclePhotoOrder(photos: [RemoteVehiclePhoto], dealerId: UUID) async {
-        do {
-            for (index, photo) in photos.enumerated() {
-                let update = VehiclePhotoOrderUpdate(sortOrder: index, updatedAt: Date())
-                try await writeClient
-                    .from("crm_vehicle_photos")
-                    .update(update)
-                    .eq("id", value: photo.id)
-                    .eq("dealer_id", value: dealerId)
-                    .execute()
-            }
-        } catch {
-            print("CloudSyncManager updateVehiclePhotoOrder error: \(error)")
+    func updateVehiclePhotoOrder(photos: [RemoteVehiclePhoto], dealerId: UUID) async throws {
+        for (index, photo) in photos.enumerated() {
+            if photo.sortOrder == index { continue }
+            let update = VehiclePhotoOrderUpdate(sortOrder: index, updatedAt: Date())
+            try await writeClient
+                .from("crm_vehicle_photos")
+                .update(update)
+                .eq("id", value: photo.id)
+                .eq("dealer_id", value: dealerId)
+                .execute()
         }
     }
 

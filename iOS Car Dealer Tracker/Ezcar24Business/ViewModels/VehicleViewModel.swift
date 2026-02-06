@@ -196,6 +196,11 @@ class VehicleViewModel: ObservableObject {
 
         do {
             vehicles = try context.fetch(request)
+            // Trigger stats calculation for the fetched vehicles
+            // Run asynchronously to avoid "Publishing changes from within view updates"
+            Task {
+                InventoryStatsManager.shared.recalculateStats(for: vehicles)
+            }
         } catch {
             print("Error fetching vehicles: \(error)")
         }

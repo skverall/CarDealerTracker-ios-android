@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import Supabase
 import UIKit
 
@@ -28,6 +29,7 @@ struct AccountView: View {
     @State private var referralCode: String?
     @State private var isFetchingReferralCode = false
     @State private var inviteAlertMessage: String?
+    @State private var showingJoinTeamByCodeSheet = false
 
     private var inviteAlertBinding: Binding<Bool> {
         Binding(
@@ -88,6 +90,10 @@ struct AccountView: View {
             }
             .sheet(isPresented: $showInviteShareSheet) {
                 ShareSheet(items: inviteShareItems)
+            }
+            .sheet(isPresented: $showingJoinTeamByCodeSheet) {
+                JoinTeamByCodeSheet()
+                    .environmentObject(sessionStore)
             }
             .alert("invite_dealer".localizedString, isPresented: inviteAlertBinding) {
                 Button("OK") {
@@ -169,6 +175,15 @@ struct AccountView: View {
             }
             
             notificationsRow
+
+            if case .signedIn = sessionStore.status {
+                Divider().padding(.leading, 52)
+                Button {
+                    showingJoinTeamByCodeSheet = true
+                } label: {
+                    MenuRow(icon: "person.badge.plus", title: "Join Team by Code", color: .blue)
+                }
+            }
 
             if permissionService.can(.viewFinancials) {
                 Divider().padding(.leading, 52)
@@ -715,11 +730,16 @@ struct AccountView: View {
     }
 
     private func shareDealerInvite() async {
-        guard case .signedIn(let user) = sessionStore.status else {
+        guard case .signedIn = sessionStore.status else {
             await MainActor.run { inviteAlertMessage = "Please sign in to generate an invite link." }
             return
         }
-        let dealerId = sessionStore.activeOrganizationId ?? CloudSyncEnvironment.currentDealerId ?? user.id
+        guard let dealerId = await sessionStore.resolveDealerIdForReferral() else {
+            await MainActor.run {
+                inviteAlertMessage = "Unable to determine your organization. Please try again."
+            }
+            return
+        }
         await MainActor.run { isFetchingReferralCode = true }
         let code = await sessionStore.getDealerReferralCode(dealerId: dealerId)
         await MainActor.run {
@@ -733,11 +753,13 @@ struct AccountView: View {
             return
         }
 
-        let link = "https://ezcar24.com/dealer-invite?code=\(code)"
+        let link = "https://ezcar24.com/?ref=\(code)"
         let message = "Join EZCar24 Business using my invite code \(code). Subscribe and we both get an extra month free."
         var items: [Any] = [message]
         if let url = URL(string: link) {
-            items.append(url)
+            let icon = UIImage(systemName: "car.fill")
+            let source = ShareLinkItemSource(url: url, title: "EZCar24 Business Invite", icon: icon)
+            items.append(source)
         }
         await MainActor.run {
             inviteShareItems = items
@@ -860,6 +882,81 @@ struct MenuRow: View {
             .foregroundColor(ColorTheme.tertiaryText)
         }
         .padding(16)
+    }
+}
+
+struct JoinTeamByCodeSheet: View {
+    @EnvironmentObject private var sessionStore: SessionStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var inviteCode = ""
+    @State private var isSubmitting = false
+    @State private var errorMessage: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("How to join") {
+                    Text("1. Ask team admin for the Team Invite Code.")
+                    Text("2. Enter code below and tap Join Team.")
+                    Text("3. Switch organization from the app switcher.")
+                }
+
+                Section("Invite Code") {
+                    TextField("Enter Team Invite Code", text: $inviteCode)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled(true)
+                        .keyboardType(.asciiCapable)
+                        .textContentType(.oneTimeCode)
+                }
+
+                if let errorMessage, !errorMessage.isEmpty {
+                    Section {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                    }
+                }
+
+                Button {
+                    submitCode()
+                } label: {
+                    HStack {
+                        if isSubmitting {
+                            ProgressView()
+                                .controlSize(.small)
+                        }
+                        Text("Join Team")
+                    }
+                }
+                .disabled(inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmitting)
+            }
+            .navigationTitle("Join Team")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func submitCode() {
+        let code = inviteCode.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !code.isEmpty else { return }
+
+        isSubmitting = true
+        errorMessage = nil
+        Task {
+            let success = await sessionStore.submitTeamInviteCode(code)
+            await MainActor.run {
+                isSubmitting = false
+                if success {
+                    dismiss()
+                } else {
+                    errorMessage = sessionStore.inviteToastMessage ?? sessionStore.errorMessage ?? "Unable to apply invite code."
+                }
+            }
+        }
     }
 }
 

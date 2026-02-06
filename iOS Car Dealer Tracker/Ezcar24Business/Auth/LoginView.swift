@@ -43,6 +43,10 @@ struct LoginView: View {
                     appSessionState.referralCode = code
                 }
             }
+            .onReceive(sessionStore.$pendingTeamInviteCode) { code in
+                guard let code, !code.isEmpty, appSessionState.teamInviteCode.isEmpty else { return }
+                appSessionState.teamInviteCode = code
+            }
             .onChange(of: appSessionState.mode) { _, newMode in
                 guard newMode == .signUp else { return }
                 if let code = sessionStore.pendingReferralCode, !code.isEmpty, appSessionState.referralCode.isEmpty {
@@ -216,6 +220,27 @@ struct LoginView: View {
                     .cornerRadius(12)
                     .shadow(color: Color.black.opacity(0.03), radius: 1, x: 0, y: 1)
                 }
+
+                HStack {
+                    Image(systemName: "person.badge.plus.fill")
+                        .foregroundColor(.secondary)
+                        .frame(width: 20)
+
+                    TextField("Team Invite Code (optional)", text: $appSessionState.teamInviteCode)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled(true)
+                        .keyboardType(.asciiCapable)
+                        .textContentType(.oneTimeCode)
+                }
+                .padding()
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .cornerRadius(12)
+                .shadow(color: Color.black.opacity(0.03), radius: 1, x: 0, y: 1)
+
+                Text("Already registered? You can also apply this code later in Account > Join Team by Code.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 
                 // Email Input
                 HStack {

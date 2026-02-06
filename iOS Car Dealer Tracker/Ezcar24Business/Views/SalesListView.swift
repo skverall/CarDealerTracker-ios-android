@@ -157,6 +157,7 @@ struct SalesListView: View {
                                 .deleteDisabled(!canDeleteRecords)
                             }
                             .listStyle(.plain)
+                            .padding(.bottom, 90) // Ensure content clears tab bar
                             .refreshable {
                                 if case .signedIn(let user) = sessionStore.status {
                                     await cloudSyncManager.manualSync(user: user)

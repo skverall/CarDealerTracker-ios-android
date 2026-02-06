@@ -122,14 +122,20 @@ fun VehicleDetailScreen(
                         }
                         IconButton(onClick = {
                             shareScope.launch {
-                                val shareLink = viewModel.createVehicleShareLink(vehicle.id)
-                                var shareText = "Check out this vehicle: ${vehicle.make} ${vehicle.model} ${vehicle.year}\nPrice: ${formatCurrency(vehicle.salePrice ?: vehicle.askingPrice ?: vehicle.purchasePrice)}"
-                                if (!shareLink.isNullOrBlank()) {
-                                    shareText += "\n\nView all photos: $shareLink"
+                                val vehicleTitle = listOfNotNull(vehicle.year?.toString(), vehicle.make, vehicle.model)
+                                    .joinToString(" ")
+                                    .trim()
+                                    .ifBlank { "vehicle" }
+                                val price = formatCurrency(vehicle.salePrice ?: vehicle.askingPrice ?: vehicle.purchasePrice)
+                                var shareText = "Check out this $vehicleTitle.\nAsking: $price"
+                                val reportLink = vehicle.reportURL?.trim().orEmpty()
+                                if (reportLink.isNotEmpty()) {
+                                    shareText += "\nReport: $reportLink"
                                 }
                                 val sendIntent = android.content.Intent().apply {
                                     action = android.content.Intent.ACTION_SEND
                                     putExtra(android.content.Intent.EXTRA_TEXT, shareText)
+                                    putExtra(android.content.Intent.EXTRA_SUBJECT, vehicleTitle)
                                     type = "text/plain"
                                 }
                                 val shareIntent = android.content.Intent.createChooser(sendIntent, null)

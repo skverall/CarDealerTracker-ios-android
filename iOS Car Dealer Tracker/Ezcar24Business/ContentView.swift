@@ -179,8 +179,14 @@ struct ContentView: View {
                 }
                 .tag(Tab.clients)
             }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: tabBarHeight)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                CustomTabBar(selectedTab: $selectedTab)
+                    .readSize { size in
+                        if abs(tabBarHeight - size.height) > 0.5 {
+                            tabBarHeight = size.height
+                        }
+                    }
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
             }
             .alert("VIN already exists", isPresented: Binding(
                 get: { cloudSyncManager.vinConflictVehicleId != nil },
@@ -200,16 +206,7 @@ struct ContentView: View {
             .onAppear {
                 UITabBar.appearance().isHidden = true
             }
-            .overlay(alignment: .bottom) {
-                CustomTabBar(selectedTab: $selectedTab)
-                    .readSize { size in
-                        if abs(tabBarHeight - size.height) > 0.5 {
-                            tabBarHeight = size.height
-                        }
-                    }
-                    .ignoresSafeArea(.keyboard, edges: .bottom)
-            }
-            
+
             // Overlays
             SyncHUDOverlay()
                 .padding(.bottom, overlayBottomPadding)

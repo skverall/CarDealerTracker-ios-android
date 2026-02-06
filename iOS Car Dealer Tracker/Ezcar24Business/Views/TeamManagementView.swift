@@ -39,12 +39,16 @@ struct InviteMemberResult: Decodable {
     let success: Bool
     let generatedPassword: String?
     let existingUser: Bool?
+    let inviteCode: String?
+    let inviteUrl: String?
     let message: String?
     
     private enum CodingKeys: String, CodingKey {
         case success
         case generatedPassword = "generated_password"
         case existingUser = "existing_user"
+        case inviteCode = "invite_code"
+        case inviteUrl = "invite_url"
         case message
     }
 }
@@ -53,6 +57,13 @@ struct GeneratedCredentials: Identifiable, Equatable {
     let id = UUID()
     let email: String
     let password: String
+}
+
+struct GeneratedInviteCode: Identifiable, Equatable {
+    let id = UUID()
+    let email: String
+    let code: String
+    let role: String
 }
 
 // MARK: - ViewModel
@@ -267,6 +278,7 @@ struct TeamManagementView: View {
     @ObservedObject private var permissionService = PermissionService.shared
     @State private var showingInviteSheet = false
     @State private var generatedCredentials: GeneratedCredentials?
+    @State private var generatedInviteCode: GeneratedInviteCode?
     @State private var inviteInfoMessage: String?
     @State private var editingMember: TeamMemberResponse?
     
@@ -311,6 +323,9 @@ struct TeamManagementView: View {
                 }
                 .sheet(item: $generatedCredentials) { credentials in
                     CredentialsSheet(credentials: credentials)
+                }
+                .sheet(item: $generatedInviteCode) { inviteCode in
+                    InviteCodeSheet(invite: inviteCode)
                 }
                 .task {
                     await viewModel.fetchTeam(organizationId: sessionStore.activeOrganizationId)
@@ -400,6 +415,7 @@ struct TeamManagementView: View {
             viewModel: viewModel,
             organizationId: sessionStore.activeOrganizationId,
             onCredentialsGenerated: { generatedCredentials = $0 },
+            onInviteCodeGenerated: { generatedInviteCode = $0 },
             onInfoMessage: { inviteInfoMessage = $0 }
         )
         .presentationDetents([PresentationDetent.medium])
@@ -561,8 +577,7 @@ struct TeamMemberRow: View {
 
                     if member.status == "invited", let token = member.invite_token {
                         Button {
-                            let link = "https://ezcar24.com/accept-invite?token=\(token)"
-                            UIPasteboard.general.string = link
+                            UIPasteboard.general.string = token
                             withAnimation {
                                 copied = true
                             }
@@ -574,7 +589,7 @@ struct TeamMemberRow: View {
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                                Text(copied ? "Copied" : "Copy Link")
+                                Text(copied ? "Copied" : "Copy Token")
                             }
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(copied ? .green : .blue)
@@ -602,9 +617,11 @@ struct InviteMemberSheet: View {
     @Environment(\.dismiss) var dismiss
     let organizationId: UUID?
     let onCredentialsGenerated: (GeneratedCredentials) -> Void
+    let onInviteCodeGenerated: (GeneratedInviteCode) -> Void
     let onInfoMessage: (String) -> Void
     @State private var email = ""
     @State private var selectedRole = "sales"
+    @State private var createAccount = true
     @State private var permissions: [String: Bool] = [:]
 
     private var existingAccountNotice: String {
@@ -623,6 +640,12 @@ struct InviteMemberSheet: View {
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
+
+                    Picker("Invite Method", selection: $createAccount) {
+                        Text("Create Account Now").tag(true)
+                        Text("Invite with Code").tag(false)
+                    }
+                    .pickerStyle(.segmented)
                     
                     VStack(alignment: .leading, spacing: 10) {
                         Text("team_role_section_title".localizedString)
@@ -632,6 +655,12 @@ struct InviteMemberSheet: View {
                     Text(PermissionCatalog.roleSummary(for: selectedRole))
                         .font(.footnote)
                         .foregroundColor(.secondary)
+
+                    if !createAccount {
+                        Text("An invite code will be generated. The member can enter it on the login screen.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
                 }
 
                 Section(header: Text("team_access_section_title".localizedString)) {
@@ -679,7 +708,7 @@ struct InviteMemberSheet: View {
                     }
                 }
                 
-                Button("team_generate_access_button".localizedString) {
+                Button(createAccount ? "team_generate_access_button".localizedString : "Generate Invite Code") {
                     Task {
                         // Detect current language
                         let currentLanguage = Locale.current.language.languageCode?.identifier ?? "en"
@@ -690,7 +719,7 @@ struct InviteMemberSheet: View {
                             role: selectedRole,
                             permissions: permissions,
                             organizationId: organizationId,
-                            createAccount: true,
+                            createAccount: createAccount,
                             language: lang
                         )
                         if let result {
@@ -698,6 +727,14 @@ struct InviteMemberSheet: View {
                                 dismiss()
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                                     onCredentialsGenerated(.init(email: email, password: password))
+                                }
+                                return
+                            }
+
+                            if let inviteCode = result.inviteCode {
+                                dismiss()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                    onInviteCodeGenerated(.init(email: email, code: inviteCode, role: selectedRole))
                                 }
                                 return
                             }
@@ -962,6 +999,59 @@ struct CredentialsSheet: View {
             }
             .padding()
             .navigationTitle("Login Credentials")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+struct InviteCodeSheet: View {
+    let invite: GeneratedInviteCode
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied = false
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Email")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(invite.email)
+                        .font(.body)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Invite Code")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Text(invite.code)
+                            .font(.system(size: 26, weight: .bold, design: .rounded))
+                            .textSelection(.enabled)
+                        Spacer()
+                        Button(copied ? "Copied" : "Copy") {
+                            UIPasteboard.general.string = invite.code
+                            copied = true
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                }
+
+                Text("Share this code with the member. They can enter it on the login screen after installing the app.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Team Invite Code")
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }

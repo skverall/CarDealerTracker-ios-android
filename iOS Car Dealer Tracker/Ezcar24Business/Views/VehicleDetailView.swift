@@ -26,6 +26,7 @@ struct VehicleDetailView: View {
     @State private var photoViewerItems: [PhotoViewerItem] = []
     @State private var photoViewerIndex: Int = 0
     @State private var isSavingPhotoOrder: Bool = false
+    @State private var photoOrderErrorMessage: String? = nil
     @State private var refreshID = UUID()
     @State private var editStatus: String = "owned"
     @State private var editPurchasePrice: String = ""
@@ -57,6 +58,11 @@ struct VehicleDetailView: View {
     @State private var showShareSheet: Bool = false
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare: Bool = false
+    @State private var showShareContactSheet: Bool = false
+    @State private var shareContactPhoneInput: String = ""
+    @State private var shareContactEmailInput: String = ""
+    @State private var shareContactValidationError: String? = nil
+    @State private var isSavingShareContact: Bool = false
     @State private var vehiclePhotos: [RemoteVehiclePhoto] = []
     @State private var photoPendingDelete: RemoteVehiclePhoto? = nil
     @State private var showPhotoDeleteDialog: Bool = false
@@ -242,7 +248,9 @@ struct VehicleDetailView: View {
         do {
             let photos = try await CloudSyncManager.shared?.fetchVehiclePhotos(dealerId: dealerId, vehicleId: id) ?? []
             for photo in photos {
-                await CloudSyncManager.shared?.downloadVehiclePhoto(photo, dealerId: dealerId)
+                if !ImageStore.shared.hasPhoto(vehicleId: id, photoId: photo.id, dealerId: dealerId) {
+                    await CloudSyncManager.shared?.downloadVehiclePhoto(photo, dealerId: dealerId)
+                }
             }
             await MainActor.run { self.vehiclePhotos = photos }
         } catch {
@@ -271,12 +279,23 @@ struct VehicleDetailView: View {
 
     private func savePhotoOrder(_ ordered: [RemoteVehiclePhoto]) {
         guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+        photoOrderErrorMessage = nil
         isSavingPhotoOrder = true
         Task {
-            await CloudSyncManager.shared?.updateVehiclePhotoOrder(photos: ordered, dealerId: dealerId)
-            await refreshVehiclePhotos()
-            await MainActor.run {
-                isSavingPhotoOrder = false
+            do {
+                if let syncManager = CloudSyncManager.shared {
+                    try await syncManager.updateVehiclePhotoOrder(photos: ordered, dealerId: dealerId)
+                }
+                await refreshVehiclePhotos()
+                await MainActor.run {
+                    isSavingPhotoOrder = false
+                    showPhotoManager = false
+                }
+            } catch {
+                await MainActor.run {
+                    isSavingPhotoOrder = false
+                    photoOrderErrorMessage = "Couldn't save photo order. Please try again."
+                }
             }
         }
     }
@@ -315,12 +334,190 @@ struct VehicleDetailView: View {
         }
     }
 
-    private func currentUserPhone() -> String? {
-        guard case .signedIn(let user) = sessionStore.status else { return nil }
+    private func currentUserRecord() -> User? {
+        guard case .signedIn(let authUser) = sessionStore.status else { return nil }
         let request: NSFetchRequest<User> = User.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", user.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@", authUser.id as CVarArg)
         request.fetchLimit = 1
-        return (try? viewContext.fetch(request).first)?.phone
+        if let existing = try? viewContext.fetch(request).first {
+            return existing
+        }
+
+        let created = User(context: viewContext)
+        let now = Date()
+        created.id = authUser.id
+        created.createdAt = now
+        created.updatedAt = now
+        if let authEmail = authUser.email?.trimmingCharacters(in: .whitespacesAndNewlines), !authEmail.isEmpty {
+            created.email = authEmail
+            if created.name == nil || created.name?.isEmpty == true {
+                created.name = authEmail.components(separatedBy: "@").first?.capitalized
+            }
+        }
+        do {
+            try viewContext.save()
+            return created
+        } catch {
+            viewContext.rollback()
+            return nil
+        }
+    }
+
+    private func currentUserPhone() -> String? {
+        currentUserRecord()?.phone?.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func currentUserEmail() -> String? {
+        let localEmail = currentUserRecord()?.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !localEmail.isEmpty {
+            return localEmail
+        }
+        guard case .signedIn(let authUser) = sessionStore.status else { return nil }
+        let authEmail = authUser.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return authEmail.isEmpty ? nil : authEmail
+    }
+
+    private func sanitizeInternationalPhoneInput(_ value: String) -> String {
+        var sanitized = ""
+        for ch in value {
+            if ch.isWholeNumber {
+                sanitized.append(ch)
+                continue
+            }
+            if ch == "+", sanitized.isEmpty {
+                sanitized.append(ch)
+            }
+        }
+        if sanitized.count > 16 {
+            return String(sanitized.prefix(16))
+        }
+        return sanitized
+    }
+
+    private func normalizedInternationalPhone(_ value: String) -> String? {
+        let sanitized = sanitizeInternationalPhoneInput(value.trimmingCharacters(in: .whitespacesAndNewlines))
+        guard sanitized.first == "+" else { return nil }
+        let digits = sanitized.dropFirst()
+        guard digits.count >= 8, digits.count <= 15 else { return nil }
+        return "+\(digits)"
+    }
+
+    private func isValidEmail(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+        let regex = "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$"
+        return NSPredicate(format: "SELF MATCHES[c] %@", regex).evaluate(with: trimmed)
+    }
+
+    private func ensureShareContactIsReady() -> Bool {
+        let currentPhone = currentUserPhone() ?? ""
+        let currentEmail = currentUserEmail() ?? ""
+        let hasValidPhone = normalizedInternationalPhone(currentPhone) != nil
+        let hasValidEmail = isValidEmail(currentEmail)
+        guard !hasValidPhone || !hasValidEmail else { return true }
+        shareContactPhoneInput = sanitizeInternationalPhoneInput(currentPhone)
+        shareContactEmailInput = currentEmail
+        shareContactValidationError = nil
+        showShareContactSheet = true
+        return false
+    }
+
+    private func saveShareContactAndContinue() {
+        guard !isSavingShareContact else { return }
+        shareContactValidationError = nil
+
+        guard let normalizedPhone = normalizedInternationalPhone(shareContactPhoneInput) else {
+            shareContactValidationError = "Enter a valid international phone, e.g. +14155551234"
+            return
+        }
+
+        let trimmedEmail = shareContactEmailInput
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        guard isValidEmail(trimmedEmail) else {
+            shareContactValidationError = "Enter a valid email address"
+            return
+        }
+
+        guard let user = currentUserRecord() else {
+            shareContactValidationError = "Unable to load your profile. Please try again."
+            return
+        }
+
+        isSavingShareContact = true
+
+        Task { @MainActor in
+            do {
+                user.phone = normalizedPhone
+                user.email = trimmedEmail
+                user.updatedAt = Date()
+                try viewContext.save()
+
+                if let dealerId = CloudSyncEnvironment.currentDealerId {
+                    await CloudSyncManager.shared?.upsertUser(user, dealerId: dealerId)
+                }
+
+                isSavingShareContact = false
+                showShareContactSheet = false
+                prepareShareData()
+            } catch {
+                isSavingShareContact = false
+                shareContactValidationError = "Failed to save contact details. Please try again."
+            }
+        }
+    }
+
+    private func normalizedDealerCandidate(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let normalized = trimmed
+            .lowercased()
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: "_", with: "")
+        let blockedNames: Set<String> = [
+            "ezcar24",
+            "easycar24",
+            "ezcar",
+            "verifieddealer"
+        ]
+        if blockedNames.contains(normalized) {
+            return nil
+        }
+        return trimmed
+    }
+
+    private func resolvedDealerName() -> String {
+        if let name = normalizedDealerCandidate(sessionStore.activeOrganizationName) {
+            return name
+        }
+
+        for organization in sessionStore.organizations {
+            let status = organization.status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if status == "active", let name = normalizedDealerCandidate(organization.organization_name) {
+                return name
+            }
+        }
+
+        for organization in sessionStore.organizations {
+            if let name = normalizedDealerCandidate(organization.organization_name) {
+                return name
+            }
+        }
+
+        if let name = normalizedDealerCandidate(currentUserRecord()?.name) {
+            return name
+        }
+
+        return "Verified Dealer"
+    }
+
+    private func whatsappLink(from phone: String?) -> String? {
+        guard let phone else { return nil }
+        let digits = phone.filter(\.isNumber)
+        guard !digits.isEmpty else { return nil }
+        return "https://wa.me/\(digits)"
     }
 
     var body: some View {
@@ -433,6 +630,21 @@ struct VehicleDetailView: View {
                 }
             )
         }
+        .sheet(isPresented: $showShareContactSheet) {
+            ShareContactCaptureSheet(
+                phone: $shareContactPhoneInput,
+                email: $shareContactEmailInput,
+                errorMessage: $shareContactValidationError,
+                isSaving: $isSavingShareContact,
+                onCancel: {
+                    showShareContactSheet = false
+                    shareContactValidationError = nil
+                },
+                onSave: {
+                    saveShareContactAndContinue()
+                }
+            )
+        }
         .sheet(isPresented: $showShareSheet) {
             ShareSheet(items: shareItems)
         }
@@ -497,6 +709,16 @@ struct VehicleDetailView: View {
             Button("cancel".localizedString, role: .cancel) {
                 photoPendingDelete = nil
             }
+        }
+        .alert("Photo Order", isPresented: Binding(
+            get: { photoOrderErrorMessage != nil },
+            set: { newValue in
+                if !newValue { photoOrderErrorMessage = nil }
+            }
+        )) {
+            Button("OK", role: .cancel) { photoOrderErrorMessage = nil }
+        } message: {
+            Text(photoOrderErrorMessage ?? "")
         }
         .onAppear {
             // Initialize edit fields
@@ -1518,6 +1740,7 @@ struct VehicleDetailView: View {
 
     private func prepareShareData() {
         guard !isPreparingShare else { return }
+        guard ensureShareContactIsReady() else { return }
         isPreparingShare = true
         Task {
             await buildShareItems()
@@ -1531,12 +1754,18 @@ struct VehicleDetailView: View {
         guard let id = vehicle.id else { return }
 
         let reportLink = vehicle.reportURL ?? ""
-        let askingPrice = vehicle.askingPrice?.decimalValue ?? 0
+        let askingPrice = vehicle.askingPrice?.decimalValue
+            ?? vehicle.salePrice?.decimalValue
+            ?? vehicle.purchasePrice?.decimalValue
+            ?? 0
         let make = vehicle.make ?? ""
         let model = vehicle.model ?? ""
         let year = vehicle.year
-        let vin = vehicle.vin ?? ""
+        let vin = vehicle.vin?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let dealerId = CloudSyncEnvironment.currentDealerId
+        let dealerName = resolvedDealerName()
+        let contactPhone = currentUserPhone()?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let contactEmail = currentUserEmail()?.trimmingCharacters(in: .whitespacesAndNewlines)
 
         var photos = vehiclePhotos
         if photos.isEmpty, let dealerId {
@@ -1544,65 +1773,84 @@ struct VehicleDetailView: View {
         }
         if let dealerId {
             for photo in photos {
-                await CloudSyncManager.shared?.downloadVehiclePhoto(photo, dealerId: dealerId)
+                if !ImageStore.shared.hasPhoto(vehicleId: id, photoId: photo.id, dealerId: dealerId) {
+                    await CloudSyncManager.shared?.downloadVehiclePhoto(photo, dealerId: dealerId)
+                }
             }
         }
 
         let primaryImage = await loadPrimaryImage(vehicleId: id, dealerId: dealerId)
+        var galleryImages: [UIImage] = []
+        if let dealerId {
+            for photo in photos {
+                if let image = await loadPhotoImage(vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId) {
+                    galleryImages.append(image)
+                    if galleryImages.count >= 8 {
+                        break
+                    }
+                }
+            }
+        }
 
         let cardView = VehicleShareCard(
             image: primaryImage,
+            galleryImages: galleryImages,
             make: make,
             model: model,
             year: year,
             vin: vin,
             price: askingPrice,
             hasReport: !reportLink.isEmpty,
-            dealerName: sessionStore.activeOrganizationName ?? "Ezcar24"
+            dealerName: dealerName,
+            contactPhone: contactPhone,
+            contactEmail: contactEmail
         )
 
         var items: [Any] = []
         let cardImage: UIImage? = await MainActor.run {
             let renderer = ImageRenderer(content: cardView)
-            renderer.scale = UIScreen.main.scale
+            renderer.scale = 1
             return renderer.uiImage
         }
         if let cardImage {
             items.append(cardImage)
         }
+        for image in galleryImages.prefix(6) {
+            items.append(image)
+        }
 
-        if let dealerId {
-            for photo in photos {
-                if let image = await loadPhotoImage(vehicleId: id, photoId: photo.id, dealerId: dealerId) {
-                    items.append(image)
-                }
+        let reportURL = URL(string: reportLink.trimmingCharacters(in: .whitespacesAndNewlines))
+
+        let vehicleTitle = "\(year.asYear()) \(make) \(model)".trimmingCharacters(in: .whitespacesAndNewlines)
+        let shareTitle = vehicleTitle.isEmpty ? "Vehicle" : vehicleTitle
+
+        var message = "Check out this \(shareTitle)!"
+        message += "\nDealer: \(dealerName)"
+        if askingPrice > 0 {
+            message += "\nAsking: \(askingPrice.asCurrency())"
+        }
+        if !vin.isEmpty {
+            message += "\nVIN: \(vin)"
+        }
+        if let contactPhone, !contactPhone.isEmpty {
+            message += "\nCall/Text: \(contactPhone)"
+            if let waLink = whatsappLink(from: contactPhone) {
+                message += "\nWhatsApp: \(waLink)"
             }
         }
-
-        let contactPhone = currentUserPhone()
-        let shareUrl = dealerId != nil ? await CloudSyncManager.shared?.createVehicleShareLink(
-            vehicleId: id,
-            dealerId: dealerId!,
-            contactPhone: contactPhone,
-            contactWhatsApp: contactPhone
-        ) : nil
-
-        var message = "Check out this \(year.asYear()) \(make) \(model)!"
-        if askingPrice > 0 {
-            message += " Asking: \(askingPrice.asCurrency())"
+        if let contactEmail, !contactEmail.isEmpty {
+            message += "\nEmail: \(contactEmail)"
         }
-        if !reportLink.isEmpty {
-            message += "\n\nFull Inspection Report: \(reportLink)"
+        if reportURL == nil, !reportLink.isEmpty {
+            message += "\nInspection report: \(reportLink)"
         }
-        if let shareUrl {
-            message += "\n\nView all photos: \(shareUrl.absoluteString)"
+        if reportURL != nil {
+            message += "\nOpen full listing from the attached link."
         }
         items.append(message)
 
-        if let shareUrl {
-            items.append(shareUrl)
-        } else if let url = URL(string: reportLink) {
-            items.append(url)
+        if let reportURL {
+            items.append(ShareLinkItemSource(url: reportURL, title: shareTitle, icon: cardImage))
         }
 
         await MainActor.run {
@@ -1659,6 +1907,7 @@ struct VehicleDetailView: View {
 
 struct VehicleShareCard: View {
     let image: UIImage?
+    let galleryImages: [UIImage]
     let make: String
     let model: String
     let year: Int32
@@ -1666,79 +1915,251 @@ struct VehicleShareCard: View {
     let price: Decimal
     let hasReport: Bool
     let dealerName: String
-    
+    let contactPhone: String?
+    let contactEmail: String?
+
+    private var titleText: String {
+        "\(year.asYear()) \(make) \(model)"
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var displayTitle: String {
+        titleText.isEmpty ? "Vehicle Listing" : titleText
+    }
+
+    private var displayVin: String {
+        vin.isEmpty ? "VIN not provided" : "VIN: \(vin)"
+    }
+
+    private var displayPrice: String? {
+        guard price > 0 else { return nil }
+        return price.asCurrency()
+    }
+
+    private var previewImages: [UIImage] {
+        Array(galleryImages.prefix(4))
+    }
+
+    private var contactLine: String {
+        if let contactPhone, !contactPhone.isEmpty {
+            return "Call/Text: \(contactPhone)"
+        }
+        if let contactEmail, !contactEmail.isEmpty {
+            return "Email: \(contactEmail)"
+        }
+        return "Message for availability and test drive"
+    }
+
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             Color.white
-            
-            VStack(spacing: 0) {
-                // Image Area
-                GeometryReader { geo in
+
+            VStack(alignment: .leading, spacing: 0) {
+                ZStack(alignment: .bottomTrailing) {
                     if let image {
                         Image(uiImage: image)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: geo.size.width, height: geo.size.height)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 650)
                             .clipped()
                     } else {
-                        ZStack {
-                            Color.gray.opacity(0.1)
-                            Image(systemName: "car.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.gray.opacity(0.5))
+                        Rectangle()
+                            .fill(Color(white: 0.93))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 650)
+                            .overlay(
+                                Image(systemName: "car.fill")
+                                    .font(.system(size: 84, weight: .medium))
+                                    .foregroundColor(.gray.opacity(0.7))
+                            )
+                    }
+
+                    if !previewImages.isEmpty {
+                        HStack(spacing: 10) {
+                            ForEach(previewImages.indices, id: \.self) { index in
+                                Image(uiImage: previewImages[index])
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 120, height: 82)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            }
+
+                            if galleryImages.count > previewImages.count {
+                                let moreCount = galleryImages.count - previewImages.count
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.black.opacity(0.55))
+                                        .frame(width: 120, height: 82)
+                                    Text("+\(moreCount)")
+                                        .font(.system(size: 30, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                            }
                         }
+                        .padding(14)
                     }
                 }
-                .frame(height: 250)
-                
-                // Info Area
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(year.asYear()) \(make) \(model)")
-                                .font(.system(size: 24, weight: .bold))
-                                .foregroundColor(.black)
-                            
-                            Text("VIN: \(vin)")
-                                .font(.system(size: 14))
-                                .foregroundColor(.gray)
-                        }
-                        
-                        Spacer()
-                        
-                        if price > 0 {
-                            Text(price.asCurrency())
-                                .font(.system(size: 24, weight: .heavy))
-                                .foregroundColor(Color(red: 0/255, green: 122/255, blue: 255/255)) // Blue
-                        }
+
+                VStack(alignment: .leading, spacing: 18) {
+                    Text(displayTitle)
+                        .font(.system(size: 64, weight: .heavy))
+                        .foregroundColor(.black)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.52)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let displayPrice {
+                        Text(displayPrice)
+                            .font(.system(size: 74, weight: .heavy))
+                            .foregroundColor(Color(red: 0/255, green: 122/255, blue: 255/255))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.45)
                     }
-                    
+
+                    Text(displayVin)
+                        .font(.system(size: 36, weight: .medium))
+                        .foregroundColor(Color.gray)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+
                     Divider()
-                    
-                    HStack {
+
+                    HStack(alignment: .center, spacing: 14) {
                         Image(systemName: "checkmark.seal.fill")
-                            .foregroundColor(hasReport ? .green : .gray)
-                        Text(hasReport ? "Inspection Report Available" : "Verified Dealer")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(.green)
+                        Text("Verified Dealer")
+                            .font(.system(size: 42, weight: .bold))
                             .foregroundColor(.black)
-                        
-                        Spacer()
-                        
-                        Text(dealerName)
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.gray)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                        Spacer(minLength: 16)
+                        Text(hasReport ? "Report Ready" : "Inventory Listing")
+                            .font(.system(size: 34, weight: .semibold))
+                            .foregroundColor(Color.gray)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                     }
+
+                    Text(dealerName)
+                        .font(.system(size: 52, weight: .heavy))
+                        .foregroundColor(.black)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.58)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text(contactLine)
+                        .font(.system(size: 42, weight: .bold))
+                        .foregroundColor(.black)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.58)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(20)
-                .background(Color.white)
+                .padding(.horizontal, 46)
+                .padding(.top, 34)
+                .padding(.bottom, 42)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(width: 400, height: 400)
-        .cornerRadius(20)
-        .shadow(radius: 10)
+        .frame(width: 1080, height: 1500)
+        .clipShape(RoundedRectangle(cornerRadius: 42, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 42, style: .continuous)
+                .stroke(Color.black.opacity(0.06), lineWidth: 2)
+        )
+        .shadow(color: .black.opacity(0.16), radius: 30, x: 0, y: 12)
     }
 }
 
+struct ShareContactCaptureSheet: View {
+    @Binding var phone: String
+    @Binding var email: String
+    @Binding var errorMessage: String?
+    @Binding var isSaving: Bool
+    let onCancel: () -> Void
+    let onSave: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Add your contact details to share listings professionally and receive more leads.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                Section("Dealer Contact") {
+                    TextField("+14155551234", text: $phone)
+                        .keyboardType(.phonePad)
+                        .textContentType(.telephoneNumber)
+                        .onChange(of: phone) { _, newValue in
+                            phone = sanitizePhoneInput(newValue)
+                        }
+
+                    TextField("name@dealer.com", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled(true)
+                        .textContentType(.emailAddress)
+                }
+
+                if let errorMessage, !errorMessage.isEmpty {
+                    Section {
+                        Text(errorMessage)
+                            .foregroundColor(.red)
+                            .font(.footnote)
+                    }
+                }
+            }
+            .navigationTitle("Complete Contact Info")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                    .disabled(isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save & Share") {
+                        onSave()
+                    }
+                    .disabled(isSaving)
+                }
+            }
+            .overlay {
+                if isSaving {
+                    ZStack {
+                        Color.black.opacity(0.1).ignoresSafeArea()
+                        ProgressView()
+                            .padding(20)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+            }
+        }
+        .interactiveDismissDisabled(isSaving)
+    }
+
+    private func sanitizePhoneInput(_ value: String) -> String {
+        var sanitized = ""
+        for ch in value {
+            if ch.isWholeNumber {
+                sanitized.append(ch)
+                continue
+            }
+            if ch == "+", sanitized.isEmpty {
+                sanitized.append(ch)
+            }
+        }
+        if sanitized.count > 16 {
+            return String(sanitized.prefix(16))
+        }
+        return sanitized
+    }
+}
 
 
 struct VehicleLargeImageView: View {
@@ -2131,6 +2552,10 @@ struct PhotoManagerSheet: View {
         GridItem(.flexible(), spacing: 12)
     ]
 
+    private var hasOrderChanges: Bool {
+        photos.map(\.id) != workingPhotos.map(\.id)
+    }
+
     init(
         vehicleId: UUID,
         photos: [RemoteVehiclePhoto],
@@ -2219,10 +2644,16 @@ struct PhotoManagerSheet: View {
                     .disabled(isSaving)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("save_order".localizedString) {
+                    Button {
                         onSave(workingPhotos)
+                    } label: {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Text("save_order".localizedString)
+                        }
                     }
-                    .disabled(isSaving || workingPhotos.isEmpty)
+                    .disabled(isSaving || workingPhotos.isEmpty || !hasOrderChanges)
                 }
             }
         }
@@ -2363,7 +2794,7 @@ struct CoverPhotoTile: View {
 
     private func loadImage() {
         let dealerId = CloudSyncEnvironment.currentDealerId
-        ImageStore.shared.swiftUIImage(id: vehicleId, dealerId: dealerId) { loaded in
+        ImageStore.shared.swiftUIImage(id: vehicleId, dealerId: dealerId, targetSize: CGSize(width: 360, height: 220)) { loaded in
             self.image = loaded
         }
     }
@@ -2445,7 +2876,12 @@ struct PhotoGridCell: View {
 
     private func loadImage() {
         let dealerId = CloudSyncEnvironment.currentDealerId
-        ImageStore.shared.swiftUIImagePhoto(vehicleId: vehicleId, photoId: photo.id, dealerId: dealerId) { loaded in
+        ImageStore.shared.swiftUIImagePhoto(
+            vehicleId: vehicleId,
+            photoId: photo.id,
+            dealerId: dealerId,
+            targetSize: CGSize(width: 260, height: 260)
+        ) { loaded in
             self.image = loaded
         }
     }
@@ -2521,7 +2957,12 @@ struct VehiclePhotoThumbnail: View {
 
     private func loadImage() {
         let dealerId = CloudSyncEnvironment.currentDealerId
-        ImageStore.shared.swiftUIImagePhoto(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId) { loaded in
+        ImageStore.shared.swiftUIImagePhoto(
+            vehicleId: vehicleId,
+            photoId: photoId,
+            dealerId: dealerId,
+            targetSize: CGSize(width: 240, height: 170)
+        ) { loaded in
             self.image = loaded
         }
     }

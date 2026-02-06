@@ -14,6 +14,7 @@ final class AppSessionState: ObservableObject {
 
     @Published var phone: String = ""
     @Published var referralCode: String = ""
+    @Published var teamInviteCode: String = ""
 
     @Published var password: String = "" {
         didSet { recalculateValidation() }
@@ -28,6 +29,7 @@ final class AppSessionState: ObservableObject {
     init(sessionStore: SessionStore) {
         self.sessionStore = sessionStore
         self.referralCode = sessionStore.pendingReferralCode ?? ""
+        self.teamInviteCode = sessionStore.pendingTeamInviteCode ?? ""
         recalculateValidation()
     }
 
@@ -38,6 +40,7 @@ final class AppSessionState: ObservableObject {
         sessionStore.resetError()
 
         do {
+            let inviteCodeValue = trimmedTeamInviteCode.isEmpty ? nil : trimmedTeamInviteCode
             switch mode {
             case .signIn:
                 try await sessionStore.signIn(email: trimmedEmail, password: password)
@@ -45,6 +48,9 @@ final class AppSessionState: ObservableObject {
                 let phoneValue = trimmedPhone.isEmpty ? nil : trimmedPhone
                 let codeValue = trimmedReferralCode.isEmpty ? nil : trimmedReferralCode
                 try await sessionStore.signUp(email: trimmedEmail, password: password, phone: phoneValue, referralCode: codeValue)
+            }
+            if let inviteCodeValue {
+                _ = await sessionStore.submitTeamInviteCode(inviteCodeValue)
             }
             isGuestMode = false
             clearSensitiveFields()
@@ -65,6 +71,7 @@ final class AppSessionState: ObservableObject {
         password = ""
         phone = ""
         referralCode = ""
+        teamInviteCode = ""
         // Drop any cached RevenueCat state so guests never inherit a previous user's subscription
         SubscriptionManager.shared.logOut()
     }
@@ -73,6 +80,7 @@ final class AppSessionState: ObservableObject {
         isGuestMode = false
         mode = .signIn
         phone = ""
+        teamInviteCode = ""
     }
 
     private var trimmedEmail: String {
@@ -87,9 +95,14 @@ final class AppSessionState: ObservableObject {
         password = ""
         phone = ""
         referralCode = ""
+        teamInviteCode = ""
     }
 
     private var trimmedReferralCode: String {
         referralCode.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedTeamInviteCode: String {
+        teamInviteCode.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }

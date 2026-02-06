@@ -76,6 +76,7 @@
 		E2C37EE82F06A77C00EA13C1 /* VehicleSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */; };
 		E2DC15452F1A1AB500068680 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */; };
 		E2DC15472F1A46BC00068680 /* iPadRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2DC15462F1A46BC00068680 /* iPadRootView.swift */; };
+		E2F8EC8E2F353EBB0006CD59 /* ExpenseDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F8EC8D2F353EBB0006CD59 /* ExpenseDetailSheet.swift */; };
 		E2F901032F22120300CD9D6D /* GlobalSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F901022F22120300CD9D6D /* GlobalSearchView.swift */; };
 		E2F901052F22129600CD9D6D /* DaysSincePurchaseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2F901042F22129600CD9D6D /* DaysSincePurchaseView.swift */; };
 		E3000001 /* DaysInInventoryIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3000000 /* DaysInInventoryIndicator.swift */; };
@@ -93,9 +94,6 @@
 		F0000002 /* FinancialAccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000001 /* FinancialAccountsView.swift */; };
 		F0000004 /* EditAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000003 /* EditAccountView.swift */; };
 		F0000006 /* FinancialAccountsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0000005 /* FinancialAccountsViewModel.swift */; };
-		F6000101 /* FinancialAccount+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6000001 /* FinancialAccount+Extensions.swift */; };
-		F6000102 /* FinancialAccountKind+UI.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6000002 /* FinancialAccountKind+UI.swift */; };
-		F6000103 /* AddFinancialAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6000003 /* AddFinancialAccountView.swift */; };
 		F1000002 /* YearFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001 /* YearFormatter.swift */; };
 		F1000009 /* SalesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000008 /* SalesViewModel.swift */; };
 		F1000011 /* SalesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000010 /* SalesListView.swift */; };
@@ -110,9 +108,14 @@
 		F3000101 /* AccountTransaction+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000001 /* AccountTransaction+Extensions.swift */; };
 		F3000102 /* AccountTransactionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000002 /* AccountTransactionsViewModel.swift */; };
 		F3000103 /* AddAccountTransactionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3000003 /* AddAccountTransactionView.swift */; };
+		F6000101 /* FinancialAccount+Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6000001 /* FinancialAccount+Extensions.swift */; };
+		F6000102 /* FinancialAccountKind+UI.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6000002 /* FinancialAccountKind+UI.swift */; };
+		F6000103 /* AddFinancialAccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6000003 /* AddFinancialAccountView.swift */; };
 		G0000101 /* BackupExportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000001 /* BackupExportManager.swift */; };
 		G0000102 /* ShareSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000002 /* ShareSheet.swift */; };
 		G0000103 /* BackupCenterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000003 /* BackupCenterView.swift */; };
+		G0000104 /* ShareLinkItemSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000004 /* ShareLinkItemSource.swift */; };
+		G0000105 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000005 /* ImagePicker.swift */; };
 		H0000101 /* RegionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000001 /* RegionSettings.swift */; };
 		H0000102 /* RegionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000002 /* RegionSelectionView.swift */; };
 		M1000001 /* AgingBucket.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000000 /* AgingBucket.swift */; };
@@ -203,6 +206,7 @@
 		E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleSelectionSheet.swift; sourceTree = "<group>"; };
 		E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		E2DC15462F1A46BC00068680 /* iPadRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPadRootView.swift; sourceTree = "<group>"; };
+		E2F8EC8D2F353EBB0006CD59 /* ExpenseDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseDetailSheet.swift; sourceTree = "<group>"; };
 		E2F901022F22120300CD9D6D /* GlobalSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalSearchView.swift; sourceTree = "<group>"; };
 		E2F901042F22129600CD9D6D /* DaysSincePurchaseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaysSincePurchaseView.swift; sourceTree = "<group>"; };
 		E3000000 /* DaysInInventoryIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DaysInInventoryIndicator.swift; sourceTree = "<group>"; };
@@ -239,6 +243,8 @@
 		G0000001 /* BackupExportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupExportManager.swift; sourceTree = "<group>"; };
 		G0000002 /* ShareSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareSheet.swift; sourceTree = "<group>"; };
 		G0000003 /* BackupCenterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupCenterView.swift; sourceTree = "<group>"; };
+		G0000004 /* ShareLinkItemSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareLinkItemSource.swift; sourceTree = "<group>"; };
+		G0000005 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		H0000001 /* RegionSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSettings.swift; sourceTree = "<group>"; };
 		H0000002 /* RegionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionView.swift; sourceTree = "<group>"; };
 		M1000000 /* AgingBucket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucket.swift; sourceTree = "<group>"; };
@@ -363,6 +369,7 @@
 		A1000029 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				E2F8EC8D2F353EBB0006CD59 /* ExpenseDetailSheet.swift */,
 				E215B0712F32166C007E0585 /* ReferralStatsView.swift */,
 				E3000014 /* Analytics */,
 				E3000010 /* Components */,
@@ -419,6 +426,8 @@
 				A1000022 /* CurrencyFormatter.swift */,
 				F1000001 /* YearFormatter.swift */,
 				G0000002 /* ShareSheet.swift */,
+				G0000004 /* ShareLinkItemSource.swift */,
+				G0000005 /* ImagePicker.swift */,
 				F6000002 /* FinancialAccountKind+UI.swift */,
 				H0000001 /* RegionSettings.swift */,
 			);
@@ -710,7 +719,10 @@
 				10FA8DDF2ECF7ED400ECC6F9 /* SubscriptionManager.swift in Sources */,
 				G0000101 /* BackupExportManager.swift in Sources */,
 				E2A08AB12F1056F00071352E /* PermissionService.swift in Sources */,
+				E2F8EC8E2F353EBB0006CD59 /* ExpenseDetailSheet.swift in Sources */,
 				G0000102 /* ShareSheet.swift in Sources */,
+				G0000104 /* ShareLinkItemSource.swift in Sources */,
+				G0000105 /* ImagePicker.swift in Sources */,
 				E20653BA2EED8B6F00C1002F /* ForceUpdateView.swift in Sources */,
 				G0000103 /* BackupCenterView.swift in Sources */,
 				H0000101 /* RegionSettings.swift in Sources */,
@@ -882,7 +894,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Ezcar24Business/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -895,7 +907,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -914,7 +926,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 11;
+				CURRENT_PROJECT_VERSION = 12;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Ezcar24Business/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -927,7 +939,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 2.1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

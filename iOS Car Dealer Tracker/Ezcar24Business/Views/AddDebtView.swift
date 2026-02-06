@@ -48,14 +48,13 @@ struct AddDebtView: View {
             if showSavedToast {
                 savedToast
             }
-            
-            // Floating Save Button
-            VStack {
-                Spacer()
-                saveButton
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-            }
+        }
+        .safeAreaInset(edge: .bottom) {
+            saveButton
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
+                .background(ColorTheme.background)
         }
     }
 

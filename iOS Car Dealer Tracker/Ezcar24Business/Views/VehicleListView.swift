@@ -340,6 +340,7 @@ struct VehicleListView: View {
 
 struct VehicleCard: View {
     @ObservedObject private var permissionService = PermissionService.shared
+    @ObservedObject private var inventoryStats = InventoryStatsManager.shared
 
     @ObservedObject var vehicle: Vehicle
     let viewModel: VehicleViewModel
@@ -419,15 +420,9 @@ struct VehicleCard: View {
                     }
                     
                     // Third Row: Days Since Purchase Badge (Inventory) or Added Date (Sold)
-                    if vehicle.status != "sold", let purchaseDate = vehicle.purchaseDate {
-                        DaysSincePurchaseView(purchaseDate: purchaseDate)
-                            .padding(.top, 4)
+                    if vehicle.status != "sold", vehicle.purchaseDate != nil {
                         if holdingCost > 0 {
-                            HoldingCostMiniIndicator(
-                                dailyCost: dailyHoldingCost,
-                                accumulatedCost: holdingCost
-                            )
-                            .padding(.top, 4)
+                            // Holding cost is now in the footer
                         }
                     } else if let date = vehicle.purchaseDate {
                          Text("Added: \(date, formatter: dateFormatter)")
@@ -442,6 +437,7 @@ struct VehicleCard: View {
             Divider()
                 .padding(.horizontal, 16)
             
+            // Footer: Cost & Financials
             // Footer: Cost & Financials
             let canSeeCost = permissionService.canViewVehicleCost()
             let canSeeProfit = permissionService.canViewVehicleProfit()
@@ -458,6 +454,20 @@ struct VehicleCard: View {
                             Text((vehicle.purchasePrice as Decimal? ?? 0).asCurrency())
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(ColorTheme.primaryText)
+                        }
+                    }
+                    
+                    if canSeeCost && (holdingCost > 0 || daysInInventory > 0) {
+                        Spacer()
+                        VStack(alignment: .center, spacing: 2) {
+                            Text("holding_cost".localizedString.uppercased())
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(holdingCost > 0 ? ColorTheme.warning : ColorTheme.secondaryText)
+                                .tracking(0.5)
+                            
+                            Text(holdingCost.asCurrency())
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(holdingCost > 0 ? ColorTheme.warning : ColorTheme.secondaryText)
                         }
                     }
                     
@@ -759,13 +769,14 @@ extension VehicleListView {
         } else {
             List {
                 ForEach(viewModel.vehicles, id: \.id) { vehicle in
-                    VehicleCard(vehicle: vehicle, viewModel: viewModel)
-                        .background(
-                            NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
-                                EmptyView()
-                            }
-                            .opacity(0)
-                        )
+                    ZStack {
+                        VehicleCard(vehicle: vehicle, viewModel: viewModel)
+                        NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
+                            EmptyView()
+                        }
+                        .opacity(0)
+                        .buttonStyle(PlainButtonStyle()) // Important to keep interaction working correctly
+                    }
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
@@ -810,6 +821,7 @@ extension VehicleListView {
                 }
             }
             .listStyle(.plain)
+            .padding(.bottom, 90) // Ensure content isn't hidden behind floating tab bar
             .scrollContentBackground(.hidden)
             .refreshable {
                 if case .signedIn(let user) = sessionStore.status {

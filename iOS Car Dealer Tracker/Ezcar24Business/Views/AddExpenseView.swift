@@ -40,7 +40,10 @@ struct AddExpenseView: View {
     @State private var showSavedToast: Bool = false
     @State private var showDatePicker: Bool = false
     @State private var vehicleSearchText: String = ""
+    @State private var showReceiptSourceDialog: Bool = false
     @State private var showReceiptImporter: Bool = false
+    @State private var showReceiptImagePicker: Bool = false
+    @State private var receiptImagePickerSource: UIImagePickerController.SourceType = .photoLibrary
     @State private var receiptAttachment: ReceiptAttachment? = nil
     @State private var receiptPath: String? = nil
     @State private var receiptRemoved: Bool = false
@@ -184,12 +187,40 @@ struct AddExpenseView: View {
                         }
                 }
             }
+            .confirmationDialog("attach_receipt".localizedString, isPresented: $showReceiptSourceDialog, titleVisibility: .visible) {
+                if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                    Button("take_photo".localizedString) {
+                        receiptImagePickerSource = .camera
+                        showReceiptImagePicker = true
+                    }
+                }
+                Button("choose_from_gallery".localizedString) {
+                    receiptImagePickerSource = .photoLibrary
+                    showReceiptImagePicker = true
+                }
+                Button("choose_file".localizedString) {
+                    showReceiptImporter = true
+                }
+                Button("cancel".localizedString, role: .cancel) {}
+            }
             .fileImporter(
                 isPresented: $showReceiptImporter,
                 allowedContentTypes: [.image, .pdf],
                 allowsMultipleSelection: false
             ) { result in
                 handleReceiptImport(result)
+            }
+            .sheet(isPresented: $showReceiptImagePicker) {
+                ImagePicker(
+                    sourceType: receiptImagePickerSource,
+                    onImagePicked: { image in
+                        attachReceiptImage(image)
+                        showReceiptImagePicker = false
+                    },
+                    onCancel: {
+                        showReceiptImagePicker = false
+                    }
+                )
             }
             .sheet(isPresented: $showReceiptShare) {
                 if let url = receiptShareUrl {
@@ -234,25 +265,20 @@ struct AddExpenseView: View {
             
             Spacer()
             
-            Menu {
-                Button {
-                    showTemplatesSheet = true
-                } label: {
-                    Label("templates".localizedString, systemImage: "bolt.fill")
-                }
-                Button {
-                    showSaveTemplateSheet = true
-                } label: {
-                    Label("save_template".localizedString, systemImage: "doc.badge.plus")
-                }
+            Button {
+                saveExpense()
             } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(ColorTheme.primary)
-                    .frame(width: 36, height: 36)
+                Text("save".localizedString)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(ColorTheme.primaryText)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
                     .background(ColorTheme.secondaryBackground)
-                    .clipShape(Circle())
+                    .clipShape(Capsule())
             }
+            .disabled(!isFormValid || isSaving)
+            .opacity(isFormValid ? 1 : 0.5)
         }
         .padding(.horizontal, 20)
         .padding(.top, 10)
@@ -444,7 +470,7 @@ struct AddExpenseView: View {
     private var receiptSection: some View {
         VStack(spacing: 12) {
             Button {
-                showReceiptImporter = true
+                showReceiptSourceDialog = true
             } label: {
                 HStack(spacing: 16) {
                     ZStack {
@@ -857,6 +883,18 @@ struct AddExpenseView: View {
         case .failure(let error):
             print("Receipt import failed: \(error)")
         }
+    }
+
+    private func attachReceiptImage(_ image: UIImage) {
+        guard let data = image.jpegData(compressionQuality: 0.85) else { return }
+        let fileName = "receipt-\(Int(Date().timeIntervalSince1970)).jpg"
+        receiptAttachment = ReceiptAttachment(
+            data: data,
+            fileName: fileName,
+            contentType: "image/jpeg",
+            fileExtension: "jpg"
+        )
+        receiptRemoved = false
     }
 
     private func removeReceipt() {

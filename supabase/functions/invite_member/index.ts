@@ -1,12 +1,11 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { createClient } from "npm:@supabase/supabase-js@2"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -163,6 +162,10 @@ serve(async (req) => {
         .delete()
         .eq('organization_id', targetOrgId)
         .eq('email', normalizedEmail)
+      await supabaseAdmin.from("team_invite_codes")
+        .delete()
+        .eq("organization_id", targetOrgId)
+        .eq("invited_email", normalizedEmail)
 
       await supabaseAdmin.from('audit_logs').insert({
         organization_id: targetOrgId,
@@ -189,6 +192,15 @@ serve(async (req) => {
       )
     }
 
+    await supabaseAdmin.from("team_invite_codes")
+      .delete()
+      .eq("organization_id", targetOrgId)
+      .eq("invited_email", normalizedEmail)
+    await supabaseAdmin.from("team_invitations")
+      .delete()
+      .eq("organization_id", targetOrgId)
+      .eq("email", normalizedEmail)
+
     // 4. Create Invitation
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h
@@ -207,12 +219,28 @@ serve(async (req) => {
 
     if (inviteError) throw inviteError
 
+    const inviteCode = await createInviteCode({
+      supabaseAdmin,
+      invitationToken: token,
+      organizationId: targetOrgId,
+      invitedEmail: normalizedEmail,
+      expiresAt,
+      createdBy: user.id,
+      maxUses: 1,
+    })
+
     // 5. Audit Log
     await supabaseClient.from('audit_logs').insert({
       organization_id: targetOrgId,
       actor_id: user.id,
       action: 'INVITE_MEMBER',
-      details: { email: normalizedEmail, role: normalizedRole, token_id: token, permissions: normalizedPermissions }
+      details: {
+        email: normalizedEmail,
+        role: normalizedRole,
+        token_id: token,
+        invite_code: inviteCode,
+        permissions: normalizedPermissions,
+      }
     })
 
     const baseUrl = Deno.env.get("INVITE_BASE_URL") ?? "https://ezcar24.com/accept-invite"
@@ -221,24 +249,31 @@ serve(async (req) => {
     if (typeof language === "string" && language.length > 0) {
       inviteUrl.searchParams.set("lang", language)
     }
+    const inviteUrlValue = inviteUrl.toString()
 
     await sendInviteEmail({
       to: normalizedEmail,
       role: normalizedRole,
-      inviteUrl: inviteUrl.toString(),
+      inviteCode,
+      inviteUrl: inviteUrlValue,
     })
 
     return new Response(
       JSON.stringify({
         success: true,
         token,
-        invite_url: inviteUrl.toString(),
+        invite_code: inviteCode,
+        invite_url: inviteUrlValue,
         message: "Invitation created",
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     )
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message =
+      typeof error === "object" && error && "message" in error
+        ? String((error as { message?: unknown }).message ?? "Unexpected error")
+        : "Unexpected error"
+    return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     })
@@ -286,7 +321,59 @@ async function findUserIdByEmail(supabaseAdmin: ReturnType<typeof createClient>,
   return null
 }
 
-async function sendInviteEmail(payload: { to: string; role: string; inviteUrl: string }) {
+async function createInviteCode(payload: {
+  supabaseAdmin: ReturnType<typeof createClient>
+  invitationToken: string
+  organizationId: string
+  invitedEmail: string
+  expiresAt: string
+  createdBy: string
+  maxUses: number
+}) {
+  for (let attempt = 0; attempt < 12; attempt += 1) {
+    const inviteCode = generateInviteCode(8)
+    const { error } = await payload.supabaseAdmin
+      .from("team_invite_codes")
+      .insert({
+        invitation_token: payload.invitationToken,
+        organization_id: payload.organizationId,
+        invite_code: inviteCode,
+        invited_email: payload.invitedEmail,
+        max_uses: payload.maxUses,
+        used_count: 0,
+        expires_at: payload.expiresAt,
+        created_by: payload.createdBy,
+      })
+    if (!error) {
+      return inviteCode
+    }
+    if (!isDuplicateViolation(error)) {
+      throw error
+    }
+  }
+  throw new Error("Could not generate a unique invite code. Please try again.")
+}
+
+function generateInviteCode(length = 8) {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+  const bytes = new Uint8Array(length)
+  crypto.getRandomValues(bytes)
+  let result = ""
+  for (const byte of bytes) {
+    result += chars[byte % chars.length]
+  }
+  return result
+}
+
+function isDuplicateViolation(error: unknown) {
+  const code =
+    typeof error === "object" && error && "code" in error
+      ? String((error as { code?: unknown }).code ?? "")
+      : ""
+  return code === "23505"
+}
+
+async function sendInviteEmail(payload: { to: string; role: string; inviteCode: string; inviteUrl: string }) {
   const apiKey = Deno.env.get("RESEND_API_KEY")
   if (!apiKey) {
     throw new Error("Email is not configured: RESEND_API_KEY is missing")
@@ -299,7 +386,9 @@ async function sendInviteEmail(payload: { to: string; role: string; inviteUrl: s
   const text = [
     "You have been invited to join a team in Ezcar24 Business.",
     `Role: ${safeRole}`,
-    `Accept invite: ${payload.inviteUrl}`,
+    `Invite code: ${payload.inviteCode}`,
+    "Open app -> Sign in / Sign up -> Enter Team Invite Code.",
+    `Fallback link: ${payload.inviteUrl}`,
     "",
     "If you did not expect this invitation, you can ignore this email.",
   ].join("\n")
@@ -309,9 +398,11 @@ async function sendInviteEmail(payload: { to: string; role: string; inviteUrl: s
       <h2 style="margin: 0 0 12px;">You have been invited</h2>
       <p style="margin: 0 0 8px;">You were invited to join a team in Ezcar24 Business.</p>
       <p style="margin: 0 0 12px;"><strong>Role:</strong> ${safeRole}</p>
-      <p style="margin: 0 0 16px;">
-        <a href="${payload.inviteUrl}" style="display: inline-block; padding: 10px 16px; background: #16a34a; color: #ffffff; text-decoration: none; border-radius: 6px;">
-          Accept Invite
+      <p style="margin: 0 0 8px;"><strong>Invite code:</strong> <span style="font-size: 18px; letter-spacing: 1px;">${payload.inviteCode}</span></p>
+      <p style="margin: 0 0 12px;">Open the app, sign in or sign up, then enter this code.</p>
+      <p style="margin: 0 0 12px;">
+        <a href="${payload.inviteUrl}" style="color: #2563eb; text-decoration: underline;">
+          Fallback invite link
         </a>
       </p>
       <p style="margin: 0; color: #6b7280; font-size: 13px;">

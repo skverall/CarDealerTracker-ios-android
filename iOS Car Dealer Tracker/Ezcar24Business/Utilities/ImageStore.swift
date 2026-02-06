@@ -10,6 +10,7 @@
 import Foundation
 import SwiftUI
 import UIKit
+import ImageIO
 
 extension Notification.Name {
     static let vehicleImageUpdated = Notification.Name("vehicleImageUpdated")
@@ -124,8 +125,15 @@ final class ImageStore {
 
     // Load UIImage with in-memory cache. Completion is called on the main thread.
     // Set forceReload to true to bypass cache and load fresh from disk.
-    func load(id: UUID, dealerId: UUID? = nil, forceReload: Bool = false, completion: @escaping (UIImage?) -> Void) {
-        if !forceReload, let cached = cache.object(forKey: id.uuidString as NSString) {
+    func load(
+        id: UUID,
+        dealerId: UUID? = nil,
+        targetSize: CGSize? = nil,
+        forceReload: Bool = false,
+        completion: @escaping (UIImage?) -> Void
+    ) {
+        let cacheKey = keyForCache(id: id.uuidString, targetSize: targetSize)
+        if !forceReload, let cached = cache.object(forKey: cacheKey) {
             completion(cached)
             return
         }
@@ -133,14 +141,24 @@ final class ImageStore {
         ioQueue.async { [weak self] in
             guard let self = self else { return }
             var result: UIImage? = nil
-            if let data = try? Data(contentsOf: url) { result = UIImage(data: data) }
-            if let result { self.cache.setObject(result, forKey: id.uuidString as NSString) }
+            if let data = try? Data(contentsOf: url) {
+                result = self.decodeImage(data: data, targetSize: targetSize)
+            }
+            if let result { self.cache.setObject(result, forKey: cacheKey) }
             DispatchQueue.main.async { completion(result) }
         }
     }
 
-    func loadPhoto(vehicleId: UUID, photoId: UUID, dealerId: UUID? = nil, forceReload: Bool = false, completion: @escaping (UIImage?) -> Void) {
-        if !forceReload, let cached = cache.object(forKey: photoId.uuidString as NSString) {
+    func loadPhoto(
+        vehicleId: UUID,
+        photoId: UUID,
+        dealerId: UUID? = nil,
+        targetSize: CGSize? = nil,
+        forceReload: Bool = false,
+        completion: @escaping (UIImage?) -> Void
+    ) {
+        let cacheKey = keyForCache(id: photoId.uuidString, targetSize: targetSize)
+        if !forceReload, let cached = cache.object(forKey: cacheKey) {
             completion(cached)
             return
         }
@@ -148,8 +166,10 @@ final class ImageStore {
         ioQueue.async { [weak self] in
             guard let self = self else { return }
             var result: UIImage? = nil
-            if let data = try? Data(contentsOf: url) { result = UIImage(data: data) }
-            if let result { self.cache.setObject(result, forKey: photoId.uuidString as NSString) }
+            if let data = try? Data(contentsOf: url) {
+                result = self.decodeImage(data: data, targetSize: targetSize)
+            }
+            if let result { self.cache.setObject(result, forKey: cacheKey) }
             DispatchQueue.main.async { completion(result) }
         }
     }
@@ -160,8 +180,8 @@ final class ImageStore {
     }
 
     // Convenience SwiftUI Image loader (scaled for thumbnails)
-    func swiftUIImage(id: UUID, dealerId: UUID? = nil, completion: @escaping (Image?) -> Void) {
-        load(id: id, dealerId: dealerId) { uiImage in
+    func swiftUIImage(id: UUID, dealerId: UUID? = nil, targetSize: CGSize? = nil, completion: @escaping (Image?) -> Void) {
+        load(id: id, dealerId: dealerId, targetSize: targetSize) { uiImage in
             if let uiImage {
                 completion(Image(uiImage: uiImage))
             } else {
@@ -170,8 +190,14 @@ final class ImageStore {
         }
     }
 
-    func swiftUIImagePhoto(vehicleId: UUID, photoId: UUID, dealerId: UUID? = nil, completion: @escaping (Image?) -> Void) {
-        loadPhoto(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId) { uiImage in
+    func swiftUIImagePhoto(
+        vehicleId: UUID,
+        photoId: UUID,
+        dealerId: UUID? = nil,
+        targetSize: CGSize? = nil,
+        completion: @escaping (Image?) -> Void
+    ) {
+        loadPhoto(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId, targetSize: targetSize) { uiImage in
             if let uiImage {
                 completion(Image(uiImage: uiImage))
             } else {
@@ -221,7 +247,43 @@ final class ImageStore {
         FileManager.default.fileExists(atPath: imageURL(for: id, dealerId: dealerId).path)
     }
 
+    func hasPhoto(vehicleId: UUID, photoId: UUID, dealerId: UUID? = nil) -> Bool {
+        FileManager.default.fileExists(atPath: photoURL(vehicleId: vehicleId, photoId: photoId, dealerId: dealerId).path)
+    }
+
+    func normalizedJPEGData(imageData: Data, maxDimension: CGFloat = 1600, quality: CGFloat = 0.8) -> Data? {
+        scaleAndCompress(imageData: imageData, maxDimension: maxDimension, quality: quality)
+    }
+
     // MARK: - Private
+    private func keyForCache(id: String, targetSize: CGSize?) -> NSString {
+        guard let targetSize else { return id as NSString }
+        let width = Int(targetSize.width.rounded(.toNearestOrAwayFromZero))
+        let height = Int(targetSize.height.rounded(.toNearestOrAwayFromZero))
+        return "\(id)_\(width)x\(height)" as NSString
+    }
+
+    private func decodeImage(data: Data, targetSize: CGSize?) -> UIImage? {
+        guard let targetSize, targetSize.width > 0, targetSize.height > 0 else {
+            return UIImage(data: data)
+        }
+        let scale = UIScreen.main.scale
+        let pixelSize = max(targetSize.width, targetSize.height) * scale
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else {
+            return UIImage(data: data)
+        }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: max(1, Int(pixelSize)),
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceShouldCacheImmediately: true
+        ]
+        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return UIImage(data: data)
+        }
+        return UIImage(cgImage: cgImage)
+    }
+
     private func scaleAndCompress(imageData: Data, maxDimension: CGFloat, quality: CGFloat) -> Data? {
         guard let uiImage = UIImage(data: imageData) else { return nil }
         let size = uiImage.size

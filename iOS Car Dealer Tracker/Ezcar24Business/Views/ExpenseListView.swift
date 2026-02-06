@@ -150,6 +150,7 @@ struct ExpenseListView: View {
     @State private var showingAddExpense = false
     @State private var showingEdit = false
     @State private var editingExpense: Expense? = nil
+    @State private var selectedExpense: Expense? = nil
 
     @State private var periodFilter: DashboardTimeRange = .all
 
@@ -465,8 +466,7 @@ struct ExpenseListView: View {
     @ViewBuilder
     private func expenseListRow(_ expense: Expense) -> some View {
         Button {
-            editingExpense = expense
-            showingEdit = true
+            selectedExpense = expense
         } label: {
             ExpenseRow(expense: expense)
         }
@@ -726,6 +726,10 @@ struct ExpenseListView: View {
             }
             .refreshable {
                 viewModel.fetchExpenses()
+            }
+            .sheet(item: $selectedExpense) { expense in
+                ExpenseDetailSheet(expense: expense)
+                    .presentationDetents([.medium, .large])
             }
 
             .sheet(isPresented: $showCategorySheet) {

@@ -28,12 +28,15 @@ final class SessionStore: ObservableObject {
     @Published private(set) var inviteToastIsError = false
     @Published private(set) var isAcceptingInvite = false
     @Published private(set) var pendingReferralCode: String?
+    @Published private(set) var pendingTeamInviteCode: String?
     
     private var isPasswordRecoverySessionActive = false
     private let passwordRecoveryFlagKey = "passwordRecoveryInProgress"
     private let lastSignedInUserIdKey = "lastSignedInUserId"
     private let pendingInviteTokenKey = "pendingInviteToken"
     private let pendingInviteTokenTimestampKey = "pendingInviteTokenTimestamp"
+    private let pendingTeamInviteCodeKey = "pendingTeamInviteCode"
+    private let pendingTeamInviteCodeTimestampKey = "pendingTeamInviteCodeTimestamp"
     private let pendingReferralCodeKey = "pendingReferralCode"
     private let pendingReferralCodeTimestampKey = "pendingReferralCodeTimestamp"
     private let pendingProfilePhoneKeyPrefix = "pendingProfilePhone_"
@@ -57,6 +60,10 @@ final class SessionStore: ObservableObject {
     init(client: SupabaseClient) {
         self.client = client
         self.pendingReferralCode = UserDefaults.standard.string(forKey: pendingReferralCodeKey)
+        self.pendingTeamInviteCode = SessionStore.readPendingTeamInviteCode(
+            key: pendingTeamInviteCodeKey,
+            timestampKey: pendingTeamInviteCodeTimestampKey
+        )
         
         if UserDefaults.standard.bool(forKey: passwordRecoveryFlagKey) {
             beginPasswordRecoveryFlow()
@@ -388,6 +395,11 @@ final class SessionStore: ObservableObject {
             await loadOrganizations()
         }
 
+        if pendingTeamInviteCodeValue() != nil {
+            _ = await acceptPendingTeamInviteCodeIfPossible()
+            await loadOrganizations()
+        }
+
         if storedReferralCode() != nil {
             _ = await claimPendingReferralIfPossible()
         }
@@ -396,6 +408,9 @@ final class SessionStore: ObservableObject {
 
         if pendingInviteToken() != nil {
             clearPendingInviteToken()
+        }
+        if pendingTeamInviteCodeValue() != nil {
+            clearPendingTeamInviteCode()
         }
     }
 
@@ -413,8 +428,26 @@ final class SessionStore: ObservableObject {
             return code
         } catch {
             print("getDealerReferralCode error: \(error)")
+            if let fallback = await fetchExistingDealerReferralCode(dealerId: dealerId) {
+                cacheDealerReferralCode(fallback, dealerId: dealerId)
+                return fallback
+            }
             return cached
         }
+    }
+
+    func resolveDealerIdForReferral() async -> UUID? {
+        guard case .signedIn(let user) = status else { return nil }
+        if activeOrganizationId == nil || organizations.isEmpty {
+            await loadOrganizations()
+        }
+        if let activeOrganizationId {
+            return activeOrganizationId
+        }
+        if let first = organizations.first?.organization_id {
+            return first
+        }
+        return user.id
     }
 
     func refreshReferralBonus() async {
@@ -476,6 +509,19 @@ final class SessionStore: ObservableObject {
     func dismissInviteToast() {
         inviteToastMessage = nil
         inviteToastIsError = false
+    }
+
+    func submitTeamInviteCode(_ code: String) async -> Bool {
+        let normalized = normalizeInviteCode(code)
+        guard !normalized.isEmpty else { return false }
+        cachePendingTeamInviteCode(normalized)
+
+        guard case .signedIn = status else {
+            showInviteToast(message: "Invite code saved. Sign in to apply.", isError: false)
+            return true
+        }
+
+        return await acceptInvite(inviteCode: normalized)
     }
 
     private func loadOrganizations() async {
@@ -618,19 +664,29 @@ final class SessionStore: ObservableObject {
     private func extractReferralCode(from url: URL) -> String? {
         let host = url.host?.lowercased() ?? ""
         let path = url.path.lowercased()
-        let isUniversal = host.contains("ezcar24.com") && (path.contains("dealer-invite") || path.contains("referral"))
-        let isCustom = host.contains("dealer-invite") || host.contains("referral")
-        guard isUniversal || isCustom else { return nil }
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
         let code = components?.queryItems?.first(where: { $0.name == "code" })?.value
             ?? components?.queryItems?.first(where: { $0.name == "ref" })?.value
         let trimmed = code?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return trimmed.isEmpty ? nil : trimmed
+        guard !trimmed.isEmpty else { return nil }
+
+        let isReferralPath = path.contains("dealer-invite") || path.contains("referral")
+        let isUniversalHost = host.contains("ezcar24.com")
+        let isCustomHost = host.contains("dealer-invite") || host.contains("referral")
+        if isReferralPath || isCustomHost || isUniversalHost {
+            return trimmed
+        }
+        return nil
     }
 
     private func acceptPendingInviteIfPossible() async -> Bool {
         guard let token = pendingInviteToken() else { return false }
         return await acceptInvite(token: token)
+    }
+
+    private func acceptPendingTeamInviteCodeIfPossible() async -> Bool {
+        guard let code = pendingTeamInviteCodeValue() else { return false }
+        return await acceptInvite(inviteCode: code)
     }
 
     private func claimPendingReferralIfPossible() async -> Bool {
@@ -656,6 +712,33 @@ final class SessionStore: ObservableObject {
             let resolved = functionErrorMessage(from: error)
             if shouldClearPendingInviteToken(statusCode: resolved.statusCode, message: resolved.message) {
                 clearPendingInviteToken()
+            }
+            showInviteToast(message: resolved.message, isError: true)
+            return false
+        }
+    }
+
+    private func acceptInvite(inviteCode: String) async -> Bool {
+        guard !isAcceptingInvite else { return false }
+        guard case .signedIn = status else { return false }
+        let normalized = normalizeInviteCode(inviteCode)
+        guard !normalized.isEmpty else { return false }
+
+        isAcceptingInvite = true
+        defer { isAcceptingInvite = false }
+
+        do {
+            let _ = try await client
+                .functions
+                .invoke("accept_invite", options: FunctionInvokeOptions(body: ["invite_code": normalized]))
+            clearPendingTeamInviteCode()
+            await loadOrganizations()
+            showInviteToast(message: "Invite code accepted. Use the switcher to change organizations.", isError: false)
+            return true
+        } catch {
+            let resolved = functionErrorMessage(from: error)
+            if shouldClearPendingTeamInviteCode(statusCode: resolved.statusCode, message: resolved.message) {
+                clearPendingTeamInviteCode()
             }
             showInviteToast(message: resolved.message, isError: true)
             return false
@@ -697,6 +780,14 @@ final class SessionStore: ObservableObject {
         UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: pendingInviteTokenTimestampKey)
     }
 
+    private func cachePendingTeamInviteCode(_ code: String) {
+        let normalized = normalizeInviteCode(code)
+        guard !normalized.isEmpty else { return }
+        pendingTeamInviteCode = normalized
+        UserDefaults.standard.set(normalized, forKey: pendingTeamInviteCodeKey)
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: pendingTeamInviteCodeTimestampKey)
+    }
+
     private func cachePendingReferralCode(_ code: String) {
         let trimmed = code.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         guard !trimmed.isEmpty else { return }
@@ -719,6 +810,27 @@ final class SessionStore: ObservableObject {
         UserDefaults.standard.set(trimmed, forKey: dealerReferralCodeKey(for: dealerId))
     }
 
+    private func fetchExistingDealerReferralCode(dealerId: UUID) async -> String? {
+        struct CodeRow: Decodable {
+            let code: String
+        }
+        do {
+            let rows: [CodeRow] = try await client
+                .from("dealer_referral_codes")
+                .select("code")
+                .eq("dealer_id", value: dealerId)
+                .eq("is_active", value: true)
+                .order("created_at", ascending: false)
+                .limit(1)
+                .execute()
+                .value
+            return rows.first?.code
+        } catch {
+            print("fetchExistingDealerReferralCode error: \(error)")
+            return nil
+        }
+    }
+
     private func pendingInviteToken() -> String? {
         guard let token = UserDefaults.standard.string(forKey: pendingInviteTokenKey) else { return nil }
         let timestamp = UserDefaults.standard.object(forKey: pendingInviteTokenTimestampKey) as? Double
@@ -732,6 +844,18 @@ final class SessionStore: ObservableObject {
             return nil
         }
         return token
+    }
+
+    private func pendingTeamInviteCodeValue() -> String? {
+        if let cached = pendingTeamInviteCode, !cached.isEmpty {
+            return cached
+        }
+        guard let code = SessionStore.readPendingTeamInviteCode(
+            key: pendingTeamInviteCodeKey,
+            timestampKey: pendingTeamInviteCodeTimestampKey
+        ) else { return nil }
+        pendingTeamInviteCode = code
+        return code
     }
 
     private func storedReferralCode() -> String? {
@@ -756,6 +880,12 @@ final class SessionStore: ObservableObject {
     private func clearPendingInviteToken() {
         UserDefaults.standard.removeObject(forKey: pendingInviteTokenKey)
         UserDefaults.standard.removeObject(forKey: pendingInviteTokenTimestampKey)
+    }
+
+    private func clearPendingTeamInviteCode() {
+        pendingTeamInviteCode = nil
+        UserDefaults.standard.removeObject(forKey: pendingTeamInviteCodeKey)
+        UserDefaults.standard.removeObject(forKey: pendingTeamInviteCodeTimestampKey)
     }
 
     private func clearPendingReferralCode() {
@@ -806,6 +936,18 @@ final class SessionStore: ObservableObject {
         return lower.contains("invalid") ||
             lower.contains("expired") ||
             lower.contains("already") ||
+            lower.contains("mismatch")
+    }
+
+    private func shouldClearPendingTeamInviteCode(statusCode: Int?, message: String) -> Bool {
+        if let code = statusCode, (400..<500).contains(code) {
+            return true
+        }
+        let lower = message.lowercased()
+        return lower.contains("invalid") ||
+            lower.contains("expired") ||
+            lower.contains("already") ||
+            lower.contains("revoked") ||
             lower.contains("mismatch")
     }
 
@@ -893,7 +1035,9 @@ final class SessionStore: ObservableObject {
         inviteToastIsError = false
         isAcceptingInvite = false
         pendingReferralCode = nil
+        pendingTeamInviteCode = nil
         clearPendingReferralCode()
+        clearPendingTeamInviteCode()
         PermissionService.shared.resetSession()
         UserDefaults.standard.removeObject(forKey: passwordRecoveryFlagKey)
         ImageStore.shared.setActiveDealerId(nil)
@@ -910,6 +1054,31 @@ final class SessionStore: ObservableObject {
         }
         CloudSyncManager.clearAllSyncTimestamps()
         ImageStore.shared.clearAll()
+    }
+
+    private func normalizeInviteCode(_ code: String) -> String {
+        code
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .uppercased()
+            .replacingOccurrences(of: "-", with: "")
+            .replacingOccurrences(of: " ", with: "")
+    }
+
+    private static func readPendingTeamInviteCode(key: String, timestampKey: String) -> String? {
+        guard let code = UserDefaults.standard.string(forKey: key) else { return nil }
+        let timestamp = UserDefaults.standard.object(forKey: timestampKey) as? Double
+        guard let timestamp else {
+            UserDefaults.standard.removeObject(forKey: key)
+            UserDefaults.standard.removeObject(forKey: timestampKey)
+            return nil
+        }
+        let maxAge: TimeInterval = 7 * 24 * 60 * 60
+        if Date().timeIntervalSince1970 - timestamp > maxAge {
+            UserDefaults.standard.removeObject(forKey: key)
+            UserDefaults.standard.removeObject(forKey: timestampKey)
+            return nil
+        }
+        return code
     }
 
     private func localized(_ error: Error) -> String {

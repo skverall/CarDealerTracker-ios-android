@@ -174,7 +174,7 @@ struct ClientListView: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 90) // Ensure content clears tab bar
                     .padding(.top, 8)
                 }
                 .refreshable {
