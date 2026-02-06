@@ -1,1 +1,6 @@
 opencode.config.json
+.DS_Store
+**/xcuserdata/
+**/*.xcuserstate
+*.bak
+*.bak_*

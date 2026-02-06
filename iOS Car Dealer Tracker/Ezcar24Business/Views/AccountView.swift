@@ -24,12 +24,16 @@ struct AccountView: View {
     @State private var showNotificationSettingsAlert = false
     @State private var notificationAlertMessage = ""
     @State private var showMailError = false
-    @State private var showInviteShareSheet = false
-    @State private var inviteShareItems: [Any] = []
+    @State private var inviteSharePayload: InviteSharePayload?
     @State private var referralCode: String?
     @State private var isFetchingReferralCode = false
     @State private var inviteAlertMessage: String?
     @State private var showingJoinTeamByCodeSheet = false
+
+    private struct InviteSharePayload: Identifiable {
+        let id = UUID()
+        let items: [Any]
+    }
 
     private var inviteAlertBinding: Binding<Bool> {
         Binding(
@@ -88,8 +92,8 @@ struct AccountView: View {
             .sheet(isPresented: $showingPaywall) {
                 PaywallView()
             }
-            .sheet(isPresented: $showInviteShareSheet) {
-                ShareSheet(items: inviteShareItems)
+            .sheet(item: $inviteSharePayload) { payload in
+                ShareSheet(items: payload.items)
             }
             .sheet(isPresented: $showingJoinTeamByCodeSheet) {
                 JoinTeamByCodeSheet()
@@ -762,8 +766,7 @@ struct AccountView: View {
             items.append(source)
         }
         await MainActor.run {
-            inviteShareItems = items
-            showInviteShareSheet = true
+            inviteSharePayload = InviteSharePayload(items: items)
         }
     }
     
@@ -1302,6 +1305,13 @@ struct AccountUserProfileView: View {
             }
             return authEmail
         }()
+        
+        let avatarURL: URL? = {
+            guard let user = users.first, let avatarUrl = user.avatarUrl?.trimmingCharacters(in: .whitespacesAndNewlines), !avatarUrl.isEmpty else {
+                return nil
+            }
+            return URL(string: avatarUrl)
+        }()
 
         VStack(spacing: 12) {
             // Avatar
@@ -1309,7 +1319,7 @@ struct AccountUserProfileView: View {
                 showingEditProfile = true
             } label: {
                 ZStack {
-                    if let user = users.first, let avatarUrl = user.avatarUrl, let url = URL(string: avatarUrl) {
+                    if let url = avatarURL {
                         AsyncImage(url: url) { image in
                             image
                                 .resizable()
@@ -1337,17 +1347,20 @@ struct AccountUserProfileView: View {
                     }
                     
                     // Edit badge
-                    Circle()
-                        .fill(ColorTheme.primary)
-                        .frame(width: 28, height: 28)
-                        .overlay(
-                            Image(systemName: "pencil")
-                                .font(.caption)
-                                .foregroundColor(.white)
-                        )
-                        .offset(x: 32, y: 32)
+                    if avatarURL == nil {
+                        Circle()
+                            .fill(ColorTheme.primary)
+                            .frame(width: 28, height: 28)
+                            .overlay(
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: 32, y: 32)
+                    }
                 }
             }
+            .buttonStyle(.plain)
             .padding(.top, 8)
 
             // Name & Email

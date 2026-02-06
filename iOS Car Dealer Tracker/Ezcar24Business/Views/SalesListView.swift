@@ -122,9 +122,9 @@ struct SalesListView: View {
                         
                         SalesInsightsView(
                             salesCount: viewModel.unifiedSales.count,
-                            netProfit: totalNetProfit,
+                            netProfit: totalNetProfitVisible,
                             totalReceivables: totalReceivables,
-                            showProfit: permissionService.canViewVehicleProfit() // TODO: Check if this covers parts profit perm
+                            showProfit: canShowProfitSummary
                         )
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
@@ -242,8 +242,41 @@ struct SalesListView: View {
         viewModel.unifiedSales.reduce(Decimal(0)) { $0 + $1.amount }
     }
     
-    private var totalNetProfit: Decimal {
-        viewModel.unifiedSales.reduce(Decimal(0)) { $0 + $1.profit }
+    private func canViewProfit(for item: UnifiedSaleItem) -> Bool {
+        switch item.type {
+        case .vehicle:
+            return permissionService.canViewVehicleProfit()
+        case .part:
+            return permissionService.canViewPartProfit()
+        }
+    }
+
+    private func canViewCost(for item: UnifiedSaleItem) -> Bool {
+        switch item.type {
+        case .vehicle:
+            return permissionService.canViewVehicleCost()
+        case .part:
+            return permissionService.canViewPartCost()
+        }
+    }
+
+    private var visibleProfitItems: [UnifiedSaleItem] {
+        viewModel.unifiedSales.filter { canViewProfit(for: $0) }
+    }
+
+    private var totalNetProfitVisible: Decimal {
+        visibleProfitItems.reduce(Decimal(0)) { $0 + $1.profit }
+    }
+
+    private var canShowProfitSummary: Bool {
+        switch viewModel.filter {
+        case .vehicles:
+            return permissionService.canViewVehicleProfit()
+        case .parts:
+            return permissionService.canViewPartProfit()
+        case .all:
+            return permissionService.canViewVehicleProfit() || permissionService.canViewPartProfit()
+        }
     }
     
     private var totalReceivables: Decimal {
@@ -276,7 +309,7 @@ struct SaleCard: View {
             )
         ]
 
-        if permissionService.canViewVehicleCost() {
+        if canViewCost {
             items.append(
                 Metric(
                     title: "cost".localizedString,
@@ -287,7 +320,7 @@ struct SaleCard: View {
             )
         }
 
-        if permissionService.canViewVehicleProfit() {
+        if canViewProfit {
             items.append(
                 Metric(
                     title: "net_profit".localizedString,
@@ -299,6 +332,24 @@ struct SaleCard: View {
         }
 
         return items
+    }
+
+    private var canViewCost: Bool {
+        switch item.type {
+        case .vehicle:
+            return permissionService.canViewVehicleCost()
+        case .part:
+            return permissionService.canViewPartCost()
+        }
+    }
+
+    private var canViewProfit: Bool {
+        switch item.type {
+        case .vehicle:
+            return permissionService.canViewVehicleProfit()
+        case .part:
+            return permissionService.canViewPartProfit()
+        }
     }
     
     var body: some View {
