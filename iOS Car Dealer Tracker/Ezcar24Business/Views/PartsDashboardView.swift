@@ -352,11 +352,11 @@ struct StatsCard: View {
                     .foregroundColor(.white.opacity(0.8))
             }
         }
-        .padding(12)
-        .frame(width: 140, height: 100)
+        .padding(10) // Reduced padding
+        .frame(width: 130, height: 90) // Reduced frame size
         .background(gradient)
-        .cornerRadius(14)
-        .shadow(color: shadowColor.opacity(0.3), radius: 5, x: 0, y: 3)
+        .cornerRadius(12) // Reduced corner radius
+        .shadow(color: shadowColor.opacity(0.3), radius: 4, x: 0, y: 2)
     }
 }
 
@@ -424,7 +424,7 @@ struct PartRowNew: View {
                 }
             }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 10) // Reduced padding
         .padding(.horizontal, 16)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
     }
@@ -466,7 +466,7 @@ struct PartSaleRowNew: View {
                 }
             }
         }
-        .padding(.vertical, 12)
+        .padding(.vertical, 10) // Reduced padding
         .padding(.horizontal, 16)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
     }

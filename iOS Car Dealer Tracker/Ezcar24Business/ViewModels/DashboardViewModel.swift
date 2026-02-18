@@ -100,46 +100,43 @@ struct VehicleSpendStat: Identifiable {
 class DashboardViewModel: ObservableObject {
     @Published var totalCash: Decimal = 0
     @Published var totalBank: Decimal = 0
+    @Published var totalCredit: Decimal = 0
     @Published var totalVehicleValue: Decimal = 0
     @Published var totalExpenses: Decimal = 0
     @Published var vehicleExpenses: Decimal = 0
     @Published var personalExpenses: Decimal = 0
     @Published var employeeExpenses: Decimal = 0
+    @Published var totalPartsValue: Decimal = 0
+    @Published var totalSalesIncome: Decimal = 0
+    @Published var totalSalesProfit: Decimal = 0
+    @Published var periodSalesProfit: Decimal = 0
+    @Published var periodSalesRevenue: Decimal = 0
+    @Published var monthlyNetProfit: Decimal = 0
+    
     @Published var vehicleCount: Int = 0
-    // Vehicle status counts
     @Published var ownedCount: Int = 0
     @Published var onSaleCount: Int = 0
     @Published var soldCount: Int = 0
     @Published var inTransitCount: Int = 0
     @Published var underServiceCount: Int = 0
-    @Published var totalSalesIncome: Decimal = 0
-    @Published var totalPartsValue: Decimal = 0
-
-    // Sales performance
-    @Published var totalSalesProfit: Decimal = 0
-    @Published var periodSalesProfit: Decimal = 0
-    @Published var periodSalesRevenue: Decimal = 0
     @Published var soldInPeriod: Int = 0
-    @Published var avgProfitPerSale: Decimal = 0
+    @Published var periodTransactionCount: Int = 0
+    @Published var periodUniqueVehicles: Int = 0
     @Published var soldChange: Int? = nil
+    
+    @Published var periodChangePercent: Double? = nil
     @Published var revenueChangePercent: Double? = nil
     @Published var profitChangePercent: Double? = nil
-
-    // Analytics additions
+    
     @Published var categoryStats: [CategoryStat] = []
     @Published var trendPoints: [TrendPoint] = []
     @Published var profitTrendPoints: [TrendPoint] = []
-    @Published var periodChangePercent: Double? = nil
-    @Published var monthlyNetProfit: Decimal = 0
     @Published var monthlyProfitTrendPoints: [TrendPoint] = []
-    @Published var currentRange: DashboardTimeRange = .all
-    @Published var periodTransactionCount: Int = 0
-    @Published var periodUniqueVehicles: Int = 0
-
+    @Published var topVehicles: [VehicleSpendStat] = []
     @Published var todaysExpenses: [Expense] = []
     @Published var recentExpenses: [Expense] = []
-    @Published var topVehicles: [VehicleSpendStat] = []
-
+    
+    var currentRange: DashboardTimeRange = .all
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -197,6 +194,7 @@ class DashboardViewModel: ObservableObject {
             let accounts = try context.fetch(accountRequest)
             totalCash = sumAccountBalances(accounts, kind: .cash)
             totalBank = sumAccountBalances(accounts, kind: .bank)
+            totalCredit = sumAccountBalances(accounts, kind: .creditCard)
         } catch {
             print("Error fetching accounts: \(error)")
         }

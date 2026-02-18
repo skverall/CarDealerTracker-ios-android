@@ -28,7 +28,7 @@ struct NotionExportView: View {
             }
             .sheet(isPresented: $viewModel.showAuthSheet) {
                 if let url = viewModel.authUrl {
-                    NotionAuthView(url: url) { callbackUrl in
+                    NotionAuthSheet(url: url) { callbackUrl in
                         viewModel.handleAuthCallback(url: callbackUrl)
                     }
                 }

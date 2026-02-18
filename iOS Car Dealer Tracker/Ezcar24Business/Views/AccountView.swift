@@ -180,14 +180,7 @@ struct AccountView: View {
             
             notificationsRow
 
-            if case .signedIn = sessionStore.status {
-                Divider().padding(.leading, 52)
-                Button {
-                    showingJoinTeamByCodeSheet = true
-                } label: {
-                    MenuRow(icon: "person.badge.plus", title: "Join Team by Code", color: .blue)
-                }
-            }
+
 
             if permissionService.can(.viewFinancials) {
                 Divider().padding(.leading, 52)
@@ -527,13 +520,24 @@ struct AccountView: View {
             }
             .disabled(isFetchingReferralCode)
 
-            NavigationLink {
-                ReferralStatsView()
-            } label: {
-                Text("referral_view_stats".localizedString)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(ColorTheme.primary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+            HStack {
+                NavigationLink {
+                    ReferralStatsView()
+                } label: {
+                    Text("referral_view_stats".localizedString)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(ColorTheme.primary)
+                }
+                
+                Spacer()
+                
+                Button {
+                    showingJoinTeamByCodeSheet = true
+                } label: {
+                    Text("Join Team by Code")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(ColorTheme.primary)
+                }
             }
         }
         .padding(16)

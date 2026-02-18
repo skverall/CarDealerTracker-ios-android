@@ -2,6 +2,9 @@ package com.ezcar24.business.util
 
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
+import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -31,12 +34,21 @@ object DateUtils {
     fun formatIso8601(date: Date): String = formatDateAndTime(date)
 
     fun parseDateAndTime(str: String): Date? {
+        val raw = str.trim()
+        try {
+            return Date.from(OffsetDateTime.parse(raw, DateTimeFormatter.ISO_OFFSET_DATE_TIME).toInstant())
+        } catch (_: Exception) {
+        }
+        try {
+            return Date.from(Instant.parse(raw))
+        } catch (_: Exception) {
+        }
         return try {
-            isoParser.parse(str)
-        } catch (e: Exception) {
+            isoParser.parse(raw)
+        } catch (_: Exception) {
             try {
-                isoParserNoMillis.parse(str)
-            } catch (e2: Exception) {
+                isoParserNoMillis.parse(raw)
+            } catch (_: Exception) {
                 null
             }
         }

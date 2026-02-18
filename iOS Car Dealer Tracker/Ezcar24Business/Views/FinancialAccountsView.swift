@@ -12,16 +12,26 @@ struct FinancialAccountsView: View {
     @State private var selectedAccount: FinancialAccount?
     @State private var showAddAccount = false
     
-    init() {
+    let filterKind: FinancialAccountKind?
+    
+    init(filterKind: FinancialAccountKind? = nil) {
+        self.filterKind = filterKind
         let context = PersistenceController.shared.container.viewContext
         _viewModel = StateObject(wrappedValue: FinancialAccountsViewModel(context: context))
+    }
+    
+    private var navigationTitle: String {
+        if let kind = filterKind {
+            return kind.title
+        }
+        return "financial_accounts".localizedString
     }
     
     var body: some View {
         List {
             listContent
         }
-        .navigationTitle("financial_accounts".localizedString)
+        .navigationTitle(navigationTitle)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -37,7 +47,7 @@ struct FinancialAccountsView: View {
                 .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $showAddAccount) {
-            AddFinancialAccountView(viewModel: viewModel)
+            AddFinancialAccountView(viewModel: viewModel, preselectedKind: filterKind)
                 .presentationDetents([.medium, .large])
         }
         .onAppear {
@@ -47,7 +57,7 @@ struct FinancialAccountsView: View {
 
     @ViewBuilder
     private var listContent: some View {
-        if viewModel.accounts.isEmpty {
+        if groupedAccounts.isEmpty {
             emptyStateSection
         } else {
             accountsSections
@@ -57,35 +67,37 @@ struct FinancialAccountsView: View {
     private var emptyStateSection: some View {
         Section {
             VStack(spacing: 16) {
-                Image(systemName: "building.columns.fill")
+                Image(systemName: filterKind?.iconName ?? "building.columns.fill")
                     .font(.system(size: 48))
                     .foregroundColor(ColorTheme.secondaryText)
 
-                Text("No Accounts Found")
+                Text(emptyStateTitle)
                     .font(.headline)
                     .foregroundColor(ColorTheme.primaryText)
 
-                Text("Create accounts to track cash, banks, and cards separately.")
+                Text(emptyStateSubtitle)
                     .font(.subheadline)
                     .foregroundColor(ColorTheme.secondaryText)
                     .multilineTextAlignment(.center)
 
-                Button {
-                    viewModel.createDefaultAccounts()
-                } label: {
-                    Text("Create Cash + Bank")
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(ColorTheme.primary)
-                        .cornerRadius(12)
+                if filterKind == nil {
+                    Button {
+                        viewModel.createDefaultAccounts()
+                    } label: {
+                        Text("Create Cash + Bank")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(ColorTheme.primary)
+                            .cornerRadius(12)
+                    }
                 }
 
                 Button {
                     showAddAccount = true
                 } label: {
-                    Text("Add Custom Account")
+                    Text(filterKind == nil ? "Add Custom Account" : "Add \(filterKind?.title ?? "Account")")
                         .font(.headline)
                         .foregroundColor(ColorTheme.primary)
                         .padding()
@@ -98,6 +110,20 @@ struct FinancialAccountsView: View {
             .padding(.vertical, 32)
             .listRowBackground(Color.clear)
         }
+    }
+    
+    private var emptyStateTitle: String {
+        if let kind = filterKind {
+            return "No \(kind.title) Found"
+        }
+        return "No Accounts Found"
+    }
+    
+    private var emptyStateSubtitle: String {
+        if let kind = filterKind {
+            return "Tap the + button to add a \(kind.title.lowercased())."
+        }
+        return "Create accounts to track cash, banks, and cards separately."
     }
 
     private var accountsSections: some View {
@@ -170,7 +196,8 @@ struct FinancialAccountsView: View {
 
     private var groupedAccounts: [AccountGroup] {
         let grouped = Dictionary(grouping: viewModel.accounts) { $0.kind }
-        return FinancialAccountKind.allCases.compactMap { kind in
+        let kindsToShow: [FinancialAccountKind] = filterKind.map { [$0] } ?? Array(FinancialAccountKind.allCases)
+        return kindsToShow.compactMap { kind in
             guard let accounts = grouped[kind], !accounts.isEmpty else { return nil }
             let sortedAccounts = accounts.sorted {
                 $0.displayTitle.localizedCaseInsensitiveCompare($1.displayTitle) == .orderedAscending

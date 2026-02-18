@@ -468,10 +468,10 @@ struct ClientRowView: View {
             ZStack {
                 Circle()
                     .fill(ColorTheme.primary.opacity(0.1))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 38, height: 38) // Reduced size
                 
                 Text(initials)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .rounded)) // Reduced font
                     .foregroundColor(ColorTheme.primary)
             }
             
@@ -576,13 +576,13 @@ struct ClientRowView: View {
                         }
                     }
                 }
-                .padding(.top, 4)
+                .padding(.top, 2) // Reduced padding
             }
         }
-        .padding(12)
+        .padding(10) // Reduced padding
         .background(ColorTheme.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
+        .cornerRadius(14) // Reduced radius
+        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
     
     private var hasPhone: Bool {

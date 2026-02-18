@@ -16,7 +16,7 @@ extension Notification.Name {
 }
 
 enum DashboardDestination: String, Identifiable, Hashable {
-    case assets, cashAccounts, bankAccounts, revenue, profit, sold, allExpenses, analytics
+    case assets, cashAccounts, bankAccounts, creditAccounts, revenue, profit, sold, allExpenses, analytics
     var id: String { rawValue }
 }
 
@@ -130,8 +130,12 @@ struct DashboardView: View {
         switch destination {
         case .assets:
             VehicleListView(showNavigation: false)
-        case .cashAccounts, .bankAccounts:
-            FinancialAccountsView()
+        case .cashAccounts:
+            FinancialAccountsView(filterKind: .cash)
+        case .bankAccounts:
+            FinancialAccountsView(filterKind: .bank)
+        case .creditAccounts:
+            FinancialAccountsView(filterKind: .creditCard)
         case .revenue, .profit:
             SalesListView(showNavigation: false)
         case .sold:
@@ -346,23 +350,9 @@ private extension DashboardView {
     var financialOverviewSection: some View {
         Section {
             VStack(spacing: 12) {
-                // First row: Assets, Cash, Bank
                 if permissionService.can(.viewFinancials) {
-                    let canViewProfit = permissionService.canViewVehicleProfit()
+                    // 1. Money Accounts (Cash, Bank, Credit)
                     HStack(spacing: 12) {
-                        Button {
-                            navPath.append(.assets)
-                        } label: {
-                            FinancialCard(
-                                title: "total_assets".localizedString,
-                                amount: viewModel.totalAssets,
-                                icon: "building.columns.fill",
-                                color: .blue,
-                                isHero: true
-                            )
-                        }
-                        .buttonStyle(.plain)
-                        
                         Button {
                             navPath.append(.cashAccounts)
                         } label: {
@@ -381,56 +371,85 @@ private extension DashboardView {
                             FinancialCard(
                                 title: "bank".localizedString,
                                 amount: viewModel.totalBank,
-                                icon: "creditcard.fill",
+                                icon: "building.columns.fill", // Changed specific bank icon if needed, but columns is fine
                                 color: .purple
                             )
                         }
                         .buttonStyle(.plain)
+
+                        Button {
+                            navPath.append(.creditAccounts)
+                        } label: {
+                            FinancialCard(
+                                title: "Credit Card", // Keeping hardcoded for now or use localized string if available
+                                amount: viewModel.totalCredit,
+                                icon: "creditcard.fill",
+                                color: .indigo
+                            )
+                        }
+                        .buttonStyle(.plain)
                     }
+
+                    // 2. Business Performance Grid (Assets, Sold, Revenue, Profit)
+                    let columns = [
+                        GridItem(.flexible(), spacing: 10),
+                        GridItem(.flexible(), spacing: 10)
+                    ]
                     
-                            // Second row: Income and Profit from Sales
-                        HStack(spacing: 12) {
+                    LazyVGrid(columns: columns, spacing: 10) {
+                         Button {
+                            navPath.append(.assets)
+                        } label: {
+                            FinancialCard(
+                                title: "total_assets".localizedString,
+                                amount: viewModel.totalAssets,
+                                icon: "car.2.fill", // More specific assets icon
+                                color: .blue,
+                                isHero: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                         Button {
+                            navPath.append(.sold)
+                        } label: {
+                            FinancialCard(
+                                title: "sold".localizedString,
+                                amount: Decimal(viewModel.soldCount),
+                                icon: "checkmark.circle.fill",
+                                color: .cyan,
+                                isCount: true
+                            )
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            navPath.append(.revenue)
+                        } label: {
+                            FinancialCard(
+                                title: "total_revenue".localizedString,
+                                amount: viewModel.totalSalesIncome,
+                                icon: "chart.line.uptrend.xyaxis",
+                                color: .orange
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        
+                        if permissionService.canViewVehicleProfit() {
                             Button {
-                                navPath.append(.revenue)
+                                navPath.append(.profit)
                             } label: {
                                 FinancialCard(
-                                    title: "total_revenue".localizedString,
-                                    amount: viewModel.totalSalesIncome,
-                                    icon: "chart.line.uptrend.xyaxis",
-                                    color: .orange
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            
-                            if canViewProfit {
-                                Button {
-                                    navPath.append(.profit)
-                                } label: {
-                                    FinancialCard(
-                                        title: "net_profit".localizedString,
-                                        amount: viewModel.totalSalesProfit,
-                                        icon: "dollarsign.circle.fill",
-                                        color: viewModel.totalSalesProfit >= 0 ? .green : .red,
-                                        isHero: true
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                                .transition(.scale.combined(with: .opacity))
-                            }
-                            
-                            Button {
-                                navPath.append(.sold)
-                            } label: {
-                                FinancialCard(
-                                    title: "sold".localizedString,
-                                    amount: Decimal(viewModel.soldCount), // Match the Sold list count to avoid Sales-vs-Status mismatch
-                                    icon: "checkmark.circle.fill",
-                                    color: .cyan,
-                                    isCount: true
+                                    title: "net_profit".localizedString,
+                                    amount: viewModel.totalSalesProfit,
+                                    icon: "dollarsign.circle.fill",
+                                    color: viewModel.totalSalesProfit >= 0 ? .green : .red,
+                                    isHero: true
                                 )
                             }
                             .buttonStyle(.plain)
                         }
+                    }
                 } else {
                     // Non-Financial View (Sales Person Mode)
                      HStack(spacing: 12) {
@@ -473,7 +492,9 @@ private extension DashboardView {
     
     var analyticsSection: some View {
         Section {
-            NavigationLink(value: DashboardDestination.analytics) {
+            Button {
+                navPath.append(.analytics)
+            } label: {
                 AnalyticsEntryCard()
             }
             .buttonStyle(.plain)
@@ -749,12 +770,12 @@ private struct FinancialCard: View {
     var trendText: String? = nil
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Image(systemName: icon)
                     .font(.headline)
                     .foregroundColor(isHero ? .white : color)
-                    .frame(width: 28, height: 28)
+                    .frame(width: 24, height: 24)
                     .background(isHero ? .white.opacity(0.2) : color.opacity(0.1))
                     .clipShape(Circle())
                 
@@ -792,7 +813,7 @@ private struct FinancialCard: View {
                 }
             }
         }
-        .padding(12)
+        .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             Group {
@@ -807,8 +828,8 @@ private struct FinancialCard: View {
                 }
             }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: isHero ? color.opacity(0.3) : Color.black.opacity(0.03), radius: isHero ? 8 : 4, x: 0, y: isHero ? 4 : 2)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: isHero ? color.opacity(0.3) : Color.black.opacity(0.03), radius: isHero ? 6 : 3, x: 0, y: isHero ? 4 : 2)
     }
 }
 
@@ -863,7 +884,7 @@ private struct TodayExpenseCard: View {
                         Circle()
                             .fill(ColorTheme.categoryColor(for: expense.category ?? ""))
                             .opacity(0.1)
-                            .frame(width: 36, height: 36)
+                            .frame(width: 32, height: 32)
                         Image(systemName: expense.categoryIcon)
                             .font(.subheadline)
                             .foregroundColor(ColorTheme.categoryColor(for: expense.category ?? ""))
@@ -882,7 +903,7 @@ private struct TodayExpenseCard: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(expense.amountDecimal.asCurrency())
-                        .font(.title3.weight(.bold))
+                        .font(.headline.weight(.bold))
                         .foregroundColor(ColorTheme.primaryText)
                     
                     Text(expense.vehicleTitle)
@@ -891,10 +912,10 @@ private struct TodayExpenseCard: View {
                         .lineLimit(1)
                 }
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
+            .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
             .background(ColorTheme.secondaryBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
         }
         .buttonStyle(.plain)
@@ -905,7 +926,7 @@ private struct EmptyTodayCard: View {
     let addAction: () -> Void
 
     var body: some View {
-        VStack(alignment: .center, spacing: 12) {
+        VStack(alignment: .center, spacing: 10) {
             Image(systemName: "list.bullet.clipboard")
                 .font(.largeTitle)
                 .foregroundColor(ColorTheme.secondaryText.opacity(0.5))
@@ -926,10 +947,10 @@ private struct EmptyTodayCard: View {
                     .shadow(color: ColorTheme.primary.opacity(0.3), radius: 4, x: 0, y: 2)
             }
         }
-        .padding(24)
+        .padding(16)
         .frame(maxWidth: .infinity)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
     }
 }
@@ -976,7 +997,7 @@ private struct SummaryOverviewCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("total_spend".localizedString + " (\(range.displayLabel))")
@@ -985,7 +1006,7 @@ private struct SummaryOverviewCard: View {
                     
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
                         Text(totalSpent.asCurrencyCompact())
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
+                            .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundColor(ColorTheme.primaryText)
                         
                         if let changePercent {
@@ -1038,7 +1059,7 @@ private struct SummaryOverviewCard: View {
                     .foregroundStyle(ColorTheme.primary)
                     .lineStyle(StrokeStyle(lineWidth: 3))
                 }
-                .frame(height: 220)
+                .frame(height: 160)
                 .chartXScale(domain: xDomain)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { value in
@@ -1066,9 +1087,9 @@ private struct SummaryOverviewCard: View {
                     .padding(.vertical, 20)
             }
         }
-        .padding(24)
+        .padding(16)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
     }
 }
@@ -1110,7 +1131,7 @@ private struct ProfitOverviewCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("net_profit".localizedString + " (\(range.displayLabel))")
@@ -1118,7 +1139,7 @@ private struct ProfitOverviewCard: View {
                         .foregroundColor(ColorTheme.secondaryText)
                     
                     Text(totalProfit.asCurrencyCompact())
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(ColorTheme.primaryText)
                 }
                 Spacer()
@@ -1147,7 +1168,7 @@ private struct ProfitOverviewCard: View {
                     .foregroundStyle(Color.green)
                     .lineStyle(StrokeStyle(lineWidth: 3))
                 }
-                .frame(height: 220)
+                .frame(height: 160)
                 .chartXScale(domain: xDomain)
                 .chartXAxis {
                     AxisMarks(values: .automatic(desiredCount: 5)) { value in
@@ -1175,9 +1196,9 @@ private struct ProfitOverviewCard: View {
                     .padding(.vertical, 20)
             }
         }
-        .padding(24)
+        .padding(16)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
     }
 }
@@ -1186,7 +1207,7 @@ private struct CategoryBreakdownCard: View {
     let stats: [CategoryStat]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("spending_breakdown".localizedString)
                 .font(.headline)
                 .fontWeight(.semibold)
@@ -1205,9 +1226,9 @@ private struct CategoryBreakdownCard: View {
                 }
             }
         }
-        .padding(24)
+        .padding(16)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
     }
 }
@@ -1258,11 +1279,11 @@ private struct RecentExpenseRow: View {
     @ObservedObject var expense: Expense
 
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             ZStack {
                 Circle()
                     .fill(ColorTheme.categoryColor(for: expense.category ?? "").opacity(0.1))
-                    .frame(width: 48, height: 48)
+                    .frame(width: 40, height: 40)
                 Image(systemName: expense.categoryIcon)
                     .font(.headline)
                     .foregroundColor(ColorTheme.categoryColor(for: expense.category ?? ""))
@@ -1293,9 +1314,9 @@ private struct RecentExpenseRow: View {
                     .foregroundColor(ColorTheme.secondaryText)
             }
         }
-        .padding(16)
+        .padding(12)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shadow(color: Color.black.opacity(0.02), radius: 2, x: 0, y: 1)
     }
 }
@@ -1576,7 +1597,7 @@ private extension DashboardView {
     }
     
     var skeletonCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack {
                 RoundedRectangle(cornerRadius: 14)
                     .fill(ColorTheme.secondaryBackground.opacity(0.5))
@@ -1596,10 +1617,10 @@ private extension DashboardView {
                     .frame(maxWidth: .infinity)
             }
         }
-        .padding(12)
+        .padding(10)
         .frame(maxWidth: .infinity)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .shimmering()
     }
     
@@ -1622,9 +1643,9 @@ private extension DashboardView {
                 .frame(height: 220)
                 .frame(maxWidth: .infinity)
         }
-        .padding(24)
+        .padding(16)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .shimmering()
     }
     
@@ -1660,9 +1681,9 @@ private extension DashboardView {
                     .frame(maxWidth: 60)
             }
         }
-        .padding(16)
+        .padding(12)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .shimmering()
     }
 }

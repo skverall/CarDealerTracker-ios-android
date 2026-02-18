@@ -452,6 +452,7 @@ struct RemoteSnapshot: Decodable {
     let partBatches: [RemotePartBatch]
     let partSales: [RemotePartSale]
     let partSaleLineItems: [RemotePartSaleLineItem]
+    let serverNow: Date?
 
     enum CodingKeys: String, CodingKey {
         case users
@@ -468,6 +469,7 @@ struct RemoteSnapshot: Decodable {
         case partBatches = "part_batches"
         case partSales = "part_sales"
         case partSaleLineItems = "part_sale_line_items"
+        case serverNow = "server_now"
     }
 
     init(
@@ -484,7 +486,8 @@ struct RemoteSnapshot: Decodable {
         parts: [RemotePart],
         partBatches: [RemotePartBatch],
         partSales: [RemotePartSale],
-        partSaleLineItems: [RemotePartSaleLineItem]
+        partSaleLineItems: [RemotePartSaleLineItem],
+        serverNow: Date? = nil
     ) {
         self.users = users
         self.accounts = accounts
@@ -500,6 +503,7 @@ struct RemoteSnapshot: Decodable {
         self.partBatches = partBatches
         self.partSales = partSales
         self.partSaleLineItems = partSaleLineItems
+        self.serverNow = serverNow
     }
 
     init(from decoder: Decoder) throws {
@@ -518,6 +522,7 @@ struct RemoteSnapshot: Decodable {
         partBatches = try container.decodeIfPresent([RemotePartBatch].self, forKey: .partBatches) ?? []
         partSales = try container.decodeIfPresent([RemotePartSale].self, forKey: .partSales) ?? []
         partSaleLineItems = try container.decodeIfPresent([RemotePartSaleLineItem].self, forKey: .partSaleLineItems) ?? []
+        serverNow = try container.decodeIfPresent(Date.self, forKey: .serverNow)
     }
 }
 

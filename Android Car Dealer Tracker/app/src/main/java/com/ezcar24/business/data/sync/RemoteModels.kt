@@ -316,6 +316,7 @@ data class RemoteSnapshot(
     val debts: List<RemoteDebt>,
     @SerialName("debt_payments") val debtPayments: List<RemoteDebtPayment>,
     val clients: List<RemoteClient>,
+    @SerialName("server_now") val serverNow: String? = null,
     @SerialName("client_interactions") val clientInteractions: List<RemoteClientInteraction> = emptyList(),
     val parts: List<RemotePart> = emptyList(),
     @SerialName("part_batches") val partBatches: List<RemotePartBatch> = emptyList(),

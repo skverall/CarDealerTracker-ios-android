@@ -92,11 +92,12 @@ struct SalesListView: View {
                             TextField(searchPlaceholder, text: activeSearchText)
                                 .foregroundColor(ColorTheme.primaryText)
                         }
-                        .padding(12)
+                        .padding(10) // Reduced padding
                         .background(ColorTheme.secondaryBackground)
-                        .cornerRadius(12)
+                        .cornerRadius(10) // Reduced radius
                     }
-                    .padding()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8) // Reduced vertical padding
 
                     if activeSection == .debts {
                         Picker("Debt Filter", selection: $debtViewModel.filter) {
@@ -127,7 +128,7 @@ struct SalesListView: View {
                             showProfit: canShowProfitSummary
                         )
                         .padding(.horizontal, 16)
-                        .padding(.top, 8)
+                        .padding(.top, 4) // Reduced top padding
                         .transition(.move(edge: .top).combined(with: .opacity))
                     }
                     
@@ -151,7 +152,7 @@ struct SalesListView: View {
                                     }
                                     .listRowSeparator(.hidden)
                                     .listRowBackground(Color.clear)
-                                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16)) // Reduced list row insets
                                 }
                                 .onDelete(perform: deleteItems)
                                 .deleteDisabled(!canDeleteRecords)
@@ -360,14 +361,14 @@ struct SaleCard: View {
                     HStack {
                         // Icon based on type
                         Image(systemName: iconName)
-                            .font(.caption)
+                            .font(.caption2) // Reduced font size
                             .foregroundColor(ColorTheme.primary)
                             .padding(4)
                             .background(ColorTheme.primary.opacity(0.1))
                             .clipShape(Circle())
                         
                         Text(item.title)
-                            .font(.headline)
+                            .font(.system(size: 15, weight: .bold)) // Reduced font size
                             .foregroundColor(ColorTheme.primaryText)
                     }
                     
@@ -380,7 +381,7 @@ struct SaleCard: View {
                     
                     HStack(spacing: 4) {
                         Image(systemName: "person.fill")
-                            .font(.caption)
+                            .font(.caption2)
                         Text(item.buyerName)
                             .font(.caption)
                     }
@@ -390,14 +391,14 @@ struct SaleCard: View {
                 Spacer()
                 
                 Text(item.date, formatter: saleDateFormatter)
-                    .font(.caption)
+                    .font(.caption2) // Reduced font size
                     .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, 2) // Reduced vertical padding
                     .background(ColorTheme.background)
                     .foregroundColor(ColorTheme.secondaryText)
                     .clipShape(Capsule())
             }
-            .padding(16)
+            .padding(12) // Reduced padding
             
             Divider()
                 .background(ColorTheme.background)
@@ -414,16 +415,16 @@ struct SaleCard: View {
                     
                     if index < metrics.count - 1 {
                         Divider()
-                            .frame(height: 40)
+                            .frame(height: 30) // Reduced height
                     }
                 }
             }
-            .padding(.vertical, 12)
+            .padding(.vertical, 8) // Reduced vertical padding
             .background(ColorTheme.secondaryBackground.opacity(0.5))
         }
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous)) // Reduced radius
+        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2) // Subtler shadow
     }
     
     private var iconName: String {
@@ -447,14 +448,13 @@ struct FinancialColumn: View {
     var isBold: Bool = false
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) { // Reduced spacing
             Text(title.uppercased())
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 9, weight: .bold)) // Reduced font
                 .foregroundColor(ColorTheme.secondaryText)
             
             Text(amount.asCurrency())
-                .font(.subheadline)
-                .fontWeight(isBold ? .bold : .medium)
+                .font(.system(size: 13, weight: isBold ? .bold : .medium)) // Reduced font
                 .foregroundColor(color)
         }
         .frame(maxWidth: .infinity)
@@ -498,7 +498,7 @@ struct SalesInsightsView: View {
     let showProfit: Bool
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 8) { // Reduced spacing
             // 1. Sales Count
             CompactInsightCard(
                 title: "sold".localizedString.uppercased(),
@@ -535,24 +535,23 @@ fileprivate struct CompactInsightCard: View {
     let bgColor: Color
     
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) { // Reduced spacing
             Text(title)
-                .font(.system(size: 10, weight: .bold))
+                .font(.system(size: 9, weight: .bold)) // Reduced font size
                 .foregroundColor(ColorTheme.secondaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             
             Text(value)
-                .font(.callout)
-                .fontWeight(.bold)
+                .font(.system(size: 14, weight: .bold)) // Reduced font size
                 .foregroundColor(color)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8) // Reduced padding
         .padding(.horizontal, 4)
         .background(bgColor)
-        .cornerRadius(12)
+        .cornerRadius(10) // Reduced radius
     }
 }

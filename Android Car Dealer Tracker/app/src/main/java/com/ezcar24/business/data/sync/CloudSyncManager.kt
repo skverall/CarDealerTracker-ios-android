@@ -104,7 +104,7 @@ class CloudSyncManager @Inject constructor(
 
             pushLocalChanges(dealerId, pendingDeletes[SyncEntityType.VEHICLE] ?: emptySet())
 
-            lastSyncTimestamp = Date()
+            lastSyncTimestamp = resolveSyncTimestamp(snapshot)
             lastSyncAt = lastSyncTimestamp
 
             syncScope.launch {
@@ -138,9 +138,10 @@ class CloudSyncManager @Inject constructor(
             processOfflineQueue(dealerId)
 
             val snapshot = fetchRemoteChanges(dealerId, since)
+            val syncMarker = resolveSyncTimestamp(snapshot)
             if (!snapshotHasChanges(snapshot)) {
                 Log.i(tag, "manualSync no changes dealerId=$dealerId")
-                lastSyncTimestamp = Date()
+                lastSyncTimestamp = syncMarker
                 lastSyncAt = lastSyncTimestamp
                 _syncState.value = SyncState.Success
                 // Auto-dismiss success state
@@ -165,7 +166,7 @@ class CloudSyncManager @Inject constructor(
 
             mergeRemoteChanges(snapshot, dealerId, cleanupContext)
 
-            lastSyncTimestamp = Date()
+            lastSyncTimestamp = syncMarker
             lastSyncAt = lastSyncTimestamp
             _queueCount.value = 0
             _syncState.value = SyncState.Success
@@ -327,6 +328,10 @@ class CloudSyncManager @Inject constructor(
             snapshot.partBatches.isNotEmpty() ||
             snapshot.partSales.isNotEmpty() ||
             snapshot.partSaleLineItems.isNotEmpty()
+    }
+
+    private fun resolveSyncTimestamp(snapshot: RemoteSnapshot): Date {
+        return snapshot.serverNow?.let { DateUtils.parseDateAndTime(it) } ?: Date()
     }
 
     private fun snapshotSummary(snapshot: RemoteSnapshot): String {

@@ -117,7 +117,8 @@ final class CloudSyncManager: ObservableObject {
                 parts: filteredSnapshot.parts,
                 partBatches: filteredSnapshot.partBatches,
                 partSales: filteredSnapshot.partSales,
-                partSaleLineItems: filteredSnapshot.partSaleLineItems
+                partSaleLineItems: filteredSnapshot.partSaleLineItems,
+                serverNow: filteredSnapshot.serverNow
             )
             
             try await bgContext.perform {
@@ -140,7 +141,7 @@ final class CloudSyncManager: ObservableObject {
             try await self.pushLocalChanges(context: bgContext, dealerId: dealerId, writeClient: writeClient, skippingVehicleIds: pendingDeletes[.vehicle] ?? [])
             
             // 6. Update timestamp (Main Actor)
-            setLastSyncTimestamp(Date(), for: dealerId)
+            setLastSyncTimestamp(resolveSyncTimestamp(snapshot), for: dealerId)
             lastSyncAt = lastSyncTimestamp(for: dealerId)
             
             // 7. Background tasks
@@ -306,6 +307,7 @@ final class CloudSyncManager: ObservableObject {
             
             // 1. Fetch remote changes only (fastest path)
             let snapshot = try await fetchRemoteChanges(dealerId: dealerId, since: since)
+            let syncMarker = resolveSyncTimestamp(snapshot)
 
             // Skip if no changes
             let hasChanges = !snapshot.vehicles.isEmpty || !snapshot.expenses.isEmpty ||
@@ -317,7 +319,7 @@ final class CloudSyncManager: ObservableObject {
                             !snapshot.partSales.isEmpty || !snapshot.partSaleLineItems.isEmpty
 
             guard hasChanges else {
-                setLastSyncTimestamp(Date(), for: dealerId)
+                setLastSyncTimestamp(syncMarker, for: dealerId)
                 lastSyncAt = lastSyncTimestamp(for: dealerId)
                 return
             }
@@ -371,7 +373,7 @@ final class CloudSyncManager: ObservableObject {
             }
 
             // 3. Update timestamp
-            setLastSyncTimestamp(Date(), for: dealerId)
+            setLastSyncTimestamp(syncMarker, for: dealerId)
             lastSyncAt = lastSyncTimestamp(for: dealerId)
 
             // 4. Download images in background (non-blocking)
@@ -509,6 +511,10 @@ final class CloudSyncManager: ObservableObject {
 
     private func syncKey(for dealerId: UUID) -> String {
         "\(Self.syncTimestampPrefix)\(dealerId.uuidString)"
+    }
+
+    private func resolveSyncTimestamp(_ snapshot: RemoteSnapshot) -> Date {
+        snapshot.serverNow ?? Date()
     }
 
     private func lastSyncTimestamp(for dealerId: UUID) -> Date? {
@@ -2507,7 +2513,8 @@ final class CloudSyncManager: ObservableObject {
             parts: filteredParts,
             partBatches: filteredPartBatches,
             partSales: filteredPartSales,
-            partSaleLineItems: filteredPartSaleLineItems
+            partSaleLineItems: filteredPartSaleLineItems,
+            serverNow: snapshot.serverNow
         )
     }
 

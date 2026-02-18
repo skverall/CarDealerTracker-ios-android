@@ -363,23 +363,23 @@ struct VehicleCard: View {
     var body: some View {
         VStack(spacing: 0) {
             // Main Content Row
-            HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) { // Reduced spacing
                 // Leading: Thumbnail
                 if let id = vehicle.id {
                     VehicleThumbnailView(vehicleID: id)
-                        .frame(width: 90, height: 70)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(width: 70, height: 70) // Reduced thumbnail size
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous)) // Reduced radius
                         .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
                 }
                 
                 // Center/Right: Details
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) { // Reduced spacing
                     
                     // Top Row: Title + Status
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
-                                .font(.headline)
+                                .font(.system(size: 15, weight: .bold)) // Reduced font
                                 .foregroundColor(ColorTheme.primaryText)
                                 .lineLimit(1)
                             
@@ -403,10 +403,11 @@ struct VehicleCard: View {
                         }
                         
                         StatusBadge(status: vehicle.status ?? "")
+                            .scaleEffect(0.9) // Slightly smaller badge
                     }
                     
                     // Second Row: VIN + Expenses Count
-                    HStack(spacing: 12) {
+                    HStack(spacing: 8) { // Reduced spacing
                         Text("VIN: \(vehicle.vin ?? "")")
                             .font(.caption2)
                             .monospacedDigit()
@@ -432,10 +433,10 @@ struct VehicleCard: View {
                     }
                 }
             }
-            .padding(16)
+            .padding(12) // Reduced padding
             
             Divider()
-                .padding(.horizontal, 16)
+                .padding(.horizontal, 12)
             
             // Footer: Cost & Financials
             // Footer: Cost & Financials
@@ -445,28 +446,28 @@ struct VehicleCard: View {
             if canSeeCost || canSeeProfit {
                 HStack(alignment: .firstTextBaseline) {
                     if canSeeCost {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 0) { // Reduced spacing
                             Text("purchase_price".localizedString.uppercased())
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 9, weight: .bold)) // Reduced font
                                 .foregroundColor(ColorTheme.secondaryText)
                                 .tracking(0.5)
                             
                             Text((vehicle.purchasePrice as Decimal? ?? 0).asCurrency())
-                                .font(.subheadline.weight(.semibold))
+                                .font(.system(size: 13, weight: .semibold)) // Reduced font
                                 .foregroundColor(ColorTheme.primaryText)
                         }
                     }
                     
                     if canSeeCost && (holdingCost > 0 || daysInInventory > 0) {
                         Spacer()
-                        VStack(alignment: .center, spacing: 2) {
+                        VStack(alignment: .center, spacing: 0) { // Reduced spacing
                             Text("holding_cost".localizedString.uppercased())
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 9, weight: .bold)) // Reduced font
                                 .foregroundColor(holdingCost > 0 ? ColorTheme.warning : ColorTheme.secondaryText)
                                 .tracking(0.5)
                             
                             Text(holdingCost.asCurrency())
-                                .font(.subheadline.weight(.medium))
+                                .font(.system(size: 13, weight: .medium)) // Reduced font
                                 .foregroundColor(holdingCost > 0 ? ColorTheme.warning : ColorTheme.secondaryText)
                         }
                     }
@@ -474,15 +475,15 @@ struct VehicleCard: View {
                     Spacer()
                     
                     if canSeeCost {
-                        VStack(alignment: .trailing, spacing: 2) {
+                        VStack(alignment: .trailing, spacing: 0) { // Reduced spacing
                             Text("total_cost".localizedString.uppercased())
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 9, weight: .bold)) // Reduced font
                                 .foregroundColor(ColorTheme.secondaryText)
                                 .tracking(0.5)
                             
                             let totalCost = viewModel.totalCost(for: vehicle) + holdingCost
                             Text(totalCost.asCurrency())
-                                .font(.subheadline.weight(.bold))
+                                .font(.system(size: 13, weight: .bold)) // Reduced font
                                 .foregroundColor(ColorTheme.primary)
                         }
                     }
@@ -491,26 +492,26 @@ struct VehicleCard: View {
                         // Adjust profit calculation to include holding cost
                         let adjustedProfit = p - holdingCost
                         Spacer()
-                        VStack(alignment: .trailing, spacing: 2) {
+                        VStack(alignment: .trailing, spacing: 0) { // Reduced spacing
                             Text("profit".localizedString.uppercased())
-                                .font(.system(size: 10, weight: .bold))
+                                .font(.system(size: 9, weight: .bold)) // Reduced font
                                 .foregroundColor(ColorTheme.secondaryText)
                                 .tracking(0.5)
                             
                             Text(adjustedProfit.asCurrency())
-                                .font(.subheadline.weight(.black))
+                                .font(.system(size: 13, weight: .black)) // Reduced font
                                 .foregroundColor(adjustedProfit >= 0 ? ColorTheme.success : ColorTheme.danger)
                         }
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8) // Reduced padding
                 .background(ColorTheme.secondaryBackground.opacity(0.3))
             }
         }
         .background(ColorTheme.background)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 4)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous)) // Reduced radius
+        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2) // Subtler shadow
     }
     
     private var dateFormatter: DateFormatter {

@@ -160,6 +160,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
     func clearAll() async {
         await clearAllPending()
         center.removeAllDeliveredNotifications()
+        try? await center.setBadgeCount(0)
         NotificationPreference.clearInventoryDigestSnapshot()
     }
 

@@ -1040,8 +1040,8 @@ struct ExpenseRow: View {
                     .foregroundColor(ColorTheme.tertiaryText)
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 14)
+        .padding(.vertical, 10) // Reduced padding
+        .padding(.horizontal, 12) // Reduced padding
         .cardStyle()
     }
     
@@ -1453,10 +1453,10 @@ struct DealerExpenseDashboardView: View {
                 ZStack {
                     Circle()
                         .fill(ColorTheme.background)
-                        .frame(width: 40, height: 40)
+                        .frame(width: 36, height: 36) // Reduced size
                     
                     Image(systemName: iconName(for: expense))
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold)) // Reduced font
                         .foregroundColor(ColorTheme.primary)
                 }
                 
@@ -1495,7 +1495,7 @@ struct DealerExpenseDashboardView: View {
                         .scaleEffect(0.8, anchor: .trailing)
                 }
             }
-            .padding(12)
+            .padding(10) // Reduced padding
             .background(ColorTheme.cardBackground)
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)

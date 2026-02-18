@@ -62,6 +62,17 @@ final class RemoteConfigService: ObservableObject {
         var configForce = false
         var configBlockLevel: String?
 
+        // First, always check App Store for the actual latest version
+        await fetchAppStoreInfo()
+        
+        // Check against App Store version first (this is the most reliable source)
+        if let storeVersion = appStoreVersion, isVersion(currentVersion, lessThan: storeVersion) {
+            print("⚠️ [RemoteConfig] App Store has newer version. Current: \(currentVersion), Store: \(storeVersion)")
+            latestVersion = storeVersion
+            requiresUpdate = true
+        }
+
+        // Also check remote config for maintenance mode, kill switch, or custom messages
         do {
             let configJson: RemoteAppConfig = try await client
                 .rpc("get_app_config", params: ["config_key": "ios_kill_switch"])
@@ -77,46 +88,51 @@ final class RemoteConfigService: ObservableObject {
             configBlockLevel = configJson.blockLevel
             maintenance = configJson.maintenanceMode ?? false
         } catch {
-            print("❌ [RemoteConfig] Failed to fetch config: \(error)")
+            print("⚠️ [RemoteConfig] Failed to fetch config (using App Store check only): \(error)")
+            // Continue with App Store check only - don't block if Supabase fails
         }
 
         self.configMessage = configMessage
 
+        // Check maintenance mode
         if maintenance {
             self.isMaintenanceMode = true
             self.isUpdateRequired = true
-            await ensureAppStoreInfo()
             return
         } else {
             self.isMaintenanceMode = false
         }
 
-        let blockLevel = (configBlockLevel ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let blockRequiresUpdate = ["hard", "force", "required", "block"].contains(blockLevel)
-
+        // Check min_version kill switch (critical - blocks old versions)
         if let min = configMin, !min.isEmpty, isVersion(currentVersion, lessThan: min) {
             print("🛑 [RemoteConfig] Kill Switch Active. Current: \(currentVersion) < Min: \(min)")
             requiresUpdate = true
         }
 
+        // Check force_update flag from remote config
+        let blockLevel = (configBlockLevel ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let blockRequiresUpdate = ["hard", "force", "required", "block"].contains(blockLevel)
+        
         if let latest = configLatest, !latest.isEmpty {
-            self.latestVersion = latest
-            if (configForce || blockRequiresUpdate) && isVersion(currentVersion, lessThan: latest) {
-                print("⚠️ [RemoteConfig] Force Update Active.")
-                requiresUpdate = true
+            if configForce || blockRequiresUpdate {
+                if isVersion(currentVersion, lessThan: latest) {
+                    print("⚠️ [RemoteConfig] Force Update via config. Current: \(currentVersion) < Latest: \(latest)")
+                    requiresUpdate = true
+                }
+                // Update latestVersion if config has newer than store
+                if latestVersion == nil || (isVersion(latestVersion ?? "0.0.0", lessThan: latest)) {
+                    latestVersion = latest
+                }
             }
-        }
-
-        await ensureAppStoreInfo()
-
-        if let storeVersion = appStoreVersion, isVersion(currentVersion, lessThan: storeVersion) {
-            if latestVersion == nil || latestVersion?.isEmpty == true || isVersion(latestVersion ?? "0.0.0", lessThan: storeVersion) {
-                latestVersion = storeVersion
-            }
-            requiresUpdate = true
         }
 
         self.isUpdateRequired = requiresUpdate
+        
+        if requiresUpdate {
+            print("🚨 [RemoteConfig] Update required! Current: \(currentVersion), Latest: \(latestVersion ?? "unknown")")
+        } else {
+            print("✅ [RemoteConfig] App is up to date. Version: \(currentVersion)")
+        }
     }
     
     // MARK: - App Store Lookup

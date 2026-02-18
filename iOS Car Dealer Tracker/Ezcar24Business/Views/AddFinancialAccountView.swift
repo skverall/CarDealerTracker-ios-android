@@ -3,11 +3,19 @@ import SwiftUI
 struct AddFinancialAccountView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: FinancialAccountsViewModel
+    
+    let preselectedKind: FinancialAccountKind?
 
     @State private var name: String = ""
     @State private var kind: FinancialAccountKind = .bank
     @State private var startingBalance: String = ""
     @State private var errorMessage: String?
+    
+    init(viewModel: FinancialAccountsViewModel, preselectedKind: FinancialAccountKind? = nil) {
+        self.viewModel = viewModel
+        self.preselectedKind = preselectedKind
+        _kind = State(initialValue: preselectedKind ?? .bank)
+    }
 
     private var balanceDecimal: Decimal {
         Decimal(string: startingBalance.filter { "0123456789.".contains($0) }) ?? 0
@@ -35,7 +43,9 @@ struct AddFinancialAccountView: View {
 
                     ScrollView {
                         VStack(spacing: 24) {
-                            typeSection
+                            if preselectedKind == nil {
+                                typeSection
+                            }
                             nameSection
                             balanceSection
                             Spacer(minLength: 80)

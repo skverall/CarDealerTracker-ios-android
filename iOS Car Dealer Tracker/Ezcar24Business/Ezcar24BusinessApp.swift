@@ -9,6 +9,7 @@ import SwiftUI
 import Supabase
 import RevenueCat
 import FirebaseCore
+import UserNotifications
 
 // Fallback provider to ensure RevenueCat keys are available even if the Services file
 // is not part of the build target.
@@ -107,6 +108,9 @@ struct Ezcar24BusinessApp: App {
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
+                        // Clear app badge when user opens the app
+                        UNUserNotificationCenter.current().setBadgeCount(0)
+                        
                         Task {
                             await remoteConfig.checkForUpdate()
                             await LocalNotificationManager.shared.refreshAll(context: persistenceController.container.viewContext)
