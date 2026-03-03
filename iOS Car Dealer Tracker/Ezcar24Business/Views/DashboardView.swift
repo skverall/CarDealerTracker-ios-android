@@ -60,7 +60,7 @@ struct DashboardView: View {
                 ZStack(alignment: .bottom) {
                     if permissionService.didLoad {
                         dashboardList
-                            .transition(.opacity.combined(with: .move(edge: .top)))
+                            .transition(.opacity)
                     } else {
                         dashboardLoadingView
                             .background(ColorTheme.background)
@@ -116,11 +116,6 @@ struct DashboardView: View {
             Task { await refreshOfflineQueueCount() }
         }
         .task {
-            // Re-fetch credentials/permissions on load
-            if case .signedIn(let user) = sessionStore.status {
-                let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
-                await PermissionService.shared.fetchPermissions(dealerId: dealerId)
-            }
             await refreshOfflineQueueCount()
         }
     }
@@ -360,10 +355,11 @@ private extension DashboardView {
                                 title: "payment_method_cash".localizedString,
                                 amount: viewModel.totalCash,
                                 icon: "banknote.fill",
-                                color: .green
+                                color: .green,
+                                isHero: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.hapticScale)
                         
                         Button {
                             navPath.append(.bankAccounts)
@@ -371,23 +367,25 @@ private extension DashboardView {
                             FinancialCard(
                                 title: "bank".localizedString,
                                 amount: viewModel.totalBank,
-                                icon: "building.columns.fill", // Changed specific bank icon if needed, but columns is fine
-                                color: .purple
+                                icon: "building.columns.fill",
+                                color: .purple,
+                                isHero: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.hapticScale)
 
                         Button {
                             navPath.append(.creditAccounts)
                         } label: {
                             FinancialCard(
-                                title: "Credit Card", // Keeping hardcoded for now or use localized string if available
+                                title: "Credit Card",
                                 amount: viewModel.totalCredit,
                                 icon: "creditcard.fill",
-                                color: .indigo
+                                color: .indigo,
+                                isHero: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.hapticScale)
                     }
 
                     // 2. Business Performance Grid (Assets, Sold, Revenue, Profit)
@@ -403,12 +401,12 @@ private extension DashboardView {
                             FinancialCard(
                                 title: "total_assets".localizedString,
                                 amount: viewModel.totalAssets,
-                                icon: "car.2.fill", // More specific assets icon
-                                color: .blue,
+                                icon: "car.2.fill",
+                                color: Color(red: 0.25, green: 0.35, blue: 0.95),
                                 isHero: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.hapticScale)
 
                          Button {
                             navPath.append(.sold)
@@ -418,10 +416,11 @@ private extension DashboardView {
                                 amount: Decimal(viewModel.soldCount),
                                 icon: "checkmark.circle.fill",
                                 color: .cyan,
-                                isCount: true
+                                isCount: true,
+                                isHero: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.hapticScale)
 
                         Button {
                             navPath.append(.revenue)
@@ -430,10 +429,11 @@ private extension DashboardView {
                                 title: "total_revenue".localizedString,
                                 amount: viewModel.totalSalesIncome,
                                 icon: "chart.line.uptrend.xyaxis",
-                                color: .orange
+                                color: .orange,
+                                isHero: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.hapticScale)
                         
                         if permissionService.canViewVehicleProfit() {
                             Button {
@@ -443,11 +443,11 @@ private extension DashboardView {
                                     title: "net_profit".localizedString,
                                     amount: viewModel.totalSalesProfit,
                                     icon: "dollarsign.circle.fill",
-                                    color: viewModel.totalSalesProfit >= 0 ? .green : .red,
+                                    color: viewModel.totalSalesProfit >= 0 ? ColorTheme.success : ColorTheme.danger,
                                     isHero: true
                                 )
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.hapticScale)
                         }
                     }
                 } else {
@@ -458,14 +458,14 @@ private extension DashboardView {
                         } label: {
                             FinancialCard(
                                 title: "vehicles".localizedString.capitalized,
-                                amount: Decimal(viewModel.totalAssetsCount), // Use count
+                                amount: Decimal(viewModel.totalAssetsCount),
                                 icon: "car.2.fill",
-                                color: .blue,
+                                color: Color(red: 0.25, green: 0.35, blue: 0.95),
                                 isCount: true,
                                 isHero: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.hapticScale)
 
                          Button {
                             navPath.append(.sold)
@@ -475,10 +475,11 @@ private extension DashboardView {
                                 amount: Decimal(viewModel.soldCount),
                                 icon: "checkmark.circle.fill",
                                 color: .cyan,
-                                isCount: true
+                                isCount: true,
+                                isHero: true
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.hapticScale)
                     }
                 }
             }
@@ -487,7 +488,6 @@ private extension DashboardView {
         }
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
-        .animation(.spring(response: 0.4, dampingFraction: 0.8), value: permissionService.didLoad)
     }
     
     var analyticsSection: some View {
@@ -761,6 +761,7 @@ private extension DashboardView {
 
 
 private struct FinancialCard: View {
+    @Environment(\.colorScheme) var colorScheme
     let title: String
     let amount: Decimal
     let icon: String
@@ -800,36 +801,40 @@ private struct FinancialCard: View {
                 
                 if isCount {
                     Text("\(NSDecimalNumber(decimal: amount).intValue)")
-                        .font(isHero ? .headline.weight(.bold) : .subheadline.weight(.bold))
+                        .font(.system(size: isHero ? 22 : 18, weight: .bold, design: .rounded))
                         .foregroundColor(isHero ? .white : ColorTheme.primaryText)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                 } else {
                     Text(amount.asCurrencyCompact())
-                        .font(isHero ? .headline.weight(.bold) : .subheadline.weight(.bold))
+                        .font(.system(size: isHero ? 22 : 18, weight: .bold, design: .rounded))
                         .foregroundColor(isHero ? .white : ColorTheme.primaryText)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                 }
             }
         }
-        .padding(10)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             Group {
                 if isHero {
                     LinearGradient(
-                        colors: [color, color.opacity(0.8)],
+                        colors: [color, color.opacity(0.7)],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                 } else {
-                    ColorTheme.secondaryBackground
+                    ColorTheme.cardBackground
                 }
             }
         )
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .shadow(color: isHero ? color.opacity(0.3) : Color.black.opacity(0.03), radius: isHero ? 6 : 3, x: 0, y: isHero ? 4 : 2)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(colorScheme == .dark ? ColorTheme.glossyGlassBorder : LinearGradient(colors: [.black.opacity(0.04)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
+        )
+        .shadow(color: isHero ? color.opacity(0.4) : Color.black.opacity(colorScheme == .dark ? 0.35 : 0.05), radius: isHero ? 12 : 8, x: 0, y: isHero ? 6 : 4)
     }
 }
 
@@ -864,9 +869,7 @@ private struct AnalyticsEntryCard: View {
                 .clipShape(Capsule())
         }
         .padding(16)
-        .background(ColorTheme.secondaryBackground)
-        .cornerRadius(18)
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 2)
+        .cardStyle()
     }
 }
 
@@ -914,11 +917,9 @@ private struct TodayExpenseCard: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, minHeight: 100, alignment: .leading)
-            .background(ColorTheme.secondaryBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
+            .cardStyle()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.hapticScale)
     }
 }
 
@@ -949,9 +950,7 @@ private struct EmptyTodayCard: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity)
-        .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
+        .cardStyle()
     }
 }
 
@@ -1088,9 +1087,7 @@ private struct SummaryOverviewCard: View {
             }
         }
         .padding(16)
-        .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
+        .cardStyle()
     }
 }
 
@@ -1197,9 +1194,7 @@ private struct ProfitOverviewCard: View {
             }
         }
         .padding(16)
-        .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
+        .cardStyle()
     }
 }
 
@@ -1227,9 +1222,7 @@ private struct CategoryBreakdownCard: View {
             }
         }
         .padding(16)
-        .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
+        .cardStyle()
     }
 }
 
@@ -1316,8 +1309,8 @@ private struct RecentExpenseRow: View {
         }
         .padding(12)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: Color.black.opacity(0.02), radius: 2, x: 0, y: 1)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.03), radius: 3, x: 0, y: 2)
     }
 }
 

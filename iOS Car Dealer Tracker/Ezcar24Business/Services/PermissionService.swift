@@ -30,6 +30,9 @@ final class PermissionService: ObservableObject {
     private var activeDealerId: UUID?
     private let permissionsCacheKeyPrefix = "permissions_cache_v1"
     private let roleCacheKeyPrefix = "role_cache_v1"
+    private var inFlightFetchDealerIds: Set<UUID> = []
+    private var lastFetchAtByDealerId: [UUID: Date] = [:]
+    private let minimumFetchInterval: TimeInterval = 15
     
     func configure(client: SupabaseClient, dealerId: UUID? = nil) {
         self.supabase = client
@@ -61,45 +64,79 @@ final class PermissionService: ObservableObject {
         permissions = [:]
         currentRole = ""
         didLoad = false
+        inFlightFetchDealerIds.removeAll()
+        lastFetchAtByDealerId.removeAll()
     }
     
-    func fetchPermissions(dealerId: UUID) async {
+    func fetchPermissions(dealerId: UUID, force: Bool = false) async {
         guard let supabase = supabase else { return }
         loadCachedStateIfAvailable(dealerId: dealerId)
+
+        if inFlightFetchDealerIds.contains(dealerId) {
+            return
+        }
+        if !force,
+           let lastFetchAt = lastFetchAtByDealerId[dealerId],
+           Date().timeIntervalSince(lastFetchAt) < minimumFetchInterval {
+            return
+        }
+
+        inFlightFetchDealerIds.insert(dealerId)
+        defer { inFlightFetchDealerIds.remove(dealerId) }
+
+        var fetchedPermissions: [String: Bool]?
+        var fetchedRole: String?
         
         do {
             let result: [String: Bool] = try await supabase
                 .rpc("get_my_permissions", params: ["_org_id": dealerId.uuidString])
                 .execute()
                 .value
-            
-            self.permissions = result
+            fetchedPermissions = result
             cachePermissions(result, dealerId: dealerId)
             print("PermissionService: Loaded permissions: \(result)")
         } catch {
             print("PermissionService: Failed to fetch permissions: \(error)")
-            // Default to RESTRICTIVE if fail? Or Permissive for Owner?
-            // "Secure by Default" -> False.
         }
         
-        // Fetch role
         do {
             let roleResult: String = try await supabase
                 .rpc("get_my_role", params: ["_org_id": dealerId.uuidString])
                 .execute()
                 .value
-            
-            self.currentRole = roleResult
+            fetchedRole = roleResult
             cacheRole(roleResult, dealerId: dealerId)
             print("PermissionService: Loaded role: \(roleResult)")
         } catch {
             print("PermissionService: Failed to fetch role: \(error)")
-            self.currentRole = ""
         }
 
-        applyResolvedPermissionsIfPossible()
-        
-        self.didLoad = true
+        guard shouldApplyResult(for: dealerId) else { return }
+
+        var nextRole = currentRole
+        if let fetchedRole {
+            nextRole = fetchedRole
+        }
+
+        var nextPermissions = fetchedPermissions ?? permissions
+        if !nextRole.isEmpty {
+            let resolved = PermissionCatalog.resolvedPermissions(nextPermissions, role: nextRole)
+            if !resolved.isEmpty {
+                nextPermissions = resolved
+            }
+        }
+
+        if permissions != nextPermissions {
+            permissions = nextPermissions
+        }
+        if currentRole != nextRole {
+            currentRole = nextRole
+        }
+        if fetchedPermissions != nil || fetchedRole != nil {
+            lastFetchAtByDealerId[dealerId] = Date()
+        }
+
+        didLoad = true
     }
     
     func can(_ key: PermissionKey) -> Bool {
@@ -195,6 +232,11 @@ final class PermissionService: ObservableObject {
         _ = applyCachedState(permissions: cachedPermissions, role: cachedRole)
     }
 
+    private func shouldApplyResult(for dealerId: UUID) -> Bool {
+        guard let activeDealerId else { return true }
+        return activeDealerId == dealerId
+    }
+
     private func applyCachedState(permissions cachedPermissions: [String: Bool]?, role cachedRole: String?) -> Bool {
         guard cachedPermissions != nil || cachedRole != nil else { return false }
         if let role = cachedRole, !role.isEmpty {
@@ -212,13 +254,6 @@ final class PermissionService: ObservableObject {
         return true
     }
 
-    private func applyResolvedPermissionsIfPossible() {
-        guard !currentRole.isEmpty else { return }
-        let resolved = PermissionCatalog.resolvedPermissions(permissions, role: currentRole)
-        if !resolved.isEmpty {
-            permissions = resolved
-        }
-    }
 }
 
 struct PermissionDefinition: Identifiable {

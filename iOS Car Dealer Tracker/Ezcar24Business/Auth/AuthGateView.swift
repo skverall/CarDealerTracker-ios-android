@@ -8,6 +8,7 @@ struct AuthGateView: View {
     @EnvironmentObject private var appSessionState: AppSessionState
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var periodicSyncTask: Task<Void, Never>?
+    @State private var initialSyncUserId: UUID?
 
     private let periodicSyncInterval: TimeInterval = 5 * 60
 
@@ -37,9 +38,8 @@ struct AuthGateView: View {
                     )
                 case .signedIn(let user):
                     ContentContainerView()
-                        .task {
-                            await sessionStore.prepareForSync()
-                            await cloudSyncManager.syncAfterLogin(user: user)
+                        .task(id: user.id) {
+                            triggerInitialSyncIfNeeded(for: user)
                         }
                 }
             }
@@ -63,18 +63,23 @@ struct AuthGateView: View {
         .onChange(of: sessionStore.showPasswordReset) { _, _ in
             refreshPeriodicSync()
         }
-        .onChange(of: sessionStore.status) { _, newStatus in
+        .onChange(of: sessionStore.status) { oldStatus, newStatus in
+            let previousUserId: UUID? = {
+                if case .signedIn(let user) = oldStatus {
+                    return user.id
+                }
+                return nil
+            }()
             if case .signedIn(let user) = newStatus {
                 appSessionState.isGuestMode = false
                 // Link RevenueCat user to restore subscription
                 SubscriptionManager.shared.logIn(userId: user.id.uuidString)
-                // Only sync if NOT in password recovery mode
-                if !sessionStore.showPasswordReset {
-                    Task {
-                        await sessionStore.prepareForSync()
-                        await cloudSyncManager.syncAfterLogin(user: user)
-                    }
+                if previousUserId != user.id {
+                    initialSyncUserId = nil
                 }
+                triggerInitialSyncIfNeeded(for: user)
+            } else {
+                initialSyncUserId = nil
             }
             refreshPeriodicSync()
         }
@@ -117,6 +122,16 @@ struct AuthGateView: View {
     private func stopPeriodicSync() {
         periodicSyncTask?.cancel()
         periodicSyncTask = nil
+    }
+
+    private func triggerInitialSyncIfNeeded(for user: Auth.User) {
+        guard !sessionStore.showPasswordReset else { return }
+        guard initialSyncUserId != user.id else { return }
+        initialSyncUserId = user.id
+        Task {
+            await sessionStore.prepareForSync()
+            await cloudSyncManager.syncAfterLogin(user: user)
+        }
     }
 }
 
