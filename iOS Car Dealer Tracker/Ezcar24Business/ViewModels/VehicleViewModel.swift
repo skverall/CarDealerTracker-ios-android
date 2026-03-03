@@ -432,7 +432,7 @@ class VehicleViewModel: ObservableObject {
         let keys = [NSInsertedObjectsKey, NSUpdatedObjectsKey, NSDeletedObjectsKey]
         for key in keys {
             guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
-            if objects.contains(where: { $0 is Vehicle || $0 is Expense }) {
+            if objects.contains(where: { $0 is Vehicle || $0 is Expense || $0 is HoldingCostSettings }) {
                 return true
             }
         }

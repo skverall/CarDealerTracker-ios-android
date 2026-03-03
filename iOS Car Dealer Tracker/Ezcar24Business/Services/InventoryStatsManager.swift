@@ -176,6 +176,11 @@ class InventoryStatsManager: ObservableObject {
     
     private func fetchHoldingCostSettings() -> HoldingCostSettings {
         let request = HoldingCostSettings.fetchRequest()
+        request.fetchLimit = 1
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \HoldingCostSettings.updatedAt, ascending: false),
+            NSSortDescriptor(keyPath: \HoldingCostSettings.createdAt, ascending: false)
+        ]
         if let dealerId = CloudSyncEnvironment.currentDealerId {
             request.predicate = NSPredicate(format: "dealerId == %@", dealerId as CVarArg)
         }
@@ -203,7 +208,7 @@ class InventoryStatsManager: ObservableObject {
         settings.dealerId = CloudSyncEnvironment.currentDealerId
         settings.annualRatePercent = NSDecimalNumber(decimal: 12.0)
         settings.dailyRatePercent = NSDecimalNumber(decimal: 0.0329)
-        settings.isEnabled = true
+        settings.isEnabled = false
         settings.createdAt = Date()
         settings.updatedAt = Date()
         

@@ -81,6 +81,7 @@ struct UserGuideView: View {
                 items: [
                     "Holding cost estimates daily carrying cost based on purchase price and expenses.",
                     "Configure annual rate in Accounts > Holding Cost Settings.",
+                    "If you don't need it, you can turn it off in Accounts > Holding Cost Settings.",
                     "Holding cost accrues until the sale date; after sale it stops.",
                     "Sales profit includes holding cost."
                 ]
@@ -205,6 +206,7 @@ struct UserGuideView: View {
                 items: [
                     "Holding cost — ежедневная стоимость простоя на основе цены покупки и расходов.",
                     "Годовую ставку можно настроить в Accounts > Holding Cost Settings.",
+                    "Если функция не нужна, её можно отключить в Accounts > Holding Cost Settings.",
                     "Начисление идет до даты продажи; после продажи останавливается.",
                     "Прибыль в Sales включает holding cost."
                 ]

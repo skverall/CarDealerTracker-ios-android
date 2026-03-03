@@ -246,6 +246,10 @@ class SalesViewModel: ObservableObject {
     private func fetchHoldingCostSettings() -> HoldingCostSettings? {
         let request = HoldingCostSettings.fetchRequest()
         request.fetchLimit = 1
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \HoldingCostSettings.updatedAt, ascending: false),
+            NSSortDescriptor(keyPath: \HoldingCostSettings.createdAt, ascending: false)
+        ]
         if let dealerId = CloudSyncEnvironment.currentDealerId {
             request.predicate = NSPredicate(format: "dealerId == %@", dealerId as CVarArg)
         }
@@ -261,7 +265,7 @@ class SalesViewModel: ObservableObject {
         let settings = HoldingCostSettings(context: viewContext)
         settings.id = UUID()
         settings.dealerId = CloudSyncEnvironment.currentDealerId
-        settings.isEnabled = true
+        settings.isEnabled = false
         settings.annualRatePercent = NSDecimalNumber(decimal: 15.0)
         settings.dailyRatePercent = NSDecimalNumber(decimal: 0.0411)
         settings.createdAt = Date()

@@ -109,6 +109,33 @@ class InventoryAnalyticsViewModel: ObservableObject {
                 self?.updateAlertItems(from: alerts)
             }
             .store(in: &cancellables)
+
+        observeContextChanges()
+    }
+
+    private func observeContextChanges() {
+        NotificationCenter.default
+            .publisher(for: .NSManagedObjectContextObjectsDidChange, object: context)
+            .sink { [weak self] notification in
+                guard let self, let userInfo = notification.userInfo else { return }
+                if Self.shouldRefreshAnalytics(userInfo: userInfo) {
+                    DispatchQueue.main.async {
+                        self.loadData()
+                    }
+                }
+            }
+            .store(in: &cancellables)
+    }
+
+    private static func shouldRefreshAnalytics(userInfo: [AnyHashable: Any]) -> Bool {
+        let keys = [NSInsertedObjectsKey, NSUpdatedObjectsKey, NSDeletedObjectsKey]
+        for key in keys {
+            guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
+            if objects.contains(where: { $0 is Vehicle || $0 is Expense || $0 is HoldingCostSettings }) {
+                return true
+            }
+        }
+        return false
     }
     
     func loadData() {

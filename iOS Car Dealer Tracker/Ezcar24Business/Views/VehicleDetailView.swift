@@ -15,6 +15,7 @@ struct VehicleDetailView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var sessionStore: SessionStore
     @ObservedObject private var permissionService = PermissionService.shared
+    @ObservedObject private var inventoryStatsManager = InventoryStatsManager.shared
     let vehicle: Vehicle
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var pendingPhotos: [PendingVehiclePhoto] = []
@@ -144,7 +145,7 @@ struct VehicleDetailView: View {
     
     var holdingCost: Decimal {
         guard let vehicleId = vehicle.id else { return 0 }
-        let stats = InventoryStatsManager.shared.getStats(for: vehicleId)
+        let stats = inventoryStatsManager.getStats(for: vehicleId)
         return stats?.holdingCostAccumulated?.decimalValue ?? 0
     }
     
@@ -721,6 +722,8 @@ struct VehicleDetailView: View {
             Text(photoOrderErrorMessage ?? "")
         }
         .onAppear {
+            inventoryStatsManager.refreshStats(for: vehicle)
+
             // Initialize edit fields
             editStatus = normalizedStatus(vehicle.status)
             if let pp = vehicle.purchasePrice?.decimalValue { editPurchasePrice = String(describing: pp) } else { editPurchasePrice = "" }
