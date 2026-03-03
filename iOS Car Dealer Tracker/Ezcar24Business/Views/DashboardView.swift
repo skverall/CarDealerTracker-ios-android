@@ -20,6 +20,17 @@ enum DashboardDestination: String, Identifiable, Hashable {
     var id: String { rawValue }
 }
 
+private enum DashboardPalette {
+    static let cash = Color(red: 0.19, green: 0.46, blue: 0.40)
+    static let bank = Color(red: 0.24, green: 0.34, blue: 0.50)
+    static let credit = Color(red: 0.37, green: 0.43, blue: 0.52)
+    static let assets = Color(red: 0.12, green: 0.24, blue: 0.39)
+    static let sold = Color(red: 0.25, green: 0.42, blue: 0.55)
+    static let revenue = Color(red: 0.60, green: 0.42, blue: 0.18)
+    static let profit = Color(red: 0.18, green: 0.48, blue: 0.34)
+    static let loss = Color(red: 0.64, green: 0.28, blue: 0.30)
+}
+
 struct DashboardView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @EnvironmentObject private var sessionStore: SessionStore
@@ -355,7 +366,7 @@ private extension DashboardView {
                                 title: "payment_method_cash".localizedString,
                                 amount: viewModel.totalCash,
                                 icon: "banknote.fill",
-                                color: .green,
+                                color: DashboardPalette.cash,
                                 isHero: true
                             )
                         }
@@ -368,7 +379,7 @@ private extension DashboardView {
                                 title: "bank".localizedString,
                                 amount: viewModel.totalBank,
                                 icon: "building.columns.fill",
-                                color: .purple,
+                                color: DashboardPalette.bank,
                                 isHero: true
                             )
                         }
@@ -381,7 +392,7 @@ private extension DashboardView {
                                 title: "Credit Card",
                                 amount: viewModel.totalCredit,
                                 icon: "creditcard.fill",
-                                color: .indigo,
+                                color: DashboardPalette.credit,
                                 isHero: true
                             )
                         }
@@ -402,7 +413,7 @@ private extension DashboardView {
                                 title: "total_assets".localizedString,
                                 amount: viewModel.totalAssets,
                                 icon: "car.2.fill",
-                                color: Color(red: 0.25, green: 0.35, blue: 0.95),
+                                color: DashboardPalette.assets,
                                 isHero: true
                             )
                         }
@@ -415,7 +426,7 @@ private extension DashboardView {
                                 title: "sold".localizedString,
                                 amount: Decimal(viewModel.soldCount),
                                 icon: "checkmark.circle.fill",
-                                color: .cyan,
+                                color: DashboardPalette.sold,
                                 isCount: true,
                                 isHero: true
                             )
@@ -429,7 +440,7 @@ private extension DashboardView {
                                 title: "total_revenue".localizedString,
                                 amount: viewModel.totalSalesIncome,
                                 icon: "chart.line.uptrend.xyaxis",
-                                color: .orange,
+                                color: DashboardPalette.revenue,
                                 isHero: true
                             )
                         }
@@ -443,7 +454,7 @@ private extension DashboardView {
                                     title: "net_profit".localizedString,
                                     amount: viewModel.totalSalesProfit,
                                     icon: "dollarsign.circle.fill",
-                                    color: viewModel.totalSalesProfit >= 0 ? ColorTheme.success : ColorTheme.danger,
+                                    color: viewModel.totalSalesProfit >= 0 ? DashboardPalette.profit : DashboardPalette.loss,
                                     isHero: true
                                 )
                             }
@@ -460,7 +471,7 @@ private extension DashboardView {
                                 title: "vehicles".localizedString.capitalized,
                                 amount: Decimal(viewModel.totalAssetsCount),
                                 icon: "car.2.fill",
-                                color: Color(red: 0.25, green: 0.35, blue: 0.95),
+                                color: DashboardPalette.assets,
                                 isCount: true,
                                 isHero: true
                             )
@@ -474,7 +485,7 @@ private extension DashboardView {
                                 title: "sold".localizedString,
                                 amount: Decimal(viewModel.soldCount),
                                 icon: "checkmark.circle.fill",
-                                color: .cyan,
+                                color: DashboardPalette.sold,
                                 isCount: true,
                                 isHero: true
                             )
@@ -775,9 +786,9 @@ private struct FinancialCard: View {
             HStack {
                 Image(systemName: icon)
                     .font(.headline)
-                    .foregroundColor(isHero ? .white : color)
+                    .foregroundColor(color)
                     .frame(width: 24, height: 24)
-                    .background(isHero ? .white.opacity(0.2) : color.opacity(0.1))
+                    .background(color.opacity(isHero ? 0.18 : 0.10))
                     .clipShape(Circle())
                 
                 Spacer()
@@ -785,10 +796,10 @@ private struct FinancialCard: View {
                 if let trendText {
                     Text(trendText)
                         .font(.caption2.weight(.medium))
-                        .foregroundColor(isHero ? .white.opacity(0.9) : ColorTheme.secondaryText)
+                        .foregroundColor(isHero ? color : ColorTheme.secondaryText)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(isHero ? .white.opacity(0.2) : ColorTheme.secondaryBackground.opacity(0.5)) // Subtle bg
+                        .background(isHero ? color.opacity(0.12) : ColorTheme.secondaryBackground.opacity(0.5))
                         .clipShape(Capsule())
                 }
             }
@@ -796,19 +807,19 @@ private struct FinancialCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.caption2)
-                    .foregroundColor(isHero ? .white.opacity(0.9) : ColorTheme.secondaryText)
+                    .foregroundColor(ColorTheme.secondaryText)
                     .lineLimit(1)
                 
                 if isCount {
                     Text("\(NSDecimalNumber(decimal: amount).intValue)")
                         .font(.system(size: isHero ? 22 : 18, weight: .bold, design: .rounded))
-                        .foregroundColor(isHero ? .white : ColorTheme.primaryText)
+                        .foregroundColor(ColorTheme.primaryText)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                 } else {
                     Text(amount.asCurrencyCompact())
                         .font(.system(size: isHero ? 22 : 18, weight: .bold, design: .rounded))
-                        .foregroundColor(isHero ? .white : ColorTheme.primaryText)
+                        .foregroundColor(ColorTheme.primaryText)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                 }
@@ -820,7 +831,10 @@ private struct FinancialCard: View {
             Group {
                 if isHero {
                     LinearGradient(
-                        colors: [color, color.opacity(0.7)],
+                        colors: [
+                            ColorTheme.cardBackground,
+                            color.opacity(colorScheme == .dark ? 0.22 : 0.14)
+                        ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -832,9 +846,21 @@ private struct FinancialCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(colorScheme == .dark ? ColorTheme.glossyGlassBorder : LinearGradient(colors: [.black.opacity(0.04)], startPoint: .top, endPoint: .bottom), lineWidth: 1)
+                .stroke(
+                    isHero
+                        ? LinearGradient(colors: [color.opacity(0.25)], startPoint: .top, endPoint: .bottom)
+                        : (colorScheme == .dark
+                            ? ColorTheme.glossyGlassBorder
+                            : LinearGradient(colors: [.black.opacity(0.04)], startPoint: .top, endPoint: .bottom)),
+                    lineWidth: 1
+                )
         )
-        .shadow(color: isHero ? color.opacity(0.4) : Color.black.opacity(colorScheme == .dark ? 0.35 : 0.05), radius: isHero ? 12 : 8, x: 0, y: isHero ? 6 : 4)
+        .shadow(
+            color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.06),
+            radius: isHero ? 10 : 8,
+            x: 0,
+            y: isHero ? 5 : 4
+        )
     }
 }
 
