@@ -198,13 +198,6 @@ struct AccountView: View {
                 } label: {
                     MenuRow(icon: "banknote", title: "financial_accounts".localizedKey, color: .green)
                 }
-                
-                Divider().padding(.leading, 52)
-                NavigationLink {
-                    NotionExportView()
-                } label: {
-                    MenuRow(icon: "square.and.arrow.up", title: "export_to_notion".localizedKey, color: .black)
-                }
             }
         }
     }

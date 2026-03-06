@@ -31,7 +31,6 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.ezcar24.business</string>
-				<string>ezcar24</string>
 			</array>
 		</dict>
 	</array>

@@ -78,50 +78,101 @@ final class SessionStore: ObservableObject {
 
     var shouldShowEmailReminderBanner: Bool {
         guard case .signedIn(let user) = status else { return false }
-
-        // Supabase Swift exposes userMetadata as [String: AnyJSON]. Convert helpers
-        func value<T>(_ key: String, as type: T.Type) -> T? {
-            guard let any = user.userMetadata[key] else { return nil }
-            // Try decoding the AnyJSON payload into the requested type
-            if let val = any.value as? T { return val }
-            // Fallback: try to serialize to Data then decode
-            do {
-                let data = try JSONSerialization.data(withJSONObject: any.value, options: [])
-                if T.self == String.self, let str = String(data: data, encoding: .utf8) as? T { return str }
-            } catch { }
-            return nil
-        }
-
-        // 1) Booleans commonly used to mark confirmation
-        if let emailConfirmed: Bool = value("email_confirmed", as: Bool.self) {
-            return !emailConfirmed
-        }
-        if let isVerified: Bool = value("is_verified", as: Bool.self) {
-            return !isVerified
-        }
-
-        // 2) Timestamp as ISO8601 string (Supabase often stores strings)
-        if let confirmedAtString: String = value("email_confirmed_at", as: String.self) {
-            let trimmed = confirmedAtString.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty {
-                let iso = ISO8601DateFormatter()
-                if iso.date(from: trimmed) != nil { return false }
-                return false
-            }
-        }
-
-        // 3) Or sometimes a numeric epoch seconds
-        if let epoch: Double = value("email_confirmed_at", as: Double.self) {
-            if epoch > 0 { return false }
-        }
-
-        // 4) Or a Date object in metadata (rare)
-        if let _: Date = value("email_confirmed_at", as: Date.self) {
+        if user.emailConfirmedAt != nil || user.confirmedAt != nil {
             return false
         }
 
-        // If unknown, do not show banner to avoid false positives
-        return false
+        func metadataValue(_ key: String) -> Any? {
+            user.userMetadata[key]?.value
+        }
+
+        func boolValue(_ key: String) -> Bool? {
+            guard let raw = metadataValue(key) else { return nil }
+            if let value = raw as? Bool {
+                return value
+            }
+            if let number = raw as? NSNumber {
+                return number.boolValue
+            }
+            if let string = raw as? String {
+                switch string.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+                case "true", "1", "yes":
+                    return true
+                case "false", "0", "no":
+                    return false
+                default:
+                    return nil
+                }
+            }
+            return nil
+        }
+
+        func stringValue(_ key: String) -> String? {
+            guard let raw = metadataValue(key) else { return nil }
+            if let value = raw as? String {
+                return value
+            }
+            if let number = raw as? NSNumber {
+                return number.stringValue
+            }
+            return nil
+        }
+
+        func doubleValue(_ key: String) -> Double? {
+            guard let raw = metadataValue(key) else { return nil }
+            if let value = raw as? Double {
+                return value
+            }
+            if let value = raw as? NSNumber {
+                return value.doubleValue
+            }
+            if let value = raw as? String {
+                return Double(value.trimmingCharacters(in: .whitespacesAndNewlines))
+            }
+            return nil
+        }
+
+        func dateValue(_ key: String) -> Date? {
+            if let raw = metadataValue(key) as? Date {
+                return raw
+            }
+            if let string = stringValue(key) {
+                let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { return nil }
+                let iso = ISO8601DateFormatter()
+                return iso.date(from: trimmed)
+            }
+            if let epoch = doubleValue(key), epoch > 0 {
+                return Date(timeIntervalSince1970: epoch)
+            }
+            return nil
+        }
+
+        if let emailConfirmed = boolValue("email_confirmed") {
+            return !emailConfirmed
+        }
+        if let isVerified = boolValue("is_verified") {
+            return !isVerified
+        }
+
+        if let confirmedAtString = stringValue("email_confirmed_at") {
+            let trimmed = confirmedAtString.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty {
+                let iso = ISO8601DateFormatter()
+                return iso.date(from: trimmed) == nil && Double(trimmed) == nil
+            }
+            return true
+        }
+
+        if let epoch = doubleValue("email_confirmed_at") {
+            return epoch <= 0
+        }
+
+        if dateValue("email_confirmed_at") != nil {
+            return false
+        }
+
+        return true
     }
 
     var activeOrganization: OrganizationMembership? {

@@ -504,7 +504,9 @@ final class BackupExportManager: ObservableObject {
     // Helper to calculate total expenses for a vehicle
     private func totalCostExpenses(_ vehicle: Vehicle) -> Decimal {
         if let expenses = vehicle.expenses as? Set<Expense> {
-            return expenses.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
+            return expenses
+                .filter { $0.deletedAt == nil }
+                .reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
         }
         return 0
     }
@@ -555,9 +557,11 @@ final class BackupExportManager: ObservableObject {
 
     private func fetchExpenses(range: DateInterval? = nil) throws -> [Expense] {
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
+        var predicates = [NSPredicate(format: "deletedAt == nil")]
         if let range {
-            request.predicate = NSPredicate(format: "date >= %@ AND date < %@", range.start as NSDate, range.end as NSDate)
+            predicates.append(NSPredicate(format: "date >= %@ AND date < %@", range.start as NSDate, range.end as NSDate))
         }
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         var results: [Expense] = []
         context.performAndWait {
             results = (try? context.fetch(request)) ?? []
@@ -567,6 +571,7 @@ final class BackupExportManager: ObservableObject {
 
     private func fetchVehicles() throws -> [Vehicle] {
         let request: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
+        request.predicate = NSPredicate(format: "deletedAt == nil")
         request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
         var results: [Vehicle] = []
         context.performAndWait {
@@ -577,7 +582,10 @@ final class BackupExportManager: ObservableObject {
     
     private func fetchInventory() throws -> [Vehicle] {
         let request: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
-        request.predicate = NSPredicate(format: "status != %@", "sold")
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "deletedAt == nil"),
+            NSPredicate(format: "status != %@", "sold")
+        ])
         var results: [Vehicle] = []
         context.performAndWait {
             results = (try? context.fetch(request)) ?? []
@@ -587,8 +595,12 @@ final class BackupExportManager: ObservableObject {
     
     private func fetchSoldVehicles(range: DateInterval) throws -> [Vehicle] {
         let request: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
-        // Assuming 'saleDate' is the property for when it was sold
-        request.predicate = NSPredicate(format: "status == %@ AND saleDate >= %@ AND saleDate < %@", "sold", range.start as NSDate, range.end as NSDate)
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "deletedAt == nil"),
+            NSPredicate(format: "status == %@", "sold"),
+            NSPredicate(format: "saleDate >= %@", range.start as NSDate),
+            NSPredicate(format: "saleDate < %@", range.end as NSDate)
+        ])
         var results: [Vehicle] = []
         context.performAndWait {
             results = (try? context.fetch(request)) ?? []
@@ -598,6 +610,7 @@ final class BackupExportManager: ObservableObject {
 
     private func fetchClients() throws -> [Client] {
         let request: NSFetchRequest<Client> = Client.fetchRequest()
+        request.predicate = NSPredicate(format: "deletedAt == nil")
         request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
         var results: [Client] = []
         context.performAndWait {
@@ -608,9 +621,11 @@ final class BackupExportManager: ObservableObject {
 
     private func fetchSales(range: DateInterval? = nil) throws -> [Sale] {
         let request: NSFetchRequest<Sale> = Sale.fetchRequest()
+        var predicates = [NSPredicate(format: "deletedAt == nil")]
         if let range {
-            request.predicate = NSPredicate(format: "date >= %@ AND date < %@", range.start as NSDate, range.end as NSDate)
+            predicates.append(NSPredicate(format: "date >= %@ AND date < %@", range.start as NSDate, range.end as NSDate))
         }
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         var results: [Sale] = []
         context.performAndWait {
             results = (try? context.fetch(request)) ?? []

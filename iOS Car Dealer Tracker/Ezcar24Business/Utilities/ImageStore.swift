@@ -52,7 +52,7 @@ final class ImageStore {
     }
 
     func setActiveDealerId(_ id: UUID?) {
-        stateQueue.async {
+        stateQueue.sync {
             self.activeDealerId = id
         }
     }
