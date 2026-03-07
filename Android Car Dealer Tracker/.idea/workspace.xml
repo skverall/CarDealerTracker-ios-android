@@ -5,24 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e7d65bf1-1412-4f9e-8286-172092b3e465" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/checksums.lock" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/md5-checksums.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/checksums/sha1-checksums.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/executionHistory/executionHistory.lock" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileChanges/last-build.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/fileHashes.lock" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/fileHashes/resourceHashesCache.bin" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/8.13/gc.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.1.0/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.1.0/fileHashes/fileHashes.lock" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business.xcodeproj/project.pbxproj" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business.xcodeproj/project.pbxproj" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Auth/AuthGateView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Auth/AuthGateView.swift" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Info.plist" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Info.plist" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/PermissionService.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/PermissionService.swift" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Utilities/ColorTheme.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Utilities/ColorTheme.swift" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/DashboardView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/DashboardView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Auth/SessionStore.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Auth/SessionStore.swift" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

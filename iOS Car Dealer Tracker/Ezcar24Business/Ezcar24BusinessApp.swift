@@ -9,23 +9,43 @@ import SwiftUI
 import Supabase
 import RevenueCat
 import FirebaseCore
+import Network
 import UserNotifications
 
-// Fallback provider to ensure RevenueCat keys are available even if the Services file
-// is not part of the build target.
-private enum RevenueCatKeyProvider {
-    static var currentKey: String {
-        if let key = Bundle.main.object(forInfoDictionaryKey: "REVENUECAT_API_KEY") as? String, key.starts(with: "appl_") {
-            return key
+private enum AppRuntime {
+    static var isRunningTests: Bool {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    }
+}
+
+@MainActor
+final class NetworkMonitor: ObservableObject {
+    @Published private(set) var isConnected = true
+
+    private let monitor: NWPathMonitor
+    private let queue = DispatchQueue(label: "NetworkMonitor")
+
+    init(monitor: NWPathMonitor = NWPathMonitor()) {
+        self.monitor = monitor
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                self?.isConnected = path.status == .satisfied
+            }
         }
-        return "appl_AcjVeBViWQjASmtxDkldEkmIvFf"
+        monitor.start(queue: queue)
+    }
+
+    deinit {
+        monitor.cancel()
     }
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        FirebaseApp.configure()
+        if !AppRuntime.isRunningTests {
+            FirebaseApp.configure()
+        }
         return true
     }
 }
@@ -37,6 +57,7 @@ struct Ezcar24BusinessApp: App {
     @StateObject private var sessionStore: SessionStore
     @StateObject private var appSessionState: AppSessionState
     @StateObject private var cloudSyncManager: CloudSyncManager
+    @StateObject private var networkMonitor = NetworkMonitor()
     @StateObject private var regionSettings = RegionSettingsManager.shared
     @StateObject private var remoteConfig = RemoteConfigService.shared
     @StateObject private var persistenceController = PersistenceController.shared
@@ -60,13 +81,13 @@ struct Ezcar24BusinessApp: App {
         _sessionStore = StateObject(wrappedValue: sessionStore)
         _appSessionState = StateObject(wrappedValue: AppSessionState(sessionStore: sessionStore))
         _cloudSyncManager = StateObject(wrappedValue: syncManager)
-        
-        _ = LocalNotificationManager.shared
 
-        // Initialize RevenueCat
-        Purchases.logLevel = .debug
-        let currentAppUserId = provider.client.auth.currentSession?.user.id.uuidString
-        Purchases.configure(withAPIKey: RevenueCatKeyProvider.currentKey, appUserID: currentAppUserId)
+        if !AppRuntime.isRunningTests {
+            _ = LocalNotificationManager.shared
+            Purchases.logLevel = .debug
+            let currentAppUserId = provider.client.auth.currentSession?.user.id.uuidString
+            Purchases.configure(withAPIKey: RevenueCatKeyProvider.currentKey, appUserID: currentAppUserId)
+        }
     }
 
     @Environment(\.scenePhase) var scenePhase
@@ -77,6 +98,7 @@ struct Ezcar24BusinessApp: App {
                 .environmentObject(sessionStore)
                 .environmentObject(appSessionState)
                 .environmentObject(cloudSyncManager)
+                .environmentObject(networkMonitor)
                 .environmentObject(regionSettings)
                 .environment(\.managedObjectContext, persistenceController.viewContext)
                 .environment(\.locale, regionSettings.selectedLanguage.locale)
@@ -91,15 +113,15 @@ struct Ezcar24BusinessApp: App {
                     }
                 }
                 .task {
-                    // Check for app updates on launch
+                    guard !AppRuntime.isRunningTests else { return }
                     await remoteConfig.checkForUpdate()
                     await LocalNotificationManager.shared.refreshAll(context: persistenceController.container.viewContext)
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
-                        // Clear app badge when user opens the app
+                        guard !AppRuntime.isRunningTests else { return }
                         UNUserNotificationCenter.current().setBadgeCount(0)
-                        
+
                         Task {
                             await remoteConfig.checkForUpdate()
                             await LocalNotificationManager.shared.refreshAll(context: persistenceController.container.viewContext)
@@ -108,7 +130,6 @@ struct Ezcar24BusinessApp: App {
                     }
                 }
                 .onAppear {
-                    // Show region selection on first launch
                     if !regionSettings.hasSelectedRegion {
                         showRegionSelection = true
                     }

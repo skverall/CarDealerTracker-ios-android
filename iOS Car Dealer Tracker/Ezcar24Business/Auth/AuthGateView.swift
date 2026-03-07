@@ -1,16 +1,24 @@
 import SwiftUI
 import Supabase
 
+enum AutoSyncStrategy: Equatable {
+    case full
+    case incremental
+}
+
 struct AuthGateView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var appSessionState: AppSessionState
+    @EnvironmentObject private var networkMonitor: NetworkMonitor
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var periodicSyncTask: Task<Void, Never>?
     @State private var initialSyncUserId: UUID?
+    @State private var lastAutoSyncAt: Date?
 
     private let periodicSyncInterval: TimeInterval = 5 * 60
+    private let minimumAutoSyncInterval: TimeInterval = 20
 
     var body: some View {
         Group {
@@ -57,6 +65,12 @@ struct AuthGateView: View {
             guard newPhase == .active else { return }
             triggerForegroundSyncIfNeeded()
         }
+        .onChange(of: networkMonitor.isConnected) { wasConnected, isConnected in
+            guard !wasConnected && isConnected else { return }
+            Task {
+                await triggerAutoSyncIfNeeded()
+            }
+        }
         .onChange(of: appSessionState.isGuestMode) { _, _ in
             refreshPeriodicSync()
         }
@@ -72,25 +86,23 @@ struct AuthGateView: View {
             }()
             if case .signedIn(let user) = newStatus {
                 appSessionState.isGuestMode = false
-                // Link RevenueCat user to restore subscription
                 SubscriptionManager.shared.logIn(userId: user.id.uuidString)
                 if previousUserId != user.id {
                     initialSyncUserId = nil
+                    lastAutoSyncAt = nil
                 }
                 triggerInitialSyncIfNeeded(for: user)
             } else {
                 initialSyncUserId = nil
+                lastAutoSyncAt = nil
             }
             refreshPeriodicSync()
         }
     }
 
     private func triggerForegroundSyncIfNeeded() {
-        guard !appSessionState.isGuestMode, !sessionStore.showPasswordReset else { return }
-        guard case .signedIn(let user) = sessionStore.status else { return }
         Task {
-            await sessionStore.refreshReferralBonus()
-            await cloudSyncManager.manualSync(user: user)
+            await triggerAutoSyncIfNeeded(refreshReferralBonus: true)
         }
     }
 
@@ -112,9 +124,7 @@ struct AuthGateView: View {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: UInt64(periodicSyncInterval * 1_000_000_000))
                 guard !Task.isCancelled else { break }
-                guard !appSessionState.isGuestMode, !sessionStore.showPasswordReset else { continue }
-                guard case .signedIn(let user) = sessionStore.status else { continue }
-                await cloudSyncManager.manualSync(user: user)
+                await triggerAutoSyncIfNeeded()
             }
         }
     }
@@ -132,6 +142,61 @@ struct AuthGateView: View {
             await sessionStore.prepareForSync()
             await cloudSyncManager.syncAfterLogin(user: user)
         }
+    }
+
+    private func triggerAutoSyncIfNeeded(refreshReferralBonus: Bool = false) async {
+        guard case .signedIn(let user) = sessionStore.status else { return }
+
+        let now = Date()
+        guard Self.shouldRunAutoSync(
+            isGuestMode: appSessionState.isGuestMode,
+            showPasswordReset: sessionStore.showPasswordReset,
+            isSignedIn: true,
+            isConnected: networkMonitor.isConnected,
+            isSyncing: cloudSyncManager.isSyncing,
+            lastAutoSyncAt: lastAutoSyncAt,
+            now: now,
+            minimumInterval: minimumAutoSyncInterval
+        ) else { return }
+
+        lastAutoSyncAt = now
+        if refreshReferralBonus {
+            await sessionStore.refreshReferralBonus()
+        }
+
+        cloudSyncManager.refreshLastSyncForCurrentOrg()
+        switch Self.preferredAutoSyncStrategy(lastSyncAt: cloudSyncManager.lastSyncAt) {
+        case .full:
+            await sessionStore.prepareForSync()
+            await cloudSyncManager.syncAfterLogin(user: user)
+        case .incremental:
+            await cloudSyncManager.manualSync(user: user)
+        }
+    }
+
+    static func shouldRunAutoSync(
+        isGuestMode: Bool,
+        showPasswordReset: Bool,
+        isSignedIn: Bool,
+        isConnected: Bool,
+        isSyncing: Bool,
+        lastAutoSyncAt: Date?,
+        now: Date,
+        minimumInterval: TimeInterval
+    ) -> Bool {
+        guard !isGuestMode else { return false }
+        guard !showPasswordReset else { return false }
+        guard isSignedIn else { return false }
+        guard isConnected else { return false }
+        guard !isSyncing else { return false }
+        if let lastAutoSyncAt, now.timeIntervalSince(lastAutoSyncAt) < minimumInterval {
+            return false
+        }
+        return true
+    }
+
+    static func preferredAutoSyncStrategy(lastSyncAt: Date?) -> AutoSyncStrategy {
+        lastSyncAt == nil ? .full : .incremental
     }
 }
 

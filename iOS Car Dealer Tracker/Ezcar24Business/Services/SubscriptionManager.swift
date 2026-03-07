@@ -18,6 +18,9 @@ class SubscriptionManager: ObservableObject {
     @Published var bonusMonths: Int = 0
     
     private var expectedAppUserId: String?
+    private var canUseRevenueCat: Bool {
+        Purchases.isConfigured
+    }
     
     enum RestoreStatus: Equatable {
         case idle
@@ -27,11 +30,19 @@ class SubscriptionManager: ObservableObject {
     }
     
     private init() {
-        // Check status on launch (will be refreshed again after auth bootstrap)
-        checkSubscriptionStatus(forceRefresh: true)
+        if canUseRevenueCat {
+            checkSubscriptionStatus(forceRefresh: true)
+        } else {
+            isCheckingStatus = false
+        }
     }
     
     func checkSubscriptionStatus(forceRefresh: Bool = false) {
+        guard canUseRevenueCat else {
+            clearCachedStatus()
+            isCheckingStatus = false
+            return
+        }
         isCheckingStatus = true
         if forceRefresh {
             Purchases.shared.invalidateCustomerInfoCache()
@@ -51,6 +62,11 @@ class SubscriptionManager: ObservableObject {
     }
     
     func fetchOfferings() {
+        guard canUseRevenueCat else {
+            currentOffering = nil
+            isLoading = false
+            return
+        }
         self.isLoading = true
         Purchases.shared.getOfferings { [weak self] (offerings, error) in
             guard let self = self else { return }
@@ -74,6 +90,10 @@ class SubscriptionManager: ObservableObject {
     }
     
     func checkIntroEligibility(for products: [StoreProduct]) {
+        guard canUseRevenueCat else {
+            introEligibility = [:]
+            return
+        }
         Purchases.shared.checkTrialOrIntroDiscountEligibility(productIdentifiers: products.map { $0.productIdentifier }) { [weak self] eligibility in
             DispatchQueue.main.async {
                 self?.introEligibility = eligibility
@@ -82,6 +102,11 @@ class SubscriptionManager: ObservableObject {
     }
     
     func purchase(package: Package, completion: @escaping (Bool) -> Void = { _ in }) {
+        guard canUseRevenueCat else {
+            isLoading = false
+            completion(false)
+            return
+        }
         self.isLoading = true
         Purchases.shared.purchase(package: package) { [weak self] (transaction, customerInfo, error, userCancelled) in
             guard let self = self else { return }
@@ -104,6 +129,12 @@ class SubscriptionManager: ObservableObject {
     }
     
     func restorePurchases() {
+        guard canUseRevenueCat else {
+            isLoading = false
+            isRestoring = false
+            restoreStatus = .noPurchases
+            return
+        }
         self.isLoading = true
         self.isRestoring = true
         self.restoreStatus = .idle
@@ -133,6 +164,10 @@ class SubscriptionManager: ObservableObject {
     func logIn(userId: String) {
         expectedAppUserId = userId
         clearCachedStatus()
+        guard canUseRevenueCat else {
+            isCheckingStatus = false
+            return
+        }
         isCheckingStatus = true
         Purchases.shared.logIn(userId) { [weak self] (customerInfo, created, error) in
             guard let self = self else { return }
@@ -150,6 +185,10 @@ class SubscriptionManager: ObservableObject {
     
     func logOut() {
         expectedAppUserId = nil
+        guard canUseRevenueCat else {
+            reset()
+            return
+        }
         isCheckingStatus = true
         Purchases.shared.logOut { [weak self] (customerInfo, error) in
             guard let self = self else { return }
@@ -161,6 +200,7 @@ class SubscriptionManager: ObservableObject {
     }
     
     func showManageSubscriptions() {
+        guard canUseRevenueCat else { return }
         Purchases.shared.showManageSubscriptions { [weak self] error in
             guard let self = self else { return }
             if let error = error {
@@ -222,7 +262,7 @@ class SubscriptionManager: ObservableObject {
     }
 
     private func recomputeProAccess() {
-        if let expected = expectedAppUserId {
+        if let expected = expectedAppUserId, canUseRevenueCat {
             let currentAppUser = Purchases.shared.appUserID
             if currentAppUser != expected {
                 self.isProAccessActive = (bonusAccessUntil ?? .distantPast) > Date()

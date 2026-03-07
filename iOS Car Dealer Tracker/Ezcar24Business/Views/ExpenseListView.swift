@@ -1,6 +1,25 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+private func expenseDisplayDateTime(_ expense: Expense) -> Date {
+    let calendar = Calendar.current
+    let expenseDate = expense.date ?? expense.createdAt ?? expense.updatedAt ?? .distantPast
+    let createdTime = expense.createdAt ?? expense.updatedAt ?? expenseDate
+
+    let dateComponents = calendar.dateComponents([.year, .month, .day], from: expenseDate)
+    let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: createdTime)
+
+    var combined = DateComponents()
+    combined.year = dateComponents.year
+    combined.month = dateComponents.month
+    combined.day = dateComponents.day
+    combined.hour = timeComponents.hour
+    combined.minute = timeComponents.minute
+    combined.second = timeComponents.second
+
+    return calendar.date(from: combined) ?? expenseDate
+}
+
 
 struct VehicleFilterMenu: View {
     @ObservedObject var viewModel: ExpenseViewModel
@@ -393,9 +412,7 @@ struct ExpenseListView: View {
         // Sort items inside each group by date desc; compute subtotal
         let mapped: [(String, [Expense], Decimal)] = groups.map { (key, items) in
             let sortedItems = items.sorted { (a, b) in
-                let da = a.date ?? .distantPast
-                let db = b.date ?? .distantPast
-                return da > db
+                expenseDisplayDateTime(a) > expenseDisplayDateTime(b)
             }
             let subtotal = sortedItems.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
 
@@ -1035,7 +1052,7 @@ struct ExpenseRow: View {
                 }
 
                 // Show date from expense.date combined with time from createdAt
-                Text(combinedDateTime(for: expense), formatter: shortDateFormatter)
+                Text(expenseDisplayDateTime(expense), formatter: shortDateFormatter)
                     .font(.caption2)
                     .foregroundColor(ColorTheme.tertiaryText)
             }
@@ -1043,28 +1060,6 @@ struct ExpenseRow: View {
         .padding(.vertical, 10) // Reduced padding
         .padding(.horizontal, 12) // Reduced padding
         .cardStyle()
-    }
-    
-    /// Combines the DATE from expense.date with the TIME from createdAt
-    private func combinedDateTime(for expense: Expense) -> Date {
-        let calendar = Calendar.current
-        let expenseDate = expense.date ?? Date()
-        let createdTime = expense.createdAt ?? expense.updatedAt ?? expenseDate
-        
-        // Extract date components from expense.date
-        let dateComponents = calendar.dateComponents([.year, .month, .day], from: expenseDate)
-        // Extract time components from createdAt
-        let timeComponents = calendar.dateComponents([.hour, .minute], from: createdTime)
-        
-        // Combine them
-        var combined = DateComponents()
-        combined.year = dateComponents.year
-        combined.month = dateComponents.month
-        combined.day = dateComponents.day
-        combined.hour = timeComponents.hour
-        combined.minute = timeComponents.minute
-        
-        return calendar.date(from: combined) ?? expenseDate
     }
 
     private var shortDateFormatter: DateFormatter {
@@ -1472,7 +1467,7 @@ struct DealerExpenseDashboardView: View {
                         .foregroundColor(ColorTheme.secondaryText)
                         .lineLimit(1)
                     
-                    Text(combinedDateTime(for: expense), formatter: dateFormatter)
+                    Text(expenseDisplayDateTime(expense), formatter: dateFormatter)
                         .font(.caption2)
                         .foregroundColor(ColorTheme.tertiaryText)
                 }
@@ -1529,25 +1524,6 @@ struct DealerExpenseDashboardView: View {
                 parts.append(user)
             }
             return parts.isEmpty ? "no_details".localizedString : parts.joined(separator: " • ")
-        }
-        
-        /// Combines the DATE from expense.date with the TIME from createdAt
-        private func combinedDateTime(for expense: Expense) -> Date {
-            let calendar = Calendar.current
-            let expenseDate = expense.date ?? Date()
-            let createdTime = expense.createdAt ?? expense.updatedAt ?? expenseDate
-            
-            let dateComponents = calendar.dateComponents([.year, .month, .day], from: expenseDate)
-            let timeComponents = calendar.dateComponents([.hour, .minute], from: createdTime)
-            
-            var combined = DateComponents()
-            combined.year = dateComponents.year
-            combined.month = dateComponents.month
-            combined.day = dateComponents.day
-            combined.hour = timeComponents.hour
-            combined.minute = timeComponents.minute
-            
-            return calendar.date(from: combined) ?? expenseDate
         }
         
         private var dateFormatter: DateFormatter {
@@ -1622,9 +1598,7 @@ struct DealerExpenseDashboardView: View {
 
         let mapped: [(String, [Expense], Decimal)] = groups.map { (key, items) in
             let sortedItems = items.sorted { (a, b) in
-                let da = a.date ?? .distantPast
-                let db = b.date ?? .distantPast
-                return da > db
+                expenseDisplayDateTime(a) > expenseDisplayDateTime(b)
             }
             let subtotal = sortedItems.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
             return (key, sortedItems, subtotal)

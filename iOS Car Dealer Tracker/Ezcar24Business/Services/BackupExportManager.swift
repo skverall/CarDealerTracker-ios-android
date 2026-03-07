@@ -517,6 +517,10 @@ final class BackupExportManager: ObservableObject {
         let clientsCSV = try exportClientsCSV()
         let pdf = try generateReportPDF(for: range)
         let metadata = try makeMetadataSnapshot(range: range)
+        let transientFiles = [expensesCSV, vehiclesCSV, clientsCSV, pdf]
+        defer {
+            transientFiles.forEach { try? FileManager.default.removeItem(at: $0) }
+        }
 
         func filePayload(for url: URL, contentType: String) throws -> ArchiveFilePayload {
             let data = try Data(contentsOf: url)

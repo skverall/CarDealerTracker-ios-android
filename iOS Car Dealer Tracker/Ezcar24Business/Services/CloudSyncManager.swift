@@ -22,11 +22,32 @@ private struct ApplicationLogInsert: Encodable {
     }
 }
 
+private protocol PushAnchorTimestamped {
+    var updatedAt: Date { get }
+}
+
+extension RemoteFinancialAccount: PushAnchorTimestamped {}
+extension RemoteVehicle: PushAnchorTimestamped {}
+extension RemoteExpenseTemplate: PushAnchorTimestamped {}
+extension RemoteExpense: PushAnchorTimestamped {}
+extension RemoteSale: PushAnchorTimestamped {}
+extension RemoteDebt: PushAnchorTimestamped {}
+extension RemoteDebtPayment: PushAnchorTimestamped {}
+extension RemoteAccountTransaction: PushAnchorTimestamped {}
+extension RemoteClient: PushAnchorTimestamped {}
+extension RemotePart: PushAnchorTimestamped {}
+extension RemotePartBatch: PushAnchorTimestamped {}
+extension RemotePartSale: PushAnchorTimestamped {}
+extension RemotePartSaleLineItem: PushAnchorTimestamped {}
+
 
 @MainActor
 final class CloudSyncManager: ObservableObject {
     static var shared: CloudSyncManager?
     static let syncTimestampPrefix = "lastSyncTimestamp_"
+    static let pushTimestampPrefix = "lastPushTimestamp_"
+    static let syncFailureTimestampPrefix = "lastSyncFailureTimestamp_"
+    static let syncFailureMessagePrefix = "lastSyncFailureMessage_"
 
     private let client: SupabaseClient
     private var writeClient: SupabaseClient { client }
@@ -39,6 +60,45 @@ final class CloudSyncManager: ObservableObject {
     @Published var vinConflictVehicleId: UUID?
     private let pendingProfilePhoneKeyPrefix = "pendingProfilePhone_"
     private let pendingProfileEmailKeyPrefix = "pendingProfileEmail_"
+
+    struct LocalPushWindow {
+        let changedAfter: Date?
+        let changedBeforeOrAt: Date
+    }
+
+    struct LocalPushPayload {
+        let users: [RemoteDealerUser]
+        let accounts: [RemoteFinancialAccount]
+        let accountTransactions: [RemoteAccountTransaction]
+        let vehicles: [RemoteVehicle]
+        let expenses: [RemoteExpense]
+        let sales: [RemoteSale]
+        let debts: [RemoteDebt]
+        let debtPayments: [RemoteDebtPayment]
+        let clients: [RemoteClient]
+        let templates: [RemoteExpenseTemplate]
+        let parts: [RemotePart]
+        let partBatches: [RemotePartBatch]
+        let partSales: [RemotePartSale]
+        let partSaleLineItems: [RemotePartSaleLineItem]
+
+        var isEmpty: Bool {
+            users.isEmpty &&
+            accounts.isEmpty &&
+            accountTransactions.isEmpty &&
+            vehicles.isEmpty &&
+            expenses.isEmpty &&
+            sales.isEmpty &&
+            debts.isEmpty &&
+            debtPayments.isEmpty &&
+            clients.isEmpty &&
+            templates.isEmpty &&
+            parts.isEmpty &&
+            partBatches.isEmpty &&
+            partSales.isEmpty &&
+            partSaleLineItems.isEmpty
+        }
+    }
 
     init(client: SupabaseClient, context: NSManagedObjectContext) {
         self.client = client
@@ -66,7 +126,6 @@ final class CloudSyncManager: ObservableObject {
         defer { isSyncing = false }
 
         var effectiveSince = currentLastSync
-        
         // Create a background context for heavy lifting
         let bgContext = PersistenceController.shared.newBackgroundContext()
         
@@ -75,6 +134,11 @@ final class CloudSyncManager: ObservableObject {
         do {
             // 1. Flush any queued offline operations first (Main Actor is fine for this as it's usually small)
             await processOfflineQueue(dealerId: dealerId)
+
+            let localPushWindow = LocalPushWindow(
+                changedAfter: lastPushTimestamp(for: dealerId),
+                changedBeforeOrAt: Date()
+            )
 
             // Pending deletes should block resurrection during this sync
             let pendingDeletes = await pendingDeleteIds()
@@ -88,6 +152,13 @@ final class CloudSyncManager: ObservableObject {
             if localClientCount == 0 {
                 effectiveSince = nil
             }
+
+            let localPushPayload = try await prepareLocalPushPayload(
+                context: bgContext,
+                dealerId: dealerId,
+                window: localPushWindow,
+                skippingVehicleIds: pendingDeletes[.vehicle] ?? []
+            )
 
             // 2. Fetch remote changes (Network is async, doesn't block context)
             let snapshot = try await fetchRemoteChanges(dealerId: dealerId, since: effectiveSince)
@@ -121,14 +192,16 @@ final class CloudSyncManager: ObservableObject {
                 serverNow: filteredSnapshot.serverNow
             )
             
+            var updatedAccountIds = Set<UUID>()
+            var ensuredUserIds = Set<UUID>()
             try await bgContext.perform {
                 // 4. Smart Merge
                 try self.mergeRemoteChanges(snapshotForMerge, context: bgContext, dealerId: dealerId)
 
                 // Ensure current user exists locally so profile editing works
-                self.ensureCurrentUserExists(context: bgContext, user: user, dealerId: dealerId)
+                ensuredUserIds = self.ensureCurrentUserExists(context: bgContext, user: user, dealerId: dealerId)
 
-                _ = self.recalculateAccountBalances(context: bgContext)
+                updatedAccountIds = self.recalculateAccountBalances(context: bgContext)
 
                 // 4.5. CRITICAL: Save the merged changes to Core Data
                 if bgContext.hasChanges {
@@ -137,8 +210,26 @@ final class CloudSyncManager: ObservableObject {
                 }
             }
 
-            // 5. Push local changes - Now done AFTER merge to ensure IDs are resolved
-            try await self.pushLocalChanges(context: bgContext, dealerId: dealerId, writeClient: writeClient, skippingVehicleIds: pendingDeletes[.vehicle] ?? [])
+            // 5. Push pre-merge local delta so freshly pulled remote rows are not echoed back.
+            try await pushPreparedLocalPayload(localPushPayload, writeClient: writeClient)
+            if !updatedAccountIds.isEmpty {
+                try await pushAccountUpdates(
+                    accountIds: updatedAccountIds,
+                    context: bgContext,
+                    dealerId: dealerId,
+                    writeClient: writeClient
+                )
+            }
+            if !ensuredUserIds.isEmpty {
+                try await pushUserUpdates(
+                    userIds: ensuredUserIds,
+                    context: bgContext,
+                    dealerId: dealerId,
+                    writeClient: writeClient
+                )
+            }
+            setLastPushTimestamp(localPushWindow.changedBeforeOrAt, for: dealerId)
+            clearLastSyncFailure(for: dealerId)
             
             // 6. Update timestamp (Main Actor)
             setLastSyncTimestamp(resolveSyncTimestamp(snapshot), for: dealerId)
@@ -175,6 +266,7 @@ final class CloudSyncManager: ObservableObject {
             }
             
             print("CloudSyncManager sync error: \(error)")
+            setLastSyncFailure(error.localizedDescription, for: dealerId)
             await logSyncError(
                 rpc: "syncAfterLogin",
                 dealerId: dealerId,
@@ -320,6 +412,7 @@ final class CloudSyncManager: ObservableObject {
 
             guard hasChanges else {
                 setLastSyncTimestamp(syncMarker, for: dealerId)
+                clearLastSyncFailure(for: dealerId)
                 lastSyncAt = lastSyncTimestamp(for: dealerId)
                 return
             }
@@ -374,6 +467,7 @@ final class CloudSyncManager: ObservableObject {
 
             // 3. Update timestamp
             setLastSyncTimestamp(syncMarker, for: dealerId)
+            clearLastSyncFailure(for: dealerId)
             lastSyncAt = lastSyncTimestamp(for: dealerId)
 
             // 4. Download images in background (non-blocking)
@@ -384,6 +478,7 @@ final class CloudSyncManager: ObservableObject {
         } catch {
             if !(error is CancellationError) {
                 print("CloudSyncManager manualSync error: \(error)")
+                setLastSyncFailure(error.localizedDescription, for: dealerId)
                 await logSyncError(
                     rpc: "manualSync",
                     dealerId: dealerId,
@@ -412,6 +507,8 @@ final class CloudSyncManager: ObservableObject {
     func resetSyncState() {
         if let dealerId = CloudSyncEnvironment.currentDealerId {
             clearLastSyncTimestamp(for: dealerId)
+            clearLastPushTimestamp(for: dealerId)
+            clearLastSyncFailure(for: dealerId)
         }
         lastSyncAt = nil
         syncHUDState = nil
@@ -431,6 +528,7 @@ final class CloudSyncManager: ObservableObject {
     func runDiagnostics(dealerId: UUID) async -> SyncDiagnosticsReport {
         let queueItems = await SyncQueueManager.shared.getAllItems().filter { $0.dealerId == dealerId }
         let queueSummary = summarizeQueue(items: queueItems)
+        let queueSnapshot = Self.queueSnapshot(from: queueItems)
 
         let localCounts: [SyncEntityType: Int] = await context.perform { [context] in
             func count(_ entityName: String) -> Int {
@@ -490,6 +588,12 @@ final class CloudSyncManager: ObservableObject {
             remoteFetchError = error.localizedDescription
         }
 
+        let issue = Self.diagnosticsIssue(
+            storedMessage: lastSyncFailureMessage(for: dealerId),
+            storedAt: lastSyncFailureTimestamp(for: dealerId),
+            queue: queueSnapshot
+        )
+
         let entityCounts = SyncEntityType.allCases.map { entity in
             SyncEntityCount(
                 entity: entity,
@@ -501,8 +605,18 @@ final class CloudSyncManager: ObservableObject {
         return SyncDiagnosticsReport(
             generatedAt: Date(),
             lastSyncAt: lastSyncAt,
+            lastPushAt: lastPushTimestamp(for: dealerId),
+            lastFailureAt: issue?.at,
+            lastFailureMessage: issue?.message,
             isSyncing: isSyncing,
-            offlineQueueCount: queueItems.count,
+            health: Self.diagnosticsHealthStatus(
+                lastSyncAt: lastSyncAt,
+                remoteFetchError: remoteFetchError,
+                issue: issue,
+                queue: queueSnapshot
+            ),
+            offlineQueueCount: queueSnapshot.totalCount,
+            queueSnapshot: queueSnapshot,
             offlineQueueSummary: queueSummary,
             entityCounts: entityCounts,
             remoteFetchError: remoteFetchError
@@ -511,6 +625,18 @@ final class CloudSyncManager: ObservableObject {
 
     private func syncKey(for dealerId: UUID) -> String {
         "\(Self.syncTimestampPrefix)\(dealerId.uuidString)"
+    }
+
+    private func pushKey(for dealerId: UUID) -> String {
+        "\(Self.pushTimestampPrefix)\(dealerId.uuidString)"
+    }
+
+    private func failureTimestampKey(for dealerId: UUID) -> String {
+        "\(Self.syncFailureTimestampPrefix)\(dealerId.uuidString)"
+    }
+
+    private func failureMessageKey(for dealerId: UUID) -> String {
+        "\(Self.syncFailureMessagePrefix)\(dealerId.uuidString)"
     }
 
     private func resolveSyncTimestamp(_ snapshot: RemoteSnapshot) -> Date {
@@ -529,9 +655,97 @@ final class CloudSyncManager: ObservableObject {
         UserDefaults.standard.removeObject(forKey: syncKey(for: dealerId))
     }
 
+    private func lastPushTimestamp(for dealerId: UUID) -> Date? {
+        UserDefaults.standard.object(forKey: pushKey(for: dealerId)) as? Date
+    }
+
+    private func setLastPushTimestamp(_ date: Date?, for dealerId: UUID) {
+        UserDefaults.standard.set(date, forKey: pushKey(for: dealerId))
+    }
+
+    private func clearLastPushTimestamp(for dealerId: UUID) {
+        UserDefaults.standard.removeObject(forKey: pushKey(for: dealerId))
+    }
+
+    private func lastSyncFailureTimestamp(for dealerId: UUID) -> Date? {
+        UserDefaults.standard.object(forKey: failureTimestampKey(for: dealerId)) as? Date
+    }
+
+    private func lastSyncFailureMessage(for dealerId: UUID) -> String? {
+        UserDefaults.standard.string(forKey: failureMessageKey(for: dealerId))
+    }
+
+    private func setLastSyncFailure(_ message: String, at date: Date = Date(), for dealerId: UUID) {
+        UserDefaults.standard.set(date, forKey: failureTimestampKey(for: dealerId))
+        UserDefaults.standard.set(message, forKey: failureMessageKey(for: dealerId))
+    }
+
+    private func clearLastSyncFailure(for dealerId: UUID) {
+        UserDefaults.standard.removeObject(forKey: failureTimestampKey(for: dealerId))
+        UserDefaults.standard.removeObject(forKey: failureMessageKey(for: dealerId))
+    }
+
+    static func nextPushAnchor(current: Date?, candidate: Date?) -> Date? {
+        guard let candidate else { return current }
+        guard let current else { return candidate }
+        return max(current, candidate)
+    }
+
+    static func queueAnchorCandidate(for item: SyncQueueItem) -> Date? {
+        guard item.operation == .upsert else { return nil }
+
+        let decoder = JSONDecoder()
+        switch item.entityType {
+        case .vehicle:
+            return (try? decoder.decode(RemoteVehicle.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .expense:
+            return (try? decoder.decode(RemoteExpense.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .sale:
+            return (try? decoder.decode(RemoteSale.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .client:
+            return (try? decoder.decode(RemoteClient.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .user:
+            return (try? decoder.decode(RemoteDealerUser.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .account:
+            return (try? decoder.decode(RemoteFinancialAccount.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .accountTransaction:
+            return (try? decoder.decode(RemoteAccountTransaction.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .template:
+            return (try? decoder.decode(RemoteExpenseTemplate.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .debt:
+            return (try? decoder.decode(RemoteDebt.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .debtPayment:
+            return (try? decoder.decode(RemoteDebtPayment.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .part:
+            return (try? decoder.decode(RemotePart.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .partBatch:
+            return (try? decoder.decode(RemotePartBatch.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .partSale:
+            return (try? decoder.decode(RemotePartSale.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .partSaleLineItem:
+            return (try? decoder.decode(RemotePartSaleLineItem.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        }
+    }
+
+    private func advanceLastPushTimestamp(_ candidate: Date?, for dealerId: UUID) {
+        let current = lastPushTimestamp(for: dealerId)
+        let next = Self.nextPushAnchor(current: current, candidate: candidate)
+        guard next != current else { return }
+        setLastPushTimestamp(next, for: dealerId)
+    }
+
+    private func processSuccessfulDelivery(anchor candidate: Date?, dealerId: UUID) async {
+        advanceLastPushTimestamp(candidate, for: dealerId)
+        await processOfflineQueue(dealerId: dealerId)
+    }
+
     static func clearAllSyncTimestamps() {
         let defaults = UserDefaults.standard
-        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(syncTimestampPrefix) {
+        for key in defaults.dictionaryRepresentation().keys where
+            key.hasPrefix(syncTimestampPrefix) ||
+            key.hasPrefix(pushTimestampPrefix) ||
+            key.hasPrefix(syncFailureTimestampPrefix) ||
+            key.hasPrefix(syncFailureMessagePrefix) {
             defaults.removeObject(forKey: key)
         }
     }
@@ -576,6 +790,75 @@ final class CloudSyncManager: ObservableObject {
             }
             return a.entity.sortOrder < b.entity.sortOrder
         }
+    }
+
+    static func queueSnapshot(from items: [SyncQueueItem], now: Date = Date()) -> SyncQueueSnapshot {
+        let deadLetterCount = items.filter { $0.deadLetteredAt != nil }.count
+        let readyCount = items.filter { item in
+            guard item.deadLetteredAt == nil else { return false }
+            guard let nextAttemptAt = item.nextAttemptAt else { return true }
+            return nextAttemptAt <= now
+        }.count
+        let waitingItems = items.filter { item in
+            guard item.deadLetteredAt == nil else { return false }
+            guard let nextAttemptAt = item.nextAttemptAt else { return false }
+            return nextAttemptAt > now
+        }
+
+        return SyncQueueSnapshot(
+            totalCount: items.count,
+            readyCount: readyCount,
+            waitingCount: waitingItems.count,
+            deadLetterCount: deadLetterCount,
+            oldestQueuedAt: items.map(\.createdAt).min(),
+            nextRetryAt: waitingItems.compactMap(\.nextAttemptAt).min(),
+            lastDeadLetterAt: items.compactMap(\.deadLetteredAt).max()
+        )
+    }
+
+    static func diagnosticsIssue(
+        storedMessage: String?,
+        storedAt: Date?,
+        queue: SyncQueueSnapshot
+    ) -> SyncDiagnosticsIssue? {
+        if let deadLetteredAt = queue.lastDeadLetterAt,
+           let storedAt {
+            if deadLetteredAt >= storedAt {
+                return SyncDiagnosticsIssue(
+                    message: "Offline queue has dead-letter items that need manual attention.",
+                    at: deadLetteredAt
+                )
+            }
+        } else if let deadLetteredAt = queue.lastDeadLetterAt {
+            return SyncDiagnosticsIssue(
+                message: "Offline queue has dead-letter items that need manual attention.",
+                at: deadLetteredAt
+            )
+        }
+
+        guard let storedMessage else { return nil }
+        return SyncDiagnosticsIssue(message: storedMessage, at: storedAt)
+    }
+
+    static func diagnosticsHealthStatus(
+        lastSyncAt: Date?,
+        remoteFetchError: String?,
+        issue: SyncDiagnosticsIssue?,
+        queue: SyncQueueSnapshot
+    ) -> SyncHealthStatus {
+        if queue.deadLetterCount > 0 {
+            return .blocked
+        }
+        if remoteFetchError != nil || issue != nil {
+            return .degraded
+        }
+        if queue.totalCount > 0 {
+            return .degraded
+        }
+        if lastSyncAt == nil {
+            return .degraded
+        }
+        return .healthy
     }
 
     private func savedLocallySyncFailureMessage(for error: Error) -> String {
@@ -725,13 +1008,10 @@ final class CloudSyncManager: ObservableObject {
     // MARK: - Offline Queue Processing
     
     func processOfflineQueue(dealerId: UUID) async {
-        let items = await SyncQueueManager.shared.getAllItems()
+        let items = await SyncQueueManager.shared.processableItems(for: dealerId)
         guard !items.isEmpty else { return }
         
         for item in items {
-            // Filter by dealerId to prevent cross-user data leaks
-            guard item.dealerId == dealerId else { continue }
-            
             do {
                 switch item.operation {
                 case .upsert:
@@ -739,6 +1019,7 @@ final class CloudSyncManager: ObservableObject {
                 case .delete:
                     try await processDelete(item)
                 }
+                advanceLastPushTimestamp(Self.queueAnchorCandidate(for: item), for: dealerId)
                 await SyncQueueManager.shared.remove(id: item.id)
             } catch {
                 print("Failed to process offline item \(item.id): \(error)")
@@ -781,39 +1062,21 @@ final class CloudSyncManager: ObservableObject {
                     }
                 }()
 
-                let recordId: UUID? = {
-                    let decoder = JSONDecoder()
-                    switch item.operation {
-                    case .delete:
-                        return try? decoder.decode(UUID.self, from: item.payload)
-                    case .upsert:
-                        switch item.entityType {
-                        case .vehicle: return (try? decoder.decode(RemoteVehicle.self, from: item.payload))?.id
-                        case .expense: return (try? decoder.decode(RemoteExpense.self, from: item.payload))?.id
-                        case .sale: return (try? decoder.decode(RemoteSale.self, from: item.payload))?.id
-                        case .client: return (try? decoder.decode(RemoteClient.self, from: item.payload))?.id
-                        case .user: return (try? decoder.decode(RemoteDealerUser.self, from: item.payload))?.id
-                        case .account: return (try? decoder.decode(RemoteFinancialAccount.self, from: item.payload))?.id
-                        case .accountTransaction: return (try? decoder.decode(RemoteAccountTransaction.self, from: item.payload))?.id
-                        case .template: return (try? decoder.decode(RemoteExpenseTemplate.self, from: item.payload))?.id
-                        case .debt: return (try? decoder.decode(RemoteDebt.self, from: item.payload))?.id
-                        case .debtPayment: return (try? decoder.decode(RemoteDebtPayment.self, from: item.payload))?.id
-                        case .part: return (try? decoder.decode(RemotePart.self, from: item.payload))?.id
-                        case .partBatch: return (try? decoder.decode(RemotePartBatch.self, from: item.payload))?.id
-                        case .partSale: return (try? decoder.decode(RemotePartSale.self, from: item.payload))?.id
-                        case .partSaleLineItem: return (try? decoder.decode(RemotePartSaleLineItem.self, from: item.payload))?.id
-                        }
-                    }
-                }()
+                let updatedQueueItem = await SyncQueueManager.shared.markFailure(
+                    id: item.id,
+                    errorDescription: error.localizedDescription
+                )
 
                 await logSyncError(
                     rpc: rpcName,
                     dealerId: dealerId,
                     entityType: item.entityType,
-                    payloadId: recordId,
+                    payloadId: item.resolvedRecordId,
                     extraContext: [
                         "offline_queue_item_id": item.id.uuidString,
-                        "operation": item.operation.rawValue
+                        "operation": item.operation.rawValue,
+                        "retry_count": String(updatedQueueItem?.retryCount ?? item.retryCount),
+                        "dead_lettered": String(updatedQueueItem?.deadLetteredAt != nil)
                     ],
                     error: error
                 )
@@ -967,7 +1230,20 @@ final class CloudSyncManager: ObservableObject {
 
     private func enqueueDelete(_ entity: SyncEntityType, id: UUID, dealerId: UUID) async {
         if let data = try? JSONEncoder().encode(id) {
-            let item = SyncQueueItem(entityType: entity, operation: .delete, payload: data, dealerId: dealerId)
+            let item = SyncQueueItem(entityType: entity, operation: .delete, payload: data, dealerId: dealerId, recordId: id)
+            await SyncQueueManager.shared.enqueue(item: item)
+        }
+    }
+
+    private func enqueueUpsertPayload<T: Encodable>(_ payload: T, entityType: SyncEntityType, recordId: UUID, dealerId: UUID) async {
+        if let data = try? JSONEncoder().encode(payload) {
+            let item = SyncQueueItem(
+                entityType: entityType,
+                operation: .upsert,
+                payload: data,
+                dealerId: dealerId,
+                recordId: recordId
+            )
             await SyncQueueManager.shared.enqueue(item: item)
         }
     }
@@ -1035,7 +1311,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_vehicles", params: SyncPayload<RemoteVehicle>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertVehicle error: \(error)")
                 await logSyncError(
@@ -1046,10 +1322,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .vehicle, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .vehicle, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1075,7 +1348,7 @@ final class CloudSyncManager: ObservableObject {
             // Let's just let the sync loop handle physical deletion, or do it here if we have context.
             // For now, just send to server.
             
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteVehicle error: \(error)")
             await logSyncError(
@@ -1087,10 +1360,7 @@ final class CloudSyncManager: ObservableObject {
                 error: error
             )
             showError("Deleted locally. Will sync when online.")
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .vehicle, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .vehicle, recordId: remote.id, dealerId: dealerId)
         }
     }
     
@@ -1098,6 +1368,7 @@ final class CloudSyncManager: ObservableObject {
     func deleteVehicle(id: UUID, dealerId: UUID) async {
         do {
             try await deleteEntityById(id, dealerId: dealerId, entity: .vehicle)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteVehicle(id:) error: \(error)")
             await logSyncError(
@@ -1120,7 +1391,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_expenses", params: SyncPayload<RemoteExpense>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertExpense error: \(error)")
                 await logSyncError(
@@ -1131,10 +1402,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .expense, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .expense, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1148,7 +1416,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_templates", params: SyncPayload<RemoteExpenseTemplate>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_templates",
@@ -1158,10 +1426,7 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .template, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .template, recordId: remote.id, dealerId: dealerId)
         }
     }
     
@@ -1174,7 +1439,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_expenses", params: SyncPayload<RemoteExpense>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_expenses",
@@ -1184,16 +1449,14 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .expense, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .expense, recordId: remote.id, dealerId: dealerId)
         }
     }
     
     func deleteExpense(id: UUID, dealerId: UUID) async {
          do {
              try await deleteEntityById(id, dealerId: dealerId, entity: .expense)
+             await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
          } catch {
              print("CloudSyncManager deleteExpense(id:) error: \(error)")
              await logSyncError(
@@ -1216,7 +1479,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_sales", params: SyncPayload<RemoteSale>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertSale error: \(error)")
                 await logSyncError(
@@ -1227,10 +1490,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .sale, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .sale, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1244,7 +1504,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_sales", params: SyncPayload<RemoteSale>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_sales",
@@ -1254,16 +1514,14 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .sale, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .sale, recordId: remote.id, dealerId: dealerId)
         }
     }
     
     func deleteSale(id: UUID, dealerId: UUID) async {
         do {
             try await deleteEntityById(id, dealerId: dealerId, entity: .sale)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteSale(id:) error: \(error)")
             await logSyncError(
@@ -1285,7 +1543,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_parts", params: SyncPayload<RemotePart>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertPart error: \(error)")
                 await logSyncError(
@@ -1296,10 +1554,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .part, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .part, recordId: remote.id, dealerId: dealerId)
             }
     }
 
@@ -1312,7 +1567,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_parts", params: SyncPayload<RemotePart>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_parts",
@@ -1322,10 +1577,7 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .part, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .part, recordId: remote.id, dealerId: dealerId)
         }
     }
 
@@ -1336,7 +1588,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_part_batches", params: SyncPayload<RemotePartBatch>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertPartBatch error: \(error)")
                 await logSyncError(
@@ -1347,10 +1599,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .partBatch, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .partBatch, recordId: remote.id, dealerId: dealerId)
             }
     }
 
@@ -1363,7 +1612,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_part_batches", params: SyncPayload<RemotePartBatch>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_part_batches",
@@ -1373,10 +1622,7 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .partBatch, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .partBatch, recordId: remote.id, dealerId: dealerId)
         }
     }
 
@@ -1388,7 +1634,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_part_sales", params: SyncPayload<RemotePartSale>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertPartSale error: \(error)")
                 await logSyncError(
@@ -1399,10 +1645,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .partSale, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .partSale, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1430,7 +1673,10 @@ final class CloudSyncManager: ObservableObject {
                     .rpc("sync_part_sale_line_items", params: SyncPayload<RemotePartSaleLineItem>(payload: itemPayload))
                     .execute()
             }
-            await processOfflineQueue(dealerId: dealerId)
+            let anchor = ([Self.pushAnchorCandidate(for: remote)] + itemPayload.map { Self.pushAnchorCandidate(for: $0) })
+                .compactMap { $0 }
+                .max()
+            await processSuccessfulDelivery(anchor: anchor, dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_part_sales",
@@ -1440,16 +1686,10 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .partSale, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .partSale, recordId: remote.id, dealerId: dealerId)
             if !itemPayload.isEmpty {
                 for payload in itemPayload {
-                    if let data = try? JSONEncoder().encode(payload) {
-                        let item = SyncQueueItem(entityType: .partSaleLineItem, operation: .upsert, payload: data, dealerId: dealerId)
-                        await SyncQueueManager.shared.enqueue(item: item)
-                    }
+                    await enqueueUpsertPayload(payload, entityType: .partSaleLineItem, recordId: payload.id, dealerId: dealerId)
                 }
             }
         }
@@ -1458,6 +1698,7 @@ final class CloudSyncManager: ObservableObject {
     func deletePartSale(id: UUID, dealerId: UUID) async {
         do {
             try await deleteEntityById(id, dealerId: dealerId, entity: .partSale)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deletePartSale(id:) error: \(error)")
             await logSyncError(
@@ -1480,7 +1721,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_part_sale_line_items", params: SyncPayload<RemotePartSaleLineItem>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertPartSaleLineItem error: \(error)")
                 await logSyncError(
@@ -1491,10 +1732,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .partSaleLineItem, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .partSaleLineItem, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1508,7 +1746,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_part_sale_line_items", params: SyncPayload<RemotePartSaleLineItem>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_part_sale_line_items",
@@ -1518,10 +1756,7 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .partSaleLineItem, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .partSaleLineItem, recordId: remote.id, dealerId: dealerId)
         }
     }
 
@@ -1533,7 +1768,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_debts", params: SyncPayload<RemoteDebt>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertDebt error: \(error)")
                 await logSyncError(
@@ -1544,10 +1779,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .debt, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .debt, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1561,7 +1793,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_debts", params: SyncPayload<RemoteDebt>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_debts",
@@ -1571,16 +1803,14 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .debt, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .debt, recordId: remote.id, dealerId: dealerId)
         }
     }
 
     func deleteDebt(id: UUID, dealerId: UUID) async {
         do {
             try await deleteEntityById(id, dealerId: dealerId, entity: .debt)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteDebt(id:) error: \(error)")
             await logSyncError(
@@ -1603,7 +1833,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_debt_payments", params: SyncPayload<RemoteDebtPayment>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertDebtPayment error: \(error)")
                 await logSyncError(
@@ -1614,10 +1844,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .debtPayment, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .debtPayment, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1631,7 +1858,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_debt_payments", params: SyncPayload<RemoteDebtPayment>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_debt_payments",
@@ -1641,16 +1868,14 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .debtPayment, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .debtPayment, recordId: remote.id, dealerId: dealerId)
         }
     }
 
     func deleteDebtPayment(id: UUID, dealerId: UUID) async {
         do {
             try await deleteEntityById(id, dealerId: dealerId, entity: .debtPayment)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteDebtPayment(id:) error: \(error)")
             await logSyncError(
@@ -1697,7 +1922,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_users", params: SyncPayload<RemoteDealerUser>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertUser error: \(error)")
                 await logSyncError(
@@ -1708,10 +1933,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .user, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .user, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1743,7 +1965,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_users", params: SyncPayload<RemoteDealerUser>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_users",
@@ -1753,16 +1975,14 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .user, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .user, recordId: remote.id, dealerId: dealerId)
         }
     }
 
     func deleteUser(id: UUID, dealerId: UUID) async {
         do {
             try await deleteEntityById(id, dealerId: dealerId, entity: .user)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteUser(id:) error: \(error)")
             await logSyncError(
@@ -1785,7 +2005,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_clients", params: SyncPayload<RemoteClient>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertClient error: \(error)")
                 await logSyncError(
@@ -1796,10 +2016,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .client, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .client, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1813,7 +2030,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_accounts", params: SyncPayload<RemoteFinancialAccount>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_accounts",
@@ -1823,10 +2040,7 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .account, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .account, recordId: remote.id, dealerId: dealerId)
         }
     }
 
@@ -1837,7 +2051,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_accounts", params: SyncPayload<RemoteFinancialAccount>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertFinancialAccount error: \(error)")
                 await logSyncError(
@@ -1848,10 +2062,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .account, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .account, recordId: remote.id, dealerId: dealerId)
             }
     }
 
@@ -1863,7 +2074,7 @@ final class CloudSyncManager: ObservableObject {
                 try await writeClient
                     .rpc("sync_account_transactions", params: SyncPayload<RemoteAccountTransaction>(payload: [remote]))
                     .execute()
-                await processOfflineQueue(dealerId: dealerId)
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
             } catch {
                 print("CloudSyncManager upsertAccountTransaction error: \(error)")
                 await logSyncError(
@@ -1874,10 +2085,7 @@ final class CloudSyncManager: ObservableObject {
                     error: error
                 )
                 showError(savedLocallySyncFailureMessage(for: error))
-                if let data = try? JSONEncoder().encode(remote) {
-                    let item = SyncQueueItem(entityType: .accountTransaction, operation: .upsert, payload: data, dealerId: dealerId)
-                    await SyncQueueManager.shared.enqueue(item: item)
-                }
+                await enqueueUpsertPayload(remote, entityType: .accountTransaction, recordId: remote.id, dealerId: dealerId)
             }
         }
     }
@@ -1891,7 +2099,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_account_transactions", params: SyncPayload<RemoteAccountTransaction>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_account_transactions",
@@ -1901,16 +2109,14 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .accountTransaction, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .accountTransaction, recordId: remote.id, dealerId: dealerId)
         }
     }
 
     func deleteAccountTransaction(id: UUID, dealerId: UUID) async {
         do {
             try await deleteEntityById(id, dealerId: dealerId, entity: .accountTransaction)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteAccountTransaction(id:) error: \(error)")
             await logSyncError(
@@ -1934,7 +2140,7 @@ final class CloudSyncManager: ObservableObject {
             try await writeClient
                 .rpc("sync_clients", params: SyncPayload<RemoteClient>(payload: [remote]))
                 .execute()
-            await processOfflineQueue(dealerId: dealerId)
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
         } catch {
             await logSyncError(
                 rpc: "sync_clients",
@@ -1944,16 +2150,14 @@ final class CloudSyncManager: ObservableObject {
                 extraContext: ["operation": "delete"],
                 error: error
             )
-            if let data = try? JSONEncoder().encode(remote) {
-                let item = SyncQueueItem(entityType: .client, operation: .upsert, payload: data, dealerId: dealerId)
-                await SyncQueueManager.shared.enqueue(item: item)
-            }
+            await enqueueUpsertPayload(remote, entityType: .client, recordId: remote.id, dealerId: dealerId)
         }
     }
     
     func deleteClient(id: UUID, dealerId: UUID) async {
         do {
             try await deleteEntityById(id, dealerId: dealerId, entity: .client)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
         } catch {
             print("CloudSyncManager deleteClient(id:) error: \(error)")
             await logSyncError(
@@ -3385,7 +3589,7 @@ final class CloudSyncManager: ObservableObject {
             }
         }
 
-    nonisolated private func ensureCurrentUserExists(context: NSManagedObjectContext, user: Auth.User, dealerId: UUID) {
+    nonisolated private func ensureCurrentUserExists(context: NSManagedObjectContext, user: Auth.User, dealerId: UUID) -> Set<UUID> {
         let request: NSFetchRequest<User> = User.fetchRequest()
         request.predicate = NSPredicate(format: "id == %@", user.id as CVarArg)
         
@@ -3393,6 +3597,7 @@ final class CloudSyncManager: ObservableObject {
             let results = try context.fetch(request)
             let now = Date()
             let localUser = results.first ?? User(context: context)
+            var needsPush = false
             if results.isEmpty {
                 print("CloudSyncManager: Creating missing local User record for \(user.id)")
                 localUser.id = user.id
@@ -3402,6 +3607,7 @@ final class CloudSyncManager: ObservableObject {
                     let prefix = email.components(separatedBy: "@").first ?? "User"
                     localUser.name = prefix.capitalized
                 }
+                needsPush = true
             }
 
             let defaults = UserDefaults.standard
@@ -3429,9 +3635,12 @@ final class CloudSyncManager: ObservableObject {
             }
             if didUpdate {
                 localUser.updatedAt = now
+                needsPush = true
             }
+            return needsPush ? [user.id] : []
         } catch {
              print("Error checking for local user: \(error)")
+             return []
         }
     }
 
@@ -3485,23 +3694,50 @@ final class CloudSyncManager: ObservableObject {
     }
 
     // Push local Core Data state to Supabase so we don't lose offline changes when applying a remote snapshot.
-    nonisolated private func pushLocalChanges(context: NSManagedObjectContext, dealerId: UUID, writeClient: SupabaseClient, skippingVehicleIds: Set<UUID> = []) async throws {
-        let payload = try await context.perform { [self] in
-            // Fetch current local objects
+    nonisolated func prepareLocalPushPayload(
+        context: NSManagedObjectContext,
+        dealerId: UUID,
+        window: LocalPushWindow,
+        skippingVehicleIds: Set<UUID> = []
+    ) async throws -> LocalPushPayload {
+        try await context.perform { [self] in
+            func applyWindow<T: NSManagedObject>(_ request: NSFetchRequest<T>) {
+                guard let changedAfter = window.changedAfter else { return }
+                request.predicate = NSPredicate(
+                    format: "updatedAt > %@ AND updatedAt <= %@",
+                    changedAfter as NSDate,
+                    window.changedBeforeOrAt as NSDate
+                )
+            }
+
             let userRequest: NSFetchRequest<User> = User.fetchRequest()
+            applyWindow(userRequest)
             let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+            applyWindow(accountRequest)
             let accountTransactionRequest: NSFetchRequest<AccountTransaction> = AccountTransaction.fetchRequest()
+            applyWindow(accountTransactionRequest)
             let vehicleRequest: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
+            applyWindow(vehicleRequest)
             let expenseRequest: NSFetchRequest<Expense> = Expense.fetchRequest()
+            applyWindow(expenseRequest)
             let saleRequest: NSFetchRequest<Sale> = Sale.fetchRequest()
+            applyWindow(saleRequest)
             let debtRequest: NSFetchRequest<Debt> = Debt.fetchRequest()
+            applyWindow(debtRequest)
             let debtPaymentRequest: NSFetchRequest<DebtPayment> = DebtPayment.fetchRequest()
+            applyWindow(debtPaymentRequest)
             let clientRequest: NSFetchRequest<Client> = Client.fetchRequest()
+            applyWindow(clientRequest)
             let templateRequest: NSFetchRequest<ExpenseTemplate> = ExpenseTemplate.fetchRequest()
+            applyWindow(templateRequest)
             let partRequest: NSFetchRequest<Part> = Part.fetchRequest()
+            applyWindow(partRequest)
             let partBatchRequest: NSFetchRequest<PartBatch> = PartBatch.fetchRequest()
+            applyWindow(partBatchRequest)
             let partSaleRequest: NSFetchRequest<PartSale> = PartSale.fetchRequest()
+            applyWindow(partSaleRequest)
             let partSaleLineItemRequest: NSFetchRequest<PartSaleLineItem> = PartSaleLineItem.fetchRequest()
+            applyWindow(partSaleLineItemRequest)
 
             let users = try context.fetch(userRequest)
             let accounts = try context.fetch(accountRequest)
@@ -3538,7 +3774,6 @@ final class CloudSyncManager: ObservableObject {
             let partSales = try context.fetch(partSaleRequest)
             let partSaleLineItems = try context.fetch(partSaleLineItemRequest)
 
-            // Map to remote models
             let remoteUsers: [RemoteDealerUser] = users.compactMap { user -> RemoteDealerUser? in
                 guard let id = user.id else { return nil }
                 return RemoteDealerUser(
@@ -3556,13 +3791,10 @@ final class CloudSyncManager: ObservableObject {
                 )
             }
 
-            // Deduplicate accounts by type (case-insensitive) before pushing
-            // Keep only one account per type - prefer the one with balance, then newest
             var accountsByType: [String: FinancialAccount] = [:]
             for account in accounts {
                 let normalizedType = (account.accountType ?? "").lowercased()
                 if let existing = accountsByType[normalizedType] {
-                    // Compare to decide which to keep
                     let existingBalance = abs(existing.balance?.decimalValue ?? 0)
                     let newBalance = abs(account.balance?.decimalValue ?? 0)
                     if newBalance > existingBalance ||
@@ -3574,78 +3806,44 @@ final class CloudSyncManager: ObservableObject {
                 }
             }
 
-            let remoteAccounts: [RemoteFinancialAccount] = accountsByType.values.compactMap { account in
-                self.makeRemoteFinancialAccount(from: account, dealerId: dealerId)
-            }
-
-            let remoteAccountTransactions: [RemoteAccountTransaction] = accountTransactions.compactMap { transaction in
-                self.makeRemoteAccountTransaction(from: transaction, dealerId: dealerId)
-            }
-
-            let remoteVehicles: [RemoteVehicle] = vehicles.compactMap { vehicle in
-                self.makeRemoteVehicle(from: vehicle, dealerId: dealerId)
-            }
-
-            let remoteExpenses: [RemoteExpense] = expenses.compactMap { expense in
-                self.makeRemoteExpense(from: expense, dealerId: dealerId)
-            }
-
-            let remoteSales: [RemoteSale] = sales.compactMap { sale in
-                self.makeRemoteSale(from: sale, dealerId: dealerId)
-            }
-
-            let remoteDebts: [RemoteDebt] = debts.compactMap { debt in
-                self.makeRemoteDebt(from: debt, dealerId: dealerId)
-            }
-
-            let remoteDebtPayments: [RemoteDebtPayment] = debtPayments.compactMap { payment in
-                self.makeRemoteDebtPayment(from: payment, dealerId: dealerId)
-            }
-
-            let remoteClients: [RemoteClient] = clients.compactMap { client in
-                self.makeRemoteClient(from: client, dealerId: dealerId)
-            }
-
-            let remoteTemplates: [RemoteExpenseTemplate] = templates.compactMap { template in
-                self.makeRemoteTemplate(from: template, dealerId: dealerId)
-            }
-
-            let remoteParts: [RemotePart] = parts.compactMap { part in
-                self.makeRemotePart(from: part, dealerId: dealerId)
-            }
-
-            let remotePartBatches: [RemotePartBatch] = partBatches.compactMap { batch in
-                self.makeRemotePartBatch(from: batch, dealerId: dealerId)
-            }
-
-            let remotePartSales: [RemotePartSale] = partSales.compactMap { sale in
-                self.makeRemotePartSale(from: sale, dealerId: dealerId)
-            }
-
-            let remotePartSaleLineItems: [RemotePartSaleLineItem] = partSaleLineItems.compactMap { item in
-                self.makeRemotePartSaleLineItem(from: item, dealerId: dealerId)
-            }
-
-            return (
+            return LocalPushPayload(
                 users: remoteUsers,
-                accounts: remoteAccounts,
-                accountTransactions: remoteAccountTransactions,
-                vehicles: remoteVehicles,
-                expenses: remoteExpenses,
-                sales: remoteSales,
-                debts: remoteDebts,
-                debtPayments: remoteDebtPayments,
-                clients: remoteClients,
-                templates: remoteTemplates,
-                parts: remoteParts,
-                partBatches: remotePartBatches,
-                partSales: remotePartSales,
-                partSaleLineItems: remotePartSaleLineItems
+                accounts: accountsByType.values.compactMap { self.makeRemoteFinancialAccount(from: $0, dealerId: dealerId) },
+                accountTransactions: accountTransactions.compactMap { self.makeRemoteAccountTransaction(from: $0, dealerId: dealerId) },
+                vehicles: vehicles.compactMap { self.makeRemoteVehicle(from: $0, dealerId: dealerId) },
+                expenses: expenses.compactMap { self.makeRemoteExpense(from: $0, dealerId: dealerId) },
+                sales: sales.compactMap { self.makeRemoteSale(from: $0, dealerId: dealerId) },
+                debts: debts.compactMap { self.makeRemoteDebt(from: $0, dealerId: dealerId) },
+                debtPayments: debtPayments.compactMap { self.makeRemoteDebtPayment(from: $0, dealerId: dealerId) },
+                clients: clients.compactMap { self.makeRemoteClient(from: $0, dealerId: dealerId) },
+                templates: templates.compactMap { self.makeRemoteTemplate(from: $0, dealerId: dealerId) },
+                parts: parts.compactMap { self.makeRemotePart(from: $0, dealerId: dealerId) },
+                partBatches: partBatches.compactMap { self.makeRemotePartBatch(from: $0, dealerId: dealerId) },
+                partSales: partSales.compactMap { self.makeRemotePartSale(from: $0, dealerId: dealerId) },
+                partSaleLineItems: partSaleLineItems.compactMap { self.makeRemotePartSaleLineItem(from: $0, dealerId: dealerId) }
             )
         }
+    }
 
-        // Push to Supabase. If any of these throws, we fail the sync rather than wiping local data.
-        // Push to Supabase using RPCs to handle upserts on views
+    nonisolated private func pushLocalChanges(
+        context: NSManagedObjectContext,
+        dealerId: UUID,
+        writeClient: SupabaseClient,
+        window: LocalPushWindow,
+        skippingVehicleIds: Set<UUID> = []
+    ) async throws {
+        let payload = try await prepareLocalPushPayload(
+            context: context,
+            dealerId: dealerId,
+            window: window,
+            skippingVehicleIds: skippingVehicleIds
+        )
+        try await pushPreparedLocalPayload(payload, writeClient: writeClient)
+    }
+
+    nonisolated private func pushPreparedLocalPayload(_ payload: LocalPushPayload, writeClient: SupabaseClient) async throws {
+        guard !payload.isEmpty else { return }
+
         if !payload.users.isEmpty {
             try await writeClient
                 .rpc("sync_users", params: SyncPayload<RemoteDealerUser>(payload: payload.users))
@@ -3750,6 +3948,40 @@ final class CloudSyncManager: ObservableObject {
             .execute()
     }
 
+    nonisolated private func pushUserUpdates(
+        userIds: Set<UUID>,
+        context: NSManagedObjectContext,
+        dealerId: UUID,
+        writeClient: SupabaseClient
+    ) async throws {
+        guard !userIds.isEmpty else { return }
+        let payload = try await context.perform {
+            let request: NSFetchRequest<User> = User.fetchRequest()
+            request.predicate = NSPredicate(format: "id IN %@", Array(userIds))
+            let users = try context.fetch(request)
+            return users.compactMap { user -> RemoteDealerUser? in
+                guard let id = user.id else { return nil }
+                return RemoteDealerUser(
+                    id: id,
+                    dealerId: dealerId,
+                    name: user.name ?? "",
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    phone: user.phone,
+                    avatarURL: user.avatarUrl,
+                    createdAt: CloudSyncManager.formatDateAndTime(user.createdAt ?? Date()),
+                    updatedAt: CloudSyncManager.formatDateAndTime(user.updatedAt ?? Date()),
+                    deletedAt: user.deletedAt.map { CloudSyncManager.formatDateAndTime($0) }
+                )
+            }
+        }
+        guard !payload.isEmpty else { return }
+        try await writeClient
+            .rpc("sync_users", params: SyncPayload<RemoteDealerUser>(payload: payload))
+            .execute()
+    }
+
     nonisolated private func makeRemoteFinancialAccount(from account: FinancialAccount, dealerId: UUID) -> RemoteFinancialAccount? {
         guard let id = account.id else { return nil }
         let balanceDecimal = account.balance?.decimalValue ?? 0
@@ -3804,6 +4036,14 @@ final class CloudSyncManager: ObservableObject {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f.string(from: date)
+    }
+
+    nonisolated private static func pushAnchorCandidate<T: PushAnchorTimestamped>(for remote: T) -> Date? {
+        remote.updatedAt
+    }
+
+    nonisolated private static func pushAnchorCandidate(for remote: RemoteDealerUser) -> Date? {
+        parseDateAndTime(remote.updatedAt)
     }
 
     nonisolated private static func parseDateAndTime(_ string: String) -> Date? {
@@ -4327,15 +4567,116 @@ struct SyncEntityCount: Identifiable {
     }
 }
 
+enum SyncHealthStatus: String, Equatable {
+    case healthy
+    case degraded
+    case blocked
+
+    var displayName: String {
+        switch self {
+        case .healthy: return "Healthy"
+        case .degraded: return "Degraded"
+        case .blocked: return "Blocked"
+        }
+    }
+}
+
+struct SyncDiagnosticsIssue: Equatable {
+    let message: String
+    let at: Date?
+}
+
+struct SyncQueueSnapshot: Equatable {
+    let totalCount: Int
+    let readyCount: Int
+    let waitingCount: Int
+    let deadLetterCount: Int
+    let oldestQueuedAt: Date?
+    let nextRetryAt: Date?
+    let lastDeadLetterAt: Date?
+}
+
 struct SyncDiagnosticsReport: Identifiable {
     let id = UUID()
     let generatedAt: Date
     let lastSyncAt: Date?
+    let lastPushAt: Date?
+    let lastFailureAt: Date?
+    let lastFailureMessage: String?
     let isSyncing: Bool
+    let health: SyncHealthStatus
     let offlineQueueCount: Int
+    let queueSnapshot: SyncQueueSnapshot
     let offlineQueueSummary: [SyncQueueSummaryItem]
     let entityCounts: [SyncEntityCount]
     let remoteFetchError: String?
+}
+
+struct SyncDiagnosticsExportContext {
+    let dealerId: UUID
+    let isConnected: Bool
+    let deviceName: String
+    let systemVersion: String
+    let appVersion: String
+}
+
+extension SyncDiagnosticsReport {
+    func exportText(context: SyncDiagnosticsExportContext) -> String {
+        var lines: [String] = [
+            "SYNC DIAGNOSTICS REPORT",
+            "Generated: \(Self.exportDateString(generatedAt))",
+            "Dealer: \(context.dealerId.uuidString)",
+            "Device: \(context.deviceName)",
+            "System: iOS \(context.systemVersion)",
+            "App Version: \(context.appVersion)",
+            "Network: \(context.isConnected ? "Online" : "Offline")",
+            "Health: \(health.displayName)",
+            "Last Sync: \(Self.exportDateString(lastSyncAt))",
+            "Last Push: \(Self.exportDateString(lastPushAt))",
+            "Last Failure: \(Self.exportDateString(lastFailureAt))",
+            "Queue Total: \(queueSnapshot.totalCount)",
+            "Queue Ready: \(queueSnapshot.readyCount)",
+            "Queue Waiting: \(queueSnapshot.waitingCount)",
+            "Queue Dead Letters: \(queueSnapshot.deadLetterCount)",
+            "Oldest Queued: \(Self.exportDateString(queueSnapshot.oldestQueuedAt))",
+            "Next Retry: \(Self.exportDateString(queueSnapshot.nextRetryAt))"
+        ]
+
+        if let lastFailureMessage, !lastFailureMessage.isEmpty {
+            lines.append("Last Issue: \(lastFailureMessage)")
+        }
+
+        if let remoteFetchError, !remoteFetchError.isEmpty {
+            lines.append("Remote Fetch Error: \(remoteFetchError)")
+        }
+
+        if !offlineQueueSummary.isEmpty {
+            lines.append("")
+            lines.append("QUEUE SUMMARY")
+            lines.append(contentsOf: offlineQueueSummary.map { item in
+                "- \(item.entity.displayName): \(item.operation.displayName) x\(item.count)"
+            })
+        }
+
+        if !entityCounts.isEmpty {
+            lines.append("")
+            lines.append("ENTITY COUNTS")
+            lines.append(contentsOf: entityCounts.map { item in
+                let remoteText = item.remoteCount.map(String.init) ?? "—"
+                let deltaText = item.delta.map(String.init) ?? "—"
+                return "- \(item.entity.displayName): local \(item.localCount), remote \(remoteText), delta \(deltaText)"
+            })
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private static func exportDateString(_ date: Date?) -> String {
+        guard let date else { return "Never" }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter.string(from: date)
+    }
 }
 
 struct SyncQueueItem: Codable, Identifiable {
@@ -4344,56 +4685,134 @@ struct SyncQueueItem: Codable, Identifiable {
     let operation: SyncOperationType
     let payload: Data // JSON data of the entity
     let dealerId: UUID
+    let recordId: UUID?
     var retryCount: Int
     let createdAt: Date
+    var lastAttemptAt: Date?
+    var nextAttemptAt: Date?
+    var lastErrorDescription: String?
+    var deadLetteredAt: Date?
     
-    init(id: UUID = UUID(), entityType: SyncEntityType, operation: SyncOperationType, payload: Data, dealerId: UUID) {
+    init(
+        id: UUID = UUID(),
+        entityType: SyncEntityType,
+        operation: SyncOperationType,
+        payload: Data,
+        dealerId: UUID,
+        recordId: UUID? = nil,
+        retryCount: Int = 0,
+        createdAt: Date = Date(),
+        lastAttemptAt: Date? = nil,
+        nextAttemptAt: Date? = nil,
+        lastErrorDescription: String? = nil,
+        deadLetteredAt: Date? = nil
+    ) {
         self.id = id
         self.entityType = entityType
         self.operation = operation
         self.payload = payload
         self.dealerId = dealerId
-        self.retryCount = 0
-        self.createdAt = Date()
+        self.recordId = recordId
+        self.retryCount = retryCount
+        self.createdAt = createdAt
+        self.lastAttemptAt = lastAttemptAt
+        self.nextAttemptAt = nextAttemptAt
+        self.lastErrorDescription = lastErrorDescription
+        self.deadLetteredAt = deadLetteredAt
+    }
+}
+
+private extension SyncQueueItem {
+    var resolvedRecordId: UUID? {
+        if let recordId {
+            return recordId
+        }
+
+        let decoder = JSONDecoder()
+        switch operation {
+        case .delete:
+            return try? decoder.decode(UUID.self, from: payload)
+        case .upsert:
+            switch entityType {
+            case .vehicle: return (try? decoder.decode(RemoteVehicle.self, from: payload))?.id
+            case .expense: return (try? decoder.decode(RemoteExpense.self, from: payload))?.id
+            case .sale: return (try? decoder.decode(RemoteSale.self, from: payload))?.id
+            case .client: return (try? decoder.decode(RemoteClient.self, from: payload))?.id
+            case .user: return (try? decoder.decode(RemoteDealerUser.self, from: payload))?.id
+            case .account: return (try? decoder.decode(RemoteFinancialAccount.self, from: payload))?.id
+            case .accountTransaction: return (try? decoder.decode(RemoteAccountTransaction.self, from: payload))?.id
+            case .template: return (try? decoder.decode(RemoteExpenseTemplate.self, from: payload))?.id
+            case .debt: return (try? decoder.decode(RemoteDebt.self, from: payload))?.id
+            case .debtPayment: return (try? decoder.decode(RemoteDebtPayment.self, from: payload))?.id
+            case .part: return (try? decoder.decode(RemotePart.self, from: payload))?.id
+            case .partBatch: return (try? decoder.decode(RemotePartBatch.self, from: payload))?.id
+            case .partSale: return (try? decoder.decode(RemotePartSale.self, from: payload))?.id
+            case .partSaleLineItem: return (try? decoder.decode(RemotePartSaleLineItem.self, from: payload))?.id
+            }
+        }
     }
 }
 
 actor SyncQueueManager {
     static let shared = SyncQueueManager()
+    static let maxRetryCount = 6
     
-    private let queueFileName = "sync_queue.json"
+    private let queueFileURL: URL?
     private var items: [SyncQueueItem] = []
+    private var hasLoaded = false
     
-    init() {
-        Task {
-            await loadQueue()
-        }
+    init(queueFileURL: URL? = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("sync_queue.json")) {
+        self.queueFileURL = queueFileURL
     }
     
-    private var queueFileURL: URL? {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent(queueFileName)
-    }
-    
-    private func loadQueue() async {
+    private func ensureLoaded() {
+        guard !hasLoaded else { return }
+        hasLoaded = true
         guard let url = queueFileURL, let data = try? Data(contentsOf: url) else { return }
         if let loaded = try? JSONDecoder().decode([SyncQueueItem].self, from: data) {
             self.items = loaded
+            return
         }
+        items = []
+        quarantineCorruptedQueue(data: data, originalURL: url)
+    }
+
+    private func quarantineCorruptedQueue(data: Data, originalURL: URL) {
+        let fileName = originalURL.deletingPathExtension().lastPathComponent
+        let corruptedURL = originalURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("\(fileName)-corrupted-\(Int(Date().timeIntervalSince1970)).json")
+        try? data.write(to: corruptedURL, options: .atomic)
+        try? FileManager.default.removeItem(at: originalURL)
     }
     
     private func saveQueue() {
         guard let url = queueFileURL else { return }
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: nil)
+        if items.isEmpty {
+            try? FileManager.default.removeItem(at: url)
+            return
+        }
         if let data = try? JSONEncoder().encode(items) {
-            try? data.write(to: url)
+            try? data.write(to: url, options: .atomic)
         }
     }
     
     func enqueue(item: SyncQueueItem) {
+        ensureLoaded()
+        if let recordId = item.resolvedRecordId {
+            items.removeAll { existing in
+                existing.dealerId == item.dealerId &&
+                existing.entityType == item.entityType &&
+                existing.resolvedRecordId == recordId
+            }
+        }
         items.append(item)
         saveQueue()
     }
     
     func dequeue() -> SyncQueueItem? {
+        ensureLoaded()
         guard !items.isEmpty else { return nil }
         let item = items.removeFirst()
         saveQueue()
@@ -4401,24 +4820,65 @@ actor SyncQueueManager {
     }
     
     func peek() -> SyncQueueItem? {
-        items.first
+        ensureLoaded()
+        return items.first
     }
     
     func remove(id: UUID) {
+        ensureLoaded()
         items.removeAll { $0.id == id }
         saveQueue()
     }
     
     func getAllItems() -> [SyncQueueItem] {
-        items
+        ensureLoaded()
+        return items
     }
     
     func clear() {
+        ensureLoaded()
         items.removeAll()
         saveQueue()
     }
     
     func itemCount() -> Int {
-        items.count
+        ensureLoaded()
+        return items.count
+    }
+
+    func processableItems(for dealerId: UUID, now: Date = Date()) -> [SyncQueueItem] {
+        ensureLoaded()
+        return items.filter { item in
+            guard item.dealerId == dealerId else { return false }
+            guard item.deadLetteredAt == nil else { return false }
+            guard let nextAttemptAt = item.nextAttemptAt else { return true }
+            return nextAttemptAt <= now
+        }
+    }
+
+    func markFailure(id: UUID, errorDescription: String, now: Date = Date()) -> SyncQueueItem? {
+        ensureLoaded()
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return nil }
+
+        items[index].retryCount += 1
+        items[index].lastAttemptAt = now
+        items[index].lastErrorDescription = errorDescription
+
+        if items[index].retryCount >= Self.maxRetryCount {
+            items[index].nextAttemptAt = nil
+            items[index].deadLetteredAt = now
+        } else {
+            items[index].nextAttemptAt = now.addingTimeInterval(Self.retryDelay(forAttempt: items[index].retryCount))
+            items[index].deadLetteredAt = nil
+        }
+
+        saveQueue()
+        return items[index]
+    }
+
+    private static func retryDelay(forAttempt attempt: Int) -> TimeInterval {
+        let baseDelay: TimeInterval = 30
+        let cappedAttempt = max(attempt - 1, 0)
+        return min(baseDelay * pow(2, Double(cappedAttempt)), 6 * 60 * 60)
     }
 }

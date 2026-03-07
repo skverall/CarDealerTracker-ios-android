@@ -78,12 +78,27 @@ final class SessionStore: ObservableObject {
 
     var shouldShowEmailReminderBanner: Bool {
         guard case .signedIn(let user) = status else { return false }
-        if user.emailConfirmedAt != nil || user.confirmedAt != nil {
+        let metadata = user.userMetadata.reduce(into: [String: Any]()) { partialResult, item in
+            partialResult[item.key] = item.value.value
+        }
+        return Self.shouldShowEmailReminderBanner(
+            emailConfirmedAt: user.emailConfirmedAt,
+            confirmedAt: user.confirmedAt,
+            metadata: metadata
+        )
+    }
+
+    static func shouldShowEmailReminderBanner(
+        emailConfirmedAt: Date?,
+        confirmedAt: Date?,
+        metadata: [String: Any]
+    ) -> Bool {
+        if emailConfirmedAt != nil || confirmedAt != nil {
             return false
         }
 
         func metadataValue(_ key: String) -> Any? {
-            user.userMetadata[key]?.value
+            metadata[key]
         }
 
         func boolValue(_ key: String) -> Bool? {

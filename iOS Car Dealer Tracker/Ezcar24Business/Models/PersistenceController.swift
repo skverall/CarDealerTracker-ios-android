@@ -13,7 +13,22 @@ final class PersistenceController: ObservableObject {
     static let shared = PersistenceController()
 
     private static let managedObjectModel: NSManagedObjectModel = {
-        guard let modelURL = Bundle.main.url(forResource: "Ezcar24Business", withExtension: "momd"),
+        let bundles = [Bundle.main] + Bundle.allBundles + Bundle.allFrameworks
+        let directModelURL = bundles
+            .lazy
+            .compactMap { $0.url(forResource: "Ezcar24Business", withExtension: "momd") }
+            .first
+        let siblingModelURL = bundles
+            .lazy
+            .map { $0.bundleURL.deletingLastPathComponent() }
+            .flatMap { root in
+                [
+                    root.appendingPathComponent("Ezcar24Business.momd"),
+                    root.appendingPathComponent("Ezcar24Business.app/Ezcar24Business.momd")
+                ]
+            }
+            .first { FileManager.default.fileExists(atPath: $0.path) }
+        guard let modelURL = directModelURL ?? siblingModelURL,
               let model = NSManagedObjectModel(contentsOf: modelURL) else {
             fatalError("Failed to load Core Data model.")
         }

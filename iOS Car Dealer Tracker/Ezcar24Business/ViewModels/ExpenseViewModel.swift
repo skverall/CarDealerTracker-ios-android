@@ -42,8 +42,18 @@ class ExpenseViewModel: ObservableObject {
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
         // Sorting
         switch sortOption {
-        case .dateDesc:    request.sortDescriptors = [NSSortDescriptor(keyPath: \Expense.date, ascending: false)]
-        case .dateAsc:     request.sortDescriptors = [NSSortDescriptor(keyPath: \Expense.date, ascending: true)]
+        case .dateDesc:
+            request.sortDescriptors = [
+                NSSortDescriptor(keyPath: \Expense.date, ascending: false),
+                NSSortDescriptor(keyPath: \Expense.createdAt, ascending: false),
+                NSSortDescriptor(keyPath: \Expense.updatedAt, ascending: false)
+            ]
+        case .dateAsc:
+            request.sortDescriptors = [
+                NSSortDescriptor(keyPath: \Expense.date, ascending: true),
+                NSSortDescriptor(keyPath: \Expense.createdAt, ascending: true),
+                NSSortDescriptor(keyPath: \Expense.updatedAt, ascending: true)
+            ]
         case .amountDesc:  request.sortDescriptors = [NSSortDescriptor(keyPath: \Expense.amount, ascending: false)]
         case .amountAsc:   request.sortDescriptors = [NSSortDescriptor(keyPath: \Expense.amount, ascending: true)]
         }
