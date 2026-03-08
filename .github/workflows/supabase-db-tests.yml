@@ -13,9 +13,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
+
+      - name: Reset Supabase CLI temp state
+        run: rm -rf supabase/.temp supabase/supabase
 
       - name: Start Supabase
         run: supabase start

@@ -4,3 +4,5 @@ opencode.config.json
 **/*.xcuserstate
 *.bak
 *.bak_*
+supabase/.temp/
+supabase/supabase/
