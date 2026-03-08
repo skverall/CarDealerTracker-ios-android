@@ -21,24 +21,20 @@ BEGIN
         RETURN false;
     END IF;
     
-    -- If the dealer_id matches the user's ID (personal organization case), allow access
-    -- This is the common pattern where user.id == organization.id for personal accounts
-    IF p_dealer_id = v_uid THEN
-        RETURN true;
-    END IF;
-    
-    -- Check via the get_my_organizations RPC pattern
-    -- User has access if they are a member of the organization
+    -- Check direct ownership first.
     RETURN EXISTS (
         SELECT 1 
         FROM public.organizations o
         WHERE o.id = p_dealer_id
-          AND EXISTS (
-              SELECT 1 
-              FROM public.organization_members om
-              WHERE om.organization_id = o.id 
-                AND om.user_id = v_uid
-                AND om.status = 'active'
+          AND (
+              o.owner_id = v_uid
+              OR EXISTS (
+                  SELECT 1
+                  FROM public.dealer_team_members dtm
+                  WHERE dtm.organization_id = o.id
+                    AND dtm.user_id = v_uid
+                    AND dtm.status = 'active'
+              )
           )
     );
 END;

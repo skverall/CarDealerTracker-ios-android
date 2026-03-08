@@ -1,5 +1,7 @@
 CREATE SCHEMA IF NOT EXISTS extensions;
 
+CREATE EXTENSION IF NOT EXISTS moddatetime WITH SCHEMA extensions;
+
 ALTER EXTENSION moddatetime
     SET SCHEMA extensions;
 

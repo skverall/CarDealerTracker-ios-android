@@ -436,122 +436,89 @@ BEGIN
 END;
 $function$;
 
-ALTER FUNCTION public.cleanup_old_application_logs()
-    SET search_path TO public, auth, extensions, pg_temp;
+DO $$
+DECLARE
+    signature text;
+    search_path_signatures text[] := ARRAY[
+        'public.cleanup_old_application_logs()',
+        'public.delete_user_account(uuid)',
+        'public.update_message_reports_updated_at()',
+        'public.get_app_config(text)',
+        'public.generate_report_slug()',
+        'public.log_admin_activity(uuid, text, text, text, jsonb, inet, text)',
+        'public.update_conversation_timestamp()',
+        'public.validate_admin_session(text)',
+        'public.admin_moderate_listing(uuid, uuid, text, text)',
+        'public.ensure_single_cover_image()',
+        'public.is_whitelisted_report_author(uuid)',
+        'public.logout_admin(text)',
+        'public.get_listing_images(uuid)',
+        'public.update_listings_search_vector()',
+        'public.get_admin_dashboard_stats()',
+        'public.clean_expired_admin_sessions()',
+        'public.admin_update_user_profile(uuid, text, text, text, text, boolean)',
+        'public.admin_suspend_user(uuid, boolean, integer)',
+        'public.get_listings_for_admin(integer, integer, text, text, text, text)',
+        'public.get_report_by_slug(text)',
+        'public.get_users_for_admin(integer, integer, text, text, text, text)',
+        'public.update_account_balance()',
+        'public.log_user_activity(uuid, text, uuid, jsonb, inet, text)',
+        'public.admin_get_user_details(uuid)',
+        'public.get_user_activity_logs(uuid, integer, integer)',
+        'public.admin_update_user_profile_with_log(uuid, uuid, text, text, text, text, boolean)',
+        'public.admin_suspend_user_with_log(uuid, uuid, boolean, integer, text)',
+        'public.admin_bulk_suspend_users(uuid[], uuid, boolean, integer, text)',
+        'public.admin_bulk_update_verification(uuid[], uuid, text, text)',
+        'public.admin_delete_listing(uuid, uuid, text)',
+        'public.admin_export_users_data(uuid[], boolean)',
+        'public.get_messages_for_admin(integer, integer, text)'
+    ];
+    legacy_revoke_signatures text[] := ARRAY[
+        'public.cleanup_old_application_logs()',
+        'public.admin_moderate_listing(uuid, uuid, text, text)',
+        'public.get_admin_dashboard_stats()',
+        'public.admin_update_user_profile(uuid, text, text, text, text, boolean)',
+        'public.admin_suspend_user(uuid, boolean, integer)',
+        'public.get_listings_for_admin(integer, integer, text, text, text, text)',
+        'public.get_users_for_admin(integer, integer, text, text, text, text)',
+        'public.log_admin_activity(uuid, text, text, text, jsonb, inet, text)',
+        'public.log_user_activity(uuid, text, uuid, jsonb, inet, text)',
+        'public.admin_get_user_details(uuid)',
+        'public.get_user_activity_logs(uuid, integer, integer)',
+        'public.admin_update_user_profile_with_log(uuid, uuid, text, text, text, text, boolean)',
+        'public.admin_suspend_user_with_log(uuid, uuid, boolean, integer, text)',
+        'public.admin_bulk_suspend_users(uuid[], uuid, boolean, integer, text)',
+        'public.admin_bulk_update_verification(uuid[], uuid, text, text)',
+        'public.admin_delete_listing(uuid, uuid, text)',
+        'public.admin_export_users_data(uuid[], boolean)',
+        'public.get_messages_for_admin(integer, integer, text)'
+    ];
+BEGIN
+    FOREACH signature IN ARRAY search_path_signatures
+    LOOP
+        IF to_regprocedure(signature) IS NOT NULL THEN
+            EXECUTE format(
+                'ALTER FUNCTION %s SET search_path TO public, auth, extensions, pg_temp',
+                signature
+            );
+        END IF;
+    END LOOP;
 
-ALTER FUNCTION public.delete_user_account(uuid)
-    SET search_path TO public, auth, extensions, pg_temp;
+    FOREACH signature IN ARRAY legacy_revoke_signatures
+    LOOP
+        IF to_regprocedure(signature) IS NOT NULL THEN
+            EXECUTE format(
+                'REVOKE EXECUTE ON FUNCTION %s FROM PUBLIC, anon, authenticated',
+                signature
+            );
+        END IF;
+    END LOOP;
 
-ALTER FUNCTION public.update_message_reports_updated_at()
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.get_app_config(text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.generate_report_slug()
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.log_admin_activity(uuid, text, text, text, jsonb, inet, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.update_conversation_timestamp()
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.validate_admin_session(text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_moderate_listing(uuid, uuid, text, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.ensure_single_cover_image()
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.is_whitelisted_report_author(uuid)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.logout_admin(text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.get_listing_images(uuid)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.update_listings_search_vector()
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.get_admin_dashboard_stats()
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.clean_expired_admin_sessions()
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_update_user_profile(uuid, text, text, text, text, boolean)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_suspend_user(uuid, boolean, integer)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.get_listings_for_admin(integer, integer, text, text, text, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.get_report_by_slug(text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.get_users_for_admin(integer, integer, text, text, text, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.update_account_balance()
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.log_user_activity(uuid, text, uuid, jsonb, inet, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_get_user_details(uuid)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.get_user_activity_logs(uuid, integer, integer)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_update_user_profile_with_log(uuid, uuid, text, text, text, text, boolean)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_suspend_user_with_log(uuid, uuid, boolean, integer, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_bulk_suspend_users(uuid[], uuid, boolean, integer, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_bulk_update_verification(uuid[], uuid, text, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_delete_listing(uuid, uuid, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.admin_export_users_data(uuid[], boolean)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-ALTER FUNCTION public.get_messages_for_admin(integer, integer, text)
-    SET search_path TO public, auth, extensions, pg_temp;
-
-REVOKE EXECUTE ON FUNCTION public.cleanup_old_application_logs() FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_moderate_listing(uuid, uuid, text, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.get_admin_dashboard_stats() FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_update_user_profile(uuid, text, text, text, text, boolean) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_suspend_user(uuid, boolean, integer) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.get_listings_for_admin(integer, integer, text, text, text, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.get_users_for_admin(integer, integer, text, text, text, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.log_admin_activity(uuid, text, text, text, jsonb, inet, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.log_user_activity(uuid, text, uuid, jsonb, inet, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_get_user_details(uuid) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.get_user_activity_logs(uuid, integer, integer) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_update_user_profile_with_log(uuid, uuid, text, text, text, text, boolean) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_suspend_user_with_log(uuid, uuid, boolean, integer, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_bulk_suspend_users(uuid[], uuid, boolean, integer, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_bulk_update_verification(uuid[], uuid, text, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_delete_listing(uuid, uuid, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.admin_export_users_data(uuid[], boolean) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.get_messages_for_admin(integer, integer, text) FROM PUBLIC, anon, authenticated;
-REVOKE EXECUTE ON FUNCTION public.delete_user_account(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.delete_user_account(uuid) TO authenticated;
+    IF to_regprocedure('public.delete_user_account(uuid)') IS NOT NULL THEN
+        EXECUTE 'REVOKE EXECUTE ON FUNCTION public.delete_user_account(uuid) FROM PUBLIC, anon';
+        EXECUTE 'GRANT EXECUTE ON FUNCTION public.delete_user_account(uuid) TO authenticated';
+    END IF;
+END $$;
 
 REVOKE EXECUTE ON FUNCTION public.get_admin_dashboard_stats(text) FROM PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.get_users_for_admin(text, integer, integer, text, text, text, text) FROM PUBLIC;
