@@ -9,46 +9,50 @@ struct FinancialCard: View {
     var isCount: Bool = false
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Image(systemName: icon)
-                    .font(.headline)
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(color)
-                    .frame(width: 28, height: 28)
-                    .background(color.opacity(0.1))
+                    .frame(width: 32, height: 32)
+                    .background(color.opacity(0.12))
                     .clipShape(Circle())
                 
                 Spacer()
             }
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.caption2)
+                    .font(.caption.weight(.medium))
                     .foregroundColor(ColorTheme.secondaryText)
                     .lineLimit(1)
                 
                 if isCount {
                     Text("\(NSDecimalNumber(decimal: amount).intValue)")
-                        .font(.subheadline)
+                        .font(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(ColorTheme.primaryText)
-                        .minimumScaleFactor(0.6)
+                        .minimumScaleFactor(0.8)
                         .lineLimit(1)
                 } else {
                     Text(amount.asCurrency())
-                        .font(.subheadline)
+                        .font(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(ColorTheme.primaryText)
-                        .minimumScaleFactor(0.6)
+                        .minimumScaleFactor(0.8)
                         .lineLimit(1)
                 }
             }
         }
-        .padding(12)
+        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.gray.opacity(0.06), lineWidth: 1)
+        )
     }
 }
 
@@ -58,45 +62,50 @@ struct TodayExpenseCard: View {
 
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top) {
                     ZStack {
                         Circle()
-                            .fill(ColorTheme.categoryColor(for: expense.category ?? ""))
-                            .opacity(0.1)
-                            .frame(width: 36, height: 36)
+                            .fill(ColorTheme.categoryColor(for: expense.category ?? "").opacity(0.12))
+                            .frame(width: 44, height: 44)
                         Image(systemName: expense.categoryIcon)
-                            .font(.subheadline)
+                            .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(ColorTheme.categoryColor(for: expense.category ?? ""))
                     }
                     
                     Spacer()
                     
                     Text(expense.timeString)
-                        .font(.caption2)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
+                        .font(.caption2.weight(.medium))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
                         .background(ColorTheme.background)
                         .foregroundColor(ColorTheme.secondaryText)
                         .clipShape(Capsule())
                 }
 
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text(expense.amountDecimal.asCurrency())
-                        .font(.title3.weight(.bold))
+                        .font(.title2.weight(.bold))
                         .foregroundColor(ColorTheme.primaryText)
+                        .minimumScaleFactor(0.8)
+                        .lineLimit(1)
                     
                     Text(expense.vehicleTitle)
-                        .font(.caption)
+                        .font(.subheadline)
                         .foregroundColor(ColorTheme.secondaryText)
                         .lineLimit(1)
                 }
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, minHeight: 130, alignment: .leading)
+            .padding(20)
+            .frame(maxWidth: .infinity, minHeight: 140, alignment: .leading)
             .background(ColorTheme.secondaryBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+            .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.gray.opacity(0.06), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }
@@ -270,9 +279,13 @@ struct SummaryOverviewCard: View {
             }
         }
         .padding(24)
-        .background(ColorTheme.secondaryBackground)
+        .background(ColorTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.gray.opacity(0.06), lineWidth: 1)
+        )
     }
 }
 
@@ -363,10 +376,13 @@ struct ProfitOverviewCard: View {
             }
         }
         .padding(24)
-        .background(ColorTheme.secondaryBackground)
+        .background(ColorTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
-
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.gray.opacity(0.06), lineWidth: 1)
+        )
     }
 }
 
@@ -394,9 +410,13 @@ struct CategoryBreakdownCard: View {
             }
         }
         .padding(24)
-        .background(ColorTheme.secondaryBackground)
+        .background(ColorTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.gray.opacity(0.06), lineWidth: 1)
+        )
     }
 }
 
@@ -449,10 +469,10 @@ struct RecentExpenseRow: View {
         HStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(ColorTheme.categoryColor(for: expense.category ?? "").opacity(0.1))
-                    .frame(width: 48, height: 48)
+                    .fill(ColorTheme.categoryColor(for: expense.category ?? "").opacity(0.12))
+                    .frame(width: 44, height: 44)
                 Image(systemName: expense.categoryIcon)
-                    .font(.headline)
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(ColorTheme.categoryColor(for: expense.category ?? ""))
             }
 
@@ -463,10 +483,14 @@ struct RecentExpenseRow: View {
                     .foregroundColor(ColorTheme.primaryText)
                     .lineLimit(1)
 
-                HStack(spacing: 6) {
-                    Text(expense.vehicleSubtitle)
+                HStack(spacing: 4) {
+                    let subtitle = expense.vehicleSubtitle
+                    Text(subtitle)
                         .lineLimit(1)
-                    Text("•")
+                    if !subtitle.isEmpty {
+                        Text("•")
+                            .opacity(0.5)
+                    }
                     Text(expense.dateString)
                 }
                 .font(.caption)
@@ -479,9 +503,13 @@ struct RecentExpenseRow: View {
                 .font(.headline)
                 .foregroundColor(ColorTheme.primaryText)
         }
-        .padding(16)
+        .padding(14)
         .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.02), radius: 2, x: 0, y: 1)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+        )
     }
 }

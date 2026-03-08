@@ -1245,18 +1245,18 @@ struct DealerExpenseDashboardView: View {
                                 } header: {
                                     HStack {
                                         Text(group.key)
-                                            .font(.subheadline)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(ColorTheme.secondaryText)
+                                            .font(.body)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(ColorTheme.primaryText)
                                         Spacer()
                                         Text(group.subtotal.asCurrency())
-                                            .font(.caption)
-                                            .fontWeight(.medium)
-                                            .foregroundColor(ColorTheme.tertiaryText)
+                                            .font(.subheadline)
+                                            .fontWeight(.bold)
+                                            .foregroundColor(ColorTheme.primary)
                                     }
                                     .padding(.horizontal, 20)
-                                    .padding(.vertical, 8)
-                                    .background(ColorTheme.background.opacity(0.95))
+                                    .padding(.vertical, 12)
+                                    .background(ColorTheme.background)
                                     .listRowInsets(EdgeInsets())
                                 }
                             }
@@ -1305,50 +1305,138 @@ struct DealerExpenseDashboardView: View {
 
 
     private var header: some View {
-
-        VStack(spacing: 16) {
+        VStack(spacing: 20) {
             HStack(alignment: .center) {
                 Text("expenses".localizedString)
-                    .font(.system(size: 34, weight: .bold))
+                    .font(.largeTitle.weight(.bold))
                     .foregroundColor(ColorTheme.primaryText)
                 
                 Spacer()
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
             
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("this_week".localizedString)
-                        .font(.subheadline)
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .fontWeight(.medium)
-                    
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(thisWeekTotal.asCurrencyCompact())
-                            .font(.system(size: 32, weight: .bold, design: .rounded))
-                            .foregroundColor(ColorTheme.primaryText)
+            // Premium Hero Card
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        Text("EZCAR24")
+                            .font(.system(size: 18, weight: .heavy, design: .rounded))
+                            .italic()
+                            .foregroundColor(.white.opacity(0.9))
                         
-                        if let delta = weekDeltaPercent {
-                            HStack(spacing: 2) {
-                                Image(systemName: delta > 0 ? "arrow.up.right" : "arrow.down.right")
-                                Text(String(format: "%.0f%%", abs(delta)))
+                        // Credit Card EMV Chip
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [Color(red: 0.9, green: 0.8, blue: 0.6), Color(red: 0.7, green: 0.55, blue: 0.35)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
+                                .shadow(color: .black.opacity(0.2), radius: 3, x: 0, y: 2)
+                            
+                            // Chip circuit lines simulation
+                            VStack(spacing: 5) {
+                                ForEach(0..<3) { _ in
+                                    Divider().background(Color.black.opacity(0.3))
+                                }
                             }
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(delta > 0 ? ColorTheme.danger : ColorTheme.success) // More expenses = danger/bad usually, less = success/good
                             .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                Capsule()
-                                    .fill((delta > 0 ? ColorTheme.danger : ColorTheme.success).opacity(0.1))
-                            )
+                        }
+                        .frame(width: 42, height: 30)
+                    }
+                    
+                    Spacer()
+                    
+                    if let delta = weekDeltaPercent {
+                        HStack(spacing: 4) {
+                            Image(systemName: delta > 0 ? "arrow.up.right" : "arrow.down.right")
+                            Text(String(format: "%.0f%%", abs(delta)))
+                        }
+                        .font(.footnote.weight(.heavy))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    } else {
+                        // Visa/Mastercard style overlapping circles
+                        HStack(spacing: -12) {
+                            Circle().fill(Color.red.opacity(0.8)).frame(width: 28, height: 28)
+                            Circle().fill(Color.orange.opacity(0.8)).frame(width: 28, height: 28)
                         }
                     }
                 }
+                
                 Spacer()
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("this_week".localizedString.uppercased())
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.8))
+                        .tracking(2)
+                        .shadow(color: .black.opacity(0.3), radius: 2)
+                    
+                    Text(thisWeekTotal.asCurrencyCompact())
+                        .font(.system(size: 38, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                }
             }
+            .padding(24)
+            .aspectRatio(1.586, contentMode: .fit)
+            .background(
+                ZStack {
+                    // Base deep obsidian/blue gradient
+                    LinearGradient(
+                        colors: [Color(red: 0.1, green: 0.15, blue: 0.25), Color(red: 0.05, green: 0.08, blue: 0.15)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                    
+                    // Subtle glowing mesh accents
+                    Circle()
+                        .fill(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.3))
+                        .frame(width: 200, height: 200)
+                        .blur(radius: 60)
+                        .offset(x: 120, y: -80)
+                    
+                    Circle()
+                        .fill(Color(red: 0.5, green: 0.2, blue: 0.8).opacity(0.2))
+                        .frame(width: 150, height: 150)
+                        .blur(radius: 50)
+                        .offset(x: -80, y: 80)
+                        
+                    // Watermark / pattern to look physical
+                    Image(systemName: "globe.americas.fill")
+                        .resizable()
+                        .scaledToFit()
+                        .foregroundColor(.white.opacity(0.04))
+                        .scaleEffect(1.6)
+                        .offset(x: 50, y: 40)
+                        .blendMode(.screen)
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: Color.black.opacity(0.25), radius: 15, x: 0, y: 10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(
+                        LinearGradient(
+                            colors: [.white.opacity(0.4), .white.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1
+                    )
+            )
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
         .padding(.bottom, 16)
         .background(ColorTheme.background)
     }
@@ -1425,16 +1513,18 @@ struct DealerExpenseDashboardView: View {
                 .fontWeight(.medium)
             Image(systemName: "chevron.down")
                 .font(.caption2)
+                .opacity(0.8)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(isActive ? ColorTheme.primary.opacity(0.1) : ColorTheme.cardBackground)
-        .foregroundColor(isActive ? ColorTheme.primary : ColorTheme.secondaryText)
+        .background(isActive ? ColorTheme.primary : ColorTheme.cardBackground)
+        .foregroundColor(isActive ? .white : ColorTheme.secondaryText)
         .clipShape(Capsule())
         .overlay(
             Capsule()
-                .strokeBorder(isActive ? ColorTheme.primary : Color.gray.opacity(0.2), lineWidth: 1)
+                .strokeBorder(isActive ? ColorTheme.primary : Color.gray.opacity(0.15), lineWidth: 1)
         )
+        .shadow(color: isActive ? ColorTheme.primary.opacity(0.3) : Color.black.opacity(0.04), radius: 6, x: 0, y: 3)
     }
 
     // MARK: - Compact Expense Row
@@ -1447,53 +1537,60 @@ struct DealerExpenseDashboardView: View {
                 // Icon
                 ZStack {
                     Circle()
-                        .fill(ColorTheme.background)
-                        .frame(width: 36, height: 36) // Reduced size
+                        .fill(ColorTheme.categoryColor(for: expense.category ?? "").opacity(0.12))
+                        .frame(width: 36, height: 36)
                     
                     Image(systemName: iconName(for: expense))
-                        .font(.system(size: 14, weight: .semibold)) // Reduced font
-                        .foregroundColor(ColorTheme.primary)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(ColorTheme.categoryColor(for: expense.category ?? ""))
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(primaryText(for: expense))
-                        .font(.subheadline)
-                        .fontWeight(.medium)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(ColorTheme.primaryText)
                         .lineLimit(1)
                     
-                    Text(subtitleText(for: expense))
-                        .font(.caption)
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .lineLimit(1)
-                    
-                    Text(expenseDisplayDateTime(expense), formatter: dateFormatter)
-                        .font(.caption2)
-                        .foregroundColor(ColorTheme.tertiaryText)
+                    HStack(spacing: 4) {
+                        Text(subtitleText(for: expense))
+                            .lineLimit(1)
+                        if !subtitleText(for: expense).isEmpty {
+                            Text("•")
+                                .opacity(0.5)
+                        }
+                        Text(expenseDisplayDateTime(expense), formatter: dateFormatter)
+                    }
+                    .font(.caption)
+                    .foregroundColor(ColorTheme.secondaryText)
                 }
                 
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text((expense.amount?.decimalValue ?? 0).asCurrency())
-                        .font(.subheadline)
-                        .fontWeight(.bold)
+                        .font(.subheadline.weight(.bold))
                         .foregroundColor(ColorTheme.primaryText)
 
-                    if expense.receiptPath != nil {
-                        Image(systemName: "paperclip")
-                            .font(.caption2)
-                            .foregroundColor(ColorTheme.tertiaryText)
+                    HStack(spacing: 4) {
+                        if expense.receiptPath != nil {
+                            Image(systemName: "paperclip")
+                                .font(.caption2)
+                                .foregroundColor(ColorTheme.secondaryText)
+                        }
+                        CategoryBadge(category: expense.category ?? "")
+                            .scaleEffect(0.8, anchor: .trailing)
                     }
-                    
-                    CategoryBadge(category: expense.category ?? "")
-                        .scaleEffect(0.8, anchor: .trailing)
                 }
             }
-            .padding(10) // Reduced padding
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             .background(ColorTheme.cardBackground)
-            .cornerRadius(12)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+            )
         }
         
         private func iconName(for expense: Expense) -> String {
