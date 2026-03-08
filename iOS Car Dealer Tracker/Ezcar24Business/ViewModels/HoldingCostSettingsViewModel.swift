@@ -8,6 +8,7 @@
 import Foundation
 import CoreData
 import Combine
+import Supabase
 
 @MainActor
 class HoldingCostSettingsViewModel: ObservableObject {
@@ -21,11 +22,16 @@ class HoldingCostSettingsViewModel: ObservableObject {
     let presetRates: [Decimal] = [10.0, 15.0, 20.0, 25.0]
     
     private let context: NSManagedObjectContext
+    private let client: SupabaseClient
     private var settings: HoldingCostSettings?
     private var cancellables = Set<AnyCancellable>()
     
-    init(context: NSManagedObjectContext) {
+    init(
+        context: NSManagedObjectContext,
+        client: SupabaseClient = SupabaseClientProvider().client
+    ) {
         self.context = context
+        self.client = client
         loadSettings()
     }
 
@@ -94,10 +100,21 @@ class HoldingCostSettingsViewModel: ObservableObject {
             settings?.updatedAt = Date()
             
             try context.save()
-            
-            saveSuccess = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-                self?.saveSuccess = false
+
+            let organizationId = settings?.dealerId
+            let currentEnabled = isEnabled
+            let currentRate = annualRatePercent
+
+            if let organizationId {
+                Task {
+                    await syncRemoteSettings(
+                        organizationId: organizationId,
+                        isEnabled: currentEnabled,
+                        annualRatePercent: currentRate
+                    )
+                }
+            } else {
+                presentSaveSuccess()
             }
         } catch {
             saveError = "Failed to save settings"
@@ -160,6 +177,36 @@ class HoldingCostSettingsViewModel: ObservableObject {
         }
         
         return true
+    }
+
+    private func syncRemoteSettings(
+        organizationId: UUID,
+        isEnabled: Bool,
+        annualRatePercent: Decimal
+    ) async {
+        let params: [String: AnyJSON] = [
+            "p_organization_id": .string(organizationId.uuidString),
+            "p_is_enabled": .bool(isEnabled),
+            "p_annual_rate_percent": .double(NSDecimalNumber(decimal: annualRatePercent).doubleValue)
+        ]
+
+        do {
+            _ = try await client
+                .rpc("upsert_organization_holding_cost_settings", params: params)
+                .execute()
+            saveError = nil
+            presentSaveSuccess()
+        } catch {
+            saveSuccess = false
+            saveError = error.localizedDescription
+        }
+    }
+
+    private func presentSaveSuccess() {
+        saveSuccess = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.saveSuccess = false
+        }
     }
 }
 

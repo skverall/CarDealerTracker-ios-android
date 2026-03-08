@@ -215,6 +215,15 @@ struct AccountView: View {
                         Divider().padding(.leading, 52)
                     }
 
+                    if MonthlyReportSettingsViewModel.canAccess(role: permissionService.currentRole) {
+                        NavigationLink {
+                            MonthlyReportSettingsView()
+                        } label: {
+                            MenuRow(icon: "envelope.badge.fill", title: LocalizedStringKey("Email Reports"), color: .indigo)
+                        }
+                        Divider().padding(.leading, 52)
+                    }
+
                     if permissionService.currentRole == "owner" {
                         NavigationLink {
                             BackupCenterView()

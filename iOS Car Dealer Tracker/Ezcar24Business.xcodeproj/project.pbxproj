@@ -121,6 +121,10 @@
 		G0000105 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000005 /* ImagePicker.swift */; };
 		H0000101 /* RegionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000001 /* RegionSettings.swift */; };
 		H0000102 /* RegionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000002 /* RegionSelectionView.swift */; };
+		MR1000000000000000000001 /* MonthlyReportSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = MR1000000000000000000011 /* MonthlyReportSupport.swift */; };
+		MR1000000000000000000002 /* MonthlyReportSnapshotBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = MR1000000000000000000012 /* MonthlyReportSnapshotBuilder.swift */; };
+		MR1000000000000000000003 /* MonthlyReportSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MR1000000000000000000013 /* MonthlyReportSettingsView.swift */; };
+		MR1000000000000000000004 /* MonthlyReportPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MR1000000000000000000014 /* MonthlyReportPreviewView.swift */; };
 		M1000001 /* AgingBucket.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000000 /* AgingBucket.swift */; };
 		M1000003 /* InventoryAlertType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000002 /* InventoryAlertType.swift */; };
 		M1000005 /* ExpenseCategoryType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000004 /* ExpenseCategoryType.swift */; };
@@ -251,6 +255,10 @@
 		G0000005 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		H0000001 /* RegionSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSettings.swift; sourceTree = "<group>"; };
 		H0000002 /* RegionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionView.swift; sourceTree = "<group>"; };
+		MR1000000000000000000011 /* MonthlyReportSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportSupport.swift; sourceTree = "<group>"; };
+		MR1000000000000000000012 /* MonthlyReportSnapshotBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportSnapshotBuilder.swift; sourceTree = "<group>"; };
+		MR1000000000000000000013 /* MonthlyReportSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportSettingsView.swift; sourceTree = "<group>"; };
+		MR1000000000000000000014 /* MonthlyReportPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportPreviewView.swift; sourceTree = "<group>"; };
 		M1000000 /* AgingBucket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucket.swift; sourceTree = "<group>"; };
 		M1000002 /* InventoryAlertType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertType.swift; sourceTree = "<group>"; };
 		M1000004 /* ExpenseCategoryType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseCategoryType.swift; sourceTree = "<group>"; };
@@ -419,6 +427,8 @@
 				F2000005 /* AddDebtView.swift */,
 				F2000006 /* AddDebtPaymentView.swift */,
 				G0000003 /* BackupCenterView.swift */,
+				MR1000000000000000000013 /* MonthlyReportSettingsView.swift */,
+				MR1000000000000000000014 /* MonthlyReportPreviewView.swift */,
 				H0000002 /* RegionSelectionView.swift */,
 			);
 			path = Views;
@@ -478,6 +488,8 @@
 				D0000002 /* CloudSyncEnvironment.swift */,
 				D0000003 /* SupabaseModels.swift */,
 				G0000001 /* BackupExportManager.swift */,
+				MR1000000000000000000011 /* MonthlyReportSupport.swift */,
+				MR1000000000000000000012 /* MonthlyReportSnapshotBuilder.swift */,
 				E20700002F1234567890ABCD /* LocalNotificationManager.swift */,
 			);
 			path = Services;
@@ -730,6 +742,10 @@
 				G0000102 /* ShareSheet.swift in Sources */,
 				G0000104 /* ShareLinkItemSource.swift in Sources */,
 				G0000105 /* ImagePicker.swift in Sources */,
+				MR1000000000000000000001 /* MonthlyReportSupport.swift in Sources */,
+				MR1000000000000000000002 /* MonthlyReportSnapshotBuilder.swift in Sources */,
+				MR1000000000000000000003 /* MonthlyReportSettingsView.swift in Sources */,
+				MR1000000000000000000004 /* MonthlyReportPreviewView.swift in Sources */,
 				E20653BA2EED8B6F00C1002F /* ForceUpdateView.swift in Sources */,
 				G0000103 /* BackupCenterView.swift in Sources */,
 				H0000101 /* RegionSettings.swift in Sources */,

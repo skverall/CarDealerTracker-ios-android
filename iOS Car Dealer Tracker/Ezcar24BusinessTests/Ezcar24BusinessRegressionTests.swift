@@ -758,7 +758,13 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
             purchaseDate: rangeStart.addingTimeInterval(-86_400),
             saleDate: rangeStart.addingTimeInterval(3_600)
         )
-        _ = makeVehicle(
+        _ = makeVehicleSale(
+            vehicle: visibleSoldVehicle,
+            amount: 14_000,
+            date: rangeStart.addingTimeInterval(3_600),
+            buyerName: "Visible Buyer"
+        )
+        let deletedSoldVehicle = makeVehicle(
             make: "DeletedSoldMake",
             model: "Bravo",
             status: "sold",
@@ -767,6 +773,12 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
             purchaseDate: rangeStart.addingTimeInterval(-86_400),
             saleDate: rangeStart.addingTimeInterval(7_200),
             deletedAt: rangeStart.addingTimeInterval(10_800)
+        )
+        _ = makeVehicleSale(
+            vehicle: deletedSoldVehicle,
+            amount: 12_000,
+            date: rangeStart.addingTimeInterval(7_200),
+            buyerName: "Deleted Buyer"
         )
         _ = makeVehicle(
             make: "VisibleInventoryMake",
@@ -835,8 +847,385 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertFalse(clientsCSV.contains("Deleted Client"))
 
         let pdfText = try decodedPDFText(from: payload)
+        XCTAssertTrue(pdfText.contains("Executive Summary"))
+        XCTAssertTrue(pdfText.contains("Vehicle Sales"))
         XCTAssertTrue(pdfText.contains("VisibleSoldMake"))
         XCTAssertFalse(pdfText.contains("DeletedSoldMake"))
+    }
+
+    func testReportMonthUsesPreviousCalendarMonthBoundaries() {
+        let calendar = Calendar(identifier: .gregorian)
+        let referenceDate = calendar.date(from: DateComponents(year: 2026, month: 3, day: 8, hour: 12))!
+
+        let month = ReportMonth.previousCalendarMonth(from: referenceDate, calendar: calendar)
+
+        XCTAssertEqual(month.year, 2026)
+        XCTAssertEqual(month.month, 2)
+        XCTAssertEqual(calendar.component(.year, from: month.startDate), 2026)
+        XCTAssertEqual(calendar.component(.month, from: month.startDate), 2)
+        XCTAssertEqual(calendar.component(.day, from: month.startDate), 1)
+        XCTAssertEqual(calendar.component(.year, from: month.endDate), 2026)
+        XCTAssertEqual(calendar.component(.month, from: month.endDate), 3)
+        XCTAssertEqual(calendar.component(.day, from: month.endDate), 1)
+    }
+
+    func testMonthlyReportPreviewUsesPreviousCalendarMonth() {
+        let calendar = Calendar(identifier: .gregorian)
+        let referenceDate = calendar.date(from: DateComponents(year: 2026, month: 3, day: 31, hour: 23, minute: 45))!
+        let viewModel = MonthlyReportSettingsViewModel(
+            deliveryClient: MonthlyReportDeliveryClientStub(),
+            recipientResolver: MonthlyReportRecipientResolverStub(recipients: []),
+            calendar: calendar,
+            nowProvider: { referenceDate }
+        )
+
+        XCTAssertEqual(viewModel.previewMonth.year, 2026)
+        XCTAssertEqual(viewModel.previewMonth.month, 2)
+    }
+
+    func testMonthlyReportPreferencesAreCachedPerOrganization() async throws {
+        let suiteName = "MonthlyReportTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let client = CachedMonthlyReportDeliveryClient(userDefaults: defaults)
+        let firstOrganizationId = UUID()
+        let secondOrganizationId = UUID()
+
+        let firstPreferences = MonthlyReportPreferences(
+            isEnabled: true,
+            timezoneIdentifier: "Asia/Dubai",
+            deliveryDay: 2,
+            deliveryHour: 9,
+            deliveryMinute: 0
+        )
+        let secondPreferences = MonthlyReportPreferences(
+            isEnabled: false,
+            timezoneIdentifier: "Europe/Berlin",
+            deliveryDay: 5,
+            deliveryHour: 12,
+            deliveryMinute: 30
+        )
+
+        try await client.savePreferences(firstPreferences, for: firstOrganizationId)
+        try await client.savePreferences(secondPreferences, for: secondOrganizationId)
+
+        let loadedFirst = try await client.loadPreferences(for: firstOrganizationId)
+        let loadedSecond = try await client.loadPreferences(for: secondOrganizationId)
+
+        XCTAssertEqual(loadedFirst, firstPreferences)
+        XCTAssertEqual(loadedSecond, secondPreferences)
+
+        defaults.removePersistentDomain(forName: suiteName)
+    }
+
+    func testMonthlyReportSettingsWarnWhenNoRecipientEmailsResolve() async {
+        let viewModel = MonthlyReportSettingsViewModel(
+            deliveryClient: MonthlyReportDeliveryClientStub(),
+            recipientResolver: MonthlyReportRecipientResolverStub(recipients: [])
+        )
+
+        await viewModel.load(organizationId: UUID())
+
+        XCTAssertEqual(viewModel.recipientWarningMessage, "No owner or admin email address is available for delivery.")
+    }
+
+    func testMonthlyReportVisibilityIsLimitedToOwnerAndAdminRoles() {
+        XCTAssertTrue(MonthlyReportSettingsViewModel.canAccess(role: "owner"))
+        XCTAssertTrue(MonthlyReportSettingsViewModel.canAccess(role: "admin"))
+        XCTAssertFalse(MonthlyReportSettingsViewModel.canAccess(role: "employee"))
+        XCTAssertFalse(MonthlyReportSettingsViewModel.canAccess(role: nil))
+    }
+
+    func testMonthlyReportSnapshotExcludesDeletedRecordsAcrossSections() throws {
+        let dealerId = UUID()
+        let month = ReportMonth(year: 2025, month: 3)
+        let rangeStart = month.startDate
+
+        let soldVehicle = makeVehicle(
+            make: "VisibleCar",
+            model: "One",
+            status: "sold",
+            purchasePrice: 10_000,
+            salePrice: 15_000,
+            purchaseDate: rangeStart.addingTimeInterval(-172_800),
+            saleDate: rangeStart.addingTimeInterval(86_400)
+        )
+        _ = makeVehicleSale(
+            vehicle: soldVehicle,
+            amount: 15_000,
+            date: rangeStart.addingTimeInterval(86_400),
+            buyerName: "Visible Buyer"
+        )
+        _ = makeVehicleSale(
+            vehicle: soldVehicle,
+            amount: 99_999,
+            date: rangeStart.addingTimeInterval(90_000),
+            buyerName: "Deleted Buyer",
+            deletedAt: rangeStart.addingTimeInterval(91_000)
+        )
+
+        let deletedVehicle = makeVehicle(
+            make: "DeletedCar",
+            model: "Two",
+            status: "sold",
+            purchasePrice: 9_000,
+            salePrice: 13_000,
+            purchaseDate: rangeStart.addingTimeInterval(-172_800),
+            saleDate: rangeStart.addingTimeInterval(95_000),
+            deletedAt: rangeStart.addingTimeInterval(96_000)
+        )
+        _ = makeVehicleSale(
+            vehicle: deletedVehicle,
+            amount: 13_000,
+            date: rangeStart.addingTimeInterval(95_000),
+            buyerName: "Hidden Buyer"
+        )
+
+        _ = makeVehicle(
+            make: "Inventory",
+            model: "Visible",
+            status: "owned",
+            purchasePrice: 8_000,
+            purchaseDate: rangeStart.addingTimeInterval(-86_400)
+        )
+        _ = makeVehicle(
+            make: "Inventory",
+            model: "Deleted",
+            status: "owned",
+            purchasePrice: 7_000,
+            purchaseDate: rangeStart.addingTimeInterval(-43_200),
+            deletedAt: rangeStart.addingTimeInterval(2_000)
+        )
+
+        _ = makeExpense(
+            description: "Visible Vehicle Expense",
+            amount: 500,
+            date: rangeStart.addingTimeInterval(43_200),
+            vehicle: soldVehicle
+        )
+        _ = makeExpense(
+            description: "Visible General Expense",
+            amount: 300,
+            date: rangeStart.addingTimeInterval(50_000),
+            vehicle: nil
+        )
+        _ = makeExpense(
+            description: "Deleted Expense",
+            amount: 999,
+            date: rangeStart.addingTimeInterval(55_000),
+            vehicle: soldVehicle,
+            deletedAt: rangeStart.addingTimeInterval(56_000)
+        )
+
+        let account = makeFinancialAccount(accountType: "Cash")
+        _ = makeAccountTransaction(
+            account: account,
+            amount: 1_000,
+            type: .deposit,
+            date: rangeStart.addingTimeInterval(60_000),
+            note: "Visible deposit"
+        )
+        _ = makeAccountTransaction(
+            account: account,
+            amount: 250,
+            type: .withdrawal,
+            date: rangeStart.addingTimeInterval(61_000),
+            note: "Visible withdrawal"
+        )
+        _ = makeAccountTransaction(
+            account: account,
+            amount: 700,
+            type: .deposit,
+            date: rangeStart.addingTimeInterval(62_000),
+            note: "Deleted deposit",
+            deletedAt: rangeStart.addingTimeInterval(63_000)
+        )
+
+        let part = makePart(name: "Filter", code: "FLT-1")
+        let batch = makePartBatch(
+            part: part,
+            quantityReceived: 10,
+            quantityRemaining: 7,
+            unitCost: 20,
+            purchaseDate: rangeStart.addingTimeInterval(-86_400)
+        )
+        let partSale = makePartSale(
+            amount: 150,
+            date: rangeStart.addingTimeInterval(70_000),
+            buyerName: "Parts Buyer"
+        )
+        _ = makePartSaleLineItem(
+            sale: partSale,
+            part: part,
+            batch: batch,
+            quantity: 3,
+            unitPrice: 50,
+            unitCost: 20
+        )
+        let deletedPartSale = makePartSale(
+            amount: 999,
+            date: rangeStart.addingTimeInterval(71_000),
+            buyerName: "Deleted Parts Buyer",
+            deletedAt: rangeStart.addingTimeInterval(72_000)
+        )
+        _ = makePartSaleLineItem(
+            sale: deletedPartSale,
+            part: part,
+            batch: batch,
+            quantity: 1,
+            unitPrice: 999,
+            unitCost: 20
+        )
+
+        try context.save()
+
+        let snapshot = try MonthlyReportSnapshotBuilder(context: context).build(for: month, dealerId: dealerId)
+
+        XCTAssertEqual(snapshot.vehicleSales.count, 1)
+        XCTAssertEqual(snapshot.partSales.count, 1)
+        XCTAssertEqual(snapshot.expenseActivity.count, 2)
+        XCTAssertEqual(snapshot.cashMovement.transactionCount, 2)
+        XCTAssertEqual(snapshot.inventorySnapshot.count, 1)
+        XCTAssertEqual(snapshot.partsSnapshot.count, 1)
+        XCTAssertEqual(snapshot.executiveSummary.totalRevenue, Decimal(15_150))
+        XCTAssertEqual(snapshot.cashMovement.netMovement, Decimal(750))
+    }
+
+    func testMonthlyReportVehicleProfitIncludesPresaleExpensesHoldingCostAndVatRefund() throws {
+        let dealerId = UUID()
+        let month = ReportMonth(year: 2025, month: 1)
+        let purchaseDate = month.startDate
+        let saleDate = purchaseDate.addingTimeInterval(864_000)
+
+        _ = makeHoldingCostSettings(
+            dealerId: dealerId,
+            annualRatePercent: Decimal(string: "36.5") ?? 36.5,
+            isEnabled: true
+        )
+
+        let vehicle = makeVehicle(
+            make: "Profit",
+            model: "Car",
+            status: "sold",
+            purchasePrice: 10_000,
+            salePrice: 15_000,
+            purchaseDate: purchaseDate,
+            saleDate: saleDate
+        )
+        _ = makeExpense(
+            description: "Pre-sale",
+            amount: 1_000,
+            date: purchaseDate.addingTimeInterval(172_800),
+            vehicle: vehicle
+        )
+        _ = makeExpense(
+            description: "Post-sale",
+            amount: 400,
+            date: saleDate.addingTimeInterval(86_400),
+            vehicle: vehicle
+        )
+        _ = makeExpense(
+            description: "Deleted pre-sale",
+            amount: 300,
+            date: purchaseDate.addingTimeInterval(259_200),
+            vehicle: vehicle,
+            deletedAt: purchaseDate.addingTimeInterval(300_000)
+        )
+        _ = makeVehicleSale(
+            vehicle: vehicle,
+            amount: 15_000,
+            date: saleDate,
+            buyerName: "Buyer",
+            vatRefundAmount: 200
+        )
+
+        try context.save()
+
+        let snapshot = try MonthlyReportSnapshotBuilder(context: context).build(for: month, dealerId: dealerId)
+        let row = try XCTUnwrap(snapshot.vehicleSales.first)
+
+        XCTAssertEqual(row.vehicleExpenses, Decimal(1_000))
+        XCTAssertEqual(row.holdingCost, Decimal(110))
+        XCTAssertEqual(row.realizedProfit, Decimal(4_090))
+    }
+
+    func testMonthlyReportPartSaleProfitUsesLineItemCogs() throws {
+        let dealerId = UUID()
+        let month = ReportMonth(year: 2025, month: 4)
+        let part = makePart(name: "Brake Pad", code: "BP-1")
+        let firstBatch = makePartBatch(
+            part: part,
+            quantityReceived: 10,
+            quantityRemaining: 8,
+            unitCost: 50,
+            purchaseDate: month.startDate.addingTimeInterval(-86_400)
+        )
+        let secondBatch = makePartBatch(
+            part: part,
+            quantityReceived: 10,
+            quantityRemaining: 9,
+            unitCost: 80,
+            purchaseDate: month.startDate.addingTimeInterval(-43_200)
+        )
+        let sale = makePartSale(
+            amount: 500,
+            date: month.startDate.addingTimeInterval(86_400),
+            buyerName: "Buyer"
+        )
+        _ = makePartSaleLineItem(
+            sale: sale,
+            part: part,
+            batch: firstBatch,
+            quantity: 2,
+            unitPrice: 120,
+            unitCost: 50
+        )
+        _ = makePartSaleLineItem(
+            sale: sale,
+            part: part,
+            batch: secondBatch,
+            quantity: 1,
+            unitPrice: 260,
+            unitCost: 80
+        )
+
+        try context.save()
+
+        let snapshot = try MonthlyReportSnapshotBuilder(context: context).build(for: month, dealerId: dealerId)
+        let row = try XCTUnwrap(snapshot.partSales.first)
+
+        XCTAssertEqual(row.costOfGoodsSold, Decimal(180))
+        XCTAssertEqual(row.realizedProfit, Decimal(320))
+    }
+
+    func testMonthlyReportCashMovementUsesDepositAndWithdrawalSigns() throws {
+        let dealerId = UUID()
+        let month = ReportMonth(year: 2025, month: 5)
+        let account = makeFinancialAccount(accountType: "Bank")
+
+        _ = makeAccountTransaction(
+            account: account,
+            amount: 400,
+            type: .deposit,
+            date: month.startDate.addingTimeInterval(3_600),
+            note: "Deposit"
+        )
+        _ = makeAccountTransaction(
+            account: account,
+            amount: 150,
+            type: .withdrawal,
+            date: month.startDate.addingTimeInterval(7_200),
+            note: "Withdrawal"
+        )
+
+        try context.save()
+
+        let snapshot = try MonthlyReportSnapshotBuilder(context: context).build(for: month, dealerId: dealerId)
+
+        XCTAssertEqual(snapshot.cashMovement.depositsTotal, Decimal(400))
+        XCTAssertEqual(snapshot.cashMovement.withdrawalsTotal, Decimal(150))
+        XCTAssertEqual(snapshot.cashMovement.netMovement, Decimal(250))
     }
 
     private func decodedTextFile(prefix: String, from payload: BackupArchivePayload) throws -> String {
@@ -929,7 +1318,7 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         description: String,
         amount: Decimal,
         date: Date,
-        vehicle: Vehicle,
+        vehicle: Vehicle? = nil,
         deletedAt: Date? = nil,
         updatedAt: Date? = nil
     ) -> Expense {
@@ -944,6 +1333,154 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         expense.deletedAt = deletedAt
         expense.vehicle = vehicle
         return expense
+    }
+
+    @discardableResult
+    private func makeVehicleSale(
+        vehicle: Vehicle,
+        amount: Decimal,
+        date: Date,
+        buyerName: String,
+        vatRefundAmount: Decimal = 0,
+        deletedAt: Date? = nil
+    ) -> Sale {
+        let sale = Sale(context: context)
+        sale.id = UUID()
+        sale.amount = NSDecimalNumber(decimal: amount)
+        sale.date = date
+        sale.buyerName = buyerName
+        sale.vatRefundAmount = NSDecimalNumber(decimal: vatRefundAmount)
+        sale.createdAt = date
+        sale.updatedAt = date
+        sale.deletedAt = deletedAt
+        sale.vehicle = vehicle
+        vehicle.saleDate = date
+        vehicle.salePrice = NSDecimalNumber(decimal: amount)
+        return sale
+    }
+
+    @discardableResult
+    private func makeFinancialAccount(accountType: String) -> FinancialAccount {
+        let account = FinancialAccount(context: context)
+        account.id = UUID()
+        account.accountType = accountType
+        account.balance = .zero
+        account.updatedAt = Date()
+        return account
+    }
+
+    @discardableResult
+    private func makeAccountTransaction(
+        account: FinancialAccount,
+        amount: Decimal,
+        type: AccountTransactionType,
+        date: Date,
+        note: String,
+        deletedAt: Date? = nil
+    ) -> AccountTransaction {
+        let transaction = AccountTransaction(context: context)
+        transaction.id = UUID()
+        transaction.amount = NSDecimalNumber(decimal: amount)
+        transaction.transactionType = type.rawValue
+        transaction.date = date
+        transaction.note = note
+        transaction.createdAt = date
+        transaction.updatedAt = date
+        transaction.deletedAt = deletedAt
+        transaction.account = account
+        return transaction
+    }
+
+    @discardableResult
+    private func makePart(name: String, code: String? = nil) -> Part {
+        let part = Part(context: context)
+        part.id = UUID()
+        part.name = name
+        part.code = code
+        part.createdAt = Date()
+        part.updatedAt = Date()
+        return part
+    }
+
+    @discardableResult
+    private func makePartBatch(
+        part: Part,
+        quantityReceived: Decimal,
+        quantityRemaining: Decimal,
+        unitCost: Decimal,
+        purchaseDate: Date,
+        deletedAt: Date? = nil
+    ) -> PartBatch {
+        let batch = PartBatch(context: context)
+        batch.id = UUID()
+        batch.quantityReceived = NSDecimalNumber(decimal: quantityReceived)
+        batch.quantityRemaining = NSDecimalNumber(decimal: quantityRemaining)
+        batch.unitCost = NSDecimalNumber(decimal: unitCost)
+        batch.purchaseDate = purchaseDate
+        batch.createdAt = purchaseDate
+        batch.updatedAt = purchaseDate
+        batch.deletedAt = deletedAt
+        batch.part = part
+        return batch
+    }
+
+    @discardableResult
+    private func makePartSale(
+        amount: Decimal,
+        date: Date,
+        buyerName: String,
+        deletedAt: Date? = nil
+    ) -> PartSale {
+        let sale = PartSale(context: context)
+        sale.id = UUID()
+        sale.amount = NSDecimalNumber(decimal: amount)
+        sale.date = date
+        sale.buyerName = buyerName
+        sale.createdAt = date
+        sale.updatedAt = date
+        sale.deletedAt = deletedAt
+        return sale
+    }
+
+    @discardableResult
+    private func makePartSaleLineItem(
+        sale: PartSale,
+        part: Part,
+        batch: PartBatch,
+        quantity: Decimal,
+        unitPrice: Decimal,
+        unitCost: Decimal,
+        deletedAt: Date? = nil
+    ) -> PartSaleLineItem {
+        let lineItem = PartSaleLineItem(context: context)
+        lineItem.id = UUID()
+        lineItem.quantity = NSDecimalNumber(decimal: quantity)
+        lineItem.unitPrice = NSDecimalNumber(decimal: unitPrice)
+        lineItem.unitCost = NSDecimalNumber(decimal: unitCost)
+        lineItem.createdAt = sale.date ?? Date()
+        lineItem.updatedAt = sale.date
+        lineItem.deletedAt = deletedAt
+        lineItem.sale = sale
+        lineItem.part = part
+        lineItem.batch = batch
+        return lineItem
+    }
+
+    @discardableResult
+    private func makeHoldingCostSettings(
+        dealerId: UUID,
+        annualRatePercent: Decimal,
+        isEnabled: Bool
+    ) -> HoldingCostSettings {
+        let settings = HoldingCostSettings(context: context)
+        settings.id = UUID()
+        settings.dealerId = dealerId
+        settings.annualRatePercent = NSDecimalNumber(decimal: annualRatePercent)
+        settings.dailyRatePercent = NSDecimalNumber(decimal: HoldingCostCalculator.calculateDailyRate(annualRatePercent: annualRatePercent))
+        settings.isEnabled = isEnabled
+        settings.createdAt = Date()
+        settings.updatedAt = Date()
+        return settings
     }
 
     @discardableResult
@@ -962,4 +1499,37 @@ private enum TestError: Error {
     case missingPayloadFile(String)
     case invalidBase64(String)
     case unreadablePDF(String)
+}
+
+private struct MonthlyReportDeliveryClientStub: MonthlyReportDeliveryClient {
+    var preferences: MonthlyReportPreferences = .default()
+
+    func loadPreferences(for organizationId: UUID) async throws -> MonthlyReportPreferences {
+        _ = organizationId
+        return preferences
+    }
+
+    func savePreferences(_ preferences: MonthlyReportPreferences, for organizationId: UUID) async throws {
+        _ = preferences
+        _ = organizationId
+    }
+
+    func sendTestReport(for organizationId: UUID, month: ReportMonth) async throws {
+        _ = organizationId
+        _ = month
+    }
+
+    func requestPreview(for organizationId: UUID, month: ReportMonth) async throws {
+        _ = organizationId
+        _ = month
+    }
+}
+
+private struct MonthlyReportRecipientResolverStub: MonthlyReportRecipientResolving {
+    let recipients: [MonthlyReportRecipient]
+
+    func resolveRecipients(for organizationId: UUID?) async throws -> [MonthlyReportRecipient] {
+        _ = organizationId
+        return recipients
+    }
 }
