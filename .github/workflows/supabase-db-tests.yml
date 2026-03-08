@@ -18,12 +18,14 @@ jobs:
 
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v1
+        with:
+          version: 2.72.7
 
       - name: Reset Supabase CLI temp state
         run: rm -rf supabase/.temp supabase/supabase
 
-      - name: Start Supabase
-        run: supabase start
+      - name: Start Supabase DB
+        run: supabase db start
 
       - name: Run pgTAP
         run: supabase test db supabase/tests/database
