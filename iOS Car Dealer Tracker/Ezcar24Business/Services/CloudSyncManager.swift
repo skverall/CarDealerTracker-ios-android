@@ -109,6 +109,36 @@ final class CloudSyncManager: ObservableObject {
         self.context = context
     }
 
+    func syncCurrentUserProfile(user: Auth.User) async {
+        guard !isSyncing else { return }
+        guard PersistenceController.shared.activeStoreKey != PersistenceController.guestStoreKey else { return }
+
+        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+        let bgContext = PersistenceController.shared.newBackgroundContext()
+        let writeClient = self.writeClient
+
+        do {
+            var ensuredUserIds = Set<UUID>()
+            try await bgContext.perform {
+                ensuredUserIds = self.ensureCurrentUserExists(context: bgContext, user: user, dealerId: dealerId)
+                if bgContext.hasChanges {
+                    try bgContext.save()
+                }
+            }
+
+            if !ensuredUserIds.isEmpty {
+                try await pushUserUpdates(
+                    userIds: ensuredUserIds,
+                    context: bgContext,
+                    dealerId: dealerId,
+                    writeClient: writeClient
+                )
+            }
+        } catch {
+            print("CloudSyncManager syncCurrentUserProfile error: \(error)")
+        }
+    }
+
     // MARK: - Public API
 
     func syncAfterLogin(user: Auth.User) async {
@@ -3612,17 +3642,23 @@ final class CloudSyncManager: ObservableObject {
 
             let defaults = UserDefaults.standard
             var didUpdate = false
-            if (localUser.email ?? "").isEmpty {
-                if let authEmail = user.email, !authEmail.isEmpty {
+            let normalizedLocalEmail = localUser.email?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased() ?? ""
+            if let authEmail = user.email?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+                .lowercased(),
+               !authEmail.isEmpty {
+                if normalizedLocalEmail != authEmail {
                     localUser.email = authEmail
                     didUpdate = true
-                } else {
-                    let emailKey = "\(pendingProfileEmailKeyPrefix)\(user.id.uuidString)"
-                    if let pendingEmail = defaults.string(forKey: emailKey), !pendingEmail.isEmpty {
-                        localUser.email = pendingEmail
-                        defaults.removeObject(forKey: emailKey)
-                        didUpdate = true
-                    }
+                }
+            } else if normalizedLocalEmail.isEmpty {
+                let emailKey = "\(pendingProfileEmailKeyPrefix)\(user.id.uuidString)"
+                if let pendingEmail = defaults.string(forKey: emailKey), !pendingEmail.isEmpty {
+                    localUser.email = pendingEmail
+                    defaults.removeObject(forKey: emailKey)
+                    didUpdate = true
                 }
             }
             if (localUser.phone ?? "").isEmpty {

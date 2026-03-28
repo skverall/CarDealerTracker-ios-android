@@ -105,11 +105,24 @@ serve(async (req) => {
     }
 
     if (userId) {
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      await repairUserEmailState(supabaseAdmin, userId, email)
+
+      let { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
         type: "recovery",
         email,
         options: { redirectTo },
       })
+
+      if (linkError) {
+        await repairUserEmailState(supabaseAdmin, userId, email)
+        const retry = await supabaseAdmin.auth.admin.generateLink({
+          type: "recovery",
+          email,
+          options: { redirectTo },
+        })
+        linkData = retry.data
+        linkError = retry.error
+      }
 
       if (linkError) throw linkError
 
@@ -185,6 +198,32 @@ async function findUserIdByEmail(
     page += 1
   }
   return null
+}
+
+async function repairUserEmailState(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  userId: string,
+  email: string
+) {
+  const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId)
+  if (userError) throw userError
+
+  const currentMetadata =
+    userData?.user?.user_metadata && typeof userData.user.user_metadata === "object"
+      ? (userData.user.user_metadata as Record<string, unknown>)
+      : {}
+
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    email,
+    email_confirm: true,
+    user_metadata: {
+      ...currentMetadata,
+      email,
+      email_verified: true,
+    },
+  })
+
+  if (updateError) throw updateError
 }
 
 async function sendRecoveryEmail(payload: { to: string; resetUrl: string }) {

@@ -150,60 +150,21 @@ final class BackupExportManager: ObservableObject {
         }
         request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         request.sortDescriptors = [NSSortDescriptor(key: "date", ascending: false)]
-
-        var results: [Expense] = []
-        var capturedError: Error?
-        context.performAndWait {
-            do {
-                results = try context.fetch(request)
-            } catch {
-                capturedError = error
-            }
-        }
-        if let capturedError {
-            throw capturedError
-        }
-        return results
+        return try context.fetch(request)
     }
 
     private func fetchVehicles() throws -> [Vehicle] {
         let request: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
         request.predicate = NSPredicate(format: "deletedAt == nil")
         request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
-
-        var results: [Vehicle] = []
-        var capturedError: Error?
-        context.performAndWait {
-            do {
-                results = try context.fetch(request)
-            } catch {
-                capturedError = error
-            }
-        }
-        if let capturedError {
-            throw capturedError
-        }
-        return results
+        return try context.fetch(request)
     }
 
     private func fetchClients() throws -> [Client] {
         let request: NSFetchRequest<Client> = Client.fetchRequest()
         request.predicate = NSPredicate(format: "deletedAt == nil")
         request.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
-
-        var results: [Client] = []
-        var capturedError: Error?
-        context.performAndWait {
-            do {
-                results = try context.fetch(request)
-            } catch {
-                capturedError = error
-            }
-        }
-        if let capturedError {
-            throw capturedError
-        }
-        return results
+        return try context.fetch(request)
     }
 
     private func makeSnapshot(for month: ReportMonth, dealerId: UUID?) throws -> MonthlyReportSnapshot {

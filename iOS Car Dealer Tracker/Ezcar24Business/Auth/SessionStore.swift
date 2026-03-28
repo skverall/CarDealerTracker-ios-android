@@ -88,6 +88,25 @@ final class SessionStore: ObservableObject {
         )
     }
 
+    var currentAuthEmail: String? {
+        guard case .signedIn(let user) = status else { return nil }
+        return Self.normalizedEmail(user.email)
+    }
+
+    var pendingEmailChange: String? {
+        guard case .signedIn(let user) = status else { return nil }
+        return Self.pendingEmailChange(currentEmail: user.email, newEmail: user.newEmail)
+    }
+
+    static func pendingEmailChange(currentEmail: String?, newEmail: String?) -> String? {
+        let normalizedCurrent = normalizedEmail(currentEmail)
+        let normalizedNew = normalizedEmail(newEmail)
+
+        guard let normalizedNew else { return nil }
+        guard normalizedNew != normalizedCurrent else { return nil }
+        return normalizedNew
+    }
+
     static func shouldShowEmailReminderBanner(
         emailConfirmedAt: Date?,
         confirmedAt: Date?,
@@ -286,6 +305,14 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    private static func normalizedEmail(_ value: String?) -> String? {
+        guard let value else { return nil }
+        let normalized = value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        return normalized.isEmpty ? nil : normalized
+    }
+
     func signOut() async {
         isAuthenticating = true
         defer { isAuthenticating = false }
@@ -303,6 +330,27 @@ final class SessionStore: ObservableObject {
         do {
             try await client.auth.update(user: UserAttributes(password: newPassword))
             errorMessage = nil
+        } catch {
+            errorMessage = localized(error)
+            throw error
+        }
+    }
+
+    func updateEmail(_ newEmail: String) async throws -> Auth.User {
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+
+        let normalizedEmail = newEmail
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+
+        do {
+            let updatedUser = try await client.auth.update(user: UserAttributes(email: normalizedEmail))
+            if case .signedIn = status {
+                status = .signedIn(user: updatedUser)
+            }
+            errorMessage = nil
+            return updatedUser
         } catch {
             errorMessage = localized(error)
             throw error
@@ -1038,13 +1086,26 @@ final class SessionStore: ObservableObject {
 
     private func updateStatus(for event: AuthChangeEvent, session: Session?) {
         switch event {
-        case .initialSession, .tokenRefreshed, .userUpdated, .signedIn:
+        case .initialSession, .tokenRefreshed, .signedIn:
             // During password recovery we intentionally block automatic sign-in
             guard !isPasswordRecoverySessionActive else { return }
             if let session {
                 handleAccountChangeIfNeeded(newUserId: session.user.id)
                 status = .signedIn(user: session.user)
                 errorMessage = nil
+            } else {
+                status = .signedOut
+                errorMessage = nil
+            }
+        case .userUpdated:
+            guard !isPasswordRecoverySessionActive else { return }
+            if let session {
+                handleAccountChangeIfNeeded(newUserId: session.user.id)
+                status = .signedIn(user: session.user)
+                errorMessage = nil
+                Task {
+                    await CloudSyncManager.shared?.syncCurrentUserProfile(user: session.user)
+                }
             } else {
                 status = .signedOut
                 errorMessage = nil

@@ -13,6 +13,7 @@ struct EditProfileView: View {
     @State private var firstName: String = ""
     @State private var lastName: String = ""
     @State private var phone: String = ""
+    @State private var email: String = ""
     
     // Avatar
     @State private var avatarItem: PhotosPickerItem?
@@ -21,6 +22,8 @@ struct EditProfileView: View {
     @State private var avatarData: Data?
     @State private var isLoading = false
     @State private var errorMessage: String?
+    @State private var successMessage: String?
+    @State private var showSuccessAlert = false
     
     var body: some View {
         NavigationView {
@@ -34,8 +37,6 @@ struct EditProfileView: View {
                                     .resizable()
                                     .scaledToFill()
                                     .frame(width: 100, height: 100)
-                                    .clipShape(Circle())
-                                    .overlay(Circle().stroke(ColorTheme.primary, lineWidth: 2))
                                     .clipShape(Circle())
                                     .overlay(Circle().stroke(ColorTheme.primary, lineWidth: 2))
                             } else if let serverAvatarImage {
@@ -71,8 +72,22 @@ struct EditProfileView: View {
                 Section(header: Text("Personal Information")) {
                     TextField("First Name", text: $firstName)
                     TextField("Last Name", text: $lastName)
-                    TextField("Email", text: .constant(user.email ?? ""))
-                        .disabled(true)
+                    TextField("Email", text: $email)
+                        .textContentType(.emailAddress)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    if let pendingEmail = sessionStore.pendingEmailChange {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Pending confirmation")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(.orange)
+                            Text("Check \(pendingEmail) and confirm the link to complete your sign-in email change.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                    }
                     TextField("Phone", text: $phone)
                         .keyboardType(.phonePad)
                 }
@@ -103,6 +118,7 @@ struct EditProfileView: View {
                 firstName = user.firstName ?? ""
                 lastName = user.lastName ?? ""
                 phone = user.phone ?? ""
+                email = resolvedCurrentEmail()
                 loadAvatar()
             }
             .onChange(of: avatarItem) { _, newItem in
@@ -121,19 +137,68 @@ struct EditProfileView: View {
                 }
             }
             .disabled(isLoading)
+            .alert("Profile Updated", isPresented: $showSuccessAlert) {
+                Button("OK") {
+                    dismiss()
+                }
+            } message: {
+                Text(successMessage ?? "")
+            }
         }
     }
     
     private func saveProfile() {
+        let normalizedEmail = email
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let currentEmail = resolvedCurrentEmail()
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let emailChanged = normalizedEmail != currentEmail
+
+        guard !emailChanged || isValidEmail(normalizedEmail) else {
+            errorMessage = "Enter a valid email address."
+            return
+        }
+
         isLoading = true
         errorMessage = nil
+        successMessage = nil
         
         Task {
+            var emailChangeMessage: String?
+            var shouldPersistEmailLocally = !normalizedEmail.isEmpty && !emailChanged
+            var requestedEmailChange = false
+
             do {
+                if emailChanged {
+                    let updatedUser = try await sessionStore.updateEmail(normalizedEmail)
+                    requestedEmailChange = true
+
+                    let returnedEmail = updatedUser.email?
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .lowercased() ?? ""
+                    let pendingEmail = updatedUser.newEmail?
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                        .lowercased() ?? ""
+
+                    if pendingEmail == normalizedEmail && returnedEmail != normalizedEmail {
+                        emailChangeMessage = "We sent a confirmation link to \(normalizedEmail). Your sign-in email will switch after you confirm it."
+                    } else if returnedEmail == normalizedEmail {
+                        emailChangeMessage = "Your account email was updated."
+                        shouldPersistEmailLocally = true
+                    } else {
+                        emailChangeMessage = "Check your inbox to confirm your new email address."
+                    }
+                }
+
                 // Update local user object
                 user.firstName = firstName
                 user.lastName = lastName
                 user.phone = phone
+                if shouldPersistEmailLocally {
+                    user.email = normalizedEmail
+                }
                 
                 // Update full name if needed
                 if !firstName.isEmpty || !lastName.isEmpty {
@@ -154,16 +219,23 @@ struct EditProfileView: View {
                 }
                 
                 try viewContext.save()
-                
-                try viewContext.save()
-                
+
                 if let dealerId = sessionStore.activeOrganizationId, let syncManager = CloudSyncManager.shared {
                     await syncManager.upsertUser(user, dealerId: dealerId)
                 }
-                
-                dismiss()
+
+                if let emailChangeMessage {
+                    successMessage = emailChangeMessage
+                    showSuccessAlert = true
+                } else {
+                    dismiss()
+                }
             } catch {
-                errorMessage = error.localizedDescription
+                if requestedEmailChange {
+                    errorMessage = "Email change was requested, but the rest of the profile could not be saved. Reopen the profile and verify the details."
+                } else {
+                    errorMessage = error.localizedDescription
+                }
             }
             isLoading = false
         }
@@ -193,5 +265,18 @@ struct EditProfileView: View {
                 print("Failed to load avatar: \(error)")
             }
         }
+    }
+
+    private func resolvedCurrentEmail() -> String {
+        if let authEmail = sessionStore.currentAuthEmail {
+            return authEmail
+        }
+        return user.email?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }
+
+    private func isValidEmail(_ value: String) -> Bool {
+        guard !value.isEmpty else { return false }
+        let regex = "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$"
+        return NSPredicate(format: "SELF MATCHES[c] %@", regex).evaluate(with: value)
     }
 }

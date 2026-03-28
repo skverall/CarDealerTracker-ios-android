@@ -60,6 +60,31 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         )
     }
 
+    func testPendingEmailChangeReturnsNormalizedAddressWhenDifferent() {
+        XCTAssertEqual(
+            SessionStore.pendingEmailChange(
+                currentEmail: "owner@dealer.com",
+                newEmail: " NEW@DEALER.COM "
+            ),
+            "new@dealer.com"
+        )
+    }
+
+    func testPendingEmailChangeIgnoresBlankOrMatchingAddress() {
+        XCTAssertNil(
+            SessionStore.pendingEmailChange(
+                currentEmail: "owner@dealer.com",
+                newEmail: " owner@dealer.com "
+            )
+        )
+        XCTAssertNil(
+            SessionStore.pendingEmailChange(
+                currentEmail: "owner@dealer.com",
+                newEmail: " "
+            )
+        )
+    }
+
     func testImageStoreUsesLatestDealerNamespaceImmediately() {
         let previousDealerId = UUID()
         let currentDealerId = UUID()

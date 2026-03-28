@@ -16,7 +16,7 @@ extension Notification.Name {
 }
 
 enum DashboardDestination: String, Identifiable, Hashable {
-    case assets, cashAccounts, bankAccounts, creditAccounts, revenue, profit, sold, allExpenses, analytics
+    case assets, cashAccounts, bankAccounts, creditAccounts, revenue, profit, sold, allExpenses, analytics, dataHealth
     var id: String { rawValue }
 }
 
@@ -84,7 +84,6 @@ struct DashboardView: View {
             .background(ColorTheme.background.ignoresSafeArea())
             .navigationDestination(for: DashboardDestination.self) { destinationView(for: $0) }
         }
-        .id(regionSettings.selectedRegion.rawValue) // Force re-render when currency changes
         .sheet(isPresented: $showingSearch) {
             GlobalSearchView()
         }
@@ -120,6 +119,12 @@ struct DashboardView: View {
                 viewModel.fetchFinancialData(range: selectedRange)
             }
         }
+        .onChange(of: regionSettings.selectedRegion) { _, _ in
+            if !navPath.isEmpty {
+                navPath.removeAll()
+            }
+            viewModel.fetchFinancialData(range: selectedRange)
+        }
         .onChange(of: cloudSyncManager.lastSyncAt) { _, _ in
             Task { await refreshOfflineQueueCount() }
         }
@@ -150,6 +155,8 @@ struct DashboardView: View {
             ExpenseListView()
         case .analytics:
             AnalyticsHubView()
+        case .dataHealth:
+            DataHealthView()
         }
     }
 }
@@ -308,16 +315,27 @@ private extension DashboardView {
 
             Spacer()
 
-            Button {
-                Task { await runManualSync() }
-            } label: {
-                Image(systemName: "arrow.clockwise")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(ColorTheme.primary)
-                    .opacity(cloudSyncManager.isSyncing ? 0.3 : 1.0)
+            HStack(spacing: 14) {
+                Button {
+                    navPath.append(.dataHealth)
+                } label: {
+                    Image(systemName: "stethoscope")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(offlineQueueCount > 0 ? ColorTheme.warning : ColorTheme.primary)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    Task { await runManualSync() }
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(ColorTheme.primary)
+                        .opacity(cloudSyncManager.isSyncing ? 0.3 : 1.0)
+                }
+                .buttonStyle(.plain)
+                .disabled(cloudSyncManager.isSyncing)
             }
-            .buttonStyle(.plain)
-            .disabled(cloudSyncManager.isSyncing)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

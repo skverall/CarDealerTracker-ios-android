@@ -232,15 +232,15 @@ struct AccountView: View {
                         }
                         Divider().padding(.leading, 52)
                     }
-                    
+
+                    NavigationLink {
+                        DataHealthView()
+                    } label: {
+                        MenuRow(icon: "stethoscope", title: "data_health".localizedKey, color: .teal)
+                    }
+                    Divider().padding(.leading, 52)
+
                     if permissionService.can(.manageTeam) { // Admin/Owner
-                         NavigationLink {
-                            DataHealthView()
-                        } label: {
-                            MenuRow(icon: "stethoscope", title: "data_health".localizedKey, color: .teal)
-                        }
-                        Divider().padding(.leading, 52)
-                        
                         Button {
                             Task {
                                 await runDeduplication()
@@ -254,10 +254,15 @@ struct AccountView: View {
                     syncRow
                 }
             } else {
-                // Minimal sync section for regular employees if not in management
-                 menuSection(title: "sync".localizedKey) {
+                menuSection(title: "sync".localizedKey) {
+                    NavigationLink {
+                        DataHealthView()
+                    } label: {
+                        MenuRow(icon: "stethoscope", title: "data_health".localizedKey, color: .teal)
+                    }
+                    Divider().padding(.leading, 52)
                     syncRow
-                 }
+                }
             }
         }
     }
@@ -369,7 +374,11 @@ struct AccountView: View {
             
             VStack(spacing: 12) {
                 if case .signedIn(let authUser) = sessionStore.status {
-                    AccountUserProfileView(userId: authUser.id, authEmail: authUser.email)
+                    AccountUserProfileView(
+                        userId: authUser.id,
+                        authEmail: authUser.email,
+                        authPendingEmail: sessionStore.pendingEmailChange
+                    )
                 } else {
                     Text("not_signed_in".localizedString)
                         .font(.headline)
@@ -1291,13 +1300,15 @@ private struct AccountOrgSwitcher: View {
 struct AccountUserProfileView: View {
     let userId: UUID
     let authEmail: String?
+    let authPendingEmail: String?
     
     @FetchRequest var users: FetchedResults<Ezcar24Business.User>
     @State private var showingEditProfile = false
     
-    init(userId: UUID, authEmail: String?) {
+    init(userId: UUID, authEmail: String?, authPendingEmail: String?) {
         self.userId = userId
         self.authEmail = authEmail
+        self.authPendingEmail = authPendingEmail
         self._users = FetchRequest(
             sortDescriptors: [],
             predicate: NSPredicate(format: "id == %@", userId as CVarArg)
@@ -1382,6 +1393,12 @@ struct AccountUserProfileView: View {
                         Text(displayEmail)
                             .font(.subheadline)
                             .foregroundColor(ColorTheme.secondaryText)
+                    }
+
+                    if let authPendingEmail {
+                        Label("Pending confirmation: \(authPendingEmail)", systemImage: "clock.badge.exclamationmark")
+                            .font(.caption)
+                            .foregroundColor(.orange)
                     }
                 } else {
                     Text(displayEmail ?? "User")

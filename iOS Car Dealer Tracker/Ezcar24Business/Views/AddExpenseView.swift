@@ -49,6 +49,7 @@ struct AddExpenseView: View {
     @State private var receiptRemoved: Bool = false
     @State private var receiptShareUrl: URL? = nil
     @State private var showReceiptShare: Bool = false
+    @State private var showVehicleSelectionError: Bool = false
     
     // Quick Add States
     @State private var showAddVehicleSheet: Bool = false
@@ -100,6 +101,10 @@ struct AddExpenseView: View {
         let trimmedAmount = amount.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let val = Decimal(string: trimmedAmount), val > 0 else { return false }
         return true
+    }
+
+    private var shouldShowVehicleSelectionError: Bool {
+        showVehicleSelectionError && category == "vehicle" && selectedVehicle == nil
     }
     
     init(viewModel: ExpenseViewModel, editingExpense: Expense? = nil) {
@@ -238,6 +243,16 @@ struct AddExpenseView: View {
             .onAppear {
                 viewModel.refreshFiltersIfNeeded()
                 prefillIfNeeded()
+            }
+            .onChange(of: selectedVehicle) { _, newValue in
+                if newValue != nil {
+                    showVehicleSelectionError = false
+                }
+            }
+            .onChange(of: category) { _, newValue in
+                if newValue != "vehicle" {
+                    showVehicleSelectionError = false
+                }
             }
         }
     }
@@ -440,7 +455,9 @@ struct AddExpenseView: View {
                     title: "Vehicle",
                     value: selectedVehicle.map(vehicleDisplayName) ?? "Select Vehicle",
                     icon: "car.fill",
-                    isActive: selectedVehicle != nil
+                    isActive: selectedVehicle != nil,
+                    showsError: shouldShowVehicleSelectionError,
+                    errorMessage: "expense_vehicle_required".localizedString
                 ) {
                     activeSheet = .vehicle
                 }
@@ -531,46 +548,58 @@ struct AddExpenseView: View {
         .padding(.horizontal, 20)
     }
     
-    private func contextButton(title: String, value: String, icon: String, isActive: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(isActive ? ColorTheme.primary.opacity(0.1) : ColorTheme.secondaryBackground)
-                        .frame(width: 44, height: 44)
+    private func contextButton(title: String, value: String, icon: String, isActive: Bool, showsError: Bool = false, errorMessage: String? = nil, action: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Button(action: action) {
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(isActive ? ColorTheme.primary.opacity(0.1) : ColorTheme.secondaryBackground)
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: icon)
+                            .font(.system(size: 18))
+                            .foregroundColor(isActive ? ColorTheme.primary : (showsError ? .red : ColorTheme.secondaryText))
+                    }
                     
-                    Image(systemName: icon)
-                        .font(.system(size: 18))
-                        .foregroundColor(isActive ? ColorTheme.primary : ColorTheme.secondaryText)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.caption)
+                            .foregroundColor(showsError ? .red : ColorTheme.secondaryText)
+                        Text(value)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(showsError ? .red : ColorTheme.primaryText)
+                            .lineLimit(1)
+                    }
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(showsError ? .red : ColorTheme.tertiaryText)
                 }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.caption)
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Text(value)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(ColorTheme.primaryText)
-                        .lineLimit(1)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(ColorTheme.tertiaryText)
+                .padding(12)
+                .background(ColorTheme.cardBackground)
+                .cornerRadius(16)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(
+                            showsError ? Color.red.opacity(0.8) : (isActive ? ColorTheme.primary.opacity(0.3) : Color.clear),
+                            lineWidth: showsError ? 1.5 : 1
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
             }
-            .padding(12)
-            .background(ColorTheme.cardBackground)
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(isActive ? ColorTheme.primary.opacity(0.3) : Color.clear, lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(0.02), radius: 5, x: 0, y: 2)
+            .buttonStyle(.plain)
+
+            if let errorMessage, showsError {
+                Text(errorMessage)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 4)
+            }
         }
-        .buttonStyle(.plain)
     }
     
     private var saveButton: some View {
@@ -975,9 +1004,17 @@ struct AddExpenseView: View {
     
     private func saveExpense() {
         guard let amountDecimal = Decimal(string: amount), amountDecimal > 0 else { return }
-        isSaving = true
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()
+
+        if category == "vehicle" && selectedVehicle == nil {
+            showVehicleSelectionError = true
+            generator.notificationOccurred(.error)
+            return
+        }
+
+        showVehicleSelectionError = false
+        isSaving = true
         
         let normalizedDate = Calendar.current.startOfDay(for: date)
         let previousReceiptPath = editingExpense?.receiptPath
