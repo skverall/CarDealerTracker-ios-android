@@ -11,14 +11,7 @@ struct VehicleSelectionSheet: View {
         if query.isEmpty {
             return vehicles
         }
-        return vehicles.filter { vehicle in
-            let make = vehicle.make ?? ""
-            let model = vehicle.model ?? ""
-            let vin = vehicle.vin ?? ""
-            return make.lowercased().contains(query) ||
-                model.lowercased().contains(query) ||
-                vin.lowercased().contains(query)
-        }
+        return vehicles.filter { $0.matchesVehicleSearchQuery(query) }
     }
 
     var body: some View {
@@ -65,7 +58,7 @@ struct VehicleSelectionSheet: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(ColorTheme.secondaryText)
-            TextField("Search Make, Model, VIN...", text: $searchText)
+            TextField("Search Make, Model, Inventory ID, VIN...", text: $searchText)
                 .foregroundColor(ColorTheme.primaryText)
             if !searchText.isEmpty {
                 Button {
@@ -113,19 +106,26 @@ struct VehicleSelectionRow: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                Text(vehicle.displayNameWithInventory)
                     .font(.headline)
                     .foregroundColor(ColorTheme.primaryText)
+                    .lineLimit(1)
 
                 HStack(spacing: 8) {
-                    if let vin = vehicle.vin, !vin.isEmpty {
-                        Text(vin)
+                    if let inventoryLabel = vehicle.inventoryOrVINLabel {
+                        Text(inventoryLabel)
                             .font(.caption)
                             .monospacedDigit()
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(ColorTheme.background)
                             .cornerRadius(4)
+                    }
+
+                    if vehicle.inventoryIDValue != nil, let vin = vehicle.vinValue {
+                        Text("VIN: \(vin)")
+                            .font(.caption)
+                            .monospacedDigit()
                     }
 
                     let yearText = vehicle.year > 0 ? String(vehicle.year) : ""

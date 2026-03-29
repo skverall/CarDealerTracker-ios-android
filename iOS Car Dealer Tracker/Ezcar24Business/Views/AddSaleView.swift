@@ -314,10 +314,10 @@ private struct VehicleSaleForm: View {
                     
                     VStack(alignment: .leading, spacing: 4) {
                         if let vehicle = selectedVehicle {
-                            Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                            Text(vehicle.displayNameWithInventory)
                                 .font(.headline)
                                 .foregroundColor(ColorTheme.primaryText)
-                            Text(vehicle.vin ?? "No VIN")
+                            Text(vehicle.inventoryOrVINLabel ?? "No ID")
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
                         } else {

@@ -814,9 +814,7 @@ struct AddExpenseView: View {
     }
     
     private func vehicleDisplayName(_ vehicle: Vehicle) -> String {
-        let make = vehicle.make?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let model = vehicle.model?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return [make, model].filter { !$0.isEmpty }.joined(separator: " ")
+        vehicle.displayNameWithInventory
     }
     
     private func accountDisplayName(_ account: FinancialAccount) -> String {

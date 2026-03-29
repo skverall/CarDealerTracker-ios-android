@@ -30,6 +30,7 @@ extension Vehicle {
     // New Feature Fields
     @NSManaged public var askingPrice: NSDecimalNumber?
     @NSManaged public var reportURL: String?
+    @NSManaged public var inventoryID: String?
     
     @NSManaged public var expenses: NSSet?
     @NSManaged public var clients: NSSet?

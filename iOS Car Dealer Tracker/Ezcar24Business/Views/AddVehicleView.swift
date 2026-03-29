@@ -18,6 +18,7 @@ struct AddVehicleView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     
     @State private var vin = ""
+    @State private var inventoryID = ""
     @State private var make = ""
     @State private var model = ""
     @State private var year = ""
@@ -79,6 +80,8 @@ struct AddVehicleView: View {
                             VStack(spacing: 12) {
                                 CustomTextField(title: "vin", text: $vin, icon: "number")
                                     .textInputAutocapitalization(.characters)
+
+                                CustomTextField(title: "Inventory ID", placeholder: "Stock-101", text: $inventoryID, icon: "number.circle")
                                 
                                 HStack(spacing: 12) {
                                     CustomTextField(title: "make", placeholder: "Toyota", text: $make, icon: "tag")
@@ -248,6 +251,7 @@ struct AddVehicleView: View {
 
         let vehicle = viewModel.addVehicle(
             vin: vin,
+            inventoryID: inventoryID,
             make: make,
             model: model,
             year: yearInt,

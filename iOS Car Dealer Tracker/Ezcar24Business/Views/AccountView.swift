@@ -1317,10 +1317,13 @@ struct AccountUserProfileView: View {
     
     var body: some View {
         let displayEmail: String? = {
+            if let authEmail, !authEmail.isEmpty {
+                return authEmail
+            }
             if let user = users.first, let email = user.email, !email.isEmpty {
                 return email
             }
-            return authEmail
+            return nil
         }()
         
         let avatarURL: URL? = {

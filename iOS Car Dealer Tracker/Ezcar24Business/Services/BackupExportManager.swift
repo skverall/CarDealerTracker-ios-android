@@ -43,10 +43,11 @@ final class BackupExportManager: ObservableObject {
 
     func exportVehiclesCSV() throws -> URL {
         let vehicles = try fetchVehicles()
-        var csv = "VIN,Make,Model,Year,Purchase Price,Status,Notes,Created At\n"
+        var csv = "Inventory ID,VIN,Make,Model,Year,Purchase Price,Status,Notes,Created At\n"
         let formatter = ISO8601DateFormatter()
 
         for vehicle in vehicles {
+            let inventoryID = vehicle.inventoryIDValue ?? ""
             let vin = vehicle.vin ?? ""
             let make = vehicle.make ?? ""
             let model = vehicle.model ?? ""
@@ -56,7 +57,7 @@ final class BackupExportManager: ObservableObject {
             let notes = vehicle.notes ?? ""
             let createdAt = vehicle.createdAt.map { formatter.string(from: $0) } ?? ""
 
-            csv += [vin, make, model, "\(year)", purchasePrice, status, notes, createdAt]
+            csv += [inventoryID, vin, make, model, "\(year)", purchasePrice, status, notes, createdAt]
                 .map { "\"\($0.replacingOccurrences(of: "\"", with: "\"\""))\"" }
                 .joined(separator: ",") + "\n"
         }

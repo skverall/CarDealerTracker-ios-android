@@ -10,6 +10,36 @@ struct ReferralStats: Equatable {
     static let empty = ReferralStats(totalRewards: 0, lastRewardedAt: nil, bonusAccessUntil: nil, totalMonths: 0)
 }
 
+private struct DeleteAccountPayload: Encodable {}
+
+private struct DeleteAccountResponse: Decodable {
+    let success: Bool
+}
+
+enum AuthRedirect {
+    static let callbackURL = URL(string: "com.ezcar24.business://login-callback")!
+    static let universalLinkCallbackURLs = [
+        URL(string: "https://ezcar24.com/login-callback")!,
+        URL(string: "https://www.ezcar24.com/login-callback")!
+    ]
+
+    static func matchesCallback(_ url: URL) -> Bool {
+        let normalizedURL = normalized(url)
+        if normalizedURL == normalized(callbackURL) {
+            return true
+        }
+        return universalLinkCallbackURLs.contains { normalizedURL == normalized($0) }
+    }
+
+    private static func normalized(_ url: URL) -> String {
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        components?.query = nil
+        components?.fragment = nil
+        let absoluteString = components?.url?.absoluteString ?? url.absoluteString
+        return absoluteString.trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased()
+    }
+}
+
 @MainActor
 final class SessionStore: ObservableObject {
     enum Status: Equatable {
@@ -344,8 +374,16 @@ final class SessionStore: ObservableObject {
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
 
+        if let currentAuthEmail, currentAuthEmail == normalizedEmail, case .signedIn(let user) = status {
+            errorMessage = nil
+            return user
+        }
+
         do {
-            let updatedUser = try await client.auth.update(user: UserAttributes(email: normalizedEmail))
+            let updatedUser = try await client.auth.update(
+                user: UserAttributes(email: normalizedEmail),
+                redirectTo: AuthRedirect.callbackURL
+            )
             if case .signedIn = status {
                 status = .signedIn(user: updatedUser)
             }
@@ -399,14 +437,13 @@ final class SessionStore: ObservableObject {
             UserDefaults.standard.set(true, forKey: passwordRecoveryFlagKey)
             // Explicitly tell Supabase where to redirect back to the app
             // NOTE: This must exactly match an allowed Redirect URL in Supabase Auth settings.
-            let redirectURL = URL(string: "com.ezcar24.business://login-callback")
             struct PasswordResetPayload: Encodable {
                 let email: String
                 let redirect_to: String
             }
             let payload = PasswordResetPayload(
                 email: email,
-                redirect_to: redirectURL?.absoluteString ?? ""
+                redirect_to: AuthRedirect.callbackURL.absoluteString
             )
             do {
                 _ = try await client.functions.invoke(
@@ -415,7 +452,7 @@ final class SessionStore: ObservableObject {
                 )
             } catch {
                 if case let FunctionsError.httpError(code, _) = error, code == 404 {
-                    try await client.auth.resetPasswordForEmail(email, redirectTo: redirectURL)
+                    try await client.auth.resetPasswordForEmail(email, redirectTo: AuthRedirect.callbackURL)
                 } else {
                     let resolved = functionErrorMessage(from: error)
                     errorMessage = resolved.message
@@ -432,27 +469,27 @@ final class SessionStore: ObservableObject {
     }
 
     func deleteAccount() async throws {
-        guard case .signedIn(let user) = status else { return }
+        guard case .signedIn = status else { return }
         isAuthenticating = true
         defer { isAuthenticating = false }
         
         do {
-            // 1. Wipe all data from public tables first
-            // This ensures we don't hit foreign key constraints when deleting the user
-            try await CloudSyncManager.shared?.deleteAllRemoteData(dealerId: user.id)
-            
-            // 2. Request backend-led account cleanup; final auth deletion is handled server-side
-            let params: [String: String] = ["user_id": user.id.uuidString]
-            _ = try await client.rpc("delete_user_account", params: params).execute()
-            
-            status = .signedOut
+            let response: DeleteAccountResponse = try await client.functions.invoke(
+                "delete_account",
+                options: FunctionInvokeOptions(body: DeleteAccountPayload())
+            )
+            guard response.success else {
+                throw NSError(
+                    domain: "Auth",
+                    code: 500,
+                    userInfo: [NSLocalizedDescriptionKey: "Account deletion did not complete."]
+                )
+            }
+            try? await client.auth.signOut()
             errorMessage = nil
-            
-            // Cleanup local state
             cleanupAfterSignOut()
-            
         } catch {
-            errorMessage = localized(error)
+            errorMessage = functionErrorMessage(from: error).message
             throw error
         }
     }
@@ -479,7 +516,7 @@ final class SessionStore: ObservableObject {
         let urlString = url.absoluteString.lowercased()
         print("Deep link received:", urlString)
         let isExplicitRecovery = urlString.contains("type=recovery") || urlString.contains("recovery")
-        let isLoginCallback = urlString.contains("com.ezcar24.business://login-callback")
+        let isLoginCallback = AuthRedirect.matchesCallback(url)
         let hasPendingRecovery = UserDefaults.standard.bool(forKey: passwordRecoveryFlagKey)
         let expectsRecovery = isExplicitRecovery || (hasPendingRecovery && isLoginCallback)
 
@@ -489,7 +526,8 @@ final class SessionStore: ObservableObject {
         }
 
         do {
-            _ = try await client.auth.session(from: url)
+            let session = try await client.auth.session(from: url)
+            updateStatus(for: .signedIn, session: session)
         } catch {
             if expectsRecovery {
                 errorMessage = "auth_recovery_session_missing".localizedString
@@ -1093,6 +1131,9 @@ final class SessionStore: ObservableObject {
                 handleAccountChangeIfNeeded(newUserId: session.user.id)
                 status = .signedIn(user: session.user)
                 errorMessage = nil
+                Task {
+                    await CloudSyncManager.shared?.syncCurrentUserProfile(user: session.user)
+                }
             } else {
                 status = .signedOut
                 errorMessage = nil

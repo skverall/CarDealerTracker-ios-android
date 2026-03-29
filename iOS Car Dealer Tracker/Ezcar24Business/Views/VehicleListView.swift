@@ -378,7 +378,7 @@ struct VehicleCard: View {
                     // Top Row: Title + Status
                     HStack(alignment: .top) {
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                            Text(vehicle.displayNameWithInventory)
                                 .font(.system(size: 15, weight: .bold)) // Reduced font
                                 .foregroundColor(ColorTheme.primaryText)
                                 .lineLimit(1)
@@ -408,10 +408,19 @@ struct VehicleCard: View {
                     
                     // Second Row: VIN + Expenses Count
                     HStack(spacing: 8) { // Reduced spacing
-                        Text("VIN: \(vehicle.vin ?? "")")
-                            .font(.caption2)
-                            .monospacedDigit()
-                            .foregroundColor(ColorTheme.tertiaryText)
+                        if let inventoryLabel = vehicle.inventoryOrVINLabel {
+                            Text(inventoryLabel)
+                                .font(.caption2)
+                                .monospacedDigit()
+                                .foregroundColor(ColorTheme.tertiaryText)
+                        }
+
+                        if vehicle.inventoryIDValue != nil, let vin = vehicle.vinValue {
+                            Text("VIN: \(vin)")
+                                .font(.caption2)
+                                .monospacedDigit()
+                                .foregroundColor(ColorTheme.tertiaryText)
+                        }
                         
                         if permissionService.canViewVehicleCost() {
                             Label("\(viewModel.expenseCount(for: vehicle)) exp", systemImage: "wrench.and.screwdriver.fill")

@@ -43,6 +43,7 @@ struct VehicleDetailView: View {
     @State private var editModel: String = ""
     @State private var editYear: String = ""
     @State private var editMileage: String = ""
+    @State private var editInventoryID: String = ""
     @State private var editPurchaseDate: Date = Date()
     @State private var editNotes: String = ""
     @State private var editBuyerName: String = ""
@@ -59,11 +60,16 @@ struct VehicleDetailView: View {
     @State private var showShareSheet: Bool = false
     @State private var shareItems: [Any] = []
     @State private var isPreparingShare: Bool = false
+    @State private var showShareComposerSheet: Bool = false
+    @State private var shareDraft: VehicleShareDraft? = nil
+    @State private var shareConfiguration = VehicleShareConfiguration()
     @State private var showShareContactSheet: Bool = false
     @State private var shareContactPhoneInput: String = ""
     @State private var shareContactEmailInput: String = ""
     @State private var shareContactValidationError: String? = nil
     @State private var isSavingShareContact: Bool = false
+    @State private var pendingShareAction: VehicleSharePendingAction? = nil
+    @State private var sharePDFURL: URL? = nil
     @State private var vehiclePhotos: [RemoteVehiclePhoto] = []
     @State private var photoPendingDelete: RemoteVehiclePhoto? = nil
     @State private var showPhotoDeleteDialog: Bool = false
@@ -410,24 +416,117 @@ struct VehicleDetailView: View {
         return NSPredicate(format: "SELF MATCHES[c] %@", regex).evaluate(with: trimmed)
     }
 
-    private func ensureShareContactIsReady() -> Bool {
+    private var photoOrderAlertBinding: Binding<Bool> {
+        Binding(
+            get: { photoOrderErrorMessage != nil },
+            set: { newValue in
+                if !newValue {
+                    photoOrderErrorMessage = nil
+                }
+            }
+        )
+    }
+
+    private var photoOrderAlertText: String {
+        photoOrderErrorMessage ?? ""
+    }
+
+    private var sharePDFSheetBinding: Binding<Bool> {
+        Binding(
+            get: { sharePDFURL != nil },
+            set: { newValue in
+                if !newValue {
+                    cleanupSharePDF()
+                }
+            }
+        )
+    }
+
+    private func dismissPhotoOrderAlert() {
+        photoOrderErrorMessage = nil
+    }
+
+    private func loadEditableVehicleFields() {
+        editStatus = normalizedStatus(vehicle.status)
+        if let pp = vehicle.purchasePrice?.decimalValue {
+            editPurchasePrice = String(describing: pp)
+        } else {
+            editPurchasePrice = ""
+        }
+        if let sp = vehicle.salePrice?.decimalValue {
+            editSalePrice = String(describing: sp)
+        } else {
+            editSalePrice = ""
+        }
+        if let sd = vehicle.saleDate {
+            editSaleDate = sd
+        }
+
+        editVIN = vehicle.vin ?? ""
+        editMake = vehicle.make ?? ""
+        editModel = vehicle.model ?? ""
+        editYear = vehicle.year == 0 ? "" : String(vehicle.year)
+        editMileage = vehicle.mileage == 0 ? "" : String(vehicle.mileage)
+        editInventoryID = vehicle.inventoryID ?? ""
+        editPurchaseDate = vehicle.purchaseDate ?? Date()
+        editNotes = vehicle.notes ?? ""
+        editBuyerName = vehicle.buyerName ?? ""
+        editBuyerPhone = vehicle.buyerPhone ?? ""
+        editPaymentMethod = vehicle.paymentMethod ?? "Cash"
+
+        if let ap = vehicle.askingPrice?.decimalValue {
+            editAskingPrice = String(describing: ap)
+        } else {
+            editAskingPrice = ""
+        }
+        editReportURL = vehicle.reportURL ?? ""
+    }
+
+    private func handleViewAppear() {
+        inventoryStatsManager.refreshStats(for: vehicle)
+        loadEditableVehicleFields()
+
+        Task { await refreshVehiclePhotos() }
+
+        createDefaultAccountsIfNeeded()
+        if let existingSale = currentSale(for: vehicle) {
+            selectedAccount = existingSale.account
+        }
+        applyDefaultSaleAccountIfNeeded()
+    }
+
+    private func ensureShareContactIsReady(
+        for configuration: VehicleShareConfiguration,
+        pendingAction: VehicleSharePendingAction
+    ) -> Bool {
         let currentPhone = currentUserPhone() ?? ""
         let currentEmail = currentUserEmail() ?? ""
-        let hasValidPhone = normalizedInternationalPhone(currentPhone) != nil
-        let hasValidEmail = isValidEmail(currentEmail)
-        guard !hasValidPhone || !hasValidEmail else { return true }
-        shareContactPhoneInput = sanitizeInternationalPhoneInput(currentPhone)
-        shareContactEmailInput = currentEmail
-        shareContactValidationError = nil
-        showShareContactSheet = true
-        return false
+        let requiresPhone = configuration.includeContactPhone
+        let requiresEmail = configuration.includeContactEmail
+        let hasValidPhone = !requiresPhone || normalizedInternationalPhone(currentPhone) != nil
+        let hasValidEmail = !requiresEmail || isValidEmail(currentEmail)
+        guard hasValidPhone && hasValidEmail else {
+            pendingShareAction = pendingAction
+            showShareComposerSheet = false
+            shareContactPhoneInput = sanitizeInternationalPhoneInput(currentPhone)
+            shareContactEmailInput = currentEmail
+            shareContactValidationError = nil
+            DispatchQueue.main.async {
+                showShareContactSheet = true
+            }
+            return false
+        }
+        return true
     }
 
     private func saveShareContactAndContinue() {
         guard !isSavingShareContact else { return }
         shareContactValidationError = nil
 
-        guard let normalizedPhone = normalizedInternationalPhone(shareContactPhoneInput) else {
+        let requiresPhone = shareConfiguration.includeContactPhone
+        let requiresEmail = shareConfiguration.includeContactEmail
+        let normalizedPhone = normalizedInternationalPhone(shareContactPhoneInput)
+        if requiresPhone, normalizedPhone == nil {
             shareContactValidationError = "Enter a valid international phone, e.g. +14155551234"
             return
         }
@@ -435,7 +534,7 @@ struct VehicleDetailView: View {
         let trimmedEmail = shareContactEmailInput
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
-        guard isValidEmail(trimmedEmail) else {
+        if requiresEmail, !isValidEmail(trimmedEmail) {
             shareContactValidationError = "Enter a valid email address"
             return
         }
@@ -449,8 +548,12 @@ struct VehicleDetailView: View {
 
         Task { @MainActor in
             do {
-                user.phone = normalizedPhone
-                user.email = trimmedEmail
+                if let normalizedPhone {
+                    user.phone = normalizedPhone
+                }
+                if isValidEmail(trimmedEmail) {
+                    user.email = trimmedEmail
+                }
                 user.updatedAt = Date()
                 try viewContext.save()
 
@@ -458,9 +561,18 @@ struct VehicleDetailView: View {
                     await CloudSyncManager.shared?.upsertUser(user, dealerId: dealerId)
                 }
 
+                let pendingAction = pendingShareAction
+                pendingShareAction = nil
                 isSavingShareContact = false
                 showShareContactSheet = false
-                prepareShareData()
+                switch pendingAction {
+                case .share:
+                    shareSelectedContent()
+                case .exportPDF:
+                    exportSharePDF()
+                case nil:
+                    break
+                }
             } catch {
                 isSavingShareContact = false
                 shareContactValidationError = "Failed to save contact details. Please try again."
@@ -522,270 +634,279 @@ struct VehicleDetailView: View {
     }
 
     var body: some View {
+        detailScreen
+    }
+
+    private var detailScreen: some View {
+        detailScrollContent
+            .toolbar { detailToolbar }
+            .onChange(of: selectedPhotos) { _, items in
+                guard !items.isEmpty else { return }
+                Task {
+                    await preparePendingPhotos(items: items)
+                }
+            }
+            .sheet(isPresented: $showPhotoUploadSheet) {
+                photoUploadSheetContent
+            }
+            .sheet(isPresented: $showShareContactSheet) {
+                shareContactSheetContent
+            }
+            .sheet(isPresented: $showShareComposerSheet) {
+                shareComposerSheetContent
+            }
+            .sheet(isPresented: $showShareSheet) {
+                activityShareSheetContent
+            }
+            .sheet(isPresented: sharePDFSheetBinding) {
+                sharePDFSheetContent
+            }
+            .sheet(isPresented: $showPhotoManager) {
+                photoManagerSheetContent
+            }
+            .fullScreenCover(isPresented: $showPhotoViewer) {
+                photoViewerContent
+            }
+            .confirmationDialog("delete_photo_confirm".localizedString, isPresented: $showPhotoDeleteDialog) {
+                Button("delete_photo".localizedString, role: .destructive) {
+                    if let photo = photoPendingDelete {
+                        Task { await deleteVehiclePhoto(photo) }
+                    }
+                    photoPendingDelete = nil
+                }
+                Button("cancel".localizedString, role: .cancel) {
+                    photoPendingDelete = nil
+                }
+            }
+            .alert(photoOrderAlertText, isPresented: photoOrderAlertBinding) {
+                Button("OK", role: .cancel, action: dismissPhotoOrderAlert)
+            }
+            .onAppear(perform: handleViewAppear)
+            .onChange(of: accounts.count) { _, _ in
+                applyDefaultSaleAccountIfNeeded()
+            }
+            .background(ColorTheme.secondaryBackground)
+            .navigationTitle("vehicle_details".localizedString)
+            .navigationBarTitleDisplayMode(.inline)
+            .overlay(alignment: .top) {
+                saveStateBanner
+            }
+    }
+
+    private var detailScrollContent: some View {
         ScrollView {
             VStack(spacing: 20) {
                 vehiclePhotoView
-
                 contentView
             }
             .padding(.vertical)
         }
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
+    }
+
+    @ToolbarContentBuilder
+    private var detailToolbar: some ToolbarContent {
+        ToolbarItem(placement: .navigationBarLeading) {
+            if isEditing {
+                Button("cancel".localizedString) {
+                    loadEditableVehicleFields()
+                    isEditing = false
+                }
+            }
+        }
+
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button(isEditing ? "done".localizedString : "edit_action".localizedString) {
                 if isEditing {
-                    Button("cancel".localizedString) {
-                        // discard edits and exit mode
-                        editStatus = normalizedStatus(vehicle.status)
-                        if let pp = vehicle.purchasePrice?.decimalValue { editPurchasePrice = String(describing: pp) } else { editPurchasePrice = "" }
-                        if let sp = vehicle.salePrice?.decimalValue { editSalePrice = String(describing: sp) } else { editSalePrice = "" }
-                        if let sd = vehicle.saleDate { editSaleDate = sd }
-                        editVIN = vehicle.vin ?? ""
-                        editMake = vehicle.make ?? ""
-                        editModel = vehicle.model ?? ""
-                        editYear = vehicle.year == 0 ? "" : String(vehicle.year)
-                        editMileage = vehicle.mileage == 0 ? "" : String(vehicle.mileage)
-                        editPurchaseDate = vehicle.purchaseDate ?? Date()
-                        editNotes = vehicle.notes ?? ""
-                        editBuyerName = vehicle.buyerName ?? ""
-                        editBuyerPhone = vehicle.buyerPhone ?? ""
-                        editPaymentMethod = vehicle.paymentMethod ?? "Cash"
-                        if let ap = vehicle.askingPrice?.decimalValue { editAskingPrice = String(describing: ap) } else { editAskingPrice = "" }
-                        editReportURL = vehicle.reportURL ?? ""
-                        isEditing = false
-                    }
+                    saveVehicleDetails()
+                    isEditing = false
+                } else {
+                    loadEditableVehicleFields()
+                    isEditing = true
                 }
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(isEditing ? "done".localizedString : "edit_action".localizedString) {
-                    if isEditing {
-                        saveVehicleDetails()
-                        isEditing = false
-                    } else {
-                        // populate fields from current vehicle
-                        editVIN = vehicle.vin ?? ""
-                        editMake = vehicle.make ?? ""
-                        editModel = vehicle.model ?? ""
-                        editYear = vehicle.year == 0 ? "" : String(vehicle.year)
-                        editMileage = vehicle.mileage == 0 ? "" : String(vehicle.mileage)
-                        editPurchaseDate = vehicle.purchaseDate ?? Date()
-                        editNotes = vehicle.notes ?? ""
-                        editBuyerName = vehicle.buyerName ?? ""
-                        editBuyerPhone = vehicle.buyerPhone ?? ""
-                        editPaymentMethod = vehicle.paymentMethod ?? "Cash"
-                        isEditing = true
-                    }
-                }
-            }
-            ToolbarItem(placement: .navigationBarTrailing) {
-
-
-                let dealerId = CloudSyncEnvironment.currentDealerId
-                if canDeleteRecords, isEditing, let id = vehicle.id, ImageStore.shared.hasImage(id: id, dealerId: dealerId) {
-                    Button(role: .destructive) {
-                        ImageStore.shared.delete(id: id, dealerId: dealerId) {
-                            refreshID = UUID()
-                        }
-                        if let dealerId {
-                            Task { await CloudSyncManager.shared?.deleteVehicleImage(vehicleId: id, dealerId: dealerId) }
-                        }
-                    } label: {
-                        Image(systemName: "trash")
-                            .foregroundColor(.red)
-                    }
-                }
-
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                 Button {
-                     prepareShareData()
-                 } label: {
-                     if isPreparingShare {
-                         ProgressView()
-                     } else {
-                         Image(systemName: "square.and.arrow.up")
-                     }
-                 }
-                 .disabled(isPreparingShare)
             }
         }
-        .onChange(of: selectedPhotos) { _, items in
-            guard !items.isEmpty else { return }
-            Task {
-                await preparePendingPhotos(items: items)
+
+        ToolbarItem(placement: .navigationBarTrailing) {
+            let dealerId = CloudSyncEnvironment.currentDealerId
+            if canDeleteRecords, isEditing, let id = vehicle.id, ImageStore.shared.hasImage(id: id, dealerId: dealerId) {
+                Button(role: .destructive) {
+                    ImageStore.shared.delete(id: id, dealerId: dealerId) {
+                        refreshID = UUID()
+                    }
+                    if let dealerId {
+                        Task { await CloudSyncManager.shared?.deleteVehicleImage(vehicleId: id, dealerId: dealerId) }
+                    }
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
             }
         }
-        .sheet(isPresented: $showPhotoUploadSheet) {
-            PhotoUploadSheet(
-                photos: pendingPhotos,
-                replaceCover: $replaceCoverOnUpload,
-                isUploading: $isUploadingPhotos,
-                onConfirm: {
-                    uploadPendingPhotos()
-                },
+
+        ToolbarItem(placement: .navigationBarTrailing) {
+            Button {
+                prepareShareData()
+            } label: {
+                if isPreparingShare {
+                    ProgressView()
+                } else {
+                    Image(systemName: "square.and.arrow.up")
+                }
+            }
+            .disabled(isPreparingShare)
+        }
+    }
+
+    private var photoUploadSheetContent: some View {
+        PhotoUploadSheet(
+            photos: pendingPhotos,
+            replaceCover: $replaceCoverOnUpload,
+            isUploading: $isUploadingPhotos,
+            onConfirm: {
+                uploadPendingPhotos()
+            },
+            onCancel: {
+                pendingPhotos = []
+                selectedPhotos = []
+                showPhotoUploadSheet = false
+            }
+        )
+    }
+
+    private var shareContactSheetContent: some View {
+        ShareContactCaptureSheet(
+            phone: $shareContactPhoneInput,
+            email: $shareContactEmailInput,
+            errorMessage: $shareContactValidationError,
+            isSaving: $isSavingShareContact,
+            onCancel: {
+                showShareContactSheet = false
+                shareContactValidationError = nil
+                pendingShareAction = nil
+            },
+            onSave: {
+                saveShareContactAndContinue()
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var shareComposerSheetContent: some View {
+        if let shareDraft {
+            VehicleShareComposerSheet(
+                draft: shareDraft,
+                configuration: $shareConfiguration,
+                isPreparingShare: isPreparingShare,
                 onCancel: {
-                    pendingPhotos = []
-                    selectedPhotos = []
-                    showPhotoUploadSheet = false
+                    showShareComposerSheet = false
+                },
+                onExportPDF: {
+                    exportSharePDF()
+                },
+                onShare: {
+                    shareSelectedContent()
                 }
             )
         }
-        .sheet(isPresented: $showShareContactSheet) {
-            ShareContactCaptureSheet(
-                phone: $shareContactPhoneInput,
-                email: $shareContactEmailInput,
-                errorMessage: $shareContactValidationError,
-                isSaving: $isSavingShareContact,
-                onCancel: {
-                    showShareContactSheet = false
-                    shareContactValidationError = nil
+    }
+
+    private var activityShareSheetContent: some View {
+        ShareSheet(
+            items: shareItems,
+            excludedActivityTypes: [.saveToFiles]
+        )
+    }
+
+    @ViewBuilder
+    private var sharePDFSheetContent: some View {
+        if let sharePDFURL {
+            ShareSheet(items: [sharePDFURL]) {
+                cleanupSharePDF()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var photoManagerSheetContent: some View {
+        if let id = vehicle.id {
+            PhotoManagerSheet(
+                vehicleId: id,
+                photos: vehiclePhotos,
+                hasCover: ImageStore.shared.hasImage(id: id, dealerId: CloudSyncEnvironment.currentDealerId),
+                isSaving: $isSavingPhotoOrder,
+                onSave: { ordered in
+                    savePhotoOrder(ordered)
                 },
-                onSave: {
-                    saveShareContactAndContinue()
+                onSetCover: { photo in
+                    Task { await setCoverPhoto(photo) }
+                },
+                onDelete: { photo in
+                    photoPendingDelete = photo
+                    showPhotoDeleteDialog = true
+                },
+                onClose: {
+                    showPhotoManager = false
                 }
             )
         }
-        .sheet(isPresented: $showShareSheet) {
-            ShareSheet(items: shareItems)
-        }
-        .sheet(isPresented: $showPhotoManager) {
-            if let id = vehicle.id {
-                PhotoManagerSheet(
-                    vehicleId: id,
-                    photos: vehiclePhotos,
-                    hasCover: ImageStore.shared.hasImage(id: id, dealerId: CloudSyncEnvironment.currentDealerId),
-                    isSaving: $isSavingPhotoOrder,
-                    onSave: { ordered in
-                        savePhotoOrder(ordered)
-                    },
-                    onSetCover: { photo in
-                        Task { await setCoverPhoto(photo) }
-                    },
-                    onDelete: { photo in
-                        photoPendingDelete = photo
-                        showPhotoDeleteDialog = true
-                    },
-                    onClose: {
-                        showPhotoManager = false
+    }
+
+    @ViewBuilder
+    private var photoViewerContent: some View {
+        if let id = vehicle.id {
+            VehiclePhotoViewer(
+                vehicleId: id,
+                items: photoViewerItems,
+                startIndex: photoViewerIndex,
+                onClose: { showPhotoViewer = false },
+                onSetCover: { photo in
+                    Task { await setCoverPhoto(photo) }
+                    showPhotoViewer = false
+                },
+                onDeletePhoto: { photo in
+                    photoPendingDelete = photo
+                    showPhotoDeleteDialog = true
+                    showPhotoViewer = false
+                },
+                onDeleteCover: {
+                    if let dealerId = CloudSyncEnvironment.currentDealerId {
+                        Task { await CloudSyncManager.shared?.deleteVehicleImage(vehicleId: id, dealerId: dealerId) }
                     }
-                )
-            }
-        }
-        .fullScreenCover(isPresented: $showPhotoViewer) {
-            if let id = vehicle.id {
-                VehiclePhotoViewer(
-                    vehicleId: id,
-                    items: photoViewerItems,
-                    startIndex: photoViewerIndex,
-                    onClose: { showPhotoViewer = false },
-                    onSetCover: { photo in
-                        Task { await setCoverPhoto(photo) }
-                        showPhotoViewer = false
-                    },
-                    onDeletePhoto: { photo in
-                        photoPendingDelete = photo
-                        showPhotoDeleteDialog = true
-                        showPhotoViewer = false
-                    },
-                    onDeleteCover: {
-                        if let dealerId = CloudSyncEnvironment.currentDealerId {
-                            Task { await CloudSyncManager.shared?.deleteVehicleImage(vehicleId: id, dealerId: dealerId) }
-                        }
-                        ImageStore.shared.delete(id: id, dealerId: CloudSyncEnvironment.currentDealerId) {
-                            refreshID = UUID()
-                        }
-                        showPhotoViewer = false
+                    ImageStore.shared.delete(id: id, dealerId: CloudSyncEnvironment.currentDealerId) {
+                        refreshID = UUID()
                     }
-                )
-            }
-        }
-        .confirmationDialog("delete_photo_confirm".localizedString, isPresented: $showPhotoDeleteDialog) {
-            Button("delete_photo".localizedString, role: .destructive) {
-                if let photo = photoPendingDelete {
-                    Task { await deleteVehiclePhoto(photo) }
+                    showPhotoViewer = false
                 }
-                photoPendingDelete = nil
-            }
-            Button("cancel".localizedString, role: .cancel) {
-                photoPendingDelete = nil
-            }
+            )
         }
-        .alert("Photo Order", isPresented: Binding(
-            get: { photoOrderErrorMessage != nil },
-            set: { newValue in
-                if !newValue { photoOrderErrorMessage = nil }
-            }
-        )) {
-            Button("OK", role: .cancel) { photoOrderErrorMessage = nil }
-        } message: {
-            Text(photoOrderErrorMessage ?? "")
-        }
-        .onAppear {
-            inventoryStatsManager.refreshStats(for: vehicle)
+    }
 
-            // Initialize edit fields
-            editStatus = normalizedStatus(vehicle.status)
-            if let pp = vehicle.purchasePrice?.decimalValue { editPurchasePrice = String(describing: pp) } else { editPurchasePrice = "" }
-            if let sp = vehicle.salePrice?.decimalValue { editSalePrice = String(describing: sp) }
-            if let sd = vehicle.saleDate { editSaleDate = sd }
-
-            // Basic info
-            editVIN = vehicle.vin ?? ""
-            editMake = vehicle.make ?? ""
-            editModel = vehicle.model ?? ""
-            editYear = vehicle.year == 0 ? "" : String(vehicle.year)
-            editMileage = vehicle.mileage == 0 ? "" : String(vehicle.mileage)
-            editPurchaseDate = vehicle.purchaseDate ?? Date()
-            editNotes = vehicle.notes ?? ""
-            editBuyerName = vehicle.buyerName ?? ""
-            editBuyerPhone = vehicle.buyerPhone ?? ""
-
-            editPaymentMethod = vehicle.paymentMethod ?? "Cash"
-            
-            Task { await refreshVehiclePhotos() }
-
-            if let ap = vehicle.askingPrice?.decimalValue { editAskingPrice = String(describing: ap) } else { editAskingPrice = "" }
-            editReportURL = vehicle.reportURL ?? ""
-            
-            createDefaultAccountsIfNeeded()
-            if let existingSale = currentSale(for: vehicle) {
-                selectedAccount = existingSale.account
+    @ViewBuilder
+    private var saveStateBanner: some View {
+        VStack {
+            if isSaving {
+                Label("saving_label".localizedString, systemImage: "arrow.triangle.2.circlepath")
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(10)
+                    .transition(.opacity)
+            } else if showSavedToast {
+                Label("saved_label".localizedString, systemImage: "checkmark.circle.fill")
+                    .foregroundColor(ColorTheme.success)
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(10)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            } else if let err = saveError {
+                Label(err, systemImage: "exclamationmark.triangle")
+                    .foregroundColor(ColorTheme.danger)
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(10)
+                    .transition(.move(edge: .top).combined(with: .opacity))
             }
-            applyDefaultSaleAccountIfNeeded()
         }
-        .onChange(of: accounts.count) { _, _ in
-            applyDefaultSaleAccountIfNeeded()
-        }
-        .background(ColorTheme.secondaryBackground)
-        .navigationTitle("vehicle_details".localizedString)
-        .navigationBarTitleDisplayMode(.inline)
-        .overlay(alignment: .top) {
-            VStack {
-                if isSaving {
-                    Label("saving_label".localizedString, systemImage: "arrow.triangle.2.circlepath")
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(10)
-                        .transition(.opacity)
-                } else if showSavedToast {
-                    Label("saved_label".localizedString, systemImage: "checkmark.circle.fill")
-                        .foregroundColor(ColorTheme.success)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(10)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                } else if let err = saveError {
-                    Label(err, systemImage: "exclamationmark.triangle")
-                        .foregroundColor(ColorTheme.danger)
-                        .padding(10)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(10)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-            }
-            .padding(.top, 8)
-        }
+        .padding(.top, 8)
     }
 
     @ViewBuilder
@@ -907,6 +1028,8 @@ struct VehicleDetailView: View {
                     editRow(label: "year".localizedString, text: $editYear, placeholder: "2024", keyboardType: .numberPad)
                     Divider().padding(.leading)
                     editRow(label: "mileage".localizedString, text: $editMileage, placeholder: "0", keyboardType: .numberPad)
+                    Divider().padding(.leading)
+                    editRow(label: "Inventory ID", text: $editInventoryID, placeholder: "Stock-101", autocapitalization: .never)
                     Divider().padding(.leading)
                     editRow(label: "vin".localizedString, text: $editVIN, placeholder: "VIN...", autocapitalization: .characters)
                 }
@@ -1305,7 +1428,7 @@ struct VehicleDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(vehicle.make ?? "") \(vehicle.model ?? "")")
+                    Text(vehicle.displayNameWithInventory)
                         .font(.title2)
                         .fontWeight(.bold)
                     
@@ -1322,6 +1445,16 @@ struct VehicleDetailView: View {
             Divider()
             
             VStack(alignment: .leading, spacing: 8) {
+                if let inventoryID = vehicle.inventoryIDValue {
+                    HStack {
+                        Text("Inventory ID:")
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Text(inventoryID)
+                            .fontWeight(.medium)
+                    }
+                    .font(.subheadline)
+                }
+
                 HStack {
                     Text("VIN:")
                         .foregroundColor(ColorTheme.secondaryText)
@@ -1610,6 +1743,7 @@ struct VehicleDetailView: View {
         vehicle.model = editModel
         if let y = Int32(editYear) { vehicle.year = y }
         if let m = Int32(editMileage) { vehicle.mileage = m } else { vehicle.mileage = 0 }
+        vehicle.inventoryID = editInventoryID.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         vehicle.purchaseDate = editPurchaseDate
         let trimmedNotes = editNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         vehicle.notes = trimmedNotes.isEmpty ? nil : trimmedNotes
@@ -1743,32 +1877,77 @@ struct VehicleDetailView: View {
 
     private func prepareShareData() {
         guard !isPreparingShare else { return }
-        guard ensureShareContactIsReady() else { return }
         isPreparingShare = true
-        Task {
-            await buildShareItems()
-            await MainActor.run {
+        Task { @MainActor in
+            let draft = await makeShareDraft()
+            isPreparingShare = false
+            guard let draft else { return }
+            shareDraft = draft
+            shareConfiguration.sync(with: draft)
+            showShareComposerSheet = true
+        }
+    }
+
+    private func shareSelectedContent() {
+        guard !isPreparingShare, let draft = shareDraft else { return }
+        guard ensureShareContactIsReady(for: shareConfiguration, pendingAction: .share) else { return }
+
+        pendingShareAction = nil
+        isPreparingShare = true
+        showShareComposerSheet = false
+        let configuration = shareConfiguration
+
+        let items = buildShareItems(from: draft, configuration: configuration)
+        isPreparingShare = false
+        guard !items.isEmpty else { return }
+        shareItems = items
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            showShareSheet = true
+        }
+    }
+
+    private func exportSharePDF() {
+        guard !isPreparingShare, let draft = shareDraft else { return }
+        guard ensureShareContactIsReady(for: shareConfiguration, pendingAction: .exportPDF) else { return }
+
+        pendingShareAction = nil
+        isPreparingShare = true
+        showShareComposerSheet = false
+        let configuration = shareConfiguration
+
+        Task { @MainActor in
+            do {
+                let pdfURL = try makeSharePDF(from: draft, configuration: configuration)
                 isPreparingShare = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    sharePDFURL = pdfURL
+                }
+            } catch {
+                isPreparingShare = false
+                saveError = "PDF export failed"
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                    withAnimation { saveError = nil }
+                }
             }
         }
     }
 
-    private func buildShareItems() async {
-        guard let id = vehicle.id else { return }
+    @MainActor
+    private func makeShareDraft() async -> VehicleShareDraft? {
+        guard let id = vehicle.id else { return nil }
 
-        let reportLink = vehicle.reportURL ?? ""
+        let make = vehicle.make ?? ""
+        let model = vehicle.model ?? ""
+        let vin = vehicle.vin?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let inventoryID = vehicle.inventoryIDValue ?? ""
+        let notes = vehicle.notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let reportLink = vehicle.reportURL?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let askingPrice = vehicle.askingPrice?.decimalValue
             ?? vehicle.salePrice?.decimalValue
             ?? vehicle.purchasePrice?.decimalValue
             ?? 0
-        let make = vehicle.make ?? ""
-        let model = vehicle.model ?? ""
-        let year = vehicle.year
-        let vin = vehicle.vin?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let dealerId = CloudSyncEnvironment.currentDealerId
-        let dealerName = resolvedDealerName()
-        let contactPhone = currentUserPhone()?.trimmingCharacters(in: .whitespacesAndNewlines)
-        let contactEmail = currentUserEmail()?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let shareTitle = "\(vehicle.year.asYear()) \(make) \(model)".trimmingCharacters(in: .whitespacesAndNewlines)
 
         var photos = vehiclePhotos
         if photos.isEmpty, let dealerId {
@@ -1782,84 +1961,330 @@ struct VehicleDetailView: View {
             }
         }
 
-        let primaryImage = await loadPrimaryImage(vehicleId: id, dealerId: dealerId)
-        var galleryImages: [UIImage] = []
-        if let dealerId {
-            for photo in photos {
-                if let image = await loadPhotoImage(vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId) {
-                    galleryImages.append(image)
-                    if galleryImages.count >= 8 {
-                        break
-                    }
+        let coverImage = await loadPrimaryImage(vehicleId: id, dealerId: dealerId)
+        var photoOptions: [VehicleSharePhotoOption] = []
+        if let coverImage {
+            photoOptions.append(
+                VehicleSharePhotoOption(
+                    id: "cover",
+                    title: "Cover Photo",
+                    image: coverImage,
+                    isCover: true
+                )
+            )
+        }
+        for (index, photo) in photos.enumerated() {
+            if let image = await loadPhotoImage(vehicleId: photo.vehicleId, photoId: photo.id, dealerId: dealerId) {
+                photoOptions.append(
+                    VehicleSharePhotoOption(
+                        id: photo.id.uuidString,
+                        title: "Photo \(index + 1)",
+                        image: image,
+                        isCover: false
+                    )
+                )
+            }
+        }
+
+        vehiclePhotos = photos
+
+        return VehicleShareDraft(
+            shareTitle: shareTitle.isEmpty ? "Vehicle" : shareTitle,
+            price: askingPrice,
+            inventoryID: inventoryID,
+            vin: vin,
+            mileage: Int(vehicle.mileage),
+            notes: notes,
+            reportLink: reportLink,
+            coverImage: coverImage,
+            photoOptions: photoOptions,
+            hasValidPhone: normalizedInternationalPhone(currentUserPhone() ?? "") != nil,
+            hasValidEmail: isValidEmail(currentUserEmail() ?? "")
+        )
+    }
+
+    @MainActor
+    private func buildShareItems(from draft: VehicleShareDraft, configuration: VehicleShareConfiguration) -> [Any] {
+        var items: [Any] = []
+        let selectedPhotos = draft.selectedPhotoOptions(using: configuration)
+        let galleryImages = selectedPhotos.filter { !$0.isCover }.map(\.image)
+        let reportURL = configuration.includeReportLink ? draft.reportURL : nil
+        let dealerName = configuration.includeDealerName ? resolvedDealerName() : nil
+        let contactPhone = configuration.includeContactPhone
+            ? currentUserPhone()?.trimmingCharacters(in: .whitespacesAndNewlines)
+            : nil
+        let contactEmail = configuration.includeContactEmail
+            ? currentUserEmail()?.trimmingCharacters(in: .whitespacesAndNewlines)
+            : nil
+        let priceText = configuration.includePrice && draft.price > 0 ? draft.price.asCurrencyFallback() : nil
+
+        var detailLines: [String] = []
+        if configuration.includeInventoryID, draft.hasInventoryID {
+            detailLines.append("Inventory ID: \(draft.inventoryID)")
+        }
+        if configuration.includeVIN, draft.hasVIN {
+            detailLines.append("VIN: \(draft.vin)")
+        }
+        if configuration.includeMileage, draft.hasMileage {
+            detailLines.append("Mileage: \(draft.mileage.asMileageFallback())")
+        }
+
+        var contactLines: [String] = []
+        if let contactPhone, !contactPhone.isEmpty {
+            contactLines.append("Call/Text: \(contactPhone)")
+        }
+        if let contactEmail, !contactEmail.isEmpty {
+            contactLines.append("Email: \(contactEmail)")
+        }
+
+        if configuration.includeCard {
+            let cardView = VehicleShareCard(
+                image: draft.coverImage ?? selectedPhotos.first?.image,
+                galleryImages: Array(galleryImages.prefix(4)),
+                title: draft.shareTitle,
+                detailLines: detailLines,
+                priceText: priceText,
+                badgeText: configuration.includeVerificationBadge ? "Verified Dealer" : nil,
+                reportText: configuration.includeReportLink && draft.hasReportLink
+                    ? (reportURL != nil ? "Report Ready" : "Report Included")
+                    : nil,
+                dealerName: dealerName,
+                contactLines: contactLines
+            )
+
+            let renderer = ImageRenderer(content: cardView)
+            renderer.scale = 1
+            let cardImage = renderer.uiImage
+            if let cardImage {
+                items.append(cardImage)
+            }
+        }
+
+        if configuration.includeSelectedPhotos {
+            for image in selectedPhotos.prefix(6).map(\.image) {
+                items.append(image)
+            }
+        }
+
+        if configuration.includeMessage {
+            var lines: [String] = []
+            if let dealerName, !dealerName.isEmpty {
+                lines.append("Check out this \(draft.shareTitle) from \(dealerName).")
+            } else {
+                lines.append("Check out this \(draft.shareTitle).")
+            }
+            if let priceText {
+                lines.append("Price: \(priceText)")
+            }
+            if configuration.includeInventoryID, draft.hasInventoryID {
+                lines.append("Inventory ID: \(draft.inventoryID)")
+            }
+            if configuration.includeVIN, draft.hasVIN {
+                lines.append("VIN: \(draft.vin)")
+            }
+            if configuration.includeMileage, draft.hasMileage {
+                lines.append("Mileage: \(draft.mileage.asMileageFallback())")
+            }
+            if configuration.includeNotes, draft.hasNotes {
+                lines.append("Notes: \(draft.notes)")
+            }
+            if let contactPhone, !contactPhone.isEmpty {
+                lines.append("Call/Text: \(contactPhone)")
+                if let waLink = whatsappLink(from: contactPhone) {
+                    lines.append("WhatsApp: \(waLink)")
                 }
             }
+            if let contactEmail, !contactEmail.isEmpty {
+                lines.append("Email: \(contactEmail)")
+            }
+            if configuration.includeReportLink, draft.hasReportLink {
+                if reportURL != nil {
+                    lines.append("Report link attached.")
+                } else {
+                    lines.append("Report: \(draft.reportLink)")
+                }
+            }
+            items.append(lines.joined(separator: "\n"))
+        }
+
+        if let reportURL {
+            items.append(ShareLinkItemSource(url: reportURL, title: draft.shareTitle, icon: nil))
+        }
+
+        return items
+    }
+
+    @MainActor
+    private func makeShareCardImage(from draft: VehicleShareDraft, configuration: VehicleShareConfiguration) -> UIImage? {
+        let selectedPhotos = draft.selectedPhotoOptions(using: configuration)
+        let galleryImages = selectedPhotos.filter { !$0.isCover }.map(\.image)
+        let dealerName = configuration.includeDealerName ? resolvedDealerName() : nil
+        let contactPhone = configuration.includeContactPhone
+            ? currentUserPhone()?.trimmingCharacters(in: .whitespacesAndNewlines)
+            : nil
+        let contactEmail = configuration.includeContactEmail
+            ? currentUserEmail()?.trimmingCharacters(in: .whitespacesAndNewlines)
+            : nil
+        let priceText = configuration.includePrice && draft.price > 0 ? draft.price.asCurrencyFallback() : nil
+
+        var detailLines: [String] = []
+        if configuration.includeInventoryID, draft.hasInventoryID {
+            detailLines.append("Inventory ID: \(draft.inventoryID)")
+        }
+        if configuration.includeVIN, draft.hasVIN {
+            detailLines.append("VIN: \(draft.vin)")
+        }
+        if configuration.includeMileage, draft.hasMileage {
+            detailLines.append("Mileage: \(draft.mileage.asMileageFallback())")
+        }
+
+        var contactLines: [String] = []
+        if let contactPhone, !contactPhone.isEmpty {
+            contactLines.append("Call/Text: \(contactPhone)")
+        }
+        if let contactEmail, !contactEmail.isEmpty {
+            contactLines.append("Email: \(contactEmail)")
         }
 
         let cardView = VehicleShareCard(
-            image: primaryImage,
-            galleryImages: galleryImages,
-            make: make,
-            model: model,
-            year: year,
-            vin: vin,
-            price: askingPrice,
-            hasReport: !reportLink.isEmpty,
+            image: draft.coverImage ?? selectedPhotos.first?.image,
+            galleryImages: Array(galleryImages.prefix(4)),
+            title: draft.shareTitle,
+            detailLines: detailLines,
+            priceText: priceText,
+            badgeText: configuration.includeVerificationBadge ? "Verified Dealer" : nil,
+            reportText: configuration.includeReportLink && draft.hasReportLink
+                ? (draft.reportURL != nil ? "Report Ready" : "Report Included")
+                : nil,
             dealerName: dealerName,
-            contactPhone: contactPhone,
-            contactEmail: contactEmail
+            contactLines: contactLines
         )
 
-        var items: [Any] = []
-        let cardImage: UIImage? = await MainActor.run {
-            let renderer = ImageRenderer(content: cardView)
-            renderer.scale = 1
-            return renderer.uiImage
-        }
-        if let cardImage {
-            items.append(cardImage)
-        }
-        for image in galleryImages.prefix(6) {
-            items.append(image)
-        }
+        let renderer = ImageRenderer(content: cardView)
+        renderer.scale = 1
+        return renderer.uiImage
+    }
 
-        let reportURL = URL(string: reportLink.trimmingCharacters(in: .whitespacesAndNewlines))
+    @MainActor
+    private func makeSharePDF(from draft: VehicleShareDraft, configuration: VehicleShareConfiguration) throws -> URL {
+        let selectedPhotos = configuration.includeSelectedPhotos ? draft.selectedPhotoOptions(using: configuration) : []
+        let cardImage = configuration.includeCard ? makeShareCardImage(from: draft, configuration: configuration) : nil
 
-        let vehicleTitle = "\(year.asYear()) \(make) \(model)".trimmingCharacters(in: .whitespacesAndNewlines)
-        let shareTitle = vehicleTitle.isEmpty ? "Vehicle" : vehicleTitle
-
-        var message = "Check out this \(shareTitle)!"
-        message += "\nDealer: \(dealerName)"
-        if askingPrice > 0 {
-            message += "\nAsking: \(askingPrice.asCurrency())"
+        var summaryLines: [String] = []
+        if let dealerName = configuration.includeDealerName ? resolvedDealerName() : nil, !dealerName.isEmpty {
+            summaryLines.append("Dealer: \(dealerName)")
         }
-        if !vin.isEmpty {
-            message += "\nVIN: \(vin)"
+        if configuration.includePrice, draft.price > 0 {
+            summaryLines.append("Price: \(draft.price.asCurrencyFallback())")
         }
-        if let contactPhone, !contactPhone.isEmpty {
-            message += "\nCall/Text: \(contactPhone)"
-            if let waLink = whatsappLink(from: contactPhone) {
-                message += "\nWhatsApp: \(waLink)"
+        if configuration.includeInventoryID, draft.hasInventoryID {
+            summaryLines.append("Inventory ID: \(draft.inventoryID)")
+        }
+        if configuration.includeVIN, draft.hasVIN {
+            summaryLines.append("VIN: \(draft.vin)")
+        }
+        if configuration.includeMileage, draft.hasMileage {
+            summaryLines.append("Mileage: \(draft.mileage.asMileageFallback())")
+        }
+        if configuration.includeNotes, draft.hasNotes {
+            summaryLines.append("Notes: \(draft.notes)")
+        }
+        if configuration.includeContactPhone, let phone = currentUserPhone()?.trimmingCharacters(in: .whitespacesAndNewlines), !phone.isEmpty {
+            summaryLines.append("Call/Text: \(phone)")
+            if let waLink = whatsappLink(from: phone) {
+                summaryLines.append("WhatsApp: \(waLink)")
             }
         }
-        if let contactEmail, !contactEmail.isEmpty {
-            message += "\nEmail: \(contactEmail)"
+        if configuration.includeContactEmail, let email = currentUserEmail()?.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty {
+            summaryLines.append("Email: \(email)")
         }
-        if reportURL == nil, !reportLink.isEmpty {
-            message += "\nInspection report: \(reportLink)"
-        }
-        if reportURL != nil {
-            message += "\nOpen full listing from the attached link."
-        }
-        items.append(message)
-
-        if let reportURL {
-            items.append(ShareLinkItemSource(url: reportURL, title: shareTitle, icon: cardImage))
+        if configuration.includeReportLink, draft.hasReportLink {
+            summaryLines.append("Report: \(draft.reportLink)")
         }
 
-        await MainActor.run {
-            self.shareItems = items
-            self.showShareSheet = true
+        let needsSummaryPage = configuration.includeMessage || (cardImage == nil && selectedPhotos.isEmpty) || (configuration.includeReportLink && draft.hasReportLink)
+        let pageRect = CGRect(x: 0, y: 0, width: 612, height: 792)
+        let contentRect = pageRect.insetBy(dx: 28, dy: 28)
+        let renderer = UIGraphicsPDFRenderer(bounds: pageRect)
+        let fileName = draft.shareTitle.replacingOccurrences(of: "/", with: "-")
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(fileName.isEmpty ? "vehicle-share" : fileName)-\(UUID().uuidString).pdf")
+
+        try renderer.writePDF(to: url) { context in
+            if let cardImage {
+                context.beginPage()
+                drawImagePage(cardImage, in: contentRect)
+            }
+
+            if needsSummaryPage, !summaryLines.isEmpty {
+                context.beginPage()
+                drawSummaryPage(title: draft.shareTitle, lines: summaryLines, in: contentRect)
+            }
+
+            for photo in selectedPhotos {
+                context.beginPage()
+                drawPhotoPage(photo: photo, in: contentRect)
+            }
         }
+
+        return url
+    }
+
+    @MainActor
+    private func drawImagePage(_ image: UIImage, in rect: CGRect) {
+        let fittedRect = aspectFitRect(for: image.size, in: rect)
+        image.draw(in: fittedRect)
+    }
+
+    @MainActor
+    private func drawSummaryPage(title: String, lines: [String], in rect: CGRect) {
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 28, weight: .bold),
+            .foregroundColor: UIColor.black
+        ]
+        let bodyAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 16, weight: .regular),
+            .foregroundColor: UIColor.darkGray
+        ]
+
+        let titleText = title.isEmpty ? "Vehicle Listing" : title
+        let titleRect = CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: 40)
+        titleText.draw(in: titleRect, withAttributes: titleAttributes)
+
+        let body = lines.joined(separator: "\n\n")
+        let bodyRect = CGRect(x: rect.minX, y: rect.minY + 56, width: rect.width, height: rect.height - 56)
+        body.draw(in: bodyRect, withAttributes: bodyAttributes)
+    }
+
+    @MainActor
+    private func drawPhotoPage(photo: VehicleSharePhotoOption, in rect: CGRect) {
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
+            .foregroundColor: UIColor.black
+        ]
+
+        let titleRect = CGRect(x: rect.minX, y: rect.minY, width: rect.width, height: 28)
+        photo.title.draw(in: titleRect, withAttributes: titleAttributes)
+
+        let imageRect = CGRect(x: rect.minX, y: rect.minY + 40, width: rect.width, height: rect.height - 40)
+        let fittedRect = aspectFitRect(for: photo.image.size, in: imageRect)
+        photo.image.draw(in: fittedRect)
+    }
+
+    private func aspectFitRect(for imageSize: CGSize, in bounds: CGRect) -> CGRect {
+        guard imageSize.width > 0, imageSize.height > 0 else { return bounds }
+        let scale = min(bounds.width / imageSize.width, bounds.height / imageSize.height)
+        let width = imageSize.width * scale
+        let height = imageSize.height * scale
+        let x = bounds.minX + (bounds.width - width) / 2
+        let y = bounds.minY + (bounds.height - height) / 2
+        return CGRect(x: x, y: y, width: width, height: height)
+    }
+
+    private func cleanupSharePDF() {
+        if let sharePDFURL {
+            try? FileManager.default.removeItem(at: sharePDFURL)
+        }
+        sharePDFURL = nil
     }
     
     private func currentSale(for vehicle: Vehicle) -> Sale? {
@@ -1908,49 +2333,294 @@ struct VehicleDetailView: View {
     }
 }
 
+private enum VehicleSharePendingAction {
+    case share
+    case exportPDF
+}
+
+private struct VehicleSharePhotoOption: Identifiable {
+    let id: String
+    let title: String
+    let image: UIImage
+    let isCover: Bool
+}
+
+private struct VehicleShareDraft {
+    let shareTitle: String
+    let price: Decimal
+    let inventoryID: String
+    let vin: String
+    let mileage: Int
+    let notes: String
+    let reportLink: String
+    let coverImage: UIImage?
+    let photoOptions: [VehicleSharePhotoOption]
+    let hasValidPhone: Bool
+    let hasValidEmail: Bool
+
+    var hasInventoryID: Bool { !inventoryID.isEmpty }
+    var hasVIN: Bool { !vin.isEmpty }
+    var hasMileage: Bool { mileage > 0 }
+    var hasNotes: Bool { !notes.isEmpty }
+    var hasReportLink: Bool { !reportLink.isEmpty }
+    var hasPhotoOptions: Bool { !photoOptions.isEmpty }
+    var reportURL: URL? { URL(string: reportLink) }
+
+    var defaultSelectedPhotoIDs: Set<String> {
+        let galleryPhotoIDs = photoOptions.filter { !$0.isCover }.map(\.id)
+        if !galleryPhotoIDs.isEmpty {
+            return Set(galleryPhotoIDs)
+        }
+        if let coverID = photoOptions.first(where: \.isCover)?.id {
+            return [coverID]
+        }
+        return []
+    }
+
+    func selectedPhotoOptions(using configuration: VehicleShareConfiguration) -> [VehicleSharePhotoOption] {
+        photoOptions.filter { configuration.selectedPhotoIDs.contains($0.id) }
+    }
+}
+
+private struct VehicleShareConfiguration {
+    var includeCard: Bool = true
+    var includeSelectedPhotos: Bool = true
+    var includeMessage: Bool = true
+    var includePrice: Bool = true
+    var includeInventoryID: Bool = true
+    var includeVIN: Bool = false
+    var includeMileage: Bool = false
+    var includeNotes: Bool = false
+    var includeDealerName: Bool = true
+    var includeContactPhone: Bool = true
+    var includeContactEmail: Bool = true
+    var includeReportLink: Bool = true
+    var includeVerificationBadge: Bool = false
+    var selectedPhotoIDs: Set<String> = []
+    private var hasInitializedDefaults: Bool = false
+
+    mutating func sync(with draft: VehicleShareDraft) {
+        if !hasInitializedDefaults {
+            includeInventoryID = draft.hasInventoryID
+            includeVIN = !draft.hasInventoryID && draft.hasVIN
+            includeMileage = false
+            includeNotes = false
+            includeSelectedPhotos = draft.hasPhotoOptions
+            includeReportLink = draft.hasReportLink
+            selectedPhotoIDs = draft.defaultSelectedPhotoIDs
+            hasInitializedDefaults = true
+            return
+        }
+
+        let availablePhotoIDs = Set(draft.photoOptions.map(\.id))
+        selectedPhotoIDs = selectedPhotoIDs.intersection(availablePhotoIDs)
+        if selectedPhotoIDs.isEmpty && includeSelectedPhotos && draft.hasPhotoOptions {
+            selectedPhotoIDs = draft.defaultSelectedPhotoIDs
+        }
+
+        if !draft.hasInventoryID { includeInventoryID = false }
+        if !draft.hasVIN { includeVIN = false }
+        if !draft.hasMileage { includeMileage = false }
+        if !draft.hasNotes { includeNotes = false }
+        if !draft.hasReportLink { includeReportLink = false }
+        if !draft.hasPhotoOptions { includeSelectedPhotos = false }
+    }
+
+    func canShare(draft: VehicleShareDraft) -> Bool {
+        includeCard
+            || includeMessage
+            || (includeSelectedPhotos && !draft.selectedPhotoOptions(using: self).isEmpty)
+            || (includeReportLink && draft.reportURL != nil)
+    }
+}
+
+private struct VehicleShareComposerSheet: View {
+    let draft: VehicleShareDraft
+    @Binding var configuration: VehicleShareConfiguration
+    let isPreparingShare: Bool
+    let onCancel: () -> Void
+    let onExportPDF: () -> Void
+    let onShare: () -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Share Output") {
+                    Toggle("Listing card", isOn: $configuration.includeCard)
+                    Toggle("Text summary", isOn: $configuration.includeMessage)
+                    if draft.hasPhotoOptions {
+                        Toggle("Selected photos", isOn: $configuration.includeSelectedPhotos)
+                    }
+                    if draft.hasReportLink {
+                        Toggle("Attach report link", isOn: $configuration.includeReportLink)
+                    }
+                }
+
+                Section("Vehicle Fields") {
+                    if draft.price > 0 {
+                        Toggle("Price", isOn: $configuration.includePrice)
+                    }
+                    if draft.hasInventoryID {
+                        Toggle("Inventory ID", isOn: $configuration.includeInventoryID)
+                    }
+                    if draft.hasVIN {
+                        Toggle("VIN", isOn: $configuration.includeVIN)
+                    }
+                    if draft.hasMileage {
+                        Toggle("Mileage", isOn: $configuration.includeMileage)
+                    }
+                    if draft.hasNotes {
+                        Toggle("Notes", isOn: $configuration.includeNotes)
+                    }
+                }
+
+                Section("Dealer & Contact") {
+                    Toggle("Dealer name", isOn: $configuration.includeDealerName)
+                    Toggle("Verification badge", isOn: $configuration.includeVerificationBadge)
+                    Toggle("Phone number", isOn: $configuration.includeContactPhone)
+                    if configuration.includeContactPhone && !draft.hasValidPhone {
+                        Text("We'll ask for a phone number before sharing.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                    Toggle("Email", isOn: $configuration.includeContactEmail)
+                    if configuration.includeContactEmail && !draft.hasValidEmail {
+                        Text("We'll ask for an email before sharing.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                if draft.hasPhotoOptions {
+                    Section("Photos") {
+                        Text("Tap the photos you want to include. The cover photo is still used for the card preview when available.")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+
+                        LazyVGrid(columns: columns, spacing: 12) {
+                            ForEach(draft.photoOptions) { option in
+                                Button {
+                                    togglePhotoSelection(option.id)
+                                } label: {
+                                    ZStack(alignment: .topTrailing) {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Image(uiImage: option.image)
+                                                .resizable()
+                                                .scaledToFill()
+                                                .frame(height: 96)
+                                                .frame(maxWidth: .infinity)
+                                                .clipped()
+                                                .cornerRadius(12)
+
+                                            Text(option.title)
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundColor(ColorTheme.primaryText)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                        }
+
+                                        Image(systemName: isSelected(option.id) ? "checkmark.circle.fill" : "circle")
+                                            .font(.title3)
+                                            .foregroundColor(isSelected(option.id) ? ColorTheme.primary : .white)
+                                            .padding(8)
+                                    }
+                                    .padding(8)
+                                    .background(ColorTheme.cardBackground)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 14)
+                                            .stroke(isSelected(option.id) ? ColorTheme.primary : Color.clear, lineWidth: 2)
+                                    )
+                                    .cornerRadius(14)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .opacity(configuration.includeSelectedPhotos ? 1 : 0.45)
+                        .disabled(!configuration.includeSelectedPhotos)
+                    }
+                }
+
+                Section("File Export") {
+                    Button("Save as PDF") {
+                        onExportPDF()
+                    }
+                    .disabled(isPreparingShare || !configuration.canShare(draft: draft))
+                }
+            }
+            .navigationTitle("Customize Share")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onCancel()
+                    }
+                    .disabled(isPreparingShare)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Share") {
+                        onShare()
+                    }
+                    .disabled(isPreparingShare || !configuration.canShare(draft: draft))
+                }
+            }
+            .overlay {
+                if isPreparingShare {
+                    ZStack {
+                        Color.black.opacity(0.1).ignoresSafeArea()
+                        ProgressView()
+                            .padding(20)
+                            .background(.ultraThinMaterial)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                }
+            }
+        }
+        .interactiveDismissDisabled(isPreparingShare)
+    }
+
+    private func isSelected(_ id: String) -> Bool {
+        configuration.selectedPhotoIDs.contains(id)
+    }
+
+    private func togglePhotoSelection(_ id: String) {
+        if configuration.selectedPhotoIDs.contains(id) {
+            configuration.selectedPhotoIDs.remove(id)
+        } else {
+            configuration.selectedPhotoIDs.insert(id)
+        }
+    }
+}
+
 struct VehicleShareCard: View {
     let image: UIImage?
     let galleryImages: [UIImage]
-    let make: String
-    let model: String
-    let year: Int32
-    let vin: String
-    let price: Decimal
-    let hasReport: Bool
-    let dealerName: String
-    let contactPhone: String?
-    let contactEmail: String?
-
-    private var titleText: String {
-        "\(year.asYear()) \(make) \(model)"
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
+    let title: String
+    let detailLines: [String]
+    let priceText: String?
+    let badgeText: String?
+    let reportText: String?
+    let dealerName: String?
+    let contactLines: [String]
 
     private var displayTitle: String {
-        titleText.isEmpty ? "Vehicle Listing" : titleText
-    }
-
-    private var displayVin: String {
-        vin.isEmpty ? "VIN not provided" : "VIN: \(vin)"
-    }
-
-    private var displayPrice: String? {
-        guard price > 0 else { return nil }
-        return price.asCurrency()
+        title.isEmpty ? "Vehicle Listing" : title
     }
 
     private var previewImages: [UIImage] {
         Array(galleryImages.prefix(4))
     }
 
-    private var contactLine: String {
-        if let contactPhone, !contactPhone.isEmpty {
-            return "Call/Text: \(contactPhone)"
+    private var footerLines: [String] {
+        var lines: [String] = []
+        if let dealerName, !dealerName.isEmpty {
+            lines.append(dealerName)
         }
-        if let contactEmail, !contactEmail.isEmpty {
-            return "Email: \(contactEmail)"
-        }
-        return "Message for availability and test drive"
+        lines.append(contentsOf: contactLines)
+        return lines
     }
 
     var body: some View {
@@ -2012,52 +2682,71 @@ struct VehicleShareCard: View {
                         .minimumScaleFactor(0.52)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if let displayPrice {
-                        Text(displayPrice)
+                    if let priceText {
+                        Text(priceText)
                             .font(.system(size: 74, weight: .heavy))
                             .foregroundColor(Color(red: 0/255, green: 122/255, blue: 255/255))
                             .lineLimit(1)
                             .minimumScaleFactor(0.45)
                     }
 
-                    Text(displayVin)
-                        .font(.system(size: 36, weight: .medium))
-                        .foregroundColor(Color.gray)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-
-                    Divider()
-
-                    HStack(alignment: .center, spacing: 14) {
-                        Image(systemName: "checkmark.seal.fill")
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundColor(.green)
-                        Text("Verified Dealer")
-                            .font(.system(size: 42, weight: .bold))
-                            .foregroundColor(.black)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.65)
-                        Spacer(minLength: 16)
-                        Text(hasReport ? "Report Ready" : "Inventory Listing")
-                            .font(.system(size: 34, weight: .semibold))
-                            .foregroundColor(Color.gray)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
+                    if !detailLines.isEmpty {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(Array(detailLines.enumerated()), id: \.offset) { _, line in
+                                Text(line)
+                                    .font(.system(size: 34, weight: .medium))
+                                    .foregroundColor(Color.gray)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.72)
+                            }
+                        }
                     }
 
-                    Text(dealerName)
-                        .font(.system(size: 52, weight: .heavy))
-                        .foregroundColor(.black)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.58)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if badgeText != nil || reportText != nil {
+                        Divider()
 
-                    Text(contactLine)
-                        .font(.system(size: 42, weight: .bold))
-                        .foregroundColor(.black)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.58)
-                        .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 12) {
+                            if let badgeText {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "checkmark.seal.fill")
+                                        .font(.system(size: 24, weight: .semibold))
+                                        .foregroundColor(.green)
+                                    Text(badgeText)
+                                        .font(.system(size: 28, weight: .bold))
+                                        .foregroundColor(.black)
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(Color.green.opacity(0.08))
+                                .cornerRadius(14)
+                            }
+
+                            if let reportText {
+                                Text(reportText)
+                                    .font(.system(size: 28, weight: .semibold))
+                                    .foregroundColor(Color.gray)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                    .background(Color.gray.opacity(0.08))
+                                    .cornerRadius(14)
+                            }
+                        }
+                    }
+
+                    if !footerLines.isEmpty {
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(Array(footerLines.enumerated()), id: \.offset) { index, line in
+                                Text(line)
+                                    .font(.system(size: index == 0 ? 48 : 34, weight: index == 0 ? .heavy : .bold))
+                                    .foregroundColor(.black)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.58)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
                 }
                 .padding(.horizontal, 46)
                 .padding(.top, 34)

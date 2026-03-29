@@ -82,7 +82,7 @@ struct EditProfileView: View {
                             Text("Pending confirmation")
                                 .font(.caption.weight(.semibold))
                                 .foregroundColor(.orange)
-                            Text("Check \(pendingEmail) and confirm the link to complete your sign-in email change.")
+                            Text("Check \(pendingEmail). Depending on your account security settings, you may need to confirm the change from both your current and new email addresses.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -183,12 +183,12 @@ struct EditProfileView: View {
                         .lowercased() ?? ""
 
                     if pendingEmail == normalizedEmail && returnedEmail != normalizedEmail {
-                        emailChangeMessage = "We sent a confirmation link to \(normalizedEmail). Your sign-in email will switch after you confirm it."
+                        emailChangeMessage = "Check your inbox. Depending on your account security settings, you may need to confirm the change from both your current and new email addresses."
                     } else if returnedEmail == normalizedEmail {
                         emailChangeMessage = "Your account email was updated."
                         shouldPersistEmailLocally = true
                     } else {
-                        emailChangeMessage = "Check your inbox to confirm your new email address."
+                        emailChangeMessage = "Check your inbox to confirm your email change."
                     }
                 }
 

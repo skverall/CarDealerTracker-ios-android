@@ -50,6 +50,7 @@ struct RemoteVehicle: Codable {
     let id: UUID
     let dealerId: UUID
     let vin: String
+    let inventoryID: String?
     let make: String?
     let model: String?
     let year: Int?
@@ -73,6 +74,7 @@ struct RemoteVehicle: Codable {
         case id
         case dealerId = "dealer_id"
         case vin
+        case inventoryID = "inventory_id"
         case make
         case model
         case year

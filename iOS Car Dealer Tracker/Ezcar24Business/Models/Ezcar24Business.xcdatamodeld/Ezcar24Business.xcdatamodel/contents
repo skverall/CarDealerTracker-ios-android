@@ -20,6 +20,7 @@
         <attribute name="salePrice" optional="YES" attributeType="Decimal" />
         <attribute name="askingPrice" optional="YES" attributeType="Decimal" />
         <attribute name="reportURL" optional="YES" attributeType="String" />
+        <attribute name="inventoryID" optional="YES" attributeType="String" />
         <attribute name="mileage" optional="NO" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES" />
         <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="Expense" inverseName="vehicle" inverseEntity="Expense" />
         <relationship name="clients" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Client" inverseName="vehicle" inverseEntity="Client" />

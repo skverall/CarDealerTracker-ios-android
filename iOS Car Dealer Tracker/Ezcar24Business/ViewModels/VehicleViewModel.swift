@@ -185,7 +185,8 @@ class VehicleViewModel: ObservableObject {
             let searchPredicate = NSCompoundPredicate(orPredicateWithSubpredicates: [
                 NSPredicate(format: "make CONTAINS[cd] %@", search),
                 NSPredicate(format: "model CONTAINS[cd] %@", search),
-                NSPredicate(format: "vin CONTAINS[cd] %@", search)
+                NSPredicate(format: "vin CONTAINS[cd] %@", search),
+                NSPredicate(format: "inventoryID CONTAINS[cd] %@", search)
             ])
             predicates.append(searchPredicate)
         }
@@ -263,6 +264,7 @@ class VehicleViewModel: ObservableObject {
     @discardableResult
     func addVehicle(
         vin: String,
+        inventoryID: String,
         make: String,
         model: String,
         year: Int32,
@@ -279,6 +281,7 @@ class VehicleViewModel: ObservableObject {
         let vehicle = Vehicle(context: context)
         vehicle.id = UUID()
         vehicle.vin = vin
+        vehicle.inventoryID = inventoryID.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         vehicle.make = make
         vehicle.model = model
         vehicle.year = year
@@ -344,6 +347,7 @@ class VehicleViewModel: ObservableObject {
         let new = Vehicle(context: context)
         new.id = UUID()
         new.vin = "" // avoid VIN duplicates
+        new.inventoryID = original.inventoryID
         new.make = original.make
         new.model = original.model
         new.year = original.year
@@ -446,5 +450,73 @@ class VehicleViewModel: ObservableObject {
         } catch {
             print("Error saving context: \(error)")
         }
+    }
+}
+
+extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
+}
+
+extension Vehicle {
+    var inventoryIDValue: String? {
+        let trimmed = inventoryID?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    var vinValue: String? {
+        let trimmed = vin?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    var displayNameWithInventory: String {
+        let normalizedMake = make?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let normalizedModel = model?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let name = [normalizedMake, normalizedModel].filter { !$0.isEmpty }.joined(separator: " ")
+
+        if let inventoryIDValue {
+            if !name.isEmpty {
+                return "\(name) • ID \(inventoryIDValue)"
+            }
+            return "ID \(inventoryIDValue)"
+        }
+
+        if !name.isEmpty {
+            return name
+        }
+
+        if let vinValue {
+            return vinValue
+        }
+
+        return "Vehicle"
+    }
+
+    var inventoryOrVINLabel: String? {
+        if let inventoryIDValue {
+            return "ID: \(inventoryIDValue)"
+        }
+        if let vinValue {
+            return "VIN: \(vinValue)"
+        }
+        return nil
+    }
+
+    func matchesVehicleSearchQuery(_ query: String) -> Bool {
+        let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !normalizedQuery.isEmpty else { return true }
+
+        let candidates = [
+            make,
+            model,
+            vinValue,
+            inventoryIDValue,
+            year > 0 ? String(year) : nil
+        ]
+
+        return candidates
+            .compactMap { $0?.lowercased() }
+            .contains { $0.contains(normalizedQuery) }
     }
 }

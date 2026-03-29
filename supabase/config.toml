@@ -14,3 +14,25 @@ max_client_conn = 100
 
 [db.seed]
 enabled = false
+
+[auth]
+enabled = true
+site_url = "https://www.ezcar24.com"
+additional_redirect_urls = [
+  "https://www.ezcar24.com/**",
+  "https://ezcar24.com/**",
+  "http://localhost:5173/**",
+  "http://localhost:3000/**",
+  "http://localhost:8080/**",
+  "https://ezcar24.com/reset-password",
+  "https://ezcar24.com/confirm-email",
+  "https://www.ezcar24.com/confirm-email",
+  "com.ezcar24.business://login-callback",
+  "ezcar24business://reset-password",
+]
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = false
+enable_confirmations = false
