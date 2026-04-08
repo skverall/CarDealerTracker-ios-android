@@ -1,7 +1,9 @@
 package com.ezcar24.business.ui.components.crm
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
@@ -114,11 +116,6 @@ fun LeadPriorityBadge(
         else -> "None" to Color.LightGray
     }
 
-    androidx.compose.foundation.background(
-        color = color.copy(alpha = 0.1f),
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
-    )
-    
     Text(
         text = text,
         fontSize = 11.sp,

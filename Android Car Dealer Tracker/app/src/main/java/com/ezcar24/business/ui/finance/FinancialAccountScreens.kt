@@ -27,8 +27,8 @@ import com.ezcar24.business.ui.theme.EzcarBlueBright
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarBackground
 import com.ezcar24.business.ui.theme.EzcarDanger
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
-import java.text.NumberFormat
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -38,6 +38,8 @@ fun FinancialAccountListScreen(
     viewModel: FinancialAccountViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingAccount by remember { mutableStateOf<FinancialAccount?>(null) }
 
@@ -113,7 +115,7 @@ fun FinancialAccountListScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = NumberFormat.getCurrencyInstance(Locale.US).format(uiState.totalBalance).replace("$", "AED "),
+                        text = regionSettingsManager.formatCurrency(uiState.totalBalance),
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -153,6 +155,7 @@ fun AccountItem(
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -179,7 +182,7 @@ fun AccountItem(
             
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = NumberFormat.getCurrencyInstance(Locale.US).format(account.balance).replace("$", "AED "),
+                    text = regionSettingsManager.formatCurrency(account.balance),
                     style = MaterialTheme.typography.bodyLarge,
                     color = EzcarGreen,
                     fontWeight = FontWeight.Bold
@@ -202,6 +205,8 @@ fun FinancialAccountDetailScreen(
     onBack: () -> Unit,
     onAddTransaction: (BigDecimal, String, String) -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var showTransactionDialog by remember { mutableStateOf<String?>(null) } // "deposit" or "withdrawal"
 
     if (showTransactionDialog != null) {
@@ -253,7 +258,7 @@ fun FinancialAccountDetailScreen(
                         color = Color.White.copy(alpha = 0.9f)
                     )
                     Text(
-                        text = NumberFormat.getCurrencyInstance(Locale.US).format(account.balance).replace("$", "AED "),
+                        text = regionSettingsManager.formatCurrency(account.balance),
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -315,6 +320,7 @@ fun FinancialAccountDetailScreen(
 
 @Composable
 fun TransactionItem(tx: com.ezcar24.business.data.local.AccountTransaction) {
+    val regionSettingsManager = rememberRegionSettingsManager()
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
@@ -340,7 +346,7 @@ fun TransactionItem(tx: com.ezcar24.business.data.local.AccountTransaction) {
                 )
             }
             Text(
-                text = (if (tx.transactionType == "withdrawal") "- " else "+ ") + NumberFormat.getCurrencyInstance(Locale.US).format(tx.amount).replace("$", "AED "),
+                text = (if (tx.transactionType == "withdrawal") "- " else "+ ") + regionSettingsManager.formatCurrency(tx.amount),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = if (tx.transactionType == "withdrawal") Color.Red else EzcarGreen
@@ -355,6 +361,8 @@ fun TransactionDialog(
     onDismiss: () -> Unit,
     onConfirm: (BigDecimal, String) -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var amount by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
 
@@ -376,7 +384,7 @@ fun TransactionDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount") },
+                    label = { Text("Amount (${regionState.selectedRegion.currencyCode})") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -417,6 +425,8 @@ fun AccountDialog(
     onDismiss: () -> Unit,
     onSave: (String, BigDecimal) -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var name by remember { mutableStateOf(account?.accountType ?: "") }
     var balance by remember { mutableStateOf(account?.balance?.toPlainString() ?: "") }
 
@@ -447,7 +457,7 @@ fun AccountDialog(
                 OutlinedTextField(
                     value = balance,
                     onValueChange = { balance = it },
-                    label = { Text("Balance") },
+                    label = { Text("Balance (${regionState.selectedRegion.currencyCode})") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true
                 )

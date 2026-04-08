@@ -25,8 +25,6 @@ import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.ui.theme.EzcarWarning
 import java.math.BigDecimal
-import java.text.NumberFormat
-import java.util.Locale
 
 enum class ROISortColumn {
     VEHICLE, ROI, PROFIT, DAYS, TOTAL_COST
@@ -195,8 +193,6 @@ private fun ROITableRow(
     stats: VehicleInventoryStats?,
     onClick: () -> Unit
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
-    
     Row(
         modifier = Modifier
             .fillMaxWidth()

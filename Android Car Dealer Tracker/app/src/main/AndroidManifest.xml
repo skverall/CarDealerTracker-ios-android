@@ -36,6 +36,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="ezcar24business" />
             </intent-filter>
+
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="ezcar24.com" />
+                <data android:scheme="https" android:host="www.ezcar24.com" />
+            </intent-filter>
         </activity>
         
         <!-- Notification Receiver -->

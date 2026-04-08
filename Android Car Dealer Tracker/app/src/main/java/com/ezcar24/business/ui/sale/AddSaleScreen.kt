@@ -34,6 +34,8 @@ fun AddSaleScreen(
     viewModel: AddSaleViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
 
     var amountStr by remember { mutableStateOf("") }
     var buyerName by remember { mutableStateOf("") }
@@ -125,7 +127,7 @@ fun AddSaleScreen(
                 OutlinedTextField(
                     value = amountStr,
                     onValueChange = { amountStr = it },
-                    label = { Text("Sale Price (AED)") },
+                    label = { Text("Sale Price (${regionState.selectedRegion.currencyCode})") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )

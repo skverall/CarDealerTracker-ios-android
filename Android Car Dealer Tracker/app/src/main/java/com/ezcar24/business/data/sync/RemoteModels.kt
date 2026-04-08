@@ -37,6 +37,7 @@ data class RemoteVehicle(
     val make: String? = null,
     val model: String? = null,
     val year: Int? = null,
+    val mileage: Int? = null,
     @SerialName("purchase_price") @Serializable(with = BigDecimalSerializer::class) val purchasePrice: BigDecimal,
     @SerialName("purchase_date") val purchaseDate: String, // String in Swift struct
     val status: String,

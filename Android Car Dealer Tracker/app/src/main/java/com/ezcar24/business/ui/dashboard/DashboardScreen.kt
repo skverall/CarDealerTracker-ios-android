@@ -24,6 +24,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -33,16 +34,20 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.compose.material.icons.automirrored.filled.ListAlt
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import com.ezcar24.business.data.local.Expense
+import com.ezcar24.business.data.repository.OrganizationMembership
 import com.ezcar24.business.ui.theme.*
 import java.math.BigDecimal
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.abs
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +55,7 @@ import androidx.compose.runtime.setValue
 import com.ezcar24.business.ui.expense.AddExpenseSheet
 import com.ezcar24.business.ui.expense.ExpenseViewModel
 import com.ezcar24.business.data.sync.SyncState
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -74,21 +80,36 @@ fun DashboardScreen(
     onNavigateToSearch: () -> Unit,
     onNavigateToVehicles: () -> Unit = {},
     onNavigateToSoldVehicles: () -> Unit = {},
+    onNavigateToSales: () -> Unit = {},
     onNavigateToExpenses: () -> Unit = {},
     onNavigateToLeadFunnel: () -> Unit = {},
-    onNavigateToInventoryAnalytics: () -> Unit = {}
+    onNavigateToInventoryAnalytics: () -> Unit = {},
+    onNavigateToDataHealth: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val expenseUiState by expenseViewModel.uiState.collectAsState()
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var showAddExpenseSheet by remember { mutableStateOf(false) }
+    var showCreateBusinessDialog by remember { mutableStateOf(false) }
+    var pendingCreateBusiness by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.refresh() }
     )
-    
-    LaunchedEffect(Unit) {
-        viewModel.loadData()
-        expenseViewModel.loadData() // Load vehicles, users, accounts for expense sheet
+
+    LaunchedEffect(
+        pendingCreateBusiness,
+        showCreateBusinessDialog,
+        uiState.isSwitchingOrganization,
+        uiState.errorMessage
+    ) {
+        if (pendingCreateBusiness && showCreateBusinessDialog && !uiState.isSwitchingOrganization) {
+            if (uiState.errorMessage == null) {
+                showCreateBusinessDialog = false
+            }
+            pendingCreateBusiness = false
+        }
     }
 
     Box(
@@ -104,10 +125,36 @@ fun DashboardScreen(
             // --- Top Bar ---
             item {
                 DashboardTopBar(
+                    syncState = uiState.syncState,
+                    activeOrganization = uiState.activeOrganization,
+                    organizations = uiState.organizations,
+                    isSwitchingOrganization = uiState.isSwitchingOrganization,
+                    onSelectOrganization = viewModel::switchOrganization,
+                    onCreateBusiness = { showCreateBusinessDialog = true },
                     onProfileClick = onNavigateToSettings,
                     onAddClick = { showAddExpenseSheet = true },
                     onSearchClick = onNavigateToSearch
                 )
+            }
+
+            uiState.statusMessage?.let { statusMessage ->
+                item {
+                    DashboardMessageBanner(
+                        message = statusMessage,
+                        isError = false,
+                        onDismiss = viewModel::clearStatusMessage
+                    )
+                }
+            }
+
+            uiState.errorMessage?.let { errorMessage ->
+                item {
+                    DashboardMessageBanner(
+                        message = errorMessage,
+                        isError = true,
+                        onDismiss = viewModel::clearErrorMessage
+                    )
+                }
             }
             
             // --- Sync Status Card ---
@@ -116,7 +163,8 @@ fun DashboardScreen(
                     syncState = uiState.syncState,
                     lastSyncTime = uiState.lastSyncTime,
                     queueCount = uiState.queueCount,
-                    onSyncClick = { viewModel.triggerSync() }
+                    onSyncClick = { viewModel.triggerSync() },
+                    onDataHealthClick = onNavigateToDataHealth
                 )
             }
 
@@ -134,7 +182,8 @@ fun DashboardScreen(
                     uiState = uiState,
                     onNavigateToAccounts = onNavigateToAccounts,
                     onNavigateToAssets = onNavigateToVehicles,
-                    onNavigateToSold = onNavigateToSoldVehicles
+                    onNavigateToSold = onNavigateToSoldVehicles,
+                    onNavigateToSales = onNavigateToSales
                 )
             }
 
@@ -161,7 +210,8 @@ fun DashboardScreen(
             item {
                 RecentExpensesSection(
                     recentExpenses = uiState.recentExpenses,
-                    onSeeAll = { /* TODO */ }
+                    vehicleTitlesById = uiState.vehicleTitlesById,
+                    onSeeAll = onNavigateToExpenses
                 )
             }
 
@@ -201,20 +251,43 @@ fun DashboardScreen(
     if (showAddExpenseSheet) {
         AddExpenseSheet(
             onDismiss = { showAddExpenseSheet = false },
-            onSave = { amount, date, desc, cat, veh, usr, acc ->
-                expenseViewModel.saveExpense(amount, date, desc, cat, veh, usr, acc)
+            onSave = { amount, date, desc, cat, veh, usr, acc, expenseType ->
+                expenseViewModel.saveExpense(amount, date, desc, cat, veh, usr, acc, expenseType)
                 showAddExpenseSheet = false
                 viewModel.refresh() // Refresh dashboard to show new expense
             },
             vehicles = expenseUiState.vehicles,
             users = expenseUiState.users,
-            accounts = expenseUiState.accounts
+            accounts = expenseUiState.accounts,
+            currencyCode = regionState.selectedRegion.currencyCode
+        )
+    }
+
+    if (showCreateBusinessDialog) {
+        DashboardCreateBusinessDialog(
+            isSaving = uiState.isSwitchingOrganization,
+            onDismiss = {
+                if (!uiState.isSwitchingOrganization) {
+                    showCreateBusinessDialog = false
+                    pendingCreateBusiness = false
+                }
+            },
+            onCreate = { businessName ->
+                pendingCreateBusiness = true
+                viewModel.createOrganization(businessName)
+            }
         )
     }
 }
 
 @Composable
 fun DashboardTopBar(
+    syncState: SyncState,
+    activeOrganization: OrganizationMembership?,
+    organizations: List<OrganizationMembership>,
+    isSwitchingOrganization: Boolean,
+    onSelectOrganization: (UUID) -> Unit,
+    onCreateBusiness: () -> Unit,
     onProfileClick: () -> Unit,
     onAddClick: () -> Unit,
     onSearchClick: () -> Unit
@@ -230,46 +303,66 @@ fun DashboardTopBar(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Column {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = getGreeting(),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.Gray
+                    style = MaterialTheme.typography.titleSmall.copy(fontStyle = FontStyle.Italic),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
                     text = "Dashboard",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                DashboardOrganizationSwitcher(
+                    activeOrganization = activeOrganization,
+                    organizations = organizations,
+                    isSwitchingOrganization = isSwitchingOrganization,
+                    onSelectOrganization = onSelectOrganization,
+                    onCreateBusiness = onCreateBusiness
                 )
             }
             
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                // Search Button
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (syncState is SyncState.Syncing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = EzcarBlueBright
+                    )
+                }
+
                 IconButton(
                     onClick = onSearchClick,
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        .size(44.dp)
+                        .background(MaterialTheme.colorScheme.surface, CircleShape)
                 ) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
-                // Profile Button
                 IconButton(
                     onClick = onProfileClick,
                     modifier = Modifier
-                        .size(40.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                        .size(44.dp)
+                        .background(MaterialTheme.colorScheme.surface, CircleShape)
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = "Profile", tint = MaterialTheme.colorScheme.primary)
+                    Icon(Icons.Default.Person, contentDescription = "Profile", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 
-                // Add Button (Primary)
                 IconButton(
                     onClick = onAddClick,
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(44.dp)
                         .background(EzcarNavy, CircleShape)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
@@ -277,6 +370,215 @@ fun DashboardTopBar(
             }
         }
     }
+}
+
+@Composable
+private fun DashboardOrganizationSwitcher(
+    activeOrganization: OrganizationMembership?,
+    organizations: List<OrganizationMembership>,
+    isSwitchingOrganization: Boolean,
+    onSelectOrganization: (UUID) -> Unit,
+    onCreateBusiness: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier.widthIn(max = 240.dp)
+    ) {
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = MaterialTheme.colorScheme.surface,
+            shadowElevation = 6.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = !isSwitchingOrganization) { showMenu = true }
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = activeOrganization?.organizationName ?: "Select Business",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = activeOrganization?.role?.replaceFirstChar { it.titlecase(Locale.getDefault()) }
+                            ?: "Switch business or create one",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (isSwitchingOrganization) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = EzcarBlueBright
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            if (organizations.isEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("No organizations yet") },
+                    onClick = {},
+                    enabled = false
+                )
+            } else {
+                organizations.forEach { organization ->
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(organization.organizationName)
+                                Text(
+                                    text = organization.role.replaceFirstChar { it.titlecase(Locale.getDefault()) },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        onClick = {
+                            showMenu = false
+                            onSelectOrganization(organization.organizationId)
+                        },
+                        trailingIcon = {
+                            if (organization.organizationId == activeOrganization?.organizationId) {
+                                Icon(
+                                    imageVector = Icons.Default.Verified,
+                                    contentDescription = null,
+                                    tint = EzcarGreen
+                                )
+                            }
+                        }
+                    )
+                }
+            }
+
+            HorizontalDivider()
+
+            DropdownMenuItem(
+                text = { Text("Create Business") },
+                onClick = {
+                    showMenu = false
+                    onCreateBusiness()
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = null
+                    )
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DashboardMessageBanner(
+    message: String,
+    isError: Boolean,
+    onDismiss: () -> Unit
+) {
+    val containerColor = if (isError) {
+        EzcarDanger.copy(alpha = 0.12f)
+    } else {
+        EzcarSuccess.copy(alpha = 0.12f)
+    }
+    val contentColor = if (isError) EzcarDanger else EzcarSuccess
+
+    Surface(
+        color = containerColor,
+        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = if (isError) Icons.Default.Error else Icons.Default.CheckCircle,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier.size(24.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DashboardCreateBusinessDialog(
+    isSaving: Boolean,
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit
+) {
+    var businessName by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Create Business") },
+        text = {
+            OutlinedTextField(
+                value = businessName,
+                onValueChange = { businessName = it },
+                label = { Text("Business name") },
+                enabled = !isSaving,
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = { onCreate(businessName.trim()) },
+                enabled = businessName.trim().isNotEmpty() && !isSaving
+            ) {
+                Text(if (isSaving) "Creating..." else "Create")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSaving) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 private fun getGreeting(): String {
@@ -309,8 +611,8 @@ fun TimeRangePicker(
             
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(50)) // Pill shape
-                    .background(if (isSelected) EzcarNavy else Color.White)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (isSelected) EzcarNavy else MaterialTheme.colorScheme.surface)
                     .clickable { onRangeSelected(range) }
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
@@ -319,7 +621,7 @@ fun TimeRangePicker(
                     text = range.displayLabel,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) Color.White else Color.Black
+                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
                 )
             }
         }
@@ -331,7 +633,8 @@ fun FinancialOverviewSection(
     uiState: DashboardUiState,
     onNavigateToAccounts: () -> Unit,
     onNavigateToAssets: () -> Unit,
-    onNavigateToSold: () -> Unit
+    onNavigateToSold: () -> Unit,
+    onNavigateToSales: () -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
         // Row 1: Assets, Cash, Bank
@@ -381,9 +684,10 @@ fun FinancialOverviewSection(
             FinancialCard(
                 title = "Total Revenue",
                 amount = uiState.totalRevenue,
-                icon = Icons.Default.TrendingUp,
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
                 baseColor = EzcarOrange,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToSales
             )
             FinancialCard(
                 title = "Net Profit",
@@ -396,7 +700,8 @@ fun FinancialOverviewSection(
                     end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
                 ),
                 isSolidBackground = true,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToSales
             )
              FinancialCard(
                 title = "Sold",
@@ -425,11 +730,10 @@ fun FinancialCard(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
-    // Format currency: "AED 1,234.00"
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     val displayValue = if (isCount && valueStr != null) valueStr else {
-        val curr = currencyFormat.format(amount ?: BigDecimal.ZERO)
-        curr.replace("$", "AED ")
+        regionSettingsManager.formatCurrency(amount ?: BigDecimal.ZERO)
     }
     
     // Solid background logic
@@ -549,7 +853,8 @@ fun TodaysExpensesSection(
 
 @Composable
 fun TodayExpenseCard(expense: Expense) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     Card(
@@ -600,7 +905,7 @@ fun TodayExpenseCard(expense: Expense) {
             
             Column {
                 Text(
-                    text = currencyFormat.format(expense.amount),
+                    text = regionSettingsManager.formatCurrency(expense.amount),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
@@ -631,7 +936,7 @@ fun EmptyTodayCard(onAddExpense: () -> Unit) {
                 verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = Icons.Default.ListAlt,
+                imageVector = Icons.AutoMirrored.Filled.ListAlt,
                 contentDescription = null,
                 modifier = Modifier.size(48.dp),
                 tint = Color.Gray.copy(alpha = 0.5f)
@@ -677,7 +982,8 @@ fun SummaryOverviewCard(
     trendPoints: List<TrendPoint>,
     selectedRange: DashboardTimeRange
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -701,7 +1007,7 @@ fun SummaryOverviewCard(
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            text = currencyFormat.format(totalSpent),
+                            text = regionSettingsManager.formatCurrency(totalSpent),
                             style = MaterialTheme.typography.headlineLarge, // equivalent to 32pt
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -762,6 +1068,8 @@ fun SummaryOverviewCard(
 
 @Composable
 fun SpendingTrendChart(points: List<TrendPoint>) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     val color = EzcarBlueBright
     val density = LocalDensity.current
     val textPaint = remember(density) {
@@ -926,7 +1234,9 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                 )
                 
                 // Draw Tooltip (Value)
-                val valueStr = NumberFormat.getCurrencyInstance(Locale.US).format(originalPoint.value)
+                val valueStr = regionSettingsManager.formatCurrency(
+                    BigDecimal.valueOf(originalPoint.value.toDouble())
+                )
                 val textWidth = textPaint.measureText(valueStr)
                 val tooltipX = (closestPoint.x - textWidth / 2).coerceIn(0f, width - textWidth)
                 val tooltipY = (closestPoint.y - 30.dp.toPx()).coerceAtLeast(20f)
@@ -985,7 +1295,8 @@ fun CategoryBreakdownCard(stats: List<CategoryStat>) {
 
 @Composable
 fun CategoryBreakdownRow(stat: CategoryStat) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     val color = getCategoryColor(stat.key)
     
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1009,7 +1320,7 @@ fun CategoryBreakdownRow(stat: CategoryStat) {
             
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = currencyFormat.format(stat.amount),
+                    text = regionSettingsManager.formatCurrency(stat.amount),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -1046,6 +1357,7 @@ fun CategoryBreakdownRow(stat: CategoryStat) {
 @Composable
 fun RecentExpensesSection(
     recentExpenses: List<Expense>,
+    vehicleTitlesById: Map<UUID, String>,
     onSeeAll: () -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
@@ -1077,7 +1389,10 @@ fun RecentExpensesSection(
             )
         } else {
             recentExpenses.forEach { expense ->
-                RecentExpenseItem(expense)
+                RecentExpenseItem(
+                    expense = expense,
+                    vehicleTitle = expense.vehicleId?.let(vehicleTitlesById::get)
+                )
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
@@ -1085,8 +1400,8 @@ fun RecentExpensesSection(
 }
 
 @Composable
-fun RecentExpenseItem(expense: Expense) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+fun RecentExpenseItem(expense: Expense, vehicleTitle: String?) {
+    val regionSettingsManager = rememberRegionSettingsManager()
     val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
 
     Card(
@@ -1124,14 +1439,14 @@ fun RecentExpenseItem(expense: Expense) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "${expense.vehicleTitle ?: "General"} • ${dateFormat.format(expense.date)}",
+                    text = "${vehicleTitle ?: "General"} • ${dateFormat.format(expense.date)}",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.Gray
                 )
             }
             
             Text(
-                text = currencyFormat.format(expense.amount),
+                text = regionSettingsManager.formatCurrency(expense.amount),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -1139,33 +1454,31 @@ fun RecentExpenseItem(expense: Expense) {
     }
 }
 
-private val Expense.vehicleTitle: String? 
-    get() = null // Placeholder, you might want to fetch vehicle info or if it's joined in query
-
 @Composable
 fun SyncStatusCard(
     syncState: SyncState,
     lastSyncTime: java.util.Date?,
     queueCount: Int,
-    onSyncClick: () -> Unit
+    onSyncClick: () -> Unit,
+    onDataHealthClick: () -> Unit
 ) {
-    val dateFormat = java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()) // Display seconds
-    
-    // Simple Strip Style
+    val dateFormat = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+    val isSyncing = syncState is SyncState.Syncing
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 0.dp), // Minimal padding
+            .padding(horizontal = 24.dp, vertical = 0.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val (icon, color, text) = when (syncState) {
             is SyncState.Syncing -> Triple(null, Color.Gray, "Syncing...")
-            is SyncState.Success -> Triple(Icons.Default.CheckCircle, EzcarGreen, "Synced in 0 sec.") // Placeholder for elapsed
+            is SyncState.Success -> Triple(Icons.Default.CheckCircle, EzcarGreen, "Synced just now")
             is SyncState.Failure -> Triple(Icons.Default.Error, EzcarDanger, "Sync failed")
             else -> Triple(null, Color.Gray, "Sync Status")
         }
         
-        if (syncState is SyncState.Syncing) {
+        if (isSyncing) {
              CircularProgressIndicator(
                 modifier = Modifier.size(12.dp),
                 strokeWidth = 2.dp,
@@ -1182,14 +1495,10 @@ fun SyncStatusCard(
         
         Spacer(modifier = Modifier.width(8.dp))
         
-        val displayMessage = if (syncState is SyncState.Success) {
-            "Synced in 0 sec."
-        } else if (syncState is SyncState.Failure) {
-             "Sync failed"
-        } else if (syncState is SyncState.Idle && lastSyncTime != null) {
-             "Synced at ${dateFormat.format(lastSyncTime)}"
-        } else {
-            text
+        val displayMessage = when {
+            syncState is SyncState.Failure -> "Sync failed"
+            lastSyncTime != null && !isSyncing -> "Synced at ${dateFormat.format(lastSyncTime)}"
+            else -> text
         }
 
         Text(
@@ -1197,18 +1506,41 @@ fun SyncStatusCard(
             style = MaterialTheme.typography.labelMedium,
             color = Color.Black.copy(alpha = 0.7f)
         )
+
+        if (queueCount > 0) {
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "• $queueCount queued",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
         
         Spacer(modifier = Modifier.weight(1f))
-        
-        // Reload Icon (Small, on the right)
-        Icon(
-            imageVector = Icons.Default.Refresh,
-            contentDescription = "Sync",
-            tint = EzcarBlueBright,
-            modifier = Modifier
-                .size(16.dp)
-                .clickable { onSyncClick() }
-        )
+
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.MonitorHeart,
+                contentDescription = "Data Health",
+                tint = if (queueCount > 0) EzcarOrange else EzcarBlueBright,
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable { onDataHealthClick() }
+            )
+
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "Sync",
+                tint = EzcarBlueBright,
+                modifier = Modifier
+                    .size(16.dp)
+                    .alpha(if (isSyncing) 0.35f else 1f)
+                    .clickable(enabled = !isSyncing) { onSyncClick() }
+            )
+        }
     }
 }
 
@@ -1220,7 +1552,8 @@ fun CRMSummaryCard(
     conversionRate: Double,
     onNavigateToLeadFunnel: () -> Unit
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     
     Card(
         colors = CardDefaults.cardColors(containerColor = EzcarNavy),
@@ -1247,7 +1580,7 @@ fun CRMSummaryCard(
                     color = Color.White
                 )
                 Icon(
-                    imageVector = Icons.Default.TrendingUp,
+                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
                     contentDescription = "View Funnel",
                     tint = EzcarGreen,
                     modifier = Modifier.size(24.dp)
@@ -1271,7 +1604,7 @@ fun CRMSummaryCard(
                     color = EzcarBlueBright
                 )
                 CRMStatItem(
-                    value = currencyFormat.format(pipelineValue),
+                    value = regionSettingsManager.formatCurrency(pipelineValue),
                     label = "Pipeline",
                     color = EzcarOrange
                 )

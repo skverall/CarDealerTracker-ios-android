@@ -27,7 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.ExpenseCategoryType
 import com.ezcar24.business.ui.theme.*
-import java.text.NumberFormat
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -38,15 +38,13 @@ fun ExpenseScreen(
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var showAddSheet by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.refresh() }
     )
-
-    LaunchedEffect(Unit) {
-        viewModel.loadData()
-    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -61,7 +59,8 @@ fun ExpenseScreen(
                     onDateFilterSelect = viewModel::setDateFilter,
                     onCategorySelect = viewModel::setCategoryFilter,
                     onExpenseTypeSelect = viewModel::setExpenseTypeFilter,
-                    onVehicleSelect = viewModel::setVehicleFilter
+                    onVehicleSelect = viewModel::setVehicleFilter,
+                    onUserSelect = viewModel::setUserFilter
                 )
             }
         },
@@ -127,7 +126,8 @@ fun ExpenseScreen(
             },
             vehicles = uiState.vehicles,
             users = uiState.users,
-            accounts = uiState.accounts
+            accounts = uiState.accounts,
+            currencyCode = regionState.selectedRegion.currencyCode
         )
     }
 }
@@ -137,8 +137,8 @@ fun ExpenseHeader(
     totalAmount: java.math.BigDecimal,
     dateFilter: DateFilter
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
-    val displayAmount = currencyFormat.format(totalAmount).replace("$", "AED ")
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val displayAmount = regionSettingsManager.formatCurrency(totalAmount)
 
     Column(
         modifier = Modifier
@@ -184,7 +184,8 @@ fun ExpenseFilters(
     onDateFilterSelect: (DateFilter) -> Unit,
     onCategorySelect: (String) -> Unit,
     onExpenseTypeSelect: (ExpenseCategoryType?) -> Unit,
-    onVehicleSelect: (com.ezcar24.business.data.local.Vehicle?) -> Unit
+    onVehicleSelect: (com.ezcar24.business.data.local.Vehicle?) -> Unit,
+    onUserSelect: (com.ezcar24.business.data.local.User?) -> Unit
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
@@ -192,45 +193,93 @@ fun ExpenseFilters(
         modifier = Modifier.background(MaterialTheme.colorScheme.background)
     ) {
         item {
-            FilterChip(
-                selected = uiState.selectedVehicle != null,
-                onClick = { /* TODO: Open Vehicle Selection Sheet */ },
-                label = {
-                    val display = listOfNotNull(
-                        uiState.selectedVehicle?.make,
-                        uiState.selectedVehicle?.model
-                    ).joinToString(" ").ifBlank { "Vehicle" }
-                    Text(
-                        text = display,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                FilterChip(
+                    selected = uiState.selectedVehicle != null,
+                    onClick = { expanded = true },
+                    label = {
+                        val display = listOfNotNull(
+                            uiState.selectedVehicle?.make,
+                            uiState.selectedVehicle?.model
+                        ).joinToString(" ").ifBlank { "Vehicle" }
+                        Text(
+                            text = display,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    },
+                    trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
+                    border = null,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(40.dp)
+                )
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text("All Vehicles") },
+                        onClick = {
+                            onVehicleSelect(null)
+                            expanded = false
+                        }
                     )
-                },
-                trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
-                colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
-                border = null,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(40.dp)
-            )
+                    uiState.vehicles.forEach { vehicle ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    listOfNotNull(vehicle.make, vehicle.model)
+                                        .joinToString(" ")
+                                        .ifBlank { vehicle.vin }
+                                )
+                            },
+                            onClick = {
+                                onVehicleSelect(vehicle)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         item {
-            FilterChip(
-                selected = uiState.selectedUser != null,
-                onClick = { /* TODO: Open User Selection */ },
-                label = {
-                    Text(
-                        text = "Employee",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Gray
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                FilterChip(
+                    selected = uiState.selectedUser != null,
+                    onClick = { expanded = true },
+                    label = {
+                        Text(
+                            text = uiState.selectedUser?.name ?: "Employee",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    },
+                    trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
+                    border = null,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(40.dp)
+                )
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    DropdownMenuItem(
+                        text = { Text("All Employees") },
+                        onClick = {
+                            onUserSelect(null)
+                            expanded = false
+                        }
                     )
-                },
-                trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
-                colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
-                border = null,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.height(40.dp)
-            )
+                    uiState.users.forEach { user ->
+                        DropdownMenuItem(
+                            text = { Text(user.name) },
+                            onClick = {
+                                onUserSelect(user)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         item {
@@ -365,7 +414,7 @@ fun ExpenseItem(
     expense: Expense,
     onDelete: (Expense) -> Unit
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
     val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     Row(
@@ -406,7 +455,7 @@ fun ExpenseItem(
         }
 
         Text(
-            text = currencyFormat.format(expense.amount).replace("$", "AED "),
+            text = regionSettingsManager.formatCurrency(expense.amount),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.SemiBold,
             color = Color.Black

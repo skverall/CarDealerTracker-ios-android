@@ -1,5 +1,4 @@
-<parameter name="path">Android Car Dealer Tracker/app/src/main/java/com/ezcar24/business/ui/components/inventory/BurningInventoryList.kt</parameter>
-<parameter name="content">package com.ezcar24.business.ui.components.inventory
+package com.ezcar24.business.ui.components.inventory
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,9 +21,8 @@ import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarWarning
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
-import java.text.NumberFormat
-import java.util.Locale
 
 @Composable
 fun BurningInventoryList(
@@ -114,7 +112,8 @@ private fun BurningVehicleItem(
     stats: VehicleInventoryStats?,
     onClick: () -> Unit
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     
     val isCritical = (stats?.daysInInventory ?: 0) >= 120
     val backgroundColor = if (isCritical) EzcarDanger.copy(alpha = 0.05f) else Color.Transparent
@@ -180,7 +179,7 @@ private fun BurningVehicleItem(
                 )
                 
                 Text(
-                    text = currencyFormat.format(stats?.totalCost ?: BigDecimal.ZERO).replace("$", "AED "),
+                    text = regionSettingsManager.formatCurrency(stats?.totalCost ?: BigDecimal.ZERO),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
                 )
@@ -289,4 +288,3 @@ fun BurningInventoryMiniCard(
         )
     }
 }
-</parameter>

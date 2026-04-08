@@ -60,6 +60,7 @@ data class Vehicle(
     val make: String?,
     val model: String?,
     val year: Int?,
+    val mileage: Int = 0,
     val purchasePrice: BigDecimal,
     val purchaseDate: Date,
     val status: String = "owned",
@@ -183,7 +184,10 @@ data class ClientInteraction(
     val interactionType: String? = null,
     val outcome: String? = null,
     val durationMinutes: Int? = null,
-    val isFollowUpRequired: Boolean = false
+    val isFollowUpRequired: Boolean = false,
+    val createdAt: Date = Date(),
+    val updatedAt: Date? = null,
+    val deletedAt: Date? = null
 )
 
 @Entity(

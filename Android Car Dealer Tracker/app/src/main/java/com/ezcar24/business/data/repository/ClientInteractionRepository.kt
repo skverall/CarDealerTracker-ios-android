@@ -116,6 +116,7 @@ class ClientInteractionRepository @Inject constructor(
     }
 
     private suspend fun getAllInteractions(): List<ClientInteraction> {
-        return emptyList()
+        return interactionDao.getAllIncludingDeleted()
+            .filter { it.deletedAt == null }
     }
 }

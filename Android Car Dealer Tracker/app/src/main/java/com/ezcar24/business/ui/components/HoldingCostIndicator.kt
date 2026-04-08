@@ -7,6 +7,8 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -17,8 +19,8 @@ import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarWarning
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarDanger
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
-import java.text.NumberFormat
 import java.util.Locale
 
 @Composable
@@ -29,6 +31,8 @@ fun HoldingCostIndicator(
     daysInInventory: Int = 0,
     modifier: Modifier = Modifier
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     val percentage = if (totalCost.compareTo(BigDecimal.ZERO) > 0) {
         holdingCost
             .multiply(BigDecimal(100))
@@ -57,7 +61,7 @@ fun HoldingCostIndicator(
                 color = Color.Gray
             )
             Text(
-                text = formatCurrency(holdingCost),
+                text = regionSettingsManager.formatCurrency(holdingCost),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = progressColor
@@ -91,7 +95,7 @@ fun HoldingCostIndicator(
 
             if (dailyRate != null && dailyRate > BigDecimal.ZERO) {
                 Text(
-                    text = "${formatCurrency(dailyRate)}/day",
+                    text = "${regionSettingsManager.formatCurrency(dailyRate)}/day",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
                 )
@@ -108,6 +112,8 @@ fun HoldingCostCard(
     daysInInventory: Int = 0,
     modifier: Modifier = Modifier
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     val percentage = if (totalCost.compareTo(BigDecimal.ZERO) > 0) {
         holdingCost
             .multiply(BigDecimal(100))
@@ -151,7 +157,7 @@ fun HoldingCostCard(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = formatCurrency(holdingCost),
+            text = regionSettingsManager.formatCurrency(holdingCost),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = Color.Black
@@ -171,15 +177,11 @@ fun HoldingCostCard(
 
             if (dailyRate != null && dailyRate > BigDecimal.ZERO) {
                 Text(
-                    text = "${formatCurrency(dailyRate)}/day",
+                    text = "${regionSettingsManager.formatCurrency(dailyRate)}/day",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
                 )
             }
         }
     }
-}
-
-private fun formatCurrency(amount: BigDecimal): String {
-    return NumberFormat.getCurrencyInstance(Locale.US).format(amount).replace("$", "AED ")
 }

@@ -136,6 +136,9 @@ interface ExpenseDao : BaseDao<Expense> {
 interface ClientDao : BaseDao<Client> {
     @Query("SELECT * FROM clients WHERE deletedAt IS NULL ORDER BY createdAt DESC")
     fun getAllActive(): Flow<List<Client>>
+
+    @Query("SELECT * FROM clients WHERE vehicleId = :vehicleId AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getByVehicleId(vehicleId: UUID): Client?
     
     @Query("SELECT * FROM clients")
     suspend fun getAllIncludingDeleted(): List<Client>
@@ -204,6 +207,9 @@ interface SyncQueueDao : BaseDao<SyncQueueItem> {
 interface SaleDao : BaseDao<Sale> {
     @Query("SELECT * FROM sales WHERE id = :id")
     suspend fun getById(id: UUID): Sale?
+
+    @Query("SELECT * FROM sales WHERE vehicleId = :vehicleId AND deletedAt IS NULL ORDER BY createdAt DESC LIMIT 1")
+    suspend fun getByVehicleId(vehicleId: UUID): Sale?
 
     @Query("SELECT * FROM sales WHERE deletedAt IS NULL")
     fun getAll(): Flow<List<Sale>>
@@ -364,8 +370,14 @@ interface PartSaleLineItemDao : BaseDao<PartSaleLineItem> {
 
 @Dao
 interface ClientInteractionDao : BaseDao<ClientInteraction> {
-    @Query("SELECT * FROM client_interactions WHERE clientId = :clientId ORDER BY occurredAt DESC")
+    @Query("SELECT * FROM client_interactions WHERE clientId = :clientId AND deletedAt IS NULL ORDER BY occurredAt DESC")
     suspend fun getByClient(clientId: UUID): List<ClientInteraction>
+
+    @Query("SELECT * FROM client_interactions WHERE id = :id")
+    suspend fun getById(id: UUID): ClientInteraction?
+
+    @Query("SELECT * FROM client_interactions")
+    suspend fun getAllIncludingDeleted(): List<ClientInteraction>
 
     @Query("DELETE FROM client_interactions WHERE clientId = :clientId")
     suspend fun deleteByClient(clientId: UUID)
@@ -385,6 +397,9 @@ interface ClientReminderDao : BaseDao<ClientReminder> {
 
 @Dao
 interface HoldingCostSettingsDao : BaseDao<HoldingCostSettings> {
+    @Query("SELECT * FROM holding_cost_settings WHERE id = :id LIMIT 1")
+    suspend fun getById(id: UUID): HoldingCostSettings?
+
     @Query("SELECT * FROM holding_cost_settings WHERE dealerId = :dealerId LIMIT 1")
     suspend fun getByDealerId(dealerId: UUID): HoldingCostSettings?
 
@@ -408,6 +423,9 @@ interface VehicleInventoryStatsDao : BaseDao<VehicleInventoryStats> {
 
     @Query("SELECT * FROM vehicle_inventory_stats")
     suspend fun getAllIncludingDeleted(): List<VehicleInventoryStats>
+
+    @Query("SELECT * FROM vehicle_inventory_stats")
+    fun getAllFlow(): Flow<List<VehicleInventoryStats>>
 
     @Query("DELETE FROM vehicle_inventory_stats WHERE vehicleId = :vehicleId")
     suspend fun deleteByVehicleId(vehicleId: UUID)
@@ -450,7 +468,7 @@ interface InventoryAlertDao : BaseDao<InventoryAlert> {
         SyncQueueItem::class, HoldingCostSettings::class,
         VehicleInventoryStats::class, InventoryAlert::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -658,6 +676,12 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_inventory_alerts_vehicleId` ON `inventory_alerts` (`vehicleId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_inventory_alerts_alertType` ON `inventory_alerts` (`alertType`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_inventory_alerts_isRead` ON `inventory_alerts` (`isRead`)")
+            }
+        }
+
+        val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE vehicles ADD COLUMN mileage INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

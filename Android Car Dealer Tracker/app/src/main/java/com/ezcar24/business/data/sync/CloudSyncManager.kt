@@ -4,6 +4,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.room.withTransaction
 import com.ezcar24.business.data.images.ImageStore
+import com.ezcar24.business.data.local.ActiveDatabaseProvider
 import com.ezcar24.business.data.local.*
 import com.ezcar24.business.util.DateUtils
 import com.ezcar24.business.util.toUUID
@@ -40,7 +41,7 @@ import kotlinx.serialization.json.put
 @Singleton
 class CloudSyncManager @Inject constructor(
     private val client: SupabaseClient,
-    private val db: AppDatabase,
+    private val databaseProvider: ActiveDatabaseProvider,
     private val syncQueueManager: SyncQueueManager,
     private val syncPrefs: SharedPreferences,
     private val imageStore: ImageStore
@@ -48,6 +49,8 @@ class CloudSyncManager @Inject constructor(
     private val tag = "CloudSyncManager"
     private val json = Json { ignoreUnknownKeys = true }
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val db: AppDatabase
+        get() = databaseProvider.currentDatabase()
 
     @Volatile
     var isSyncing = false
@@ -64,24 +67,25 @@ class CloudSyncManager @Inject constructor(
     private val _queueCount = MutableStateFlow(0)
     val queueCount: StateFlow<Int> = _queueCount.asStateFlow()
 
-    private var lastSyncTimestamp: Date?
-        get() {
-            val stored = syncPrefs.getLong(KEY_LAST_SYNC, 0L)
-            return if (stored == 0L) null else Date(stored)
-        }
-        set(value) {
-            syncPrefs.edit().putLong(KEY_LAST_SYNC, value?.time ?: 0L).apply()
-        }
+    private fun lastSyncTimestamp(dealerId: UUID): Date? {
+        val stored = syncPrefs.getLong(lastSyncKey(dealerId), 0L)
+        return if (stored == 0L) null else Date(stored)
+    }
+
+    private fun setLastSyncTimestamp(dealerId: UUID, value: Date?) {
+        syncPrefs.edit().putLong(lastSyncKey(dealerId), value?.time ?: 0L).apply()
+    }
 
     suspend fun syncAfterLogin(dealerId: UUID) = withContext(Dispatchers.IO) {
         if (isSyncing) return@withContext
         isSyncing = true
         try {
-            Log.i(tag, "syncAfterLogin start dealerId=$dealerId lastSync=$lastSyncTimestamp")
+            val lastSync = lastSyncTimestamp(dealerId)
+            Log.i(tag, "syncAfterLogin start dealerId=$dealerId lastSync=$lastSync")
             processOfflineQueue(dealerId)
 
             val pendingDeletes = pendingDeleteIds(dealerId)
-            var effectiveSince = lastSyncTimestamp
+            var effectiveSince = lastSync
 
             val localClientCount = db.clientDao().countAll()
             if (localClientCount == 0) {
@@ -104,8 +108,8 @@ class CloudSyncManager @Inject constructor(
 
             pushLocalChanges(dealerId, pendingDeletes[SyncEntityType.VEHICLE] ?: emptySet())
 
-            lastSyncTimestamp = resolveSyncTimestamp(snapshot)
-            lastSyncAt = lastSyncTimestamp
+            setLastSyncTimestamp(dealerId, resolveSyncTimestamp(snapshot))
+            lastSyncAt = lastSyncTimestamp(dealerId)
 
             syncScope.launch {
                 downloadVehicleImages(dealerId, filteredSnapshot.vehicles)
@@ -128,7 +132,7 @@ class CloudSyncManager @Inject constructor(
         _syncState.value = SyncState.Syncing
 
         val syncStartedAt = Date()
-        val since = if (force) null else lastSyncTimestamp
+        val since = if (force) null else lastSyncTimestamp(dealerId)
         val queueItems = syncQueueManager.getAllItems().filter { it.dealerId == dealerId }
         val protectedIds = collectProtectedIds(queueItems)
         _queueCount.value = queueItems.size
@@ -141,8 +145,8 @@ class CloudSyncManager @Inject constructor(
             val syncMarker = resolveSyncTimestamp(snapshot)
             if (!snapshotHasChanges(snapshot)) {
                 Log.i(tag, "manualSync no changes dealerId=$dealerId")
-                lastSyncTimestamp = syncMarker
-                lastSyncAt = lastSyncTimestamp
+                setLastSyncTimestamp(dealerId, syncMarker)
+                lastSyncAt = lastSyncTimestamp(dealerId)
                 _syncState.value = SyncState.Success
                 // Auto-dismiss success state
                 launch {
@@ -166,8 +170,8 @@ class CloudSyncManager @Inject constructor(
 
             mergeRemoteChanges(snapshot, dealerId, cleanupContext)
 
-            lastSyncTimestamp = syncMarker
-            lastSyncAt = lastSyncTimestamp
+            setLastSyncTimestamp(dealerId, syncMarker)
+            lastSyncAt = lastSyncTimestamp(dealerId)
             _queueCount.value = 0
             _syncState.value = SyncState.Success
 
@@ -205,6 +209,27 @@ class CloudSyncManager @Inject constructor(
 
     suspend fun fullSync(dealerId: UUID) {
         syncAfterLogin(dealerId)
+    }
+
+    fun resetSyncState(dealerId: UUID? = CloudSyncEnvironment.currentDealerId) {
+        if (dealerId != null) {
+            setLastSyncTimestamp(dealerId, null)
+        }
+        refreshLastSyncForCurrentOrg()
+    }
+
+    fun refreshLastSyncForCurrentOrg() {
+        lastSyncAt = CloudSyncEnvironment.currentDealerId?.let(::lastSyncTimestamp)
+    }
+
+    fun clearAllSyncState() {
+        val keysToRemove = syncPrefs.all.keys.filter { it.startsWith(KEY_LAST_SYNC_PREFIX) }
+        if (keysToRemove.isNotEmpty()) {
+            val editor = syncPrefs.edit()
+            keysToRemove.forEach(editor::remove)
+            editor.apply()
+        }
+        lastSyncAt = null
     }
 
     suspend fun runDiagnostics(dealerId: UUID): SyncDiagnosticsReport = withContext(Dispatchers.IO) {
@@ -262,7 +287,7 @@ class CloudSyncManager @Inject constructor(
 
         SyncDiagnosticsReport(
             generatedAt = Date(),
-            lastSyncAt = lastSyncAt,
+            lastSyncAt = lastSyncTimestamp(dealerId),
             isSyncing = isSyncing,
             offlineQueueCount = queueItems.count(),
             offlineQueueSummary = queueSummary,
@@ -454,6 +479,63 @@ class CloudSyncManager @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(tag, "uploadVehiclePhoto failed: ${e.message}", e)
+        }
+    }
+
+    suspend fun deleteVehiclePhoto(photoId: String, dealerId: UUID, storagePath: String) = withContext(Dispatchers.IO) {
+        try {
+            client.storage
+                .from("vehicle-images")
+                .delete(listOf(storagePath))
+
+            val now = DateUtils.formatDateAndTime(Date())
+            client.postgrest
+                .from("crm_vehicle_photos")
+                .update(
+                    {
+                        set("deleted_at", now)
+                        set("updated_at", now)
+                    }
+                ) {
+                    filter {
+                        eq("id", photoId)
+                        eq("dealer_id", dealerId.toString())
+                    }
+                }
+        } catch (e: Exception) {
+            Log.e(tag, "deleteVehiclePhoto failed: ${e.message}", e)
+        }
+    }
+
+    suspend fun setVehiclePhotoAsCover(dealerId: UUID, storagePath: String, vehicleId: UUID) = withContext(Dispatchers.IO) {
+        try {
+            val data = client.storage
+                .from("vehicle-images")
+                .downloadAuthenticated(storagePath)
+            uploadVehicleImage(vehicleId, dealerId, data)
+        } catch (e: Exception) {
+            Log.e(tag, "setVehiclePhotoAsCover failed: ${e.message}", e)
+        }
+    }
+
+    suspend fun updateVehiclePhotoOrder(photoId: String, dealerId: UUID, sortOrder: Int) = withContext(Dispatchers.IO) {
+        try {
+            val now = DateUtils.formatDateAndTime(Date())
+            client.postgrest
+                .from("crm_vehicle_photos")
+                .update(
+                    {
+                        set("sort_order", sortOrder)
+                        set("updated_at", now)
+                    }
+                ) {
+                    filter {
+                        eq("id", photoId)
+                        eq("dealer_id", dealerId.toString())
+                    }
+                }
+        } catch (e: Exception) {
+            Log.e(tag, "updateVehiclePhotoOrder failed: ${e.message}", e)
         }
     }
 
@@ -691,6 +773,8 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.PART_BATCH -> db.partBatchDao().getById(id)?.let { deletePartBatch(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.PART_SALE -> db.partSaleDao().getById(id)?.let { deletePartSale(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.PART_SALE_LINE_ITEM -> db.partSaleLineItemDao().getById(id)?.let { deletePartSaleLineItem(it) } ?: performDeleteRpc(entityType, id, dealerId)
+            SyncEntityType.HOLDING_COST_SETTINGS -> db.holdingCostSettingsDao().getById(id)?.let { db.holdingCostSettingsDao().delete(it) } ?: performDeleteRpc(entityType, id, dealerId)
+            SyncEntityType.CLIENT_INTERACTION -> db.clientInteractionDao().getById(id)?.let { deleteClientInteraction(it) } ?: performDeleteRpc(entityType, id, dealerId)
         }
     }
 
@@ -1138,6 +1222,7 @@ class CloudSyncManager @Inject constructor(
                 make = remote.make,
                 model = remote.model,
                 year = remote.year,
+                mileage = remote.mileage ?: local?.mileage ?: 0,
                 purchasePrice = remote.purchasePrice,
                 purchaseDate = purchaseDate,
                 status = remote.status,
@@ -2951,7 +3036,7 @@ class CloudSyncManager @Inject constructor(
     }
 
     companion object {
-        private const val KEY_LAST_SYNC = "lastSyncTimestamp"
+        private const val KEY_LAST_SYNC_PREFIX = "lastSyncTimestamp"
     }
 
     @Serializable
@@ -2967,6 +3052,10 @@ class CloudSyncManager @Inject constructor(
         val remoteIds: Map<SyncEntityType, Set<UUID>>,
         val protectedIds: Map<SyncEntityType, Set<UUID>>
     )
+
+    private fun lastSyncKey(dealerId: UUID): String {
+        return "${KEY_LAST_SYNC_PREFIX}_${dealerId}"
+    }
 }
 
 enum class SyncOperationType(val rawValue: String, val displayName: String, val sortOrder: Int) {
@@ -3106,6 +3195,7 @@ fun Vehicle.toRemote(dealerId: String) = RemoteVehicle(
     make = make,
     model = model,
     year = year,
+    mileage = mileage.takeIf { it > 0 },
     purchasePrice = purchasePrice,
     purchaseDate = DateUtils.formatDateOnly(purchaseDate),
     status = status,

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.MoreVert
@@ -41,9 +42,8 @@ import androidx.compose.ui.unit.sp
 import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.LeadStage
 import com.ezcar24.business.ui.theme.EzcarBlueBright
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
-import java.text.NumberFormat
-import java.util.Locale
 
 @Composable
 fun LeadCard(
@@ -216,7 +216,7 @@ fun LeadCard(
                                 .background(Color.LightGray.copy(alpha = 0.2f), CircleShape)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Call,
+                                imageVector = Icons.AutoMirrored.Filled.Message,
                                 contentDescription = "Message",
                                 tint = Color(0xFF4CAF50),
                                 modifier = Modifier.size(18.dp)
@@ -272,9 +272,10 @@ private fun getStageDisplayName(stage: LeadStage): String {
     }
 }
 
+@Composable
 private fun formatCurrency(amount: BigDecimal): String {
-    val formatter = NumberFormat.getCurrencyInstance(Locale.US)
-    return formatter.format(amount)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    return regionSettingsManager.formatCurrency(amount)
 }
 
 @Composable

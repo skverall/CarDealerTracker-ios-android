@@ -41,6 +41,7 @@ import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.User
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.ui.theme.*
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -54,8 +55,11 @@ fun AddExpenseSheet(
     onSave: (BigDecimal, Date, String, String, Vehicle?, User?, FinancialAccount?, ExpenseCategoryType) -> Unit,
     vehicles: List<Vehicle>,
     users: List<User>,
-    accounts: List<FinancialAccount>
+    accounts: List<FinancialAccount>,
+    currencyCode: String
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var amountStr by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("vehicle") }
@@ -171,7 +175,7 @@ fun AddExpenseSheet(
                             Spacer(modifier = Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    "AED",
+                                    currencyCode,
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = Color.Gray
@@ -255,7 +259,12 @@ fun AddExpenseSheet(
                                             selectedLabelColor = Color.White,
                                             selectedLeadingIconColor = Color.White
                                         ),
-                                        border = if (!isSelected) FilterChipDefaults.filterChipBorder() else null
+                                        border = if (!isSelected) {
+                                            FilterChipDefaults.filterChipBorder(
+                                                enabled = true,
+                                                selected = false
+                                            )
+                                        } else null
                                     )
                                 }
                             }

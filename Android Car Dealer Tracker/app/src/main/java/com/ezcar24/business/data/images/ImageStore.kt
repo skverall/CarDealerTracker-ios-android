@@ -1,6 +1,7 @@
 package com.ezcar24.business.data.images
 
 import android.content.Context
+import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.util.UUID
@@ -13,11 +14,16 @@ import kotlinx.coroutines.withContext
 class ImageStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val directory: File by lazy {
+    private val rootDirectory: File by lazy {
         File(context.filesDir, "VehicleImages").apply { mkdirs() }
     }
 
-    fun imageFile(id: UUID): File = File(directory, "${id}.jpg")
+    private fun directory(dealerId: UUID? = CloudSyncEnvironment.currentDealerId): File {
+        val storeKey = dealerId?.toString() ?: "guest"
+        return File(rootDirectory, storeKey).apply { mkdirs() }
+    }
+
+    fun imageFile(id: UUID): File = File(directory(), "${id}.jpg")
 
     suspend fun saveImage(id: UUID, data: ByteArray) = withContext(Dispatchers.IO) {
         val file = imageFile(id)
@@ -37,8 +43,8 @@ class ImageStore @Inject constructor(
     }
 
     suspend fun clearAll() = withContext(Dispatchers.IO) {
-        if (directory.exists()) {
-            directory.deleteRecursively()
+        if (rootDirectory.exists()) {
+            rootDirectory.deleteRecursively()
         }
     }
 }

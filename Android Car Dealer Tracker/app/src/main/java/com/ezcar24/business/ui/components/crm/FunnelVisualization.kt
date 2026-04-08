@@ -22,6 +22,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,7 @@ import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.ui.theme.EzcarWarning
 import com.ezcar24.business.util.calculator.FunnelMetrics
+import com.ezcar24.business.util.rememberRegionSettingsManager
 
 @Composable
 fun FunnelVisualization(
@@ -315,7 +317,8 @@ fun PipelineValueCard(
     leadCount: Int,
     modifier: Modifier = Modifier
 ) {
-    val formatter = java.text.NumberFormat.getCurrencyInstance(java.util.Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
 
     Card(
         colors = CardDefaults.cardColors(containerColor = EzcarNavy),
@@ -328,7 +331,7 @@ fun PipelineValueCard(
                 .padding(20.dp)
         ) {
             Text(
-                text = "Pipeline Value",
+                text = "Pipeline Value (${regionState.selectedRegion.currencyCode})",
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.7f)
             )
@@ -336,7 +339,7 @@ fun PipelineValueCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = formatter.format(totalValue),
+                text = regionSettingsManager.formatCurrency(totalValue),
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
@@ -355,7 +358,7 @@ fun PipelineValueCard(
                         color = Color.White.copy(alpha = 0.7f)
                     )
                     Text(
-                        text = formatter.format(weightedValue),
+                        text = regionSettingsManager.formatCurrency(weightedValue),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = EzcarGreen

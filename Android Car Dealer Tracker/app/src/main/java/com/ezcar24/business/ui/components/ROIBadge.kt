@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -14,6 +16,7 @@ import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.ui.theme.EzcarWarning
 import com.ezcar24.business.ui.theme.EzcarDanger
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
 
 @Composable
@@ -61,6 +64,8 @@ fun ProfitBadge(
     profit: BigDecimal?,
     modifier: Modifier = Modifier
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     if (profit == null) {
         Text(
             text = "-",
@@ -80,7 +85,7 @@ fun ProfitBadge(
         else -> EzcarGreen
     }
 
-    val formattedProfit = formatCurrency(profit)
+    val formattedProfit = regionSettingsManager.formatCurrency(profit)
 
     Text(
         text = formattedProfit,
@@ -91,10 +96,4 @@ fun ProfitBadge(
             .background(color.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
             .padding(horizontal = 8.dp, vertical = 4.dp)
     )
-}
-
-private fun formatCurrency(amount: BigDecimal): String {
-    val prefix = if (amount.compareTo(BigDecimal.ZERO) < 0) "-AED " else "AED "
-    val absAmount = amount.abs()
-    return prefix + absAmount.toPlainString()
 }

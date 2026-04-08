@@ -6,14 +6,14 @@ import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.LeadSource
 import com.ezcar24.business.data.local.LeadStage
 import com.ezcar24.business.data.repository.ClientRepository
+import com.ezcar24.business.data.sync.CloudSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.Date
-import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -36,23 +36,27 @@ data class LeadManagementUiState(
     val selectedSource: LeadSource? = null,
     val sortOption: LeadSortOption = LeadSortOption.NEWEST,
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val statusMessage: String? = null
 )
 
 @HiltViewModel
 class LeadManagementViewModel @Inject constructor(
-    private val clientRepository: ClientRepository
+    private val clientRepository: ClientRepository,
+    private val cloudSyncManager: CloudSyncManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LeadManagementUiState())
     val uiState: StateFlow<LeadManagementUiState> = _uiState.asStateFlow()
+    private var loadJob: Job? = null
 
     init {
         loadLeads()
     }
 
     fun loadLeads() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
             try {
@@ -60,7 +64,8 @@ class LeadManagementViewModel @Inject constructor(
                     _uiState.update { 
                         it.copy(
                             allLeads = clients,
-                            isLoading = false
+                            isLoading = false,
+                            error = null
                         )
                     }
                     applyFiltersAndSort()
@@ -154,6 +159,32 @@ class LeadManagementViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    fun clearStatusMessage() {
+        _uiState.update { it.copy(statusMessage = null) }
+    }
+
+    fun updateLeadStage(client: Client, stage: LeadStage) {
+        viewModelScope.launch {
+            try {
+                val updatedClient = client.copy(
+                    leadStage = stage,
+                    updatedAt = Date()
+                )
+                cloudSyncManager.upsertClient(updatedClient)
+                _uiState.update {
+                    it.copy(
+                        statusMessage = "${client.name} moved to ${stage.name.replace('_', ' ')}",
+                        error = null
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(error = e.message ?: "Failed to update lead stage")
+                }
+            }
+        }
     }
 
     fun getLeadsByStage(stage: LeadStage): List<Client> {

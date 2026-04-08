@@ -12,10 +12,11 @@ import android.provider.MediaStore
 import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ezcar24.business.data.local.AppDatabase
+import com.ezcar24.business.data.local.ActiveDatabaseProvider
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import com.ezcar24.business.util.DateUtils
+import com.ezcar24.business.util.RegionSettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.ByteArrayOutputStream
@@ -44,8 +45,9 @@ data class BackupCenterUiState(
 @HiltViewModel
 class BackupCenterViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val db: AppDatabase,
-    private val cloudSyncManager: CloudSyncManager
+    private val databaseProvider: ActiveDatabaseProvider,
+    private val cloudSyncManager: CloudSyncManager,
+    private val regionSettingsManager: RegionSettingsManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BackupCenterUiState())
@@ -126,6 +128,7 @@ class BackupCenterViewModel @Inject constructor(
     }
 
     private suspend fun buildExpensesCsv(startDate: Date?, endDate: Date?): String {
+        val db = databaseProvider.currentDatabase()
         val expenses = db.expenseDao().getAllIncludingDeleted()
             .filter { it.deletedAt == null }
             .filter { expense ->
@@ -168,6 +171,7 @@ class BackupCenterViewModel @Inject constructor(
     }
 
     private suspend fun buildVehiclesCsv(): String {
+        val db = databaseProvider.currentDatabase()
         val vehicles = db.vehicleDao().getAllIncludingDeleted().filter { it.deletedAt == null }
         val df = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
         val header = listOf("VIN", "Make", "Model", "Year", "Purchase Price", "Status", "Notes", "Created At")
@@ -187,6 +191,7 @@ class BackupCenterViewModel @Inject constructor(
     }
 
     private suspend fun buildClientsCsv(): String {
+        val db = databaseProvider.currentDatabase()
         val clients = db.clientDao().getAllIncludingDeleted().filter { it.deletedAt == null }
         val df = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
         val header = listOf("Name", "Phone", "Email", "Notes", "Created At", "Next Reminder")
@@ -311,6 +316,7 @@ class BackupCenterViewModel @Inject constructor(
     }
 
     private suspend fun prepareReportData(startDate: Date, endDate: Date): ReportData {
+        val db = databaseProvider.currentDatabase()
         val expenses = db.expenseDao().getAllIncludingDeleted()
             .filter { it.deletedAt == null }
             .filter { !it.date.before(startDate) && !it.date.after(endDate) }
@@ -336,20 +342,19 @@ class BackupCenterViewModel @Inject constructor(
             total + (salePrice - purchasePrice - vehicleExpenses)
         }
 
-        val currency = java.text.NumberFormat.getCurrencyInstance(Locale.US)
         val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
         val rangeLabel = "${dateFormatter.format(startDate)} - ${dateFormatter.format(endDate)}"
         val topSold = soldVehicles.sortedByDescending { it.salePrice ?: BigDecimal.ZERO }.map { vehicle ->
             val title = listOfNotNull(vehicle.make, vehicle.model).joinToString(" ").ifBlank { vehicle.vin }
-            val price = currency.format(vehicle.salePrice ?: BigDecimal.ZERO)
+            val price = regionSettingsManager.formatCurrency(vehicle.salePrice ?: BigDecimal.ZERO)
             "$title • $price"
         }
 
         return ReportData(
             rangeLabel = rangeLabel,
-            totalExpenses = currency.format(totalExpenses),
-            totalSales = currency.format(totalSales),
-            totalProfit = currency.format(totalProfit),
+            totalExpenses = regionSettingsManager.formatCurrency(totalExpenses),
+            totalSales = regionSettingsManager.formatCurrency(totalSales),
+            totalProfit = regionSettingsManager.formatCurrency(totalProfit),
             inventoryCount = inventoryCount,
             soldCount = soldVehicles.size,
             topSoldVehicles = topSold

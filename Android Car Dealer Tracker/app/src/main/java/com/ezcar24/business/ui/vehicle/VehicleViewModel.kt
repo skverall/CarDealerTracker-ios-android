@@ -3,6 +3,8 @@ package com.ezcar24.business.ui.vehicle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
+import com.ezcar24.business.data.local.Client
+import com.ezcar24.business.data.local.ClientDao
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.local.VehicleDao
 import com.ezcar24.business.data.local.VehicleWithFinancials
@@ -13,8 +15,12 @@ import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.HoldingCostSettings
 import com.ezcar24.business.data.local.HoldingCostSettingsDao
 import com.ezcar24.business.data.local.VehicleInventoryStats
+import com.ezcar24.business.data.local.VehicleInventoryStatsDao
 import com.ezcar24.business.data.local.InventoryAlert
 import com.ezcar24.business.data.local.InventoryAlertDao
+import com.ezcar24.business.data.local.LeadStage
+import com.ezcar24.business.data.local.Sale
+import com.ezcar24.business.data.local.SaleDao
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import com.ezcar24.business.util.calculator.HoldingCostCalculator
@@ -28,6 +34,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 import java.util.UUID
 import java.util.Date
@@ -55,6 +62,8 @@ data class VehiclePhotoItem(
 
 data class VehicleDetailUiState(
     val vehicle: Vehicle? = null,
+    val sale: Sale? = null,
+    val saleAccount: FinancialAccount? = null,
     val expenses: List<Expense> = emptyList(),
     val financialSummary: VehicleFinancialSummary = VehicleFinancialSummary(),
     val inventoryStats: VehicleInventoryStats? = null,
@@ -81,6 +90,8 @@ data class VehicleUiState(
 @HiltViewModel
 class VehicleViewModel @Inject constructor(
     private val vehicleDao: VehicleDao,
+    private val saleDao: SaleDao,
+    private val clientDao: ClientDao,
     private val financialAccountDao: FinancialAccountDao,
     private val expenseDao: ExpenseDao,
     private val holdingCostSettingsDao: HoldingCostSettingsDao,
@@ -143,6 +154,74 @@ class VehicleViewModel @Inject constructor(
                 // loadVehicles() removed - updates are automatic via Flow
             }
         }
+    }
+
+    suspend fun completeQuickSale(
+        vehicleId: UUID,
+        salePrice: BigDecimal,
+        saleDate: Date,
+        buyerName: String,
+        buyerPhone: String,
+        paymentMethod: String,
+        accountId: UUID
+    ): Result<Unit> = runCatching {
+        require(salePrice > BigDecimal.ZERO) { "Sale price must be greater than zero." }
+
+        val normalizedBuyerName = buyerName.trim().takeIf { it.isNotEmpty() }
+            ?: error("Buyer name is required.")
+        val normalizedBuyerPhone = buyerPhone.trim().takeIf { it.isNotEmpty() }
+        val normalizedPaymentMethod = paymentMethod.trim().takeIf { it.isNotEmpty() } ?: "Cash"
+
+        val vehicle = vehicleDao.getById(vehicleId) ?: error("Vehicle not found.")
+        val account = financialAccountDao.getById(accountId) ?: error("Financial account not found.")
+        val now = Date()
+
+        val sale = Sale(
+            id = UUID.randomUUID(),
+            amount = salePrice,
+            date = saleDate,
+            buyerName = normalizedBuyerName,
+            buyerPhone = normalizedBuyerPhone,
+            paymentMethod = normalizedPaymentMethod,
+            createdAt = now,
+            updatedAt = now,
+            vehicleId = vehicle.id,
+            accountId = account.id
+        )
+        val updatedVehicle = vehicle.copy(
+            status = "sold",
+            salePrice = salePrice,
+            saleDate = saleDate,
+            buyerName = normalizedBuyerName,
+            buyerPhone = normalizedBuyerPhone,
+            paymentMethod = normalizedPaymentMethod,
+            updatedAt = now
+        )
+        val updatedAccount = account.copy(
+            balance = account.balance.add(salePrice),
+            updatedAt = now
+        )
+        val client = Client(
+            id = UUID.randomUUID(),
+            name = normalizedBuyerName,
+            phone = normalizedBuyerPhone,
+            email = null,
+            notes = buildClientPurchaseNote(vehicle),
+            requestDetails = null,
+            preferredDate = null,
+            status = "purchased",
+            createdAt = now,
+            updatedAt = now,
+            vehicleId = vehicle.id,
+            leadStage = LeadStage.closed_won,
+            leadCreatedAt = now,
+            lastContactAt = now
+        )
+
+        cloudSyncManager.upsertSale(sale)
+        cloudSyncManager.upsertVehicle(updatedVehicle)
+        cloudSyncManager.upsertFinancialAccount(updatedAccount)
+        cloudSyncManager.upsertClient(client)
     }
 
     private fun applyFilters() {
@@ -208,7 +287,7 @@ class VehicleViewModel @Inject constructor(
             // Combine vehicles with their inventory stats
             combine(
                 vehicleDao.getAllActiveWithFinancialsFlow(),
-                vehicleInventoryStatsDao.getAllIncludingDeleted()
+                vehicleInventoryStatsDao.getAllFlow()
             ) { vehicles, stats ->
                 val statsMap = stats.associateBy { it.vehicleId.toString() }
                 Pair(vehicles, statsMap)
@@ -258,6 +337,8 @@ class VehicleViewModel @Inject constructor(
                     Triple(vehicle, expenses, settings)
                 }.collect { (vehicle, expenses, settings) ->
                     if (vehicle != null) {
+                        val sale = saleDao.getByVehicleId(vehicle.id)
+                        val saleAccount = sale?.accountId?.let { financialAccountDao.getById(it) }
                         val effectiveSettings = settings ?: HoldingCostSettings(
                             id = UUID.randomUUID(),
                             dealerId = CloudSyncEnvironment.currentDealerId ?: UUID.randomUUID(),
@@ -337,6 +418,8 @@ class VehicleViewModel @Inject constructor(
                         _detailUiState.update {
                             it.copy(
                                 vehicle = vehicle,
+                                sale = sale,
+                                saleAccount = saleAccount,
                                 expenses = expenses,
                                 financialSummary = financialSummary,
                                 inventoryStats = inventoryStats,
@@ -352,6 +435,8 @@ class VehicleViewModel @Inject constructor(
                         _detailUiState.update {
                             it.copy(
                                 vehicle = null,
+                                sale = null,
+                                saleAccount = null,
                                 photoUrls = emptyList(),
                                 isLoading = false
                             )
@@ -434,12 +519,13 @@ class VehicleViewModel @Inject constructor(
         }
     }
 
-    fun saveVehicle(
+    suspend fun saveVehicle(
         id: String?,
         vin: String,
         make: String,
         model: String,
         year: Int?,
+        mileage: Int,
         purchasePrice: BigDecimal,
         purchaseDate: Date,
         askingPrice: BigDecimal?,
@@ -450,61 +536,206 @@ class VehicleViewModel @Inject constructor(
         buyerName: String? = null,
         buyerPhone: String? = null,
         paymentMethod: String? = null,
-        reportURL: String? = null
-    ) {
-        viewModelScope.launch {
-            val now = Date()
-            val vehicle = if (id != null) {
-                // Update
-                val existing = vehicleDao.getById(UUID.fromString(id)) ?: return@launch
-                existing.copy(
-                    vin = vin,
-                    make = make,
-                    model = model,
-                    year = year,
-                    purchasePrice = purchasePrice,
-                    purchaseDate = purchaseDate,
-                    askingPrice = askingPrice,
-                    status = status,
-                    notes = notes,
-                    salePrice = if (status == "sold") salePrice else null,
-                    saleDate = if (status == "sold") saleDate else null,
-                    buyerName = buyerName,
-                    buyerPhone = buyerPhone,
-                    paymentMethod = paymentMethod,
-                    reportURL = reportURL,
-                    updatedAt = now
-                )
-            } else {
-                // Create
-                Vehicle(
+        reportURL: String? = null,
+        saleAccountId: UUID? = null
+    ): Result<UUID> = runCatching {
+        val now = Date()
+        val normalizedNotes = notes.trim().takeIf { it.isNotEmpty() }
+        val normalizedBuyerName = buyerName?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedBuyerPhone = buyerPhone?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedPaymentMethod = paymentMethod?.trim()?.takeIf { it.isNotEmpty() }
+        val normalizedReportUrl = reportURL?.trim()?.takeIf { it.isNotEmpty() }
+        val vehicleId = id?.let(UUID::fromString) ?: UUID.randomUUID()
+        val existingVehicle = id?.let { vehicleDao.getById(vehicleId) }
+        if (id != null && existingVehicle == null) {
+            error("Vehicle not found.")
+        }
+        val existingSale = saleDao.getByVehicleId(vehicleId)
+        val existingClient = clientDao.getByVehicleId(vehicleId)
+        val previousSaleAmount = existingSale?.amount ?: BigDecimal.ZERO
+        val previousSaleAccount = existingSale?.accountId?.let { financialAccountDao.getById(it) }
+
+        val vehicle = if (existingVehicle != null) {
+            existingVehicle.copy(
+                vin = vin,
+                make = make,
+                model = model,
+                year = year,
+                mileage = mileage,
+                purchasePrice = purchasePrice,
+                purchaseDate = purchaseDate,
+                askingPrice = askingPrice,
+                status = status,
+                notes = normalizedNotes,
+                salePrice = if (status == "sold") salePrice else null,
+                saleDate = if (status == "sold") saleDate else null,
+                buyerName = if (status == "sold") normalizedBuyerName else null,
+                buyerPhone = if (status == "sold") normalizedBuyerPhone else null,
+                paymentMethod = if (status == "sold") normalizedPaymentMethod else null,
+                reportURL = normalizedReportUrl,
+                updatedAt = now
+            )
+        } else {
+            Vehicle(
+                id = vehicleId,
+                vin = vin,
+                make = make,
+                model = model,
+                year = year,
+                mileage = mileage,
+                purchasePrice = purchasePrice,
+                purchaseDate = purchaseDate,
+                status = status,
+                notes = normalizedNotes,
+                askingPrice = askingPrice,
+                createdAt = now,
+                updatedAt = now,
+                deletedAt = null,
+                saleDate = if (status == "sold") saleDate else null,
+                buyerName = if (status == "sold") normalizedBuyerName else null,
+                buyerPhone = if (status == "sold") normalizedBuyerPhone else null,
+                paymentMethod = if (status == "sold") normalizedPaymentMethod else null,
+                salePrice = if (status == "sold") salePrice else null,
+                reportURL = normalizedReportUrl
+            )
+        }
+
+        cloudSyncManager.upsertVehicle(vehicle)
+
+        if (status == "sold") {
+            val normalizedSalePrice = salePrice?.takeIf { it > BigDecimal.ZERO }
+                ?: error("Sale price is required.")
+            val normalizedSaleDate = saleDate ?: error("Sale date is required.")
+            val targetAccount = saleAccountId?.let { financialAccountDao.getById(it) }
+                ?: previousSaleAccount
+                ?: defaultSaleAccount()
+                ?: error("A financial account is required for sold vehicles.")
+
+            val sale = existingSale?.copy(
+                amount = normalizedSalePrice,
+                date = normalizedSaleDate,
+                buyerName = normalizedBuyerName,
+                buyerPhone = normalizedBuyerPhone,
+                paymentMethod = normalizedPaymentMethod,
+                updatedAt = now,
+                deletedAt = null,
+                vehicleId = vehicle.id,
+                accountId = targetAccount.id
+            ) ?: Sale(
+                id = UUID.randomUUID(),
+                amount = normalizedSalePrice,
+                date = normalizedSaleDate,
+                buyerName = normalizedBuyerName,
+                buyerPhone = normalizedBuyerPhone,
+                paymentMethod = normalizedPaymentMethod,
+                createdAt = now,
+                updatedAt = now,
+                deletedAt = null,
+                vehicleId = vehicle.id,
+                accountId = targetAccount.id
+            )
+
+            when {
+                existingSale == null -> {
+                    cloudSyncManager.upsertFinancialAccount(
+                        targetAccount.copy(
+                            balance = targetAccount.balance.add(normalizedSalePrice),
+                            updatedAt = now
+                        )
+                    )
+                }
+                previousSaleAccount?.id == targetAccount.id -> {
+                    val delta = normalizedSalePrice.subtract(previousSaleAmount)
+                    if (delta.compareTo(BigDecimal.ZERO) != 0) {
+                        cloudSyncManager.upsertFinancialAccount(
+                            targetAccount.copy(
+                                balance = targetAccount.balance.add(delta),
+                                updatedAt = now
+                            )
+                        )
+                    }
+                }
+                else -> {
+                    previousSaleAccount?.let { previousAccount ->
+                        if (previousSaleAmount.compareTo(BigDecimal.ZERO) != 0) {
+                            cloudSyncManager.upsertFinancialAccount(
+                                previousAccount.copy(
+                                    balance = previousAccount.balance.subtract(previousSaleAmount),
+                                    updatedAt = now
+                                )
+                            )
+                        }
+                    }
+                    cloudSyncManager.upsertFinancialAccount(
+                        targetAccount.copy(
+                            balance = targetAccount.balance.add(normalizedSalePrice),
+                            updatedAt = now
+                        )
+                    )
+                }
+            }
+
+            cloudSyncManager.upsertSale(sale)
+
+            val clientName = normalizedBuyerName ?: existingClient?.name
+            if (clientName != null) {
+                val client = existingClient?.copy(
+                    name = clientName,
+                    phone = normalizedBuyerPhone,
+                    notes = buildClientPurchaseNote(vehicle),
+                    status = "purchased",
+                    updatedAt = now,
+                    vehicleId = vehicle.id,
+                    leadStage = LeadStage.closed_won,
+                    lastContactAt = now
+                ) ?: Client(
                     id = UUID.randomUUID(),
-                    vin = vin,
-                    make = make,
-                    model = model,
-                    year = year,
-                    purchasePrice = purchasePrice,
-                    purchaseDate = purchaseDate,
-                    status = status,
-                    notes = notes,
-                    askingPrice = askingPrice,
+                    name = clientName,
+                    phone = normalizedBuyerPhone,
+                    email = null,
+                    notes = buildClientPurchaseNote(vehicle),
+                    requestDetails = null,
+                    preferredDate = null,
+                    status = "purchased",
                     createdAt = now,
                     updatedAt = now,
                     deletedAt = null,
-                    saleDate = if (status == "sold") saleDate else null,
-                    buyerName = buyerName,
-                    buyerPhone = buyerPhone,
-                    paymentMethod = paymentMethod,
-                    salePrice = if (status == "sold") salePrice else null,
-                    reportURL = reportURL
+                    vehicleId = vehicle.id,
+                    leadStage = LeadStage.closed_won,
+                    leadCreatedAt = now,
+                    lastContactAt = now
                 )
+                cloudSyncManager.upsertClient(client)
             }
-            vehicleDao.upsert(vehicle)
-            // loadVehicles() removed - updates are automatic
-            
-            // Return the vehicle ID so caller can upload image if needed
-            vehicle.id
+        } else if (existingSale != null) {
+            previousSaleAccount?.let { previousAccount ->
+                if (previousSaleAmount.compareTo(BigDecimal.ZERO) != 0) {
+                    cloudSyncManager.upsertFinancialAccount(
+                        previousAccount.copy(
+                            balance = previousAccount.balance.subtract(previousSaleAmount),
+                            updatedAt = now
+                        )
+                    )
+                }
+            }
+            cloudSyncManager.deleteSale(existingSale)
         }
+
+        vehicle.id
+    }
+
+    private suspend fun defaultSaleAccount(): FinancialAccount? {
+        val accounts = financialAccountDao.getAll().first()
+        return accounts.firstOrNull { it.accountType.equals("cash", ignoreCase = true) }
+            ?: accounts.firstOrNull { it.accountType.equals("bank", ignoreCase = true) }
+            ?: accounts.firstOrNull()
+    }
+
+    private fun buildClientPurchaseNote(vehicle: Vehicle): String {
+        val title = listOfNotNull(vehicle.year?.toString(), vehicle.make, vehicle.model)
+            .joinToString(" ")
+            .ifBlank { vehicle.vin }
+        return "Purchased $title"
     }
     
     fun uploadVehicleImage(vehicleId: UUID, imageData: ByteArray) {

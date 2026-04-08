@@ -6,18 +6,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.LocalPhone
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -53,14 +52,14 @@ fun LeadSourceBadge(
     }
 
     val (text, color, icon) = when (source) {
-        LeadSource.facebook -> "Facebook" to Color(0xFF1877F2) to Icons.Default.Share
-        LeadSource.dubizzle -> "Dubizzle" to EzcarOrange to Icons.Default.Store
-        LeadSource.instagram -> "Instagram" to Color(0xFFE4405F) to Icons.Default.Share
-        LeadSource.referral -> "Referral" to EzcarPurple to Icons.Default.People
-        LeadSource.walk_in -> "Walk-in" to EzcarGreen to Icons.Default.LocationOn
-        LeadSource.phone -> "Phone" to EzcarNavy to Icons.Default.Phone
-        LeadSource.website -> "Website" to EzcarBlueBright to Icons.Default.Language
-        LeadSource.other -> "Other" to Color.Gray to Icons.Default.Call
+        LeadSource.facebook -> Triple("Facebook", Color(0xFF1877F2), Icons.Default.Share)
+        LeadSource.dubizzle -> Triple("Dubizzle", EzcarOrange, Icons.Default.Store)
+        LeadSource.instagram -> Triple("Instagram", Color(0xFFE4405F), Icons.Default.Share)
+        LeadSource.referral -> Triple("Referral", EzcarPurple, Icons.Default.People)
+        LeadSource.walk_in -> Triple("Walk-in", EzcarGreen, Icons.Default.LocationOn)
+        LeadSource.phone -> Triple("Phone", EzcarNavy, Icons.Default.Phone)
+        LeadSource.website -> Triple("Website", EzcarBlueBright, Icons.Default.Language)
+        LeadSource.other -> Triple("Other", Color.Gray, Icons.Default.Call)
     }
 
     Row(
@@ -77,7 +76,7 @@ fun LeadSourceBadge(
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(
-            text = text.first,
+            text = text,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = color
@@ -102,7 +101,7 @@ fun LeadSourceSelector(
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
         modifier = modifier
     ) {
-        items(sources) { source ->
+        items(items = sources, key = { it?.name ?: "any" }) { source ->
             val isSelected = source == selectedSource
             val (text, color) = when (source) {
                 null -> "Any" to Color.Gray

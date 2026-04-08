@@ -3,24 +3,32 @@ package com.ezcar24.business.ui.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
+import com.ezcar24.business.data.repository.AccountRepository
+import com.ezcar24.business.data.repository.OrganizationMembership
 import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.ExpenseDao
 import com.ezcar24.business.data.local.FinancialAccountDao
 import com.ezcar24.business.data.local.SaleDao
 import com.ezcar24.business.data.local.VehicleDao
+import com.ezcar24.business.data.local.VehicleInventoryStatsDao
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
+import com.ezcar24.business.util.UserFacingErrorContext
+import com.ezcar24.business.util.UserFacingErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.util.Calendar
 import java.util.Date
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 // Time range enum matching iOS DashboardTimeRange
 // Time range enum matching iOS DashboardTimeRange
@@ -71,6 +79,7 @@ enum class DashboardTimeRange(val displayLabel: String) {
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
+    private val accountRepository: AccountRepository,
     private val vehicleDao: VehicleDao,
     private val financialAccountDao: FinancialAccountDao,
     private val expenseDao: ExpenseDao,
@@ -84,10 +93,29 @@ class DashboardViewModel @Inject constructor(
     private val tag = "DashboardViewModel"
     private val _uiState = MutableStateFlow(DashboardUiState())
     val uiState: StateFlow<DashboardUiState> = _uiState.asStateFlow()
+    private var dataJob: Job? = null
 
     init {
+        observeOrganizationState()
         loadData()
         observeSyncState()
+    }
+
+    private fun observeOrganizationState() {
+        viewModelScope.launch {
+            accountRepository.organizations.collectLatest { organizations ->
+                _uiState.update { it.copy(organizations = organizations) }
+            }
+        }
+        viewModelScope.launch {
+            accountRepository.activeOrganization.collectLatest { organization ->
+                _uiState.update { it.copy(activeOrganization = organization) }
+            }
+        }
+        viewModelScope.launch {
+            runCatching { accountRepository.refreshOrganizations() }
+                .onFailure { error -> Log.w(tag, "Unable to refresh organizations: ${error.message}", error) }
+        }
     }
     
     private fun observeSyncState() {
@@ -130,7 +158,8 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun loadData() {
-        viewModelScope.launch {
+        dataJob?.cancel()
+        dataJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             
             kotlinx.coroutines.flow.combine(
@@ -138,7 +167,7 @@ class DashboardViewModel @Inject constructor(
                 financialAccountDao.getAll(),
                 saleDao.getAll(),
                 expenseDao.getAll(),
-                vehicleInventoryStatsDao.getAllIncludingDeleted()
+                vehicleInventoryStatsDao.getAllFlow()
             ) { vehicles, accounts, sales, allExpenses, inventoryStats ->
                 val selectedRange = _uiState.value.selectedRange
                 val rangeStartDate = selectedRange.getStartDate()
@@ -201,6 +230,9 @@ class DashboardViewModel @Inject constructor(
                 
                 // Get recent expenses (top 4, matching iOS)
                 val recentExpenses = allExpenses.take(4)
+                val vehicleTitlesById = vehicles.associate { vehicle ->
+                    vehicle.id to formatDashboardVehicleTitle(vehicle)
+                }
                 
                 // Calculate total expenses for the period
                 val totalExpensesInPeriod = filteredExpenses.sumOf { it.amount }
@@ -308,8 +340,8 @@ class DashboardViewModel @Inject constructor(
                 }
 
                 // Calculate CRM metrics
-                val todayStart = getTodayStart()
-                val tomorrowStart = getTomorrowStart()
+                val leadTodayStart = getTodayStart()
+                val leadTomorrowStart = getTomorrowStart()
                 val allClients = clientDao.getAllIncludingDeleted()
                 val allInteractions = mutableListOf<com.ezcar24.business.data.local.ClientInteraction>()
                 allClients.forEach { client ->
@@ -318,14 +350,14 @@ class DashboardViewModel @Inject constructor(
                 
                 // New leads today
                 val newLeadsToday = allClients.count { 
-                    (it.leadCreatedAt ?: it.createdAt) >= todayStart && 
-                    (it.leadCreatedAt ?: it.createdAt) < tomorrowStart 
+                    (it.leadCreatedAt ?: it.createdAt) >= leadTodayStart &&
+                    (it.leadCreatedAt ?: it.createdAt) < leadTomorrowStart
                 }
                 
                 // Calls made today
                 val callsMadeToday = allInteractions.count {
-                    it.occurredAt >= todayStart && 
-                    it.occurredAt < tomorrowStart &&
+                    it.occurredAt >= leadTodayStart &&
+                    it.occurredAt < leadTomorrowStart &&
                     it.interactionType?.lowercase()?.contains("call") == true
                 }
                 
@@ -364,6 +396,7 @@ class DashboardViewModel @Inject constructor(
                         soldCount = soldCount,
                         todaysExpenses = todaysExpenses,
                         recentExpenses = recentExpenses,
+                        vehicleTitlesById = vehicleTitlesById,
                         totalExpensesInPeriod = totalExpensesInPeriod,
                         categoryStats = categoryStats,
                         trendPoints = trendPoints,
@@ -381,6 +414,86 @@ class DashboardViewModel @Inject constructor(
                 }
             }.collect { }
         }
+    }
+
+    fun switchOrganization(organizationId: UUID) {
+        if (_uiState.value.isSwitchingOrganization) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSwitchingOrganization = true,
+                    statusMessage = null,
+                    errorMessage = null
+                )
+            }
+            try {
+                val organization = accountRepository.switchOrganization(
+                    organizationId = organizationId,
+                    forceSync = true
+                )
+                val organizations = accountRepository.refreshOrganizations()
+                _uiState.update {
+                    it.copy(
+                        organizations = organizations,
+                        activeOrganization = organization ?: accountRepository.activeOrganization.value,
+                        isSwitchingOrganization = false,
+                        statusMessage = organization?.let { active ->
+                            "Switched to ${active.organizationName}."
+                        }
+                    )
+                }
+                loadData()
+            } catch (e: Exception) {
+                Log.e(tag, "switchOrganization failed", e)
+                _uiState.update {
+                    it.copy(
+                        isSwitchingOrganization = false,
+                        errorMessage = UserFacingErrorMapper.map(e, UserFacingErrorContext.SWITCH_BUSINESS)
+                    )
+                }
+            }
+        }
+    }
+
+    fun createOrganization(name: String) {
+        if (_uiState.value.isSwitchingOrganization) return
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSwitchingOrganization = true,
+                    statusMessage = null,
+                    errorMessage = null
+                )
+            }
+            try {
+                val organization = accountRepository.createOrganization(name)
+                _uiState.update {
+                    it.copy(
+                        organizations = accountRepository.organizations.value,
+                        activeOrganization = organization,
+                        isSwitchingOrganization = false,
+                        statusMessage = "Created ${organization.organizationName}."
+                    )
+                }
+                loadData()
+            } catch (e: Exception) {
+                Log.e(tag, "createOrganization failed", e)
+                _uiState.update {
+                    it.copy(
+                        isSwitchingOrganization = false,
+                        errorMessage = UserFacingErrorMapper.map(e, UserFacingErrorContext.CREATE_BUSINESS)
+                    )
+                }
+            }
+        }
+    }
+
+    fun clearStatusMessage() {
+        _uiState.update { it.copy(statusMessage = null) }
+    }
+
+    fun clearErrorMessage() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 
     private fun getTodayStart(): Date {
@@ -437,8 +550,20 @@ class DashboardViewModel @Inject constructor(
     }
 }
 
+private fun formatDashboardVehicleTitle(vehicle: Vehicle): String {
+    val title = listOfNotNull(
+        vehicle.year?.toString(),
+        vehicle.make?.takeIf { it.isNullOrBlank().not() },
+        vehicle.model?.takeIf { it.isNullOrBlank().not() }
+    ).joinToString(" ")
+
+    return title.ifBlank { vehicle.vin }
+}
+
 data class DashboardUiState(
     val selectedRange: DashboardTimeRange = DashboardTimeRange.ONE_WEEK,
+    val organizations: List<OrganizationMembership> = emptyList(),
+    val activeOrganization: OrganizationMembership? = null,
     val totalAssets: BigDecimal = BigDecimal.ZERO,
     val totalCash: BigDecimal = BigDecimal.ZERO,
     val totalBank: BigDecimal = BigDecimal.ZERO,
@@ -447,6 +572,7 @@ data class DashboardUiState(
     val soldCount: Int = 0,
     val todaysExpenses: List<Expense> = emptyList(),
     val recentExpenses: List<Expense> = emptyList(),
+    val vehicleTitlesById: Map<UUID, String> = emptyMap(),
     val totalExpensesInPeriod: BigDecimal = BigDecimal.ZERO,
     val categoryStats: List<CategoryStat> = emptyList(),
     val trendPoints: List<TrendPoint> = emptyList(),
@@ -461,6 +587,9 @@ data class DashboardUiState(
     val syncState: com.ezcar24.business.data.sync.SyncState = com.ezcar24.business.data.sync.SyncState.Idle,
     val lastSyncTime: Date? = null,
     val queueCount: Int = 0,
+    val isSwitchingOrganization: Boolean = false,
+    val statusMessage: String? = null,
+    val errorMessage: String? = null,
     // Inventory summary fields
     val totalVehiclesInInventory: Int = 0,
     val averageDaysInInventory: Int = 0,

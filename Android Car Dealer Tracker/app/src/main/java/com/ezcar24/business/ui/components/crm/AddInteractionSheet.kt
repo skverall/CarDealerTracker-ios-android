@@ -1,6 +1,9 @@
 package com.ezcar24.business.ui.components.crm
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -15,11 +18,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Note
 import androidx.compose.material.icons.filled.Schedule
@@ -40,8 +46,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -57,6 +64,12 @@ import com.ezcar24.business.ui.theme.EzcarBlueBright
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
+import com.ezcar24.business.util.rememberRegionSettingsManager
+import java.math.BigDecimal
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -68,24 +81,31 @@ fun AddInteractionSheet(
         detail: String,
         outcome: String?,
         durationMinutes: Int?,
-        isFollowUpRequired: Boolean
+        isFollowUpRequired: Boolean,
+        value: BigDecimal?,
+        occurredAt: Date
     ) -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState()
 ) {
+    val context = LocalContext.current
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var selectedType by remember { mutableStateOf("call") }
     var title by remember { mutableStateOf("") }
     var detail by remember { mutableStateOf("") }
     var outcome by remember { mutableStateOf<String?>(null) }
     var durationMinutes by remember { mutableStateOf("") }
+    var value by remember { mutableStateOf("") }
     var isFollowUpRequired by remember { mutableStateOf(false) }
+    var occurredAt by remember { mutableStateOf(Date()) }
 
     val interactionTypes = listOf(
         InteractionType("call", "Call", Icons.Default.Call, EzcarGreen),
         InteractionType("meeting", "Meeting", Icons.Default.Event, EzcarPurple),
         InteractionType("email", "Email", Icons.Default.Email, EzcarBlueBright),
-        InteractionType("message", "Message", Icons.Default.Message, Color(0xFF2196F3)),
+        InteractionType("message", "Message", Icons.AutoMirrored.Filled.Message, Color(0xFF2196F3)),
         InteractionType("test_drive", "Test Drive", Icons.Default.Visibility, EzcarOrange),
-        InteractionType("note", "Note", Icons.Default.Note, Color.Gray)
+        InteractionType("note", "Note", Icons.AutoMirrored.Filled.Note, Color.Gray)
     )
 
     val outcomes = listOf(
@@ -190,7 +210,89 @@ fun AddInteractionSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Outcome Selector
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .clickable {
+                        val calendar = Calendar.getInstance().apply { time = occurredAt }
+                        DatePickerDialog(
+                            context,
+                            { _, year, month, dayOfMonth ->
+                                calendar.set(year, month, dayOfMonth)
+                                TimePickerDialog(
+                                    context,
+                                    { _, hour, minute ->
+                                        calendar.set(Calendar.HOUR_OF_DAY, hour)
+                                        calendar.set(Calendar.MINUTE, minute)
+                                        calendar.set(Calendar.SECOND, 0)
+                                        calendar.set(Calendar.MILLISECOND, 0)
+                                        occurredAt = calendar.time
+                                    },
+                                    calendar.get(Calendar.HOUR_OF_DAY),
+                                    calendar.get(Calendar.MINUTE),
+                                    true
+                                ).show()
+                            },
+                            calendar.get(Calendar.YEAR),
+                            calendar.get(Calendar.MONTH),
+                            calendar.get(Calendar.DAY_OF_MONTH)
+                        ).show()
+                    },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                        .background(Color.Transparent, RoundedCornerShape(12.dp)),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.CalendarToday, contentDescription = null, tint = Color.Gray)
+                    Spacer(modifier = Modifier.size(16.dp))
+                    Text(
+                        text = "Date",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(occurredAt),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EzcarBlueBright,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.size(8.dp))
+                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null, tint = Color.Gray)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = {
+                        if (it.isEmpty() || it.toBigDecimalOrNull() != null) {
+                            value = it
+                        }
+                    },
+                    label = { Text("Deal Value (${regionState.selectedRegion.currencyCode})") },
+                    leadingIcon = { Text(regionState.selectedRegion.currencySymbol) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             Text(
                 text = "Outcome (Optional)",
                 style = MaterialTheme.typography.bodyMedium,
@@ -270,7 +372,9 @@ fun AddInteractionSheet(
                             detail,
                             outcome,
                             durationMinutes.toIntOrNull(),
-                            isFollowUpRequired
+                            isFollowUpRequired,
+                            value.toBigDecimalOrNull(),
+                            occurredAt
                         )
                         onDismiss()
                     },
@@ -301,9 +405,9 @@ fun QuickInteractionButton(
 ) {
     val (icon, color, label) = when (type.lowercase()) {
         "call" -> Triple(Icons.Default.Call, EzcarGreen, "Call")
-        "message" -> Triple(Icons.Default.Message, Color(0xFF2196F3), "Message")
+        "message" -> Triple(Icons.AutoMirrored.Filled.Message, Color(0xFF2196F3), "Message")
         "email" -> Triple(Icons.Default.Email, EzcarBlueBright, "Email")
-        else -> Triple(Icons.Default.Note, Color.Gray, "Note")
+        else -> Triple(Icons.AutoMirrored.Filled.Note, Color.Gray, "Note")
     }
 
     Column(

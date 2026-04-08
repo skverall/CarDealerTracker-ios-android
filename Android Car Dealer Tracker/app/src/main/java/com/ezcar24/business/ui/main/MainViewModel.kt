@@ -4,12 +4,14 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ezcar24.business.data.repository.AccountRepository
 import com.ezcar24.business.data.repository.AuthRepository
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
@@ -19,6 +21,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
+    private val accountRepository: AccountRepository,
     private val authRepository: AuthRepository,
     private val cloudSyncManager: CloudSyncManager
 ) : ViewModel(), DefaultLifecycleObserver {
@@ -38,7 +41,19 @@ class MainViewModel @Inject constructor(
     private var currentDealerId: UUID? = null
 
     init {
+        observeActiveOrganization()
         checkSession()
+    }
+
+    private fun observeActiveOrganization() {
+        viewModelScope.launch {
+            accountRepository.activeOrganization.collectLatest { organization ->
+                currentDealerId = organization?.organizationId
+                CloudSyncEnvironment.currentDealerId = organization?.organizationId
+                cloudSyncManager.refreshLastSyncForCurrentOrg()
+                refreshPeriodicSync()
+            }
+        }
     }
 
     private fun checkSession() {
@@ -46,12 +61,12 @@ class MainViewModel @Inject constructor(
             authRepository.awaitInitialization()
             val user = authRepository.getCurrentUser()
             if (user != null) {
-                val dealerIdStr = authRepository.getDealerId()
-                if (dealerIdStr != null) {
+                val dealerId = accountRepository.bootstrapActiveOrganization()
+                if (dealerId != null) {
                     try {
-                        val dealerId = UUID.fromString(dealerIdStr)
                         currentDealerId = dealerId
                         CloudSyncEnvironment.currentDealerId = dealerId
+                        cloudSyncManager.refreshLastSyncForCurrentOrg()
                         // Initial sync after bootstrap (matching iOS)
                         launch {
                             cloudSyncManager.syncAfterLogin(dealerId)
@@ -82,6 +97,17 @@ class MainViewModel @Inject constructor(
         _isGuestMode.value = true
         stopPeriodicSync()
         _startDestination.value = "home"
+        _isLoading.value = false
+    }
+
+    fun onSignedOut() {
+        _isGuestMode.value = false
+        accountRepository.clearSessionState()
+        cloudSyncManager.resetSyncState()
+        currentDealerId = null
+        CloudSyncEnvironment.currentDealerId = null
+        stopPeriodicSync()
+        _startDestination.value = "login"
         _isLoading.value = false
     }
 
@@ -132,12 +158,11 @@ class MainViewModel @Inject constructor(
     }
 
     fun refreshPeriodicSync() {
+        stopPeriodicSync()
         if (_isGuestMode.value) {
-            stopPeriodicSync()
             return
         }
         if (currentDealerId == null) {
-            stopPeriodicSync()
             return
         }
         startPeriodicSync()

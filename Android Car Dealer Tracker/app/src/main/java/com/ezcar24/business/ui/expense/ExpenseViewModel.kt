@@ -12,6 +12,7 @@ import java.math.BigDecimal
 import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,6 +60,7 @@ class ExpenseViewModel @Inject constructor(
     private val tag = "ExpenseViewModel"
     private val _uiState = MutableStateFlow(ExpenseUiState())
     val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
+    private var dataJob: Job? = null
 
     init {
         loadData()
@@ -108,6 +110,11 @@ class ExpenseViewModel @Inject constructor(
         applyFilters()
     }
 
+    fun setUserFilter(user: User?) {
+        _uiState.update { it.copy(selectedUser = user) }
+        applyFilters()
+    }
+
     fun setSearchQuery(query: String) {
         _uiState.update { it.copy(searchQuery = query) }
         applyFilters()
@@ -145,6 +152,10 @@ class ExpenseViewModel @Inject constructor(
             result = result.filter { it.vehicleId == vehicle.id }
         }
 
+        currentState.selectedUser?.let { user ->
+            result = result.filter { it.userId == user.id }
+        }
+
         // Search Filter
         if (query.isNotEmpty()) {
             result = result.filter { expense ->
@@ -171,8 +182,8 @@ class ExpenseViewModel @Inject constructor(
     }
 
     private fun loadDataInternal() {
-        // Collect using combine to wait for all data sources
-        viewModelScope.launch {
+        dataJob?.cancel()
+        dataJob = viewModelScope.launch {
             kotlinx.coroutines.flow.combine(
                 expenseDao.getAll(),
                 vehicleDao.getAllActive(),

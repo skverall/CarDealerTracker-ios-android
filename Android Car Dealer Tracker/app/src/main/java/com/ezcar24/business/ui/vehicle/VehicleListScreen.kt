@@ -1,16 +1,22 @@
 package com.ezcar24.business.ui.vehicle
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
@@ -18,7 +24,10 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.outlined.Garage
 import androidx.compose.material.icons.outlined.LocalOffer
@@ -35,13 +44,18 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ezcar24.business.data.local.FinancialAccount
+import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.local.VehicleWithFinancials
 import com.ezcar24.business.ui.theme.*
-import java.text.NumberFormat
+import com.ezcar24.business.util.rememberRegionSettingsManager
+import kotlinx.coroutines.launch
+import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -56,6 +70,7 @@ fun VehicleListScreen(
     onNavigateToDetail: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var quickSaleVehicle by remember { mutableStateOf<Vehicle?>(null) }
     
     LaunchedEffect(presetStatus) {
         if (presetStatus != null) {
@@ -71,33 +86,37 @@ fun VehicleListScreen(
     val allVehicles = uiState.vehicles
 
     Scaffold(
-        containerColor = EzcarBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             if (showNavigation) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(Color.White.copy(alpha = 0.9f)) // Translucent header
-                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                        .statusBarsPadding(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    color = MaterialTheme.colorScheme.background.copy(alpha = 0.98f),
+                    shadowElevation = 8.dp
                 ) {
-                    Text(
-                        text = "Vehicles",
-                        style = MaterialTheme.typography.headlineLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.Black
-                        )
-                    )
-                    IconButton(
-                        onClick = onNavigateToAddVehicle,
-                        colors = IconButtonDefaults.iconButtonColors(
-                            containerColor = EzcarGreen,
-                            contentColor = Color.White
-                        )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp, vertical = 12.dp)
+                            .statusBarsPadding(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Vehicle")
+                        Text(
+                            text = "Vehicles",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        IconButton(
+                            onClick = onNavigateToAddVehicle,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                containerColor = EzcarNavy,
+                                contentColor = Color.White
+                            ),
+                            modifier = Modifier.size(42.dp)
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Vehicle")
+                        }
                     }
                 }
             }
@@ -201,13 +220,13 @@ fun VehicleListScreen(
                     TextField(
                         value = uiState.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = { Text("Search Make, Model, VIN...", color = Color.Gray) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
+                        placeholder = { Text("Search Make, Model, VIN...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                         trailingIcon = {
                             Box {
                                 var showSortMenu by remember { mutableStateOf(false) }
                                 IconButton(onClick = { showSortMenu = true }) {
-                                    Icon(Icons.Default.Sort, contentDescription = "Sort", tint = Color.Gray)
+                                    Icon(Icons.Default.Sort, contentDescription = "Sort", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 DropdownMenu(
                                     expanded = showSortMenu,
@@ -264,14 +283,14 @@ fun VehicleListScreen(
                         },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp)),
+                            .clip(RoundedCornerShape(18.dp)),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = Color.White,
-                            unfocusedContainerColor = Color.White,
+                            focusedContainerColor = MaterialTheme.colorScheme.surface,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
-                            focusedTextColor = Color.Black,
-                            unfocusedTextColor = Color.Black
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                         ),
                         singleLine = true
                     )
@@ -296,8 +315,8 @@ fun VehicleListScreen(
                                         true
                                     } else if (it == SwipeToDismissBoxValue.StartToEnd) {
                                         if (item.vehicle.status != "sold") {
-                                            viewModel.updateVehicleStatus(item.vehicle.id, "sold") // Swipe Right to Mark Sold
-                                            true
+                                            quickSaleVehicle = item.vehicle
+                                            false
                                         } else false
                                     } else false
                                 }
@@ -351,6 +370,342 @@ fun VehicleListScreen(
                 contentColor = EzcarGreen
             )
         }
+    }
+
+    quickSaleVehicle?.let { vehicle ->
+        QuickSaleSheet(
+            vehicle = vehicle,
+            accounts = uiState.accounts,
+            onDismiss = { quickSaleVehicle = null },
+            onSave = { salePrice, saleDate, buyerName, buyerPhone, paymentMethod, accountId ->
+                viewModel.completeQuickSale(
+                    vehicleId = vehicle.id,
+                    salePrice = salePrice,
+                    saleDate = saleDate,
+                    buyerName = buyerName,
+                    buyerPhone = buyerPhone,
+                    paymentMethod = paymentMethod,
+                    accountId = accountId
+                )
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun QuickSaleSheet(
+    vehicle: Vehicle,
+    accounts: List<FinancialAccount>,
+    onDismiss: () -> Unit,
+    onSave: suspend (
+        salePrice: BigDecimal,
+        saleDate: Date,
+        buyerName: String,
+        buyerPhone: String,
+        paymentMethod: String,
+        accountId: UUID
+    ) -> Result<Unit>
+) {
+    val scope = rememberCoroutineScope()
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
+    val vehicleTitle = remember(vehicle.id) {
+        listOfNotNull(vehicle.year?.toString(), vehicle.make, vehicle.model)
+            .joinToString(" ")
+            .ifBlank { vehicle.vin }
+    }
+    val currencyCode = regionState.selectedRegion.currencyCode
+    val paymentMethods = remember { listOf("Cash", "Bank Transfer", "Cheque", "Finance", "Other") }
+    var salePrice by remember(vehicle.id) {
+        mutableStateOf(
+            vehicle.askingPrice?.takeIf { it > BigDecimal.ZERO }?.toPlainString()
+                ?: vehicle.purchasePrice.toPlainString()
+        )
+    }
+    var saleDate by remember(vehicle.id) { mutableStateOf(Date()) }
+    var buyerName by remember(vehicle.id) { mutableStateOf(vehicle.buyerName.orEmpty()) }
+    var buyerPhone by remember(vehicle.id) { mutableStateOf(vehicle.buyerPhone.orEmpty()) }
+    var paymentMethod by remember(vehicle.id) { mutableStateOf(vehicle.paymentMethod ?: "Cash") }
+    var selectedAccount by remember(vehicle.id) { mutableStateOf<FinancialAccount?>(null) }
+    var showSaleDatePicker by remember { mutableStateOf(false) }
+    var showAccountPicker by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isSaving by remember { mutableStateOf(false) }
+
+    LaunchedEffect(vehicle.id, accounts) {
+        if (accounts.isEmpty()) {
+            selectedAccount = null
+        } else if (selectedAccount == null || accounts.none { it.id == selectedAccount?.id }) {
+            selectedAccount = accounts.find { it.accountType.equals("cash", ignoreCase = true) } ?: accounts.first()
+        }
+    }
+
+    val canSave = salePrice.toBigDecimalOrNull()?.let { it > BigDecimal.ZERO } == true &&
+        buyerName.isNotBlank() &&
+        selectedAccount != null &&
+        !isSaving
+
+    ModalBottomSheet(
+        onDismissRequest = {
+            if (!isSaving) {
+                onDismiss()
+            }
+        },
+        modifier = Modifier.fillMaxHeight(0.96f),
+        containerColor = EzcarBackgroundLight,
+        dragHandle = { BottomSheetDefaults.DragHandle() }
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 2.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = "Mark as Sold",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = vehicleTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "Purchase ${regionSettingsManager.formatCurrency(vehicle.purchasePrice)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            FormSection(title = "Sale Details", icon = Icons.Default.CheckCircle) {
+                CustomFormField(
+                    label = "Sale Price ($currencyCode)",
+                    value = salePrice,
+                    onValueChange = {
+                        salePrice = it.filter { char -> char.isDigit() || char == '.' }
+                        errorMessage = null
+                    },
+                    icon = Icons.Default.AttachMoney,
+                    keyboardType = KeyboardType.Decimal,
+                    placeholder = "0.00"
+                )
+                PickerField(
+                    label = "Sale Date",
+                    value = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(saleDate),
+                    onClick = { showSaleDatePicker = true }
+                )
+                PickerField(
+                    label = "Deposit To",
+                    value = selectedAccount?.accountType ?: "Select Account",
+                    onClick = { showAccountPicker = true }
+                )
+            }
+
+            FormSection(title = "Buyer Details", icon = Icons.Default.Person) {
+                CustomFormField(
+                    label = "Buyer Name",
+                    value = buyerName,
+                    onValueChange = {
+                        buyerName = it
+                        errorMessage = null
+                    },
+                    icon = Icons.Default.Person,
+                    placeholder = "John Doe"
+                )
+                CustomFormField(
+                    label = "Buyer Phone",
+                    value = buyerPhone,
+                    onValueChange = { buyerPhone = it },
+                    icon = Icons.Default.Phone,
+                    keyboardType = KeyboardType.Phone,
+                    placeholder = "+971..."
+                )
+                Text(
+                    text = "Payment Method",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    paymentMethods.forEach { method ->
+                        FilterChip(
+                            selected = paymentMethod == method,
+                            onClick = { paymentMethod = method },
+                            label = { Text(method) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = EzcarGreen,
+                                selectedLabelColor = Color.White
+                            )
+                        )
+                    }
+                }
+            }
+
+            if (accounts.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = EzcarDanger.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, EzcarDanger.copy(alpha = 0.2f))
+                ) {
+                    Text(
+                        text = "No financial accounts available. Add at least one cash or bank account before completing this sale.",
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EzcarDanger
+                    )
+                }
+            }
+
+            errorMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = EzcarDanger
+                )
+            }
+
+            Button(
+                onClick = {
+                    val normalizedPrice = salePrice.toBigDecimalOrNull()
+                    val accountId = selectedAccount?.id
+                    if (normalizedPrice == null || normalizedPrice <= BigDecimal.ZERO) {
+                        errorMessage = "Enter a valid sale price."
+                        return@Button
+                    }
+                    if (buyerName.isBlank()) {
+                        errorMessage = "Buyer name is required."
+                        return@Button
+                    }
+                    if (accountId == null) {
+                        errorMessage = "Select the account where this payment should be deposited."
+                        return@Button
+                    }
+                    isSaving = true
+                    errorMessage = null
+                    scope.launch {
+                        val result = onSave(
+                            normalizedPrice,
+                            saleDate,
+                            buyerName,
+                            buyerPhone,
+                            paymentMethod,
+                            accountId
+                        )
+                        isSaving = false
+                        result.onSuccess {
+                            onDismiss()
+                        }.onFailure { error ->
+                            errorMessage = error.message ?: "Failed to complete sale."
+                        }
+                    }
+                },
+                enabled = canSave,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = EzcarNavy,
+                    contentColor = Color.White
+                )
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                } else {
+                    Text(
+                        text = "Complete Sale",
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+
+    if (showSaleDatePicker) {
+        DatePickerDialog(
+            onDismiss = { showSaleDatePicker = false },
+            onDateSelected = {
+                saleDate = it
+                showSaleDatePicker = false
+            }
+        )
+    }
+
+    if (showAccountPicker) {
+        AlertDialog(
+            onDismissRequest = { showAccountPicker = false },
+            title = { Text("Select Account") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    accounts.forEach { account ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selectedAccount = account
+                                    showAccountPicker = false
+                                }
+                                .padding(vertical = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(
+                                    text = account.accountType,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = regionSettingsManager.formatCurrency(account.balance),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (selectedAccount?.id == account.id) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = EzcarGreen
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAccountPicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
@@ -413,9 +768,9 @@ fun StatusCard(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isActive) color else Color.White
-    val contentColor = if (isActive) Color.White else color
-    val textColor = if (isActive) Color.White else Color.Black
+    val backgroundColor = if (isActive) color.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surface
+    val contentColor = color
+    val textColor = if (isActive) color else MaterialTheme.colorScheme.onSurface
     
     Row(
         modifier = Modifier
@@ -446,7 +801,7 @@ fun StatusCard(
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isActive) Color.White.copy(alpha = 0.9f) else Color.Gray
+                color = if (isActive) color else MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 text = count.toString(),
@@ -496,6 +851,8 @@ fun VehicleItem(
     inventoryStats: Map<String, com.ezcar24.business.data.local.VehicleInventoryStats> = emptyMap(),
     onClick: () -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     val vehicle = item.vehicle
     val totalCost = vehicle.purchasePrice.add(item.totalExpenseCost ?: java.math.BigDecimal.ZERO)
     
@@ -513,20 +870,19 @@ fun VehicleItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(0.dp) // Flat list style
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.Top) {
-                // Vehicle Photo Thumbnail
                 val imageUrl = vehicle.photoUrl ?: com.ezcar24.business.data.sync.CloudSyncEnvironment.vehicleImageUrl(vehicle.id)
                 
                 Box(
                     modifier = Modifier
                         .size(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF2F2F7)),
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     if (imageUrl != null) {
@@ -574,27 +930,36 @@ fun VehicleItem(
                                 text = "${vehicle.make ?: ""} ${vehicle.model ?: ""}",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold,
-                                color = Color.Black,
+                                color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = "VIN: ${vehicle.vin}",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            // Year + Expense count row (iOS style)
                             Spacer(modifier = Modifier.height(4.dp))
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Icon(Icons.Default.CalendarToday, null, modifier = Modifier.size(10.dp), tint = Color.Gray)
-                                    Text("${vehicle.year ?: "-"}", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                    Icon(Icons.Default.CalendarToday, null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${vehicle.year ?: "-"}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                if (vehicle.mileage > 0) {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                        Icon(Icons.Default.Speed, null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            regionSettingsManager.formatMileage(vehicle.mileage),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Icon(Icons.Default.Build, null, modifier = Modifier.size(10.dp), tint = Color.Gray)
-                                    Text("${item.expenseCount} exp", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                    Icon(Icons.Default.Build, null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text("${item.expenseCount} exp", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -617,25 +982,8 @@ fun VehicleItem(
                                 Spacer(modifier = Modifier.height(4.dp))
                             }
                             
-                            val badgeColor = when(vehicle.status) {
-                                "sold" -> EzcarBlueBright.copy(alpha = 0.15f)
-                                "owned" -> Color.Gray.copy(alpha = 0.15f)
-                                "on_sale" -> EzcarGreen.copy(alpha = 0.15f)
-                                "in_transit" -> EzcarPurple.copy(alpha = 0.15f)
-                                "under_service" -> EzcarOrange.copy(alpha = 0.15f)
-                                else -> EzcarGreen.copy(alpha = 0.15f) 
-                            }
-                            val textColor = when(vehicle.status) {
-                                "sold" -> EzcarBlueBright
-                                "owned" -> Color.Gray
-                                "on_sale" -> EzcarGreen
-                                "in_transit" -> EzcarPurple
-                                "under_service" -> EzcarOrange
-                                else -> EzcarGreen
-                            }
-                            
                             Surface(
-                                color = badgeColor,
+                                color = vehicleStatusBackground(vehicle.status),
                                 shape = RoundedCornerShape(6.dp)
                             ) {
                                 Text(
@@ -649,7 +997,7 @@ fun VehicleItem(
                                     },
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = textColor,
+                                    color = vehicleStatusColor(vehicle.status),
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -660,9 +1008,9 @@ fun VehicleItem(
                     
                     // Price
                     Text(
-                        text = NumberFormat.getCurrencyInstance(Locale.US).format(vehicle.purchasePrice).replace("$", "AED "),
+                        text = regionSettingsManager.formatCurrency(vehicle.purchasePrice),
                         style = MaterialTheme.typography.titleMedium,
-                        color = Color.Black,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -699,7 +1047,7 @@ fun VehicleItem(
                  } else {
                      MetricData(
                          label = "Total Cost",
-                         value = NumberFormat.getCurrencyInstance(Locale.US).format(totalCost).replace("$", "").substringBefore("."), 
+                         value = regionSettingsManager.formatCurrencyCompact(totalCost),
                          isBold = true
                      )
                  }
@@ -720,7 +1068,7 @@ fun VehicleItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Sale: ${NumberFormat.getCurrencyInstance(Locale.US).format(vehicle.salePrice).replace("$", "AED ")}",
+                        text = "Sale: ${regionSettingsManager.formatCurrency(vehicle.salePrice)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Black
                     )
@@ -734,7 +1082,7 @@ fun VehicleItem(
                             color = Color.Gray
                         )
                         Text(
-                            text = NumberFormat.getCurrencyInstance(Locale.US).format(profit).replace("$", "AED "),
+                            text = regionSettingsManager.formatCurrency(profit),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = if (isProfit) EzcarGreen else Color.Red
@@ -763,4 +1111,3 @@ fun MetricData(
         )
     }
 }
-

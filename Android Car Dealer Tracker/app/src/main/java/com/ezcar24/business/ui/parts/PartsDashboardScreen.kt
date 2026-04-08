@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Search
@@ -44,13 +45,14 @@ import com.ezcar24.business.ui.theme.EzcarBackgroundLight
 import com.ezcar24.business.ui.theme.EzcarBlueBright
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarNavy
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import com.ezcar24.business.util.toBigDecimalOrZero
 import java.math.BigDecimal
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,14 +60,15 @@ fun PartsDashboardScreen(
     inventoryViewModel: PartsInventoryViewModel = hiltViewModel(),
     salesViewModel: PartSalesViewModel = hiltViewModel()
 ) {
+    val scope = rememberCoroutineScope()
     val inventoryState by inventoryViewModel.uiState.collectAsState()
     val salesState by salesViewModel.uiState.collectAsState()
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var selectedTab by remember { mutableStateOf(0) }
     var showAddPartDialog by remember { mutableStateOf(false) }
     var showReceiveStockDialog by remember { mutableStateOf(false) }
     var showAddSaleDialog by remember { mutableStateOf(false) }
-
-    val currencyFormatter = remember { NumberFormat.getCurrencyInstance(Locale.US) }
 
     Scaffold(
         containerColor = EzcarBackground,
@@ -126,7 +129,7 @@ fun PartsDashboardScreen(
             PartsInventoryContent(
                 modifier = Modifier.padding(padding),
                 state = inventoryState,
-                currencyFormatter = currencyFormatter,
+                formatCurrency = regionSettingsManager::formatCurrency,
                 onToggleLowStock = { inventoryViewModel.toggleLowStockOnly(it) },
                 onCategorySelected = { inventoryViewModel.setCategory(it) },
                 onReceiveStock = { showReceiveStockDialog = true }
@@ -135,7 +138,7 @@ fun PartsDashboardScreen(
             PartsSalesContent(
                 modifier = Modifier.padding(padding),
                 state = salesState,
-                currencyFormatter = currencyFormatter,
+                formatCurrency = regionSettingsManager::formatCurrency,
                 onDeleteSale = { salesViewModel.deleteSale(it.sale) }
             )
         }
@@ -189,18 +192,20 @@ fun PartsDashboardScreen(
             clients = salesState.clients,
             onDismiss = { showAddSaleDialog = false },
             onSave = { saleDate, accountId, lines, buyerName, buyerPhone, paymentMethod, notes, clientId ->
-                val success = salesViewModel.createSale(
-                    saleDate = saleDate,
-                    selectedAccountId = accountId,
-                    lineItems = lines,
-                    buyerName = buyerName,
-                    buyerPhone = buyerPhone,
-                    paymentMethod = paymentMethod,
-                    notes = notes,
-                    selectedClientId = clientId
-                )
-                if (success) {
-                    showAddSaleDialog = false
+                scope.launch {
+                    val success = salesViewModel.createSale(
+                        saleDate = saleDate,
+                        selectedAccountId = accountId,
+                        lineItems = lines,
+                        buyerName = buyerName,
+                        buyerPhone = buyerPhone,
+                        paymentMethod = paymentMethod,
+                        notes = notes,
+                        selectedClientId = clientId
+                    )
+                    if (success) {
+                        showAddSaleDialog = false
+                    }
                 }
             }
         )
@@ -211,7 +216,7 @@ fun PartsDashboardScreen(
 private fun PartsInventoryContent(
     modifier: Modifier = Modifier,
     state: PartsInventoryUiState,
-    currencyFormatter: NumberFormat,
+    formatCurrency: (BigDecimal) -> String,
     onToggleLowStock: (Boolean) -> Unit,
     onCategorySelected: (String?) -> Unit,
     onReceiveStock: () -> Unit
@@ -232,7 +237,7 @@ private fun PartsInventoryContent(
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
                         Text("Total Value", style = MaterialTheme.typography.labelMedium)
-                        Text(currencyFormatter.format(totalValue), fontWeight = FontWeight.Bold)
+                        Text(formatCurrency(totalValue), fontWeight = FontWeight.Bold)
                     }
                     Column {
                         Text("Parts", style = MaterialTheme.typography.labelMedium)
@@ -271,7 +276,7 @@ private fun PartsInventoryContent(
             modifier = Modifier.fillMaxSize()
         ) {
             items(state.filteredParts) { item ->
-                PartRow(item = item, currencyFormatter = currencyFormatter)
+                PartRow(item = item, formatCurrency = formatCurrency)
             }
         }
 
@@ -292,7 +297,7 @@ private fun PartsInventoryContent(
 private fun PartsSalesContent(
     modifier: Modifier = Modifier,
     state: PartSalesUiState,
-    currencyFormatter: NumberFormat,
+    formatCurrency: (BigDecimal) -> String,
     onDeleteSale: (PartSaleItemSummary) -> Unit
 ) {
     LazyColumn(
@@ -300,13 +305,13 @@ private fun PartsSalesContent(
         modifier = modifier.fillMaxSize()
     ) {
         items(state.filteredSales.ifEmpty { state.sales }) { item ->
-            PartSaleRow(item = item, currencyFormatter = currencyFormatter, onDelete = { onDeleteSale(item) })
+            PartSaleRow(item = item, formatCurrency = formatCurrency, onDelete = { onDeleteSale(item) })
         }
     }
 }
 
 @Composable
-private fun PartRow(item: PartInventoryItem, currencyFormatter: NumberFormat) {
+private fun PartRow(item: PartInventoryItem, formatCurrency: (BigDecimal) -> String) {
     Card(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -321,7 +326,7 @@ private fun PartRow(item: PartInventoryItem, currencyFormatter: NumberFormat) {
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("On Hand: ${item.quantityOnHand.stripTrailingZeros().toPlainString()}")
-                Text(currencyFormatter.format(item.inventoryValue))
+                Text(formatCurrency(item.inventoryValue))
             }
         }
     }
@@ -330,7 +335,7 @@ private fun PartRow(item: PartInventoryItem, currencyFormatter: NumberFormat) {
 @Composable
 private fun PartSaleRow(
     item: PartSaleItemSummary,
-    currencyFormatter: NumberFormat,
+    formatCurrency: (BigDecimal) -> String,
     onDelete: () -> Unit
 ) {
     Card(
@@ -342,7 +347,7 @@ private fun PartSaleRow(
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(item.buyerName, fontWeight = FontWeight.Bold)
-                Text(currencyFormatter.format(item.totalAmount), fontWeight = FontWeight.Bold)
+                Text(formatCurrency(item.totalAmount), fontWeight = FontWeight.Bold)
             }
             if (item.itemsSummary.isNotEmpty()) {
                 Text(item.itemsSummary, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
@@ -457,13 +462,13 @@ private fun AddPartDialog(
                         value = quantity,
                         onValueChange = { quantity = it },
                         label = { Text("Quantity") },
-                        keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     OutlinedTextField(
                         value = unitCost,
                         onValueChange = { unitCost = it },
                         label = { Text("Unit Cost") },
-                        keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     OutlinedTextField(value = batchLabel, onValueChange = { batchLabel = it }, label = { Text("Batch Label") })
                     AccountDropdown(
@@ -531,13 +536,13 @@ private fun ReceiveStockDialog(
                     value = quantity,
                     onValueChange = { quantity = it },
                     label = { Text("Quantity") },
-                    keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(
                     value = unitCost,
                     onValueChange = { unitCost = it },
                     label = { Text("Unit Cost") },
-                    keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(value = batchLabel, onValueChange = { batchLabel = it }, label = { Text("Batch Label") })
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") })
@@ -714,13 +719,13 @@ private fun AddLineItemDialog(
                     value = quantity,
                     onValueChange = { quantity = it },
                     label = { Text("Quantity") },
-                    keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(
                     value = unitPrice,
                     onValueChange = { unitPrice = it },
                     label = { Text("Unit Price") },
-                    keyboardOptions = androidx.compose.ui.text.input.KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
             }
         },

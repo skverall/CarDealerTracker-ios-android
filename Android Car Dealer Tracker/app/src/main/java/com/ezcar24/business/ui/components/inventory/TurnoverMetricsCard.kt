@@ -21,9 +21,9 @@ import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarNavy
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
+import com.ezcar24.business.ui.theme.EzcarWarning
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
-import java.text.NumberFormat
-import java.util.Locale
 
 @Composable
 fun TurnoverMetricsCard(
@@ -33,7 +33,7 @@ fun TurnoverMetricsCard(
     totalVehicles: Int,
     modifier: Modifier = Modifier
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
     
     Column(
         modifier = modifier
@@ -58,7 +58,7 @@ fun TurnoverMetricsCard(
             MetricItem(
                 icon = Icons.Default.Inventory,
                 label = "Total Value",
-                value = currencyFormat.format(totalInventoryValue).replace("$", "AED "),
+                value = regionSettingsManager.formatCurrency(totalInventoryValue),
                 color = EzcarNavy,
                 modifier = Modifier.weight(1f)
             )

@@ -26,8 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.ui.theme.*
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
-import java.text.NumberFormat
 import java.util.Locale
 import com.ezcar24.business.ui.finance.DebtsContent
 
@@ -39,6 +39,8 @@ fun SalesScreen(
 ) {
     val salesUiState by salesViewModel.uiState.collectAsState()
     val debtUiState by debtViewModel.uiState.collectAsState()
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     
     var selectedTab by remember { mutableStateOf(0) }
     var showAddSheet by remember { mutableStateOf(false) }
@@ -357,6 +359,7 @@ fun FinancialColumn(
     isBold: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -369,7 +372,7 @@ fun FinancialColumn(
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
-            text = NumberFormat.getCurrencyInstance(Locale.US).format(amount),
+            text = regionSettingsManager.formatCurrency(amount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
             color = color

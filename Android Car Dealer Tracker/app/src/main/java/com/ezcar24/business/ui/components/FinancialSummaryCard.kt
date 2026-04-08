@@ -17,9 +17,8 @@ import com.ezcar24.business.ui.theme.EzcarNavy
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.data.local.ExpenseCategoryType
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
-import java.text.NumberFormat
-import java.util.Locale
 
 data class FinancialSummaryData(
     val purchasePrice: BigDecimal,
@@ -41,6 +40,8 @@ fun FinancialSummaryCard(
     onEditAskingPrice: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -160,6 +161,8 @@ fun RecommendedPricingCard(
     onUpdateAskingPrice: ((BigDecimal) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var showEditDialog by remember { mutableStateOf(false) }
 
     Column(
@@ -197,7 +200,7 @@ fun RecommendedPricingCard(
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = formatCurrency(recommendedPrice),
+                text = regionSettingsManager.formatCurrency(recommendedPrice),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Bold,
                 color = EzcarGreen
@@ -222,7 +225,7 @@ fun RecommendedPricingCard(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = formatCurrency(currentAskingPrice),
+                        text = regionSettingsManager.formatCurrency(currentAskingPrice),
                         style = MaterialTheme.typography.bodyLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -256,9 +259,9 @@ fun RecommendedPricingCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = if (difference > BigDecimal.ZERO) {
-                        "+${formatCurrency(difference)} (${percentDiff.toInt()}% above recommended)"
+                        "+${regionSettingsManager.formatCurrency(difference)} (${percentDiff.toInt()}% above recommended)"
                     } else {
-                        "${formatCurrency(difference)} (${percentDiff.abs().toInt()}% below recommended)"
+                        "${regionSettingsManager.formatCurrency(difference)} (${percentDiff.abs().toInt()}% below recommended)"
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (difference > BigDecimal.ZERO) EzcarGreen else EzcarOrange
@@ -271,6 +274,7 @@ fun RecommendedPricingCard(
         EditAskingPriceDialog(
             currentPrice = currentAskingPrice ?: BigDecimal.ZERO,
             recommendedPrice = recommendedPrice,
+            currencyCode = regionState.selectedRegion.currencyCode,
             onDismiss = { showEditDialog = false },
             onConfirm = { newPrice ->
                 onUpdateAskingPrice(newPrice)
@@ -288,6 +292,8 @@ private fun FinancialRow(
     isBold: Boolean = false,
     isIndented: Boolean = false
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -302,7 +308,7 @@ private fun FinancialRow(
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal
         )
         Text(
-            text = formatCurrency(amount),
+            text = regionSettingsManager.formatCurrency(amount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.SemiBold,
             color = color
@@ -314,9 +320,12 @@ private fun FinancialRow(
 private fun EditAskingPriceDialog(
     currentPrice: BigDecimal,
     recommendedPrice: BigDecimal,
+    currencyCode: String,
     onDismiss: () -> Unit,
     onConfirm: (BigDecimal) -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var priceText by remember { mutableStateOf(currentPrice.toPlainString()) }
 
     AlertDialog(
@@ -325,7 +334,7 @@ private fun EditAskingPriceDialog(
         text = {
             Column {
                 Text(
-                    text = "Recommended: ${formatCurrency(recommendedPrice)}",
+                    text = "Recommended: ${regionSettingsManager.formatCurrency(recommendedPrice)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = EzcarGreen
                 )
@@ -334,7 +343,7 @@ private fun EditAskingPriceDialog(
                     value = priceText,
                     onValueChange = { priceText = it },
                     label = { Text("Asking Price") },
-                    prefix = { Text("AED") },
+                    prefix = { Text(currencyCode) },
                     singleLine = true
                 )
             }
@@ -354,10 +363,6 @@ private fun EditAskingPriceDialog(
             }
         }
     )
-}
-
-private fun formatCurrency(amount: BigDecimal): String {
-    return NumberFormat.getCurrencyInstance(Locale.US).format(amount).replace("$", "AED ")
 }
 
 private fun getExpenseTypeLabel(type: ExpenseCategoryType): String {

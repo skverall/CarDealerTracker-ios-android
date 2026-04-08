@@ -20,7 +20,9 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.lifecycleScope
 import com.ezcar24.business.data.repository.AuthRepository
+import com.ezcar24.business.data.repository.AuthDeepLinkResult
 import com.ezcar24.business.data.version.PlayStoreVersionChecker
 import com.ezcar24.business.ui.auth.LoginScreen
 import com.ezcar24.business.ui.auth.PasswordResetScreen
@@ -31,6 +33,7 @@ import com.ezcar24.business.ui.update.ForceUpdateScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -143,6 +146,9 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToDebts = {
                                             navController.navigate("debts")
                                         },
+                                        onNavigateToDataHealth = {
+                                            navController.navigate("data_health")
+                                        },
                                         onNavigateToSettings = {
                                             navController.navigate("settings")
                                         }
@@ -193,9 +199,40 @@ class MainActivity : ComponentActivity() {
                                     com.ezcar24.business.ui.settings.SettingsScreen(
                                         onBack = { navController.popBackStack() },
                                         onNavigateToFinancialAccounts = { navController.navigate("financial_accounts") },
+                                        onNavigateToRegionSettings = { navController.navigate("region_settings") },
                                         onNavigateToTeamMembers = { navController.navigate("team_members") },
                                         onNavigateToBackupCenter = { navController.navigate("backup_center") },
-                                        onNavigateToDataHealth = { navController.navigate("data_health") }
+                                        onNavigateToDataHealth = { navController.navigate("data_health") },
+                                        onNavigateToHoldingCostSettings = { navController.navigate("holding_cost_settings_root") },
+                                        onNavigateToChangePassword = { navController.navigate("change_password") },
+                                        onNavigateToUserGuide = { navController.navigate("user_guide") },
+                                        onNavigateToPaywall = { navController.navigate("paywall") },
+                                        onSignedOut = {
+                                            viewModel.onSignedOut()
+                                            navController.navigate("login") {
+                                                popUpTo(0) { inclusive = true }
+                                            }
+                                        }
+                                    )
+                                }
+                                composable("holding_cost_settings_root") {
+                                    com.ezcar24.business.ui.settings.HoldingCostSettingsScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("region_settings") {
+                                    com.ezcar24.business.ui.settings.RegionLanguageSettingsScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("change_password") {
+                                    com.ezcar24.business.ui.settings.ChangePasswordScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("user_guide") {
+                                    com.ezcar24.business.ui.settings.UserGuideScreen(
+                                        onBack = { navController.popBackStack() }
                                     )
                                 }
                                 composable("team_members") {
@@ -213,6 +250,23 @@ class MainActivity : ComponentActivity() {
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
+                                composable("paywall") {
+                                    val subscriptionManager = remember {
+                                        (application as? com.ezcar24.business.Ezcar24Application)
+                                            ?.let { app ->
+                                                dagger.hilt.android.EntryPointAccessors.fromApplication(
+                                                    app,
+                                                    com.ezcar24.business.data.billing.SubscriptionManagerEntryPoint::class.java
+                                                ).subscriptionManager()
+                                            }
+                                    }
+                                    if (subscriptionManager != null) {
+                                        com.ezcar24.business.ui.settings.PaywallScreen(
+                                            subscriptionManager = subscriptionManager,
+                                            onDismiss = { navController.popBackStack() }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -228,11 +282,10 @@ class MainActivity : ComponentActivity() {
 
     private fun handleIntent(intent: Intent?) {
         val uri = intent?.data ?: return
-        val uriString = uri.toString().lowercase()
-
-        // Check if this is a password recovery deep-link
-        if (uriString.contains("reset-password") || uriString.contains("type=recovery")) {
-            showPasswordReset.value = true
+        lifecycleScope.launch {
+            if (authRepository.handleDeepLink(uri) == AuthDeepLinkResult.PASSWORD_RESET) {
+                showPasswordReset.value = true
+            }
         }
     }
 }

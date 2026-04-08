@@ -1,5 +1,8 @@
 package com.ezcar24.business.ui.crm
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -28,6 +32,9 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -43,9 +50,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.pullrefresh.PullRefreshIndicator
-import androidx.compose.material3.pullrefresh.pullRefresh
-import androidx.compose.material3.pullrefresh.rememberPullRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,6 +60,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -75,10 +80,9 @@ import com.ezcar24.business.ui.theme.EzcarNavy
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.ui.theme.EzcarSuccess
-import java.text.NumberFormat
-import java.util.Locale
+import com.ezcar24.business.util.rememberRegionSettingsManager
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun LeadManagementScreen(
     onBack: () -> Unit,
@@ -87,6 +91,9 @@ fun LeadManagementScreen(
     viewModel: LeadManagementViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
+    val context = LocalContext.current
     var showFilters by remember { mutableStateOf(false) }
     var showSortMenu by remember { mutableStateOf(false) }
     
@@ -94,10 +101,6 @@ fun LeadManagementScreen(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.refresh() }
     )
-
-    LaunchedEffect(Unit) {
-        viewModel.loadLeads()
-    }
 
     Scaffold(
         topBar = {
@@ -176,8 +179,29 @@ fun LeadManagementScreen(
                         totalLeads = uiState.allLeads.size,
                         activeLeads = viewModel.getActiveLeadsCount(),
                         pipelineValue = viewModel.getTotalPipelineValue(),
-                        newLeadsToday = viewModel.getNewLeadsTodayCount()
+                        newLeadsToday = viewModel.getNewLeadsTodayCount(),
+                        currencyCode = regionState.selectedRegion.currencyCode
                     )
+                }
+
+                uiState.statusMessage?.let { statusMessage ->
+                    item {
+                        LeadManagementBanner(
+                            message = statusMessage,
+                            isError = false,
+                            onDismiss = viewModel::clearStatusMessage
+                        )
+                    }
+                }
+
+                uiState.error?.let { errorMessage ->
+                    item {
+                        LeadManagementBanner(
+                            message = errorMessage,
+                            isError = true,
+                            onDismiss = viewModel::clearError
+                        )
+                    }
                 }
 
                 // Filters
@@ -250,13 +274,13 @@ fun LeadManagementScreen(
                         LeadCard(
                             client = lead,
                             onClick = { onLeadClick(lead.id.toString()) },
-                            onCall = { /* TODO: Implement call action */ },
-                            onMessage = { /* TODO: Implement message action */ },
+                            onCall = { openDialer(context, lead.phone) },
+                            onMessage = { openWhatsApp(context, lead.phone) },
                             onEmail = if (lead.email != null) {
-                                { /* TODO: Implement email action */ }
+                                { openEmail(context, lead.email) }
                             } else null,
                             onChangeStage = { newStage ->
-                                // TODO: Implement stage change
+                                viewModel.updateLeadStage(lead, newStage)
                             }
                         )
                     }
@@ -273,13 +297,65 @@ fun LeadManagementScreen(
 }
 
 @Composable
+private fun LeadManagementBanner(
+    message: String,
+    isError: Boolean,
+    onDismiss: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (isError) Color(0xFFFFF1F0) else Color(0xFFF3FAF6)
+        ),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isError) Color(0xFFB42318) else Color(0xFF067647),
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss")
+            }
+        }
+    }
+}
+
+private fun openDialer(context: Context, phone: String?) {
+    val value = phone?.trim().orEmpty()
+    if (value.isBlank()) return
+    context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$value")))
+}
+
+private fun openWhatsApp(context: Context, phone: String?) {
+    val digits = phone.orEmpty().replace(Regex("[^0-9]"), "")
+    if (digits.isBlank()) return
+    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$digits")))
+}
+
+private fun openEmail(context: Context, email: String?) {
+    val value = email?.trim().orEmpty()
+    if (value.isBlank()) return
+    context.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$value")))
+}
+
+@Composable
 private fun LeadSummaryCards(
     totalLeads: Int,
     activeLeads: Int,
     pipelineValue: java.math.BigDecimal,
-    newLeadsToday: Int
+    newLeadsToday: Int,
+    currencyCode: String
 ) {
-    val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
     
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -319,12 +395,12 @@ private fun LeadSummaryCards(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "Pipeline Value",
+                text = "Pipeline Value ($currencyCode)",
                 fontSize = 14.sp,
                 color = Color.White.copy(alpha = 0.7f)
             )
             Text(
-                text = currencyFormatter.format(pipelineValue),
+                text = regionSettingsManager.formatCurrency(pipelineValue),
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White

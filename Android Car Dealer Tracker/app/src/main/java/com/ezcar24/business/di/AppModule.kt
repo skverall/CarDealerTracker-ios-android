@@ -2,13 +2,6 @@ package com.ezcar24.business.di
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.room.Room
-import com.ezcar24.business.data.local.AppDatabase
-import com.ezcar24.business.data.local.ClientDao
-import com.ezcar24.business.data.local.ExpenseDao
-import com.ezcar24.business.data.local.FinancialAccountDao
-import com.ezcar24.business.data.local.UserDao
-import com.ezcar24.business.data.local.VehicleDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -62,104 +55,11 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "ezcar24_business.db"
-        )
-        .fallbackToDestructiveMigration() // For development speed
-        .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4, AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6)
-        .build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideVehicleDao(db: AppDatabase): VehicleDao = db.vehicleDao()
-
-    @Provides
-    @Singleton
-    fun provideExpenseDao(db: AppDatabase): ExpenseDao = db.expenseDao()
-
-    @Provides
-    @Singleton
-    fun provideClientDao(db: AppDatabase): ClientDao = db.clientDao()
-
-    @Provides
-    @Singleton
-    fun provideUserDao(db: AppDatabase): UserDao = db.userDao()
-
-    @Provides
-    @Singleton
-    fun provideFinancialAccountDao(db: AppDatabase): FinancialAccountDao = db.financialAccountDao()
-
-    @Provides
-    @Singleton
-    fun provideSyncQueueDao(db: AppDatabase): com.ezcar24.business.data.local.SyncQueueDao = db.syncQueueDao()
-
-    @Provides
-    @Singleton
     fun provideSyncQueueManager(
         syncQueueDao: com.ezcar24.business.data.local.SyncQueueDao
     ): com.ezcar24.business.data.sync.SyncQueueManager {
         return com.ezcar24.business.data.sync.SyncQueueManagerImpl(syncQueueDao)
     }
-
-    @Provides
-    @Singleton
-    fun provideSaleDao(db: AppDatabase): com.ezcar24.business.data.local.SaleDao = db.saleDao()
-
-    @Provides
-    @Singleton
-    fun provideDebtDao(db: AppDatabase): com.ezcar24.business.data.local.DebtDao = db.debtDao()
-
-    @Provides
-    @Singleton
-    fun provideDebtPaymentDao(db: AppDatabase): com.ezcar24.business.data.local.DebtPaymentDao = db.debtPaymentDao()
-
-    @Provides
-    @Singleton
-    fun provideAccountTransactionDao(db: AppDatabase): com.ezcar24.business.data.local.AccountTransactionDao = db.accountTransactionDao()
-
-    @Provides
-    @Singleton
-    fun provideExpenseTemplateDao(db: AppDatabase): com.ezcar24.business.data.local.ExpenseTemplateDao = db.expenseTemplateDao()
-
-    @Provides
-    @Singleton
-    fun provideClientInteractionDao(db: AppDatabase): com.ezcar24.business.data.local.ClientInteractionDao = db.clientInteractionDao()
-
-    @Provides
-    @Singleton
-    fun provideClientReminderDao(db: AppDatabase): com.ezcar24.business.data.local.ClientReminderDao = db.clientReminderDao()
-
-    @Provides
-    @Singleton
-    fun providePartDao(db: AppDatabase): com.ezcar24.business.data.local.PartDao = db.partDao()
-
-    @Provides
-    @Singleton
-    fun providePartBatchDao(db: AppDatabase): com.ezcar24.business.data.local.PartBatchDao = db.partBatchDao()
-
-    @Provides
-    @Singleton
-    fun providePartSaleDao(db: AppDatabase): com.ezcar24.business.data.local.PartSaleDao = db.partSaleDao()
-
-    @Provides
-    @Singleton
-    fun providePartSaleLineItemDao(db: AppDatabase): com.ezcar24.business.data.local.PartSaleLineItemDao = db.partSaleLineItemDao()
-
-    @Provides
-    @Singleton
-    fun provideHoldingCostSettingsDao(db: AppDatabase): com.ezcar24.business.data.local.HoldingCostSettingsDao = db.holdingCostSettingsDao()
-
-    @Provides
-    @Singleton
-    fun provideVehicleInventoryStatsDao(db: AppDatabase): com.ezcar24.business.data.local.VehicleInventoryStatsDao = db.vehicleInventoryStatsDao()
-
-    @Provides
-    @Singleton
-    fun provideInventoryAlertDao(db: AppDatabase): com.ezcar24.business.data.local.InventoryAlertDao = db.inventoryAlertDao()
 
     @Provides
     @Singleton

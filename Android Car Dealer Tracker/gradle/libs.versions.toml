@@ -1,5 +1,5 @@
 [versions]
-agp = "9.0.0"
+agp = "9.1.0"
 kotlin = "2.2.10"
 coreKtx = "1.13.1"
 junit = "4.13.2"
@@ -10,15 +10,21 @@ activityCompose = "1.9.3"
 composeBom = "2024.09.03"
 supabase = "3.0.1"
 ktor = "3.0.0"
-room = "2.6.1"
-hilt = "2.51.1"
+room = "2.7.2"
+hilt = "2.57"
 coil = "2.7.0"
 navigationCompose = "2.8.0"
 serialization = "1.7.3"
 ksp = "2.3.2"
+appcompat = "1.7.0"
+firebaseBom = "33.7.0"
+googleServices = "4.4.2"
+crashlyticsPlugin = "3.0.2"
+billing = "7.0.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }
@@ -60,6 +66,14 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 # Serialization
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 
+# Firebase
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-crashlytics = { group = "com.google.firebase", name = "firebase-crashlytics" }
+
+# Billing
+billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
+
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
@@ -67,4 +81,5 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
-
+google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
+crashlytics = { id = "com.google.firebase.crashlytics", version.ref = "crashlyticsPlugin" }

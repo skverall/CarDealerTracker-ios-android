@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.ui.theme.*
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import android.net.Uri
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
@@ -51,10 +52,13 @@ fun VehicleAddEditScreen(
     }
 
     val uiState by viewModel.uiState.collectAsState()
+    val detailState by viewModel.detailUiState.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val selectedVehicle = uiState.selectedVehicle
     val accounts = uiState.accounts
     val isEditing = vehicleId != null
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
 
     // Status options matching iOS
     val statusOptions = listOf(
@@ -70,6 +74,7 @@ fun VehicleAddEditScreen(
     var make by remember { mutableStateOf("") }
     var model by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("") }
+    var mileage by remember { mutableStateOf("") }
     var purchasePrice by remember { mutableStateOf("") }
     var purchaseDate by remember { mutableStateOf(Date()) }
     var askingPrice by remember { mutableStateOf("") }
@@ -80,6 +85,7 @@ fun VehicleAddEditScreen(
     var selectedAccount by remember { mutableStateOf<FinancialAccount?>(null) }
     var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var replaceCoverOnUpload by remember { mutableStateOf(!isEditing) }
+    var populatedVehicleId by remember { mutableStateOf<String?>(null) }
 
     // New Fields
     var buyerName by remember { mutableStateOf("") }
@@ -93,6 +99,8 @@ fun VehicleAddEditScreen(
     var showPurchaseDatePicker by remember { mutableStateOf(false) }
     var showSaleDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
 
     // Set default account when accounts load
     LaunchedEffect(accounts) {
@@ -102,12 +110,16 @@ fun VehicleAddEditScreen(
     }
 
     // Populate form when vehicle loads
-    LaunchedEffect(selectedVehicle) {
-        if (selectedVehicle != null && isEditing) {
+    LaunchedEffect(selectedVehicle?.id) {
+        if (selectedVehicle != null && isEditing && populatedVehicleId != selectedVehicle.id.toString()) {
             vin = selectedVehicle.vin
             make = selectedVehicle.make ?: ""
             model = selectedVehicle.model ?: ""
             year = selectedVehicle.year?.toString() ?: ""
+            mileage = selectedVehicle.mileage
+                .takeIf { it > 0 }
+                ?.let { regionSettingsManager.displayMileageFromKilometers(it).toString() }
+                ?: ""
             purchasePrice = selectedVehicle.purchasePrice.toPlainString()
             purchaseDate = selectedVehicle.purchaseDate
             askingPrice = selectedVehicle.askingPrice?.toPlainString() ?: ""
@@ -119,6 +131,13 @@ fun VehicleAddEditScreen(
             buyerPhone = selectedVehicle.buyerPhone ?: ""
             paymentMethod = selectedVehicle.paymentMethod ?: "Cash"
             reportURL = selectedVehicle.reportURL ?: ""
+            populatedVehicleId = selectedVehicle.id.toString()
+        }
+    }
+
+    LaunchedEffect(selectedVehicle?.status, detailState.saleAccount?.id) {
+        if (selectedVehicle?.status == "sold" && detailState.saleAccount != null) {
+            selectedAccount = detailState.saleAccount
         }
     }
 
@@ -132,6 +151,7 @@ fun VehicleAddEditScreen(
                       (status != "sold" || salePrice.isNotBlank())
     
     val context = androidx.compose.ui.platform.LocalContext.current
+    val currencyCode = regionState.selectedRegion.currencyCode
 
     Scaffold(
         topBar = {
@@ -146,20 +166,15 @@ fun VehicleAddEditScreen(
                     TextButton(
                         onClick = {
                             coroutineScope.launch {
-                                // Get vehicle ID (existing or new will be generated)
-                                val targetVehicleId = if (vehicleId != null) {
-                                    java.util.UUID.fromString(vehicleId)
-                                } else {
-                                    java.util.UUID.randomUUID()
-                                }
-                                
-                                // Save vehicle
-                                viewModel.saveVehicle(
+                                isSaving = true
+                                saveError = null
+                                val result = viewModel.saveVehicle(
                                     id = vehicleId,
                                     vin = vin,
                                     make = make,
                                     model = model,
                                     year = year.toIntOrNull(),
+                                    mileage = mileage.toIntOrNull()?.let(regionSettingsManager::kilometersFromInput) ?: 0,
                                     purchasePrice = purchasePrice.toBigDecimalOrNull() ?: BigDecimal.ZERO,
                                     purchaseDate = purchaseDate,
                                     askingPrice = askingPrice.toBigDecimalOrNull(),
@@ -170,31 +185,43 @@ fun VehicleAddEditScreen(
                                     buyerName = buyerName,
                                     buyerPhone = buyerPhone,
                                     paymentMethod = paymentMethod,
-                                    reportURL = reportURL
+                                    reportURL = reportURL,
+                                    saleAccountId = if (status == "sold") selectedAccount?.id else null
                                 )
-                                
-                                // Upload image if selected
-                                if (selectedImageUris.isNotEmpty()) {
-                                    coroutineScope.launch {
-                                        val images = selectedImageUris.mapNotNull { uri ->
-                                            com.ezcar24.business.util.ImageUtils.compressImage(context, uri)
-                                        }
-                                        if (images.isNotEmpty()) {
-                                            viewModel.uploadVehicleImages(targetVehicleId, images, replaceCoverOnUpload)
+
+                                result.onSuccess { savedVehicleId ->
+                                    if (selectedImageUris.isNotEmpty()) {
+                                        coroutineScope.launch {
+                                            val images = selectedImageUris.mapNotNull { uri ->
+                                                com.ezcar24.business.util.ImageUtils.compressImage(context, uri)
+                                            }
+                                            if (images.isNotEmpty()) {
+                                                viewModel.uploadVehicleImages(savedVehicleId, images, replaceCoverOnUpload)
+                                            }
                                         }
                                     }
+                                    onBack()
+                                }.onFailure { error ->
+                                    saveError = error.message ?: "Failed to save vehicle."
                                 }
-                                
-                                onBack()
+                                isSaving = false
                             }
                         },
-                        enabled = isFormValid
+                        enabled = isFormValid && !isSaving
                     ) {
-                        Text(
-                            "Save", 
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isFormValid) EzcarGreen else Color.Gray
-                        )
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = EzcarGreen
+                            )
+                        } else {
+                            Text(
+                                "Save", 
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isFormValid) EzcarGreen else Color.Gray
+                            )
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -370,12 +397,21 @@ fun VehicleAddEditScreen(
                     keyboardType = KeyboardType.Number,
                     placeholder = "2024"
                 )
+
+                CustomFormField(
+                    label = regionSettingsManager.mileageInputLabel(),
+                    value = mileage,
+                    onValueChange = { if (it.all { c -> c.isDigit() }) mileage = it },
+                    icon = Icons.Default.Speed,
+                    keyboardType = KeyboardType.Number,
+                    placeholder = "0"
+                )
             }
 
             // --- Purchase & Status Section ---
             FormSection(title = "Purchase & Status", icon = Icons.Default.AttachMoney) {
                 CustomFormField(
-                    label = "Purchase Price (AED)",
+                    label = "Purchase Price ($currencyCode)",
                     value = purchasePrice,
                     onValueChange = { purchasePrice = it.filter { c -> c.isDigit() || c == '.' } },
                     icon = Icons.Default.Money,
@@ -384,7 +420,7 @@ fun VehicleAddEditScreen(
                 )
                 
                 CustomFormField(
-                    label = "Asking Price (AED)",
+                    label = "Asking Price ($currencyCode)",
                     value = askingPrice,
                     onValueChange = { askingPrice = it.filter { c -> c.isDigit() || c == '.' } },
                     icon = Icons.Default.Sell,
@@ -438,7 +474,7 @@ fun VehicleAddEditScreen(
             if (status == "sold") {
                 FormSection(title = "Sale Details", icon = Icons.Default.CheckCircle) {
                     CustomFormField(
-                        label = "Sale Price (AED)",
+                        label = "Sale Price ($currencyCode)",
                         value = salePrice,
                         onValueChange = { salePrice = it.filter { c -> c.isDigit() || c == '.' } },
                         icon = Icons.Default.Money,
@@ -471,9 +507,7 @@ fun VehicleAddEditScreen(
                         placeholder = "+971..."
                     )
 
-                    // Payment Method (Simplified as text for now or custom picker)
-                    // Using a horizontal scroll picker for chips for Payment Method
-                     Text(
+                    Text(
                         "Payment Method",
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
@@ -497,41 +531,21 @@ fun VehicleAddEditScreen(
                         }
                     }
 
-                    // Deposit to Account (Sales Account)
-                    // Reusing selectedAccount? No, selectedAccount (lines 79) seems to be Purchase Account "Paid From" (lines 348).
-                    // We need a SEPARATE account selection for "Deposit To".
-                    // But in the current implementation, `selectedAccount` is used for "Paid From".
-                    // The iOS code uses `selectedAccount` for "Paid From" if status is owned, and "Deposit To" if status is Sold?
-                    // Let's check iOS line 484: `Picker("Account", selection: $selectedAccount)`.
-                    // It seems iOS reuses the same state variable?
-                    // "Paid From" is shown in purchase section. "Deposit To" in sale section.
-                    // If vehicle is SOLD, do we still care about where it was PAID FROM? Yes, historical data.
-                    // So we probably need TWO account fields if we want to track both.
-                    // However, `Entities.kt` (checked in Step 69 snippet) doesn't explicitly show `expenseAccountId` vs `revenueAccountId`.
-                    // It likely uses `transactions` table (FinancialAccountTransaction) to link money movement.
-                    // The `Vehicle` entity itself doesn't have `accountId` in the snippet I saw!
-                    // Let's re-read Entities.kt to see how accounts are linked.
-                    // Snippet in Step 69 only showed `Vehicle` class. It did NOT show `accountId`.
-                    // So linking account is likely done via `Transaction` creation on cleanup/backend?
-                    // OR `Vehicle` has `financialAccountId`.
-                    // I'll stick to updating `Vehicle` fields first.
-                    // For now, I will add the UI for "Deposit To" but realize I might not have a field to save it to in `Vehicle` entity yet?
-                    // Wait, `VehicleViewModel.saveVehicle` does NOT take `accountId` as parameter in my previous read (Step 104).
-                    // It takes `Make`, `Model`, etc.
-                    // It DOES NOT take `accountId`. 
-                    // So `selectedAccount` in `VehicleAddEditScreen` was effectively doing NOTHING in `saveVehicle` call in Step 104?
-                    // `viewModel.saveVehicle` signature (Step 104 lines 196-209) confirms NO accountId.
-                    // So the "Paid From" picker was cosmetic or incomplete.
-                    // I will leave "Deposit To" UI as cosmetic for now or bind it to `selectedAccount` to match existing pattern, 
-                    // knowing it won't persist until I fix `saveVehicle` to handle accounts (which is a bigger task, "Financial Accounts" parity).
-                    
                     HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
-                     PickerField(
+                    PickerField(
                         label = "Deposit To",
                         value = selectedAccount?.accountType ?: "Select Account",
                         onClick = { showAccountPicker = true }
                     )
                 }
+            }
+
+            saveError?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = EzcarDanger
+                )
             }
 
             // --- Notes Section ---

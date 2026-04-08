@@ -36,7 +36,7 @@ import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.ui.theme.EzcarBackground
-import java.text.NumberFormat
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -49,7 +49,8 @@ fun GlobalSearchScreen(
     viewModel: GlobalSearchViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val currencyFormatter = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
 
     Scaffold(
@@ -102,7 +103,11 @@ fun GlobalSearchScreen(
                 if (uiState.expenseResults.isNotEmpty()) {
                     item { SectionHeader(title = "Expenses") }
                     items(uiState.expenseResults) { expense ->
-                        ExpenseSearchRow(expense = expense, dateFormatter = dateFormatter, currencyFormatter = currencyFormatter)
+                        ExpenseSearchRow(
+                            expense = expense,
+                            dateFormatter = dateFormatter,
+                            formatCurrency = regionSettingsManager::formatCurrency
+                        )
                     }
                 }
 
@@ -175,7 +180,7 @@ private fun ClientSearchRow(client: Client, onClick: () -> Unit) {
 private fun ExpenseSearchRow(
     expense: Expense,
     dateFormatter: SimpleDateFormat,
-    currencyFormatter: NumberFormat
+    formatCurrency: (java.math.BigDecimal) -> String
 ) {
     Row(
         modifier = Modifier
@@ -188,7 +193,7 @@ private fun ExpenseSearchRow(
             Text(expense.expenseDescription ?: expense.category, fontWeight = FontWeight.Bold)
             Text(dateFormatter.format(expense.date), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         }
-        Text(currencyFormatter.format(expense.amount))
+        Text(formatCurrency(expense.amount))
     }
 }
 

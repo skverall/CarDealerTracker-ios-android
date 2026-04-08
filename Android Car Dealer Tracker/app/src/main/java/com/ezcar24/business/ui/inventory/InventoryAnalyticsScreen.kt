@@ -25,10 +25,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.ui.components.inventory.*
 import com.ezcar24.business.ui.theme.EzcarBackground
 import com.ezcar24.business.ui.theme.EzcarBlueBright
+import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarNavy
-import java.text.NumberFormat
-import java.util.Locale
+import com.ezcar24.business.ui.theme.EzcarOrange
+import com.ezcar24.business.util.rememberRegionSettingsManager
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -208,7 +209,8 @@ private fun TotalValueCard(
     vehiclesOver90Days: Int,
     totalVehicles: Int
 ) {
-    val currencyFormat = NumberFormat.getCurrencyInstance(Locale.US)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     
     Column(
         modifier = Modifier
@@ -224,7 +226,7 @@ private fun TotalValueCard(
         )
         
         Text(
-            text = currencyFormat.format(totalValue).replace("$", "AED "),
+            text = regionSettingsManager.formatCurrency(totalValue),
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
             color = EzcarNavy
@@ -238,7 +240,7 @@ private fun TotalValueCard(
         ) {
             ValueMetric(
                 label = "Holding Cost",
-                value = currencyFormat.format(totalHoldingCost).replace("$", "AED "),
+                value = regionSettingsManager.formatCurrency(totalHoldingCost),
                 color = EzcarOrange
             )
             

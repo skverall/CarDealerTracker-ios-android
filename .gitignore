@@ -6,3 +6,8 @@ opencode.config.json
 *.bak_*
 supabase/.temp/
 supabase/supabase/
+*.jks
+*.keystore
+keystore.properties
+local.properties
+google-services.json

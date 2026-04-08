@@ -13,16 +13,19 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Event
-import androidx.compose.material.icons.filled.Message
-import androidx.compose.material.icons.filled.Note
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -37,16 +40,19 @@ import com.ezcar24.business.ui.theme.EzcarBlueBright
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Locale
 
 @Composable
 fun InteractionItem(
     interaction: ClientInteraction,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onDelete: (() -> Unit)? = null
 ) {
     val interactionType = interaction.interactionType ?: "note"
     val (icon, color) = getInteractionTypeInfo(interactionType)
+    val regionSettingsManager = rememberRegionSettingsManager()
     
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -59,7 +65,6 @@ fun InteractionItem(
                 .padding(12.dp),
             verticalAlignment = Alignment.Top
         ) {
-            // Icon with background
             Box(
                 modifier = Modifier
                     .size(40.dp)
@@ -88,12 +93,45 @@ fun InteractionItem(
                         fontWeight = FontWeight.SemiBold,
                         color = Color.Black
                     )
-                    
-                    Text(
-                        text = formatInteractionDate(interaction.occurredAt),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.Gray
-                    )
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        interaction.value?.let { value ->
+                            Surface(
+                                color = EzcarGreen.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(999.dp)
+                            ) {
+                                Text(
+                                    text = regionSettingsManager.formatCurrency(value),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = EzcarGreen,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = formatInteractionDate(interaction.occurredAt),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray
+                            )
+                            onDelete?.let {
+                                IconButton(
+                                    onClick = it,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.DeleteOutline,
+                                        contentDescription = "Delete interaction",
+                                        tint = Color.Gray,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
                 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -158,10 +196,10 @@ private fun getInteractionTypeInfo(type: String?): Pair<ImageVector, Color> {
         "call" -> Icons.Default.Call to EzcarGreen
         "meeting" -> Icons.Default.Event to EzcarPurple
         "email" -> Icons.Default.Email to EzcarBlueBright
-        "message", "sms", "text" -> Icons.Default.Message to Color(0xFF2196F3)
+        "message", "sms", "text" -> Icons.AutoMirrored.Filled.Message to Color(0xFF2196F3)
         "test_drive" -> Icons.Default.Visibility to EzcarOrange
-        "note" -> Icons.Default.Note to Color.Gray
-        else -> Icons.Default.Note to Color.Gray
+        "note" -> Icons.AutoMirrored.Filled.Note to Color.Gray
+        else -> Icons.AutoMirrored.Filled.Note to Color.Gray
     }
 }
 
@@ -227,7 +265,7 @@ fun InteractionSummaryRow(
         )
         
         InteractionCountItem(
-            icon = Icons.Default.Message,
+            icon = Icons.AutoMirrored.Filled.Message,
             count = messagesCount,
             label = "Messages",
             color = Color(0xFF2196F3)

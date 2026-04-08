@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
 import androidx.room.withTransaction
-import com.ezcar24.business.data.local.AppDatabase
+import com.ezcar24.business.data.local.ActiveDatabaseProvider
 import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.ClientDao
 import com.ezcar24.business.data.local.FinancialAccount
@@ -59,7 +59,7 @@ data class PartSaleLineDraft(
 
 @HiltViewModel
 class PartSalesViewModel @Inject constructor(
-    private val db: AppDatabase,
+    private val databaseProvider: ActiveDatabaseProvider,
     private val partSaleDao: PartSaleDao,
     private val partSaleLineItemDao: PartSaleLineItemDao,
     private val partDao: PartDao,
@@ -191,7 +191,7 @@ class PartSalesViewModel @Inject constructor(
         return value.stripTrailingZeros().toPlainString()
     }
 
-    fun createSale(
+    suspend fun createSale(
         saleDate: Date,
         selectedAccountId: UUID,
         lineItems: List<PartSaleLineDraft>,
@@ -211,11 +211,12 @@ class PartSalesViewModel @Inject constructor(
         var updatedClient: Client? = null
 
         return try {
+            val db = databaseProvider.currentDatabase()
             db.withTransaction {
-                val account = financialAccountDao.getById(selectedAccountId)
+                val account = db.financialAccountDao().getById(selectedAccountId)
                     ?: throw IllegalStateException("Account not found")
-                val partsById = partDao.getAllActiveList().associateBy { it.id }
-                val batchesByPart = partBatchDao.getAllActiveList().groupBy { it.partId }
+                val partsById = db.partDao().getAllActiveList().associateBy { it.id }
+                val batchesByPart = db.partBatchDao().getAllActiveList().groupBy { it.partId }
 
                 val sale = PartSale(
                     id = UUID.randomUUID(),
@@ -284,20 +285,20 @@ class PartSalesViewModel @Inject constructor(
                 createdSale = updatedSale
                 createdLineItems = lineItemRecords
 
-                partSaleDao.upsert(updatedSale)
-                partSaleLineItemDao.upsertAll(lineItemRecords)
-                updatedBatches.forEach { partBatchDao.upsert(it) }
-                updatedParts.values.forEach { partDao.upsert(it) }
+                db.partSaleDao().upsert(updatedSale)
+                db.partSaleLineItemDao().upsertAll(lineItemRecords)
+                updatedBatches.forEach { db.partBatchDao().upsert(it) }
+                updatedParts.values.forEach { db.partDao().upsert(it) }
 
                 val updatedBalance = account.balance + total
                 updatedAccount = account.copy(balance = updatedBalance, updatedAt = now)
-                financialAccountDao.upsert(updatedAccount!!)
+                db.financialAccountDao().upsert(updatedAccount!!)
 
                 if (selectedClientId != null) {
-                    val client = clientDao.getById(selectedClientId)
+                    val client = db.clientDao().getById(selectedClientId)
                     if (client != null) {
                         updatedClient = client.copy(updatedAt = now)
-                        clientDao.upsert(updatedClient!!)
+                        db.clientDao().upsert(updatedClient!!)
                     }
                 }
             }
@@ -308,9 +309,15 @@ class PartSalesViewModel @Inject constructor(
                     if (createdSale != null) {
                         cloudSyncManager.upsertPartSale(createdSale!!)
                     }
-                    createdLineItems.forEach { cloudSyncManager.upsertPartSaleLineItem(it) }
-                    updatedBatches.forEach { cloudSyncManager.upsertPartBatch(it) }
-                    updatedParts.values.forEach { cloudSyncManager.upsertPart(it) }
+                    for (item in createdLineItems) {
+                        cloudSyncManager.upsertPartSaleLineItem(item)
+                    }
+                    for (batch in updatedBatches) {
+                        cloudSyncManager.upsertPartBatch(batch)
+                    }
+                    for (part in updatedParts.values) {
+                        cloudSyncManager.upsertPart(part)
+                    }
                     if (updatedAccount != null) {
                         cloudSyncManager.upsertFinancialAccount(updatedAccount!!)
                     }
@@ -336,47 +343,54 @@ class PartSalesViewModel @Inject constructor(
             val updatedParts = mutableMapOf<UUID, Part>()
             var updatedAccount: FinancialAccount? = null
 
+            val db = databaseProvider.currentDatabase()
             db.withTransaction {
                 lineItems.forEach { item ->
                     val deletedItem = item.copy(deletedAt = now, updatedAt = now)
-                    partSaleLineItemDao.upsert(deletedItem)
-                    val batch = partBatchDao.getById(item.batchId)
+                    db.partSaleLineItemDao().upsert(deletedItem)
+                    val batch = db.partBatchDao().getById(item.batchId)
                     if (batch != null) {
                         val updatedBatch = batch.copy(
                             quantityRemaining = batch.quantityRemaining + item.quantity,
                             updatedAt = now
                         )
-                        partBatchDao.upsert(updatedBatch)
+                        db.partBatchDao().upsert(updatedBatch)
                         updatedBatches.add(updatedBatch)
                     }
-                    val part = partDao.getById(item.partId)
+                    val part = db.partDao().getById(item.partId)
                     if (part != null) {
                         val updatedPart = part.copy(updatedAt = now)
-                        partDao.upsert(updatedPart)
+                        db.partDao().upsert(updatedPart)
                         updatedParts[updatedPart.id] = updatedPart
                     }
                 }
 
                 val accountId = sale.accountId
                 if (accountId != null) {
-                    val account = financialAccountDao.getById(accountId)
+                    val account = db.financialAccountDao().getById(accountId)
                     if (account != null) {
                         val updatedBalance = account.balance - sale.amount
                         updatedAccount = account.copy(balance = updatedBalance, updatedAt = now)
-                        financialAccountDao.upsert(updatedAccount!!)
+                        db.financialAccountDao().upsert(updatedAccount!!)
                     }
                 }
 
                 val deletedSale = sale.copy(deletedAt = now, updatedAt = now)
-                partSaleDao.upsert(deletedSale)
+                db.partSaleDao().upsert(deletedSale)
             }
 
             val dealerId = CloudSyncEnvironment.currentDealerId
             if (dealerId != null) {
                 try {
-                    lineItems.forEach { cloudSyncManager.deletePartSaleLineItem(it) }
-                    updatedBatches.forEach { cloudSyncManager.upsertPartBatch(it) }
-                    updatedParts.values.forEach { cloudSyncManager.upsertPart(it) }
+                    for (item in lineItems) {
+                        cloudSyncManager.deletePartSaleLineItem(item)
+                    }
+                    for (batch in updatedBatches) {
+                        cloudSyncManager.upsertPartBatch(batch)
+                    }
+                    for (part in updatedParts.values) {
+                        cloudSyncManager.upsertPart(part)
+                    }
                     if (updatedAccount != null) {
                         cloudSyncManager.upsertFinancialAccount(updatedAccount!!)
                     }

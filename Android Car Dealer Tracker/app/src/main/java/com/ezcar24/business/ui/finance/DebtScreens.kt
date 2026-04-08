@@ -28,8 +28,8 @@ import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.ui.theme.EzcarBlueBright
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarDanger
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
-import java.text.NumberFormat
 import java.util.Locale
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.ui.unit.sp
@@ -250,6 +250,7 @@ fun DebtItem(
     onPayClick: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -280,7 +281,7 @@ fun DebtItem(
                     }
                 }
                 Text(
-                    text = NumberFormat.getCurrencyInstance(Locale.US).format(debt.amount).replace("$", "AED "),
+                    text = regionSettingsManager.formatCurrency(debt.amount),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (debt.direction == "owed_to_me") EzcarGreen else EzcarDanger
@@ -318,6 +319,8 @@ fun DebtDialog(
     onDismiss: () -> Unit,
     onSave: (String, String, BigDecimal, String, String) -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var name by remember { mutableStateOf(debt?.counterpartyName ?: "") }
     var phone by remember { mutableStateOf(debt?.counterpartyPhone ?: "") }
     var amount by remember { mutableStateOf(debt?.amount?.toPlainString() ?: "") }
@@ -374,7 +377,7 @@ fun DebtDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount") },
+                    label = { Text("Amount (${regionState.selectedRegion.currencyCode})") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -419,6 +422,7 @@ fun DebtDetailScreen(
     onPay: () -> Unit,
     onDelete: () -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
@@ -472,7 +476,7 @@ fun DebtDetailScreen(
                         }
                     }
                     Text(
-                        text = NumberFormat.getCurrencyInstance(Locale.US).format(debt.amount).replace("$", "AED "),
+                        text = regionSettingsManager.formatCurrency(debt.amount),
                         style = MaterialTheme.typography.displaySmall,
                         fontWeight = FontWeight.Bold,
                         color = if (debt.direction == "owed_to_me") EzcarGreen else EzcarDanger
@@ -533,6 +537,7 @@ fun DebtDetailScreen(
 
 @Composable
 fun PaymentItem(payment: com.ezcar24.business.data.local.DebtPayment) {
+    val regionSettingsManager = rememberRegionSettingsManager()
      Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
@@ -558,7 +563,7 @@ fun PaymentItem(payment: com.ezcar24.business.data.local.DebtPayment) {
                 )
             }
             Text(
-                text = NumberFormat.getCurrencyInstance(Locale.US).format(payment.amount).replace("$", "AED "),
+                text = regionSettingsManager.formatCurrency(payment.amount),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -575,6 +580,8 @@ fun PaymentDialog(
     onDismiss: () -> Unit,
     onConfirm: (BigDecimal, UUID) -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     var amount by remember { mutableStateOf("") } // Default to empty, user enters amount
     var selectedAccountId by remember { mutableStateOf<UUID?>(null) }
     var expanded by remember { mutableStateOf(false) }
@@ -612,8 +619,8 @@ fun PaymentDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Payment Amount") },
-                    placeholder = { Text("Max: ${debt.amount}") },
+                    label = { Text("Payment Amount (${regionState.selectedRegion.currencyCode})") },
+                    placeholder = { Text("Max: ${regionSettingsManager.formatCurrency(debt.amount)}") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -640,7 +647,7 @@ fun PaymentDialog(
                     ) {
                         accounts.forEach { account ->
                             DropdownMenuItem(
-                                text = { Text("${account.accountType} (${NumberFormat.getCurrencyInstance(Locale.US).format(account.balance)})") },
+                                text = { Text("${account.accountType} (${regionSettingsManager.formatCurrency(account.balance)})") },
                                 onClick = {
                                     selectedAccountId = account.id
                                     expanded = false

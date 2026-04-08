@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
@@ -36,10 +37,9 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.input.pointer.consume
-import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -53,12 +53,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.SubcomposeAsyncImage
 import com.ezcar24.business.util.ImageUtils
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.ui.components.*
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import android.net.Uri
 import java.math.BigDecimal
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -86,6 +86,8 @@ fun VehicleDetailScreen(
     var showDeleteDialog by remember { mutableStateOf(false) }
     val shareScope = rememberCoroutineScope()
     val context = androidx.compose.ui.platform.LocalContext.current
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
 
     var showPhotoManager by remember { mutableStateOf(false) }
     var showPhotoViewer by remember { mutableStateOf(false) }
@@ -126,7 +128,7 @@ fun VehicleDetailScreen(
                                     .joinToString(" ")
                                     .trim()
                                     .ifBlank { "vehicle" }
-                                val price = formatCurrency(vehicle.salePrice ?: vehicle.askingPrice ?: vehicle.purchasePrice)
+                                val price = regionSettingsManager.formatCurrency(vehicle.salePrice ?: vehicle.askingPrice ?: vehicle.purchasePrice)
                                 var shareText = "Check out this $vehicleTitle.\nAsking: $price"
                                 val reportLink = vehicle.reportURL?.trim().orEmpty()
                                 if (reportLink.isNotEmpty()) {
@@ -207,6 +209,17 @@ fun VehicleDetailScreen(
                         { viewModel.updateAskingPrice(detailState.financialSummary.recommendedPrice) }
                     } else null
                 )
+
+                if (vehicle.status == "sold") {
+                    SaleDetailsCard(
+                        salePrice = vehicle.salePrice,
+                        saleDate = vehicle.saleDate,
+                        buyerName = vehicle.buyerName,
+                        buyerPhone = vehicle.buyerPhone,
+                        paymentMethod = vehicle.paymentMethod,
+                        accountName = detailState.saleAccount?.accountType
+                    )
+                }
 
                 if (vehicle.status != "sold") {
                     RecommendedPricingCard(
@@ -566,7 +579,7 @@ private fun PhotoUploadSheet(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun PhotoManagerSheet(
     photos: List<VehiclePhotoItem>,
@@ -712,7 +725,7 @@ private fun PhotoViewerDialog(
     onDelete: (VehiclePhotoItem) -> Unit,
     onRemoveCover: () -> Unit
 ) {
-    val pagerState = rememberPagerState(initialPage = startIndex)
+    val pagerState = rememberPagerState(initialPage = startIndex) { items.size }
     var isZoomed by remember { mutableStateOf(false) }
     LaunchedEffect(pagerState.currentPage) { isZoomed = false }
     androidx.compose.ui.window.Dialog(
@@ -720,7 +733,7 @@ private fun PhotoViewerDialog(
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-            HorizontalPager(pageCount = items.size, state = pagerState, userScrollEnabled = !isZoomed) { page ->
+            HorizontalPager(state = pagerState, userScrollEnabled = !isZoomed) { page ->
                 val item = items[page]
                 val currentPage = pagerState.currentPage
                 ZoomableImage(
@@ -809,7 +822,9 @@ private fun ZoomableImage(
                         scale = newScale
                         val current = offsetAnim.value
                         val proposed = if (newScale > minScale) current + pan else Offset.Zero
-                        offsetAnim.snapTo(rubberBandOffset(proposed, newScale))
+                        scope.launch {
+                            offsetAnim.snapTo(rubberBandOffset(proposed, newScale))
+                        }
                         onZoomChanged(newScale > minScale)
                     }
                 }
@@ -823,7 +838,9 @@ private fun ZoomableImage(
                         }
                         val target = clampOffset(offsetAnim.value, scale)
                         if (target != offsetAnim.value) {
-                            offsetAnim.animateTo(target, spring(stiffness = 500f, dampingRatio = 0.85f))
+                            scope.launch {
+                                offsetAnim.animateTo(target, spring(stiffness = 500f, dampingRatio = 0.85f))
+                            }
                         }
                     }
                 }
@@ -1027,6 +1044,8 @@ private fun VehicleHeaderCard(
     vehicle: com.ezcar24.business.data.local.Vehicle,
     detailState: VehicleDetailUiState
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -1076,6 +1095,17 @@ private fun VehicleHeaderCard(
                 )
             }
 
+            if (vehicle.mileage > 0) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Mileage:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        regionSettingsManager.formatMileage(vehicle.mileage),
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
             detailState.inventoryStats?.let { stats ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1108,6 +1138,8 @@ private fun ExpensesSection(
     expenses: List<com.ezcar24.business.data.local.Expense>,
     totalExpenses: BigDecimal
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -1125,7 +1157,7 @@ private fun ExpensesSection(
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    formatCurrency(totalExpenses),
+                    regionSettingsManager.formatCurrency(totalExpenses),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Bold,
                     color = EzcarOrange
@@ -1166,7 +1198,64 @@ private fun ExpensesSection(
 }
 
 @Composable
+private fun SaleDetailsCard(
+    salePrice: BigDecimal?,
+    saleDate: Date?,
+    buyerName: String?,
+    buyerPhone: String?,
+    paymentMethod: String?,
+    accountName: String?
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Sale Details",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            FinancialDetailRow(
+                label = "Sale Price",
+                amount = salePrice,
+                color = EzcarGreen,
+                isBold = true
+            )
+            FinancialDetailRow(
+                label = "Sale Date",
+                value = saleDate?.let { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it) } ?: "-",
+                isBold = true
+            )
+            FinancialDetailRow(
+                label = "Buyer Name",
+                value = buyerName?.takeIf { it.isNotBlank() } ?: "-"
+            )
+            FinancialDetailRow(
+                label = "Buyer Phone",
+                value = buyerPhone?.takeIf { it.isNotBlank() } ?: "-"
+            )
+            FinancialDetailRow(
+                label = "Payment Method",
+                value = paymentMethod?.takeIf { it.isNotBlank() } ?: "-"
+            )
+            FinancialDetailRow(
+                label = "Deposited To",
+                value = accountName?.takeIf { it.isNotBlank() } ?: "-"
+            )
+        }
+    }
+}
+
+@Composable
 private fun ExpenseRow(expense: com.ezcar24.business.data.local.Expense) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1185,7 +1274,7 @@ private fun ExpenseRow(expense: com.ezcar24.business.data.local.Expense) {
             )
         }
         Text(
-            text = formatCurrency(expense.amount),
+            text = regionSettingsManager.formatCurrency(expense.amount),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold
         )
@@ -1221,6 +1310,8 @@ fun FinancialDetailRow(
     color: Color = Color.Black,
     isBold: Boolean = false
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -1231,7 +1322,7 @@ fun FinancialDetailRow(
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal
         )
         Text(
-            text = formatCurrency(amount),
+            text = regionSettingsManager.formatCurrency(amount),
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.Medium,
             color = color
         )
@@ -1260,10 +1351,4 @@ fun FinancialDetailRow(
             color = color
         )
     }
-}
-
-private fun formatCurrency(amount: BigDecimal?): String {
-    return amount?.let {
-        NumberFormat.getCurrencyInstance(Locale.US).format(it).replace("$", "AED ")
-    } ?: "-"
 }

@@ -5,8 +5,7 @@ import android.util.Log
 import androidx.work.*
 import com.ezcar24.business.data.local.*
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
-import com.ezcar24.business.util.calculator.HoldingCostCalculator
-import com.ezcar24.business.util.calculator.VehicleFinancialsCalculator
+import com.ezcar24.business.util.calculator.InventoryMetricsCalculator
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import dagger.hilt.EntryPoint
@@ -116,71 +115,24 @@ class InventoryStatsWorker(
 
             for (vehicle in vehicles) {
                 try {
-                    // Get expenses for vehicle
                     val expenses = expenseDao.getExpensesForVehicleSync(vehicle.id)
                         .filter { it.deletedAt == null }
-
-                    // Calculate financials
-                    val totalExpenses = expenses
-                        .filter { it.category != "HOLDING_COST" }
-                        .fold(BigDecimal.ZERO) { acc, expense -> acc + expense.amount }
-
-                    val totalCost = vehicle.purchasePrice + totalExpenses
-
-                    // Calculate days in inventory
-                    val daysInInventory = HoldingCostCalculator.calculateDaysInInventory(
-                        purchaseDate = vehicle.purchaseDate,
-                        saleDate = null
-                    )
-
-                    // Calculate aging bucket
-                    val agingBucket = VehicleFinancialsCalculator.calculateAgingBucket(daysInInventory)
-
-                    // Calculate holding cost
-                    val holdingCostAccumulated = if (holdingCostEnabled) {
-                        HoldingCostCalculator.calculateAccumulatedHoldingCost(
-                            totalCost = totalCost,
-                            dailyRatePercent = dailyRate,
-                            daysInInventory = daysInInventory
-                        )
-                    } else {
-                        BigDecimal.ZERO
-                    }
-
-                    // Calculate ROI
-                    val roiPercent = vehicle.askingPrice?.let { askingPrice ->
-                        VehicleFinancialsCalculator.calculateROI(
-                            purchasePrice = vehicle.purchasePrice,
-                            totalExpenses = totalExpenses + holdingCostAccumulated,
-                            askingPrice = askingPrice
-                        )
-                    }
-
-                    // Calculate profit estimate
-                    val profitEstimate = vehicle.askingPrice?.let { askingPrice ->
-                        VehicleFinancialsCalculator.calculateProfitEstimate(
-                            purchasePrice = vehicle.purchasePrice,
-                            totalExpenses = totalExpenses + holdingCostAccumulated,
-                            askingPrice = askingPrice
-                        )
-                    }
-
-                    // Save stats
-                    val stats = VehicleInventoryStats(
+                    val effectiveSettings = settings ?: HoldingCostSettings(
                         id = UUID.randomUUID(),
-                        vehicleId = vehicle.id,
-                        daysInInventory = daysInInventory,
-                        agingBucket = agingBucket.name.lowercase(),
-                        totalCost = totalCost,
-                        holdingCostAccumulated = holdingCostAccumulated,
-                        roiPercent = roiPercent,
-                        profitEstimate = profitEstimate,
-                        lastCalculatedAt = Date(),
+                        dealerId = dealerId,
+                        annualRatePercent = dailyRate.multiply(BigDecimal("36500")),
+                        dailyRatePercent = dailyRate,
+                        isEnabled = holdingCostEnabled,
                         createdAt = Date(),
                         updatedAt = Date()
                     )
 
-                    // Check for existing stats and update or insert
+                    val stats = InventoryMetricsCalculator.calculateInventoryStats(
+                        vehicle = vehicle,
+                        expenses = expenses,
+                        settings = effectiveSettings
+                    )
+
                     val existingStats = vehicleInventoryStatsDao.getByVehicleId(vehicle.id)
                     if (existingStats != null) {
                         vehicleInventoryStatsDao.delete(existingStats)
@@ -188,13 +140,12 @@ class InventoryStatsWorker(
                     vehicleInventoryStatsDao.upsert(stats)
                     updatedCount++
 
-                    // Generate alerts
                     val alerts = generateAlerts(
                         vehicleId = vehicle.id,
-                        daysInInventory = daysInInventory,
-                        roiPercent = roiPercent,
-                        holdingCostAccumulated = holdingCostAccumulated,
-                        totalCost = totalCost,
+                        daysInInventory = stats.daysInInventory,
+                        roiPercent = stats.roiPercent,
+                        holdingCostAccumulated = stats.holdingCostAccumulated,
+                        totalCost = stats.totalCost,
                         askingPrice = vehicle.askingPrice
                     )
 

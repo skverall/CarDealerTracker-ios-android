@@ -65,7 +65,7 @@ class InventoryAnalyticsViewModel @Inject constructor(
             
             combine(
                 vehicleDao.getAllActive(),
-                vehicleInventoryStatsDao.getAllIncludingDeleted(),
+                vehicleInventoryStatsDao.getAllFlow(),
                 inventoryAlertDao.getAllAlerts(),
                 holdingCostSettingsDao.getSettings()
             ) { vehicles, allStats, alerts, settings ->

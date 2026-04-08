@@ -1,10 +1,21 @@
 package com.ezcar24.business.data.sync
 
-import java.util.UUID
 import java.util.Locale
+import java.util.UUID
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
 object CloudSyncEnvironment {
-    var currentDealerId: UUID? = null
+    private val _currentDealerId = MutableStateFlow<UUID?>(null)
+
+    var currentDealerId: UUID?
+        get() = _currentDealerId.value
+        set(value) {
+            _currentDealerId.value = value
+        }
+
+    val currentDealerIdFlow: StateFlow<UUID?> = _currentDealerId.asStateFlow()
     
     const val SUPABASE_URL = "https://haordpdxyyreliyzmire.supabase.co"
     private const val BUCKET_NAME = "vehicle-images"

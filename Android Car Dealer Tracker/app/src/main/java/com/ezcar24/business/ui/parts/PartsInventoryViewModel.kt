@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
 import androidx.room.withTransaction
-import com.ezcar24.business.data.local.AppDatabase
+import com.ezcar24.business.data.local.ActiveDatabaseProvider
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.FinancialAccountDao
 import com.ezcar24.business.data.local.Part
@@ -43,7 +43,7 @@ data class PartsInventoryUiState(
 
 @HiltViewModel
 class PartsInventoryViewModel @Inject constructor(
-    private val db: AppDatabase,
+    private val databaseProvider: ActiveDatabaseProvider,
     private val partDao: PartDao,
     private val partBatchDao: PartBatchDao,
     private val financialAccountDao: FinancialAccountDao,
@@ -169,8 +169,9 @@ class PartsInventoryViewModel @Inject constructor(
                 deletedAt = null
             )
 
+            val db = databaseProvider.currentDatabase()
             db.withTransaction {
-                partDao.upsert(part)
+                db.partDao().upsert(part)
                 if (addInitialStock && initialQuantity > BigDecimal.ZERO) {
                     val accountId = selectedAccountId
                     newBatch = PartBatch(
@@ -187,16 +188,16 @@ class PartsInventoryViewModel @Inject constructor(
                         updatedAt = now,
                         deletedAt = null
                     )
-                    partBatchDao.upsert(newBatch!!)
+                    db.partBatchDao().upsert(newBatch!!)
                     if (accountId != null) {
-                        val account = financialAccountDao.getById(accountId)
+                        val account = db.financialAccountDao().getById(accountId)
                         if (account != null) {
                             val totalCost = initialQuantity.multiply(unitCost)
                             updatedAccount = account.copy(
                                 balance = account.balance.subtract(totalCost),
                                 updatedAt = now
                             )
-                            financialAccountDao.upsert(updatedAccount!!)
+                            db.financialAccountDao().upsert(updatedAccount!!)
                         }
                     }
                 }
@@ -250,18 +251,19 @@ class PartsInventoryViewModel @Inject constructor(
             var updatedAccount: FinancialAccount? = null
             val updatedPart = part.copy(updatedAt = now)
 
+            val db = databaseProvider.currentDatabase()
             db.withTransaction {
-                partBatchDao.upsert(batch)
-                partDao.upsert(updatedPart)
+                db.partBatchDao().upsert(batch)
+                db.partDao().upsert(updatedPart)
                 if (selectedAccountId != null) {
-                    val account = financialAccountDao.getById(selectedAccountId)
+                    val account = db.financialAccountDao().getById(selectedAccountId)
                     if (account != null) {
                         val totalCost = quantity.multiply(unitCost)
                         updatedAccount = account.copy(
                             balance = account.balance.subtract(totalCost),
                             updatedAt = now
                         )
-                        financialAccountDao.upsert(updatedAccount!!)
+                        db.financialAccountDao().upsert(updatedAccount!!)
                     }
                 }
             }
