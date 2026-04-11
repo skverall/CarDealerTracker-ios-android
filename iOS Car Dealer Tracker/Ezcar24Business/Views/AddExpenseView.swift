@@ -203,9 +203,6 @@ struct AddExpenseView: View {
                     receiptImagePickerSource = .photoLibrary
                     showReceiptImagePicker = true
                 }
-                Button("choose_file".localizedString) {
-                    showReceiptImporter = true
-                }
                 Button("cancel".localizedString, role: .cancel) {}
             }
             .fileImporter(
@@ -213,6 +210,7 @@ struct AddExpenseView: View {
                 allowedContentTypes: [.image, .pdf],
                 allowsMultipleSelection: false
             ) { result in
+                showReceiptImporter = false
                 handleReceiptImport(result)
             }
             .sheet(isPresented: $showReceiptImagePicker) {
@@ -543,6 +541,23 @@ struct AddExpenseView: View {
                             .cornerRadius(12)
                     }
                 }
+            } else {
+                Button {
+                    showReceiptImporter = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "doc.fill")
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Text("choose_file".localizedString)
+                            .font(.subheadline)
+                            .foregroundColor(ColorTheme.secondaryText)
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(ColorTheme.secondaryBackground.opacity(0.5))
+                    .cornerRadius(12)
+                }
+                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 20)
