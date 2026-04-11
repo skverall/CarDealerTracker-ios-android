@@ -27,6 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.ExpenseCategoryType
 import com.ezcar24.business.ui.theme.*
+import com.ezcar24.business.util.expenseDisplayDateTime
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -40,7 +41,16 @@ fun ExpenseScreen(
     val uiState by viewModel.uiState.collectAsState()
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showAddSheet by remember { mutableStateOf(false) }
+    var selectedExpense by remember { mutableStateOf<Expense?>(null) }
+    val vehicleTitlesById = remember(uiState.vehicles) {
+        uiState.vehicles.associate { vehicle ->
+            vehicle.id to listOfNotNull(vehicle.make, vehicle.model)
+                .joinToString(" ")
+                .ifBlank { vehicle.vin }
+        }
+    }
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.refresh() }
@@ -104,7 +114,8 @@ fun ExpenseScreen(
                 ExpenseList(
                     expenses = uiState.filteredExpenses,
                     padding = PaddingValues(top = 0.dp),
-                    onDelete = viewModel::deleteExpense
+                    onDelete = viewModel::deleteExpense,
+                    onExpenseClick = { selectedExpense = it }
                 )
             }
             PullRefreshIndicator(
@@ -120,14 +131,32 @@ fun ExpenseScreen(
     if (showAddSheet) {
         AddExpenseSheet(
             onDismiss = { showAddSheet = false },
-            onSave = { amount, date, desc, cat, veh, usr, acc, expenseType ->
-                viewModel.saveExpense(amount, date, desc, cat, veh, usr, acc, expenseType)
+            onSave = { amount, date, desc, cat, veh, usr, acc, expenseType, receipt ->
+                viewModel.saveExpense(amount, date, desc, cat, veh, usr, acc, expenseType, receipt)
                 showAddSheet = false
             },
+            onSaveTemplate = viewModel::saveTemplate,
             vehicles = uiState.vehicles,
             users = uiState.users,
             accounts = uiState.accounts,
+            templates = uiState.templates,
             currencyCode = regionState.selectedRegion.currencyCode
+        )
+    }
+
+    selectedExpense?.let { expense ->
+        ExpenseDetailBottomSheet(
+            expense = expense,
+            vehicleTitle = expense.vehicleId?.let(vehicleTitlesById::get),
+            onDismiss = { selectedExpense = null },
+            onSaveComment = viewModel::updateExpenseComment,
+            onViewReceipt = { viewModel.openExpenseReceipt(context, it) },
+            onReplaceReceipt = { targetExpense, receipt, onUpdated ->
+                viewModel.replaceExpenseReceipt(targetExpense, receipt, onUpdated)
+            },
+            onRemoveReceipt = { targetExpense, onUpdated ->
+                viewModel.removeExpenseReceipt(targetExpense, onUpdated)
+            }
         )
     }
 }
@@ -144,6 +173,7 @@ fun ExpenseHeader(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         Row(
@@ -380,7 +410,8 @@ fun ExpenseFilters(
 fun ExpenseList(
     expenses: List<Expense>,
     padding: PaddingValues,
-    onDelete: (Expense) -> Unit
+    onDelete: (Expense) -> Unit,
+    onExpenseClick: (Expense) -> Unit
 ) {
     val grouped = expenses.groupBy { getDateBucket(it.date) }
 
@@ -403,7 +434,11 @@ fun ExpenseList(
             }
 
             items(list) { expense ->
-                ExpenseItem(expense = expense, onDelete = onDelete)
+                ExpenseItem(
+                    expense = expense,
+                    onDelete = onDelete,
+                    onClick = onExpenseClick
+                )
             }
         }
     }
@@ -412,16 +447,18 @@ fun ExpenseList(
 @Composable
 fun ExpenseItem(
     expense: Expense,
-    onDelete: (Expense) -> Unit
+    onDelete: (Expense) -> Unit,
+    onClick: (Expense) -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val displayDateTime = remember(expense.date, expense.createdAt) { expenseDisplayDateTime(expense) }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .clickable { }
+            .clickable { onClick(expense) }
             .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -448,7 +485,7 @@ fun ExpenseItem(
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = "${dateFormat.format(expense.date)} • ${getExpenseTypeLabel(expense.expenseType)}",
+                text = "${dateFormat.format(displayDateTime)} • ${getExpenseTypeLabel(expense.expenseType)}",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray
             )

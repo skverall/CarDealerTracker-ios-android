@@ -202,6 +202,7 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToRegionSettings = { navController.navigate("region_settings") },
                                         onNavigateToTeamMembers = { navController.navigate("team_members") },
                                         onNavigateToBackupCenter = { navController.navigate("backup_center") },
+                                        onNavigateToMonthlyReports = { navController.navigate("monthly_report_settings") },
                                         onNavigateToDataHealth = { navController.navigate("data_health") },
                                         onNavigateToHoldingCostSettings = { navController.navigate("holding_cost_settings_root") },
                                         onNavigateToChangePassword = { navController.navigate("change_password") },
@@ -242,6 +243,11 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable("backup_center") {
                                     com.ezcar24.business.ui.settings.BackupCenterScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("monthly_report_settings") {
+                                    com.ezcar24.business.ui.settings.MonthlyReportSettingsScreen(
                                         onBack = { navController.popBackStack() }
                                     )
                                 }

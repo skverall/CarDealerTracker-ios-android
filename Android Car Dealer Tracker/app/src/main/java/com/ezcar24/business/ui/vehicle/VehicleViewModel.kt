@@ -156,6 +156,21 @@ class VehicleViewModel @Inject constructor(
         }
     }
 
+    fun updateExpenseComment(expense: Expense, comment: String) {
+        viewModelScope.launch {
+            val normalizedComment = comment.trim().takeIf { it.isNotEmpty() }
+            val currentComment = expense.expenseDescription?.trim()?.takeIf { it.isNotEmpty() }
+            if (normalizedComment == currentComment) return@launch
+
+            cloudSyncManager.upsertExpense(
+                expense.copy(
+                    expenseDescription = normalizedComment,
+                    updatedAt = Date()
+                )
+            )
+        }
+    }
+
     suspend fun completeQuickSale(
         vehicleId: UUID,
         salePrice: BigDecimal,

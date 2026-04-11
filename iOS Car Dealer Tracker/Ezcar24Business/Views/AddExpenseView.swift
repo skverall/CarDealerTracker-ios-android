@@ -33,26 +33,21 @@ struct AddExpenseView: View {
     @State private var selectedAccount: FinancialAccount?
 
     // UI State
-    @State private var showTemplatesSheet: Bool = false
-    @State private var showSaveTemplateSheet: Bool = false
     @State private var templateName: String = ""
     @State private var isSaving: Bool = false
     @State private var showSavedToast: Bool = false
-    @State private var showDatePicker: Bool = false
     @State private var vehicleSearchText: String = ""
     @State private var showReceiptSourceDialog: Bool = false
     @State private var showReceiptImporter: Bool = false
-    @State private var showReceiptImagePicker: Bool = false
     @State private var receiptImagePickerSource: UIImagePickerController.SourceType = .photoLibrary
     @State private var receiptAttachment: ReceiptAttachment? = nil
     @State private var receiptPath: String? = nil
     @State private var receiptRemoved: Bool = false
     @State private var receiptShareUrl: URL? = nil
-    @State private var showReceiptShare: Bool = false
     @State private var showVehicleSelectionError: Bool = false
+    @State private var didPrefill: Bool = false
     
     // Quick Add States
-    @State private var showAddVehicleSheet: Bool = false
     @State private var showAddUserAlert: Bool = false
     @State private var newUserName: String = ""
     @StateObject private var vehicleViewModel: VehicleViewModel
@@ -62,6 +57,8 @@ struct AddExpenseView: View {
     
     enum ActiveSheet: Identifiable {
         case vehicle, user, account
+        case templates, saveTemplate, addVehicle
+        case datePicker, receiptImagePicker, receiptShare
         var id: Int { hashValue }
     }
 
@@ -164,47 +161,61 @@ struct AddExpenseView: View {
                 case .vehicle: vehicleSelector
                 case .user: userSelector
                 case .account: accountSelector
-                }
-            }
-            .sheet(isPresented: $showTemplatesSheet) {
-                templatesView
-            }
-            .sheet(isPresented: $showSaveTemplateSheet) {
-                saveTemplateView
-            }
-            .sheet(isPresented: $showAddVehicleSheet) {
-                AddVehicleView(viewModel: vehicleViewModel)
-            }
-            .sheet(isPresented: $showDatePicker) {
-                NavigationStack {
-                    DatePicker("Date", selection: $date, displayedComponents: .date)
-                        .datePickerStyle(.graphical)
-                        .tint(ColorTheme.primary)
-                        .padding()
-                        .onChange(of: date) { _, _ in
-                            showDatePicker = false
-                        }
-                        .navigationTitle("Select Date")
-                        .toolbar {
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("done".localizedString) { showDatePicker = false }
+                case .templates: templatesView
+                case .saveTemplate: saveTemplateView
+                case .addVehicle: AddVehicleView(viewModel: vehicleViewModel)
+                case .datePicker:
+                    NavigationStack {
+                        DatePicker("Date", selection: $date, displayedComponents: .date)
+                            .datePickerStyle(.graphical)
+                            .tint(ColorTheme.primary)
+                            .padding()
+                            .onChange(of: date) { _, _ in
+                                activeSheet = nil
                             }
+                            .navigationTitle("Select Date")
+                            .toolbar {
+                                ToolbarItem(placement: .confirmationAction) {
+                                    Button("done".localizedString) { activeSheet = nil }
+                                }
+                            }
+                    }
+                case .receiptImagePicker:
+                    ImagePicker(
+                        sourceType: receiptImagePickerSource,
+                        onImagePicked: { image in
+                            attachReceiptImage(image)
+                            activeSheet = nil
+                        },
+                        onCancel: {
+                            activeSheet = nil
                         }
+                    )
+                case .receiptShare:
+                    if let url = receiptShareUrl {
+                        ActivityView(activityItems: [url])
+                    }
                 }
             }
             .confirmationDialog("attach_receipt".localizedString, isPresented: $showReceiptSourceDialog, titleVisibility: .visible) {
                 if UIImagePickerController.isSourceTypeAvailable(.camera) {
                     Button("take_photo".localizedString) {
                         receiptImagePickerSource = .camera
-                        showReceiptImagePicker = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                            activeSheet = .receiptImagePicker
+                        }
                     }
                 }
                 Button("choose_from_gallery".localizedString) {
                     receiptImagePickerSource = .photoLibrary
-                    showReceiptImagePicker = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        activeSheet = .receiptImagePicker
+                    }
                 }
                 Button("choose_file".localizedString) {
-                    showReceiptImporter = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        showReceiptImporter = true
+                    }
                 }
                 Button("cancel".localizedString, role: .cancel) {}
             }
@@ -214,23 +225,6 @@ struct AddExpenseView: View {
                 allowsMultipleSelection: false
             ) { result in
                 handleReceiptImport(result)
-            }
-            .sheet(isPresented: $showReceiptImagePicker) {
-                ImagePicker(
-                    sourceType: receiptImagePickerSource,
-                    onImagePicked: { image in
-                        attachReceiptImage(image)
-                        showReceiptImagePicker = false
-                    },
-                    onCancel: {
-                        showReceiptImagePicker = false
-                    }
-                )
-            }
-            .sheet(isPresented: $showReceiptShare) {
-                if let url = receiptShareUrl {
-                    ActivityView(activityItems: [url])
-                }
             }
             .alert("Add New User", isPresented: $showAddUserAlert) {
                 TextField("User Name", text: $newUserName)
@@ -242,7 +236,10 @@ struct AddExpenseView: View {
             }
             .onAppear {
                 viewModel.refreshFiltersIfNeeded()
-                prefillIfNeeded()
+                if !didPrefill {
+                    prefillIfNeeded()
+                    didPrefill = true
+                }
             }
             .onChange(of: selectedVehicle) { _, newValue in
                 if newValue != nil {
@@ -429,7 +426,7 @@ struct AddExpenseView: View {
                 Spacer()
 
                 Button {
-                    showDatePicker = true
+                    activeSheet = .datePicker
                 } label: {
                     Text(date.formatted(date: .abbreviated, time: .omitted))
                         .font(.subheadline)
@@ -726,7 +723,7 @@ struct AddExpenseView: View {
             List(viewModel.templates, id: \.objectID) { t in
                 Button {
                     applyTemplate(t)
-                    showTemplatesSheet = false
+                    activeSheet = nil
                 } label: {
                     VStack(alignment: .leading) {
                         Text(t.name ?? "Template")
@@ -742,7 +739,7 @@ struct AddExpenseView: View {
             .navigationTitle("templates".localizedString)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("close".localizedString) { showTemplatesSheet = false }
+                    Button("close".localizedString) { activeSheet = nil }
                 }
             }
         }
@@ -760,7 +757,7 @@ struct AddExpenseView: View {
             .navigationTitle("save_template".localizedString)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("cancel".localizedString) { showSaveTemplateSheet = false }
+                    Button("cancel".localizedString) { activeSheet = nil }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("save".localizedString) {
@@ -880,7 +877,7 @@ struct AddExpenseView: View {
                 defaultDescription: description.isEmpty ? nil : description
             )
             templateName = ""
-            showSaveTemplateSheet = false
+            activeSheet = nil
             UINotificationFeedbackGenerator().notificationOccurred(.success)
         } catch {
             UINotificationFeedbackGenerator().notificationOccurred(.error)
@@ -936,7 +933,7 @@ struct AddExpenseView: View {
         if let attachment = receiptAttachment {
             if let url = writeReceiptTempFile(data: attachment.data, fileName: attachment.fileName) {
                 receiptShareUrl = url
-                showReceiptShare = true
+                activeSheet = .receiptShare
             }
             return
         }
@@ -948,7 +945,7 @@ struct AddExpenseView: View {
                 let url = writeReceiptTempFile(data: data, fileName: fileName)
                 await MainActor.run {
                     receiptShareUrl = url
-                    showReceiptShare = url != nil
+                    if url != nil { activeSheet = .receiptShare }
                 }
             }
         }

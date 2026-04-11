@@ -1,5 +1,6 @@
 package com.ezcar24.business.ui.search
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -26,6 +27,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,7 +39,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.Vehicle
+import com.ezcar24.business.ui.expense.ExpenseDetailBottomSheet
+import com.ezcar24.business.ui.expense.ExpenseViewModel
 import com.ezcar24.business.ui.theme.EzcarBackground
+import com.ezcar24.business.util.expenseDisplayDateTime
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -46,12 +53,23 @@ fun GlobalSearchScreen(
     onBack: () -> Unit,
     onOpenVehicle: (String) -> Unit,
     onOpenClient: (String?) -> Unit,
-    viewModel: GlobalSearchViewModel = hiltViewModel()
+    viewModel: GlobalSearchViewModel = hiltViewModel(),
+    expenseViewModel: ExpenseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val expenseUiState by expenseViewModel.uiState.collectAsState()
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
+    var selectedExpense by remember { mutableStateOf<Expense?>(null) }
+    val vehicleTitlesById = remember(expenseUiState.vehicles) {
+        expenseUiState.vehicles.associate { vehicle ->
+            vehicle.id to listOfNotNull(vehicle.make, vehicle.model)
+                .joinToString(" ")
+                .ifBlank { vehicle.vin }
+        }
+    }
 
     Scaffold(
         containerColor = EzcarBackground,
@@ -106,7 +124,8 @@ fun GlobalSearchScreen(
                         ExpenseSearchRow(
                             expense = expense,
                             dateFormatter = dateFormatter,
-                            formatCurrency = regionSettingsManager::formatCurrency
+                            formatCurrency = regionSettingsManager::formatCurrency,
+                            onClick = { selectedExpense = expense }
                         )
                     }
                 }
@@ -126,6 +145,22 @@ fun GlobalSearchScreen(
                 }
             }
         }
+    }
+
+    selectedExpense?.let { expense ->
+        ExpenseDetailBottomSheet(
+            expense = expense,
+            vehicleTitle = expense.vehicleId?.let(vehicleTitlesById::get),
+            onDismiss = { selectedExpense = null },
+            onSaveComment = expenseViewModel::updateExpenseComment,
+            onViewReceipt = { expenseViewModel.openExpenseReceipt(context, it) },
+            onReplaceReceipt = { targetExpense, receipt, onUpdated ->
+                expenseViewModel.replaceExpenseReceipt(targetExpense, receipt, onUpdated)
+            },
+            onRemoveReceipt = { targetExpense, onUpdated ->
+                expenseViewModel.removeExpenseReceipt(targetExpense, onUpdated)
+            }
+        )
     }
 }
 
@@ -180,18 +215,24 @@ private fun ClientSearchRow(client: Client, onClick: () -> Unit) {
 private fun ExpenseSearchRow(
     expense: Expense,
     dateFormatter: SimpleDateFormat,
-    formatCurrency: (java.math.BigDecimal) -> String
+    formatCurrency: (java.math.BigDecimal) -> String,
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(expense.expenseDescription ?: expense.category, fontWeight = FontWeight.Bold)
-            Text(dateFormatter.format(expense.date), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(
+                dateFormatter.format(expenseDisplayDateTime(expense)),
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray
+            )
         }
         Text(formatCurrency(expense.amount))
     }

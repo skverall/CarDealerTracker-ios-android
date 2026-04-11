@@ -111,6 +111,7 @@ fun SettingsScreen(
     onNavigateToRegionSettings: () -> Unit,
     onNavigateToTeamMembers: () -> Unit,
     onNavigateToBackupCenter: () -> Unit,
+    onNavigateToMonthlyReports: () -> Unit,
     onNavigateToDataHealth: () -> Unit,
     onNavigateToHoldingCostSettings: () -> Unit,
     onNavigateToChangePassword: () -> Unit = {},
@@ -123,6 +124,12 @@ fun SettingsScreen(
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     val context = LocalContext.current
+    val canCleanDuplicates = remember(uiState.activeOrganization?.role) {
+        when (uiState.activeOrganization?.role?.lowercase(Locale.US)) {
+            "owner", "admin" -> true
+            else -> false
+        }
+    }
     val appVersion = remember(context) {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
@@ -308,6 +315,16 @@ fun SettingsScreen(
                         color = EzcarOrange,
                         onClick = onNavigateToBackupCenter
                     )
+                    if (canCleanDuplicates) {
+                        SectionDivider()
+                        SettingsRow(
+                            title = "Email Reports",
+                            subtitle = "Monthly finance snapshot, preview and test delivery",
+                            icon = Icons.Default.Email,
+                            color = EzcarBlueBright,
+                            onClick = onNavigateToMonthlyReports
+                        )
+                    }
                     SectionDivider()
                     SettingsRow(
                         title = "Data Health",
@@ -316,6 +333,17 @@ fun SettingsScreen(
                         color = Color(0xFF22A6A1),
                         onClick = onNavigateToDataHealth
                     )
+                    if (canCleanDuplicates) {
+                        SectionDivider()
+                        SettingsRow(
+                            title = "Clean Up Duplicates",
+                            subtitle = "Merge duplicate vehicles, clients, users and accounts",
+                            icon = Icons.Default.Verified,
+                            color = EzcarPurple,
+                            isLoading = uiState.isDeduplicating,
+                            onClick = viewModel::cleanUpDuplicates
+                        )
+                    }
                     SectionDivider()
                     SettingsRow(
                         title = "Sync Now",
@@ -384,7 +412,7 @@ fun SettingsScreen(
                             context.startActivity(
                                 Intent(
                                     Intent.ACTION_VIEW,
-                                    Uri.parse("https://www.ezcar24.com/en/terms-of-use")
+                                    Uri.parse("https://www.ezcar24.com/en/terms-of-service")
                                 )
                             )
                         }

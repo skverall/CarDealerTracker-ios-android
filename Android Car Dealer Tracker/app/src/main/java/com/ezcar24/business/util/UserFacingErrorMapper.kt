@@ -8,6 +8,11 @@ import javax.net.ssl.SSLException
 enum class UserFacingErrorContext {
     LOAD_ACCOUNT,
     RUN_SYNC,
+    CLEAN_UP_DUPLICATES,
+    LOAD_MONTHLY_REPORT_SETTINGS,
+    SAVE_MONTHLY_REPORT_SETTINGS,
+    LOAD_MONTHLY_REPORT_PREVIEW,
+    SEND_MONTHLY_REPORT_TEST,
     SWITCH_BUSINESS,
     CREATE_BUSINESS,
     ACCEPT_TEAM_INVITE,
@@ -118,6 +123,21 @@ object UserFacingErrorMapper {
 
             UserFacingErrorContext.RUN_SYNC ->
                 "Unable to sync right now. Check your network and try again."
+
+            UserFacingErrorContext.CLEAN_UP_DUPLICATES ->
+                "We couldn't clean duplicate records right now. Please try again."
+
+            UserFacingErrorContext.LOAD_MONTHLY_REPORT_SETTINGS ->
+                "We couldn't load email report settings right now. Please try again."
+
+            UserFacingErrorContext.SAVE_MONTHLY_REPORT_SETTINGS ->
+                "We couldn't save email report settings right now. Please try again."
+
+            UserFacingErrorContext.LOAD_MONTHLY_REPORT_PREVIEW ->
+                "We couldn't load the monthly report preview right now. Please try again."
+
+            UserFacingErrorContext.SEND_MONTHLY_REPORT_TEST ->
+                "We couldn't send the test report right now. Please try again."
 
             UserFacingErrorContext.SWITCH_BUSINESS ->
                 "We couldn't switch businesses right now. Please try again."

@@ -274,6 +274,9 @@ interface AccountTransactionDao : BaseDao<AccountTransaction> {
 
 @Dao
 interface ExpenseTemplateDao : BaseDao<ExpenseTemplate> {
+    @Query("SELECT * FROM expense_templates WHERE deletedAt IS NULL ORDER BY name ASC")
+    fun getAllActive(): Flow<List<ExpenseTemplate>>
+
     @Query("SELECT * FROM expense_templates WHERE id = :id")
     suspend fun getById(id: UUID): ExpenseTemplate?
 
@@ -468,7 +471,7 @@ interface InventoryAlertDao : BaseDao<InventoryAlert> {
         SyncQueueItem::class, HoldingCostSettings::class,
         VehicleInventoryStats::class, InventoryAlert::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -682,6 +685,12 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_6_7 = object : androidx.room.migration.Migration(6, 7) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE vehicles ADD COLUMN mileage INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE expenses ADD COLUMN receiptPath TEXT")
             }
         }
     }

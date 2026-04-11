@@ -393,11 +393,11 @@ export async function buildMonthlyReportSnapshot(
     .map((sale) => {
       const vehicle = sale.vehicle_id ? vehiclesById.get(sale.vehicle_id) ?? null : null;
       const saleDate = sale.date;
-      const vehicleExpenses = relevantVehicleExpenses(vehicleExpenseMap.get(sale.vehicle_id ?? ""), saleDate)
+      const vehicleExpenses = relevantVehicleExpenses(vehicleExpenseMap.get(sale.vehicle_id ?? ""), saleDate, timezone)
         .reduce((total, expense) => total + numberValue(expense.amount), 0);
       const holdingCost = calculateHoldingCost({
         vehicle,
-        expenses: relevantVehicleExpenses(vehicleExpenseMap.get(sale.vehicle_id ?? ""), saleDate),
+        expenses: relevantVehicleExpenses(vehicleExpenseMap.get(sale.vehicle_id ?? ""), saleDate, timezone),
         saleDate,
         settings: holdingCostSettings,
       });
@@ -429,7 +429,7 @@ export async function buildMonthlyReportSnapshot(
       date: expense.date ?? monthRange.startDate,
       amount: numberValue(expense.amount),
     } satisfies ExpenseRow))
-    .sort((left, right) => right.date.localeCompare(left.date));
+    .sort((left, right) => compareDateish(right.date, left.date, monthRange.timezone));
 
   const expenseCategories = buildExpenseCategories(expenseActivity);
 
@@ -821,11 +821,52 @@ function monthBounds(reportMonth: ReportMonth, timezone: string) {
   return {
     start,
     end,
+    timezone,
     startDate: start.toPlainDate().toString(),
     endDate: end.toPlainDate().toString(),
     startInstant: start.toInstant(),
     endInstant: end.toInstant(),
   };
+}
+
+function dateishInstant(value: string | null, timezone: string) {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    return Temporal.Instant.from(value);
+  } catch (_error) {
+  }
+
+  try {
+    return Temporal.PlainDate.from(value)
+      .toZonedDateTime({
+        timeZone: timezone,
+        plainTime: Temporal.PlainTime.from("00:00"),
+      })
+      .toInstant();
+  } catch (_error) {
+  }
+
+  return null;
+}
+
+function compareDateish(left: string | null, right: string | null, timezone: string) {
+  const leftInstant = dateishInstant(left, timezone);
+  const rightInstant = dateishInstant(right, timezone);
+
+  if (!leftInstant && !rightInstant) {
+    return 0;
+  }
+  if (!leftInstant) {
+    return -1;
+  }
+  if (!rightInstant) {
+    return 1;
+  }
+
+  return Temporal.Instant.compare(leftInstant, rightInstant);
 }
 
 export function previousCalendarMonth(referenceInstant: string, timezone: string) {
@@ -1006,12 +1047,22 @@ async function loadPartSaleLineItems(admin: SupabaseClient, organizationId: stri
   return (data ?? []) as PartSaleLineItemRecord[];
 }
 
-function relevantVehicleExpenses(expenses: ExpenseRecord[] | undefined, throughDate: string) {
+function relevantVehicleExpenses(
+  expenses: ExpenseRecord[] | undefined,
+  throughDate: string,
+  timezone: string,
+) {
+  const throughInstant = dateishInstant(throughDate, timezone);
+  if (!throughInstant) {
+    return [];
+  }
+
   return (expenses ?? []).filter((expense) => {
-    if (!expense.date) {
+    const expenseInstant = dateishInstant(expense.date, timezone);
+    if (!expenseInstant) {
       return false;
     }
-    return expense.date <= throughDate;
+    return Temporal.Instant.compare(expenseInstant, throughInstant) <= 0;
   });
 }
 
@@ -1192,10 +1243,12 @@ function previousDate(nextDate: string) {
 }
 
 function isDateWithinMonth(date: string | null, range: ReturnType<typeof monthBounds>) {
-  if (!date) {
+  const instant = dateishInstant(date, range.timezone);
+  if (!instant) {
     return false;
   }
-  return date >= range.startDate && date < range.endDate;
+  return Temporal.Instant.compare(instant, range.startInstant) >= 0 &&
+    Temporal.Instant.compare(instant, range.endInstant) < 0;
 }
 
 function reportHealthSignal(snapshot: MonthlyReportSnapshot) {

@@ -3342,7 +3342,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.id = e.id
                 obj.amount = NSDecimalNumber(decimal: e.amount)
                 
-                if let d = CloudSyncManager.parseRemoteDateOnly(e.date) {
+                if let d = CloudSyncManager.parseDateAndTime(e.date) ?? CloudSyncManager.parseRemoteDateOnly(e.date) {
                     obj.date = d
                 } else {
                     obj.date = e.createdAt
@@ -4077,6 +4077,14 @@ final class CloudSyncManager: ObservableObject {
         return f.string(from: date)
     }
 
+    nonisolated private static func hasExplicitTime(_ date: Date) -> Bool {
+        let components = Calendar.current.dateComponents([.hour, .minute, .second, .nanosecond], from: date)
+        return components.hour != 0 ||
+            components.minute != 0 ||
+            components.second != 0 ||
+            components.nanosecond != 0
+    }
+
     nonisolated private static func pushAnchorCandidate<T: PushAnchorTimestamped>(for remote: T) -> Date? {
         remote.updatedAt
     }
@@ -4132,12 +4140,18 @@ final class CloudSyncManager: ObservableObject {
 
     nonisolated private func makeRemoteExpense(from expense: Expense, dealerId: UUID) -> RemoteExpense? {
         guard let id = expense.id else { return nil }
-        let date = Calendar.current.startOfDay(for: expense.date ?? Date())
+        let originalDate = expense.date ?? Date()
+        let encodedDate: String
+        if CloudSyncManager.hasExplicitTime(originalDate) {
+            encodedDate = CloudSyncManager.formatDateAndTime(originalDate)
+        } else {
+            encodedDate = CloudSyncManager.formatDateOnly(Calendar.current.startOfDay(for: originalDate))
+        }
         return RemoteExpense(
             id: id,
             dealerId: dealerId,
             amount: (expense.amount as Decimal?) ?? 0,
-            date: CloudSyncManager.formatDateOnly(date),
+            date: encodedDate,
             expenseDescription: expense.expenseDescription,
             category: expense.category ?? "",
             receiptPath: expense.receiptPath,

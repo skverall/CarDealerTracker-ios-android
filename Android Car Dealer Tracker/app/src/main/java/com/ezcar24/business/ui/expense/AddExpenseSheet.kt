@@ -2,7 +2,14 @@ package com.ezcar24.business.ui.expense
 
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
+import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import android.widget.DatePicker
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -37,11 +44,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ezcar24.business.data.local.ExpenseCategoryType
+import com.ezcar24.business.data.local.ExpenseTemplate
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.User
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -52,10 +61,12 @@ import java.util.Locale
 @Composable
 fun AddExpenseSheet(
     onDismiss: () -> Unit,
-    onSave: (BigDecimal, Date, String, String, Vehicle?, User?, FinancialAccount?, ExpenseCategoryType) -> Unit,
+    onSave: (BigDecimal, Date, String, String, Vehicle?, User?, FinancialAccount?, ExpenseCategoryType, ExpenseReceiptDraft?) -> Unit,
+    onSaveTemplate: (String, String, BigDecimal?, String?, Vehicle?, User?, FinancialAccount?) -> Unit,
     vehicles: List<Vehicle>,
     users: List<User>,
     accounts: List<FinancialAccount>,
+    templates: List<ExpenseTemplate>,
     currencyCode: String
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
@@ -73,10 +84,35 @@ fun AddExpenseSheet(
     var showVehicleSheet by remember { mutableStateOf(false) }
     var showUserSheet by remember { mutableStateOf(false) }
     var showAccountSheet by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
+    var showTemplatesSheet by remember { mutableStateOf(false) }
+    var showSaveTemplateDialog by remember { mutableStateOf(false) }
+    var showReceiptActionsSheet by remember { mutableStateOf(false) }
+    var templateName by remember { mutableStateOf("") }
+    var receiptDraft by remember { mutableStateOf<ExpenseReceiptDraft?>(null) }
 
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val isValid = amountStr.isNotEmpty() && (amountStr.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+    val openReceiptPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val draft = readExpenseReceiptDraft(context, uri)
+            if (draft != null) {
+                receiptDraft = draft
+            } else {
+                android.widget.Toast.makeText(context, "Could not attach receipt", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    val takePhotoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            receiptDraft = bitmap.toExpenseReceiptDraft()
+        }
+    }
 
     val categories = remember {
         listOf(
@@ -140,18 +176,45 @@ fun AddExpenseSheet(
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    IconButton(
-                        onClick = { },
-                        modifier = Modifier
-                            .size(44.dp)
-                            .background(Color.White, CircleShape)
-                    ) {
-                        Icon(
-                            Icons.Default.MoreHoriz,
-                            contentDescription = "Menu",
-                            tint = EzcarNavy,
-                            modifier = Modifier.size(24.dp)
-                        )
+                    Box {
+                        IconButton(
+                            onClick = { showMoreMenu = true },
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(Color.White, CircleShape)
+                        ) {
+                            Icon(
+                                Icons.Default.MoreHoriz,
+                                contentDescription = "Menu",
+                                tint = EzcarNavy,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
+                        ) {
+                            if (templates.isNotEmpty()) {
+                                DropdownMenuItem(
+                                    text = { Text("Use Template") },
+                                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        showTemplatesSheet = true
+                                    }
+                                )
+                            }
+                            DropdownMenuItem(
+                                text = { Text("Save as Template") },
+                                leadingIcon = { Icon(Icons.Default.BookmarkBorder, contentDescription = null) },
+                                onClick = {
+                                    templateName = description.trim().takeIf { it.isNotEmpty() } ?: "Template"
+                                    showMoreMenu = false
+                                    showSaveTemplateDialog = true
+                                }
+                            )
+                        }
                     }
                 }
 
@@ -173,7 +236,11 @@ fun AddExpenseSheet(
                                 letterSpacing = 1.sp
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
                                     currencyCode,
                                     style = MaterialTheme.typography.headlineSmall,
@@ -181,23 +248,23 @@ fun AddExpenseSheet(
                                     color = Color.Gray
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                TextField(
+                                androidx.compose.foundation.text.BasicTextField(
                                     value = amountStr,
                                     onValueChange = { if (it.count { c -> c == '.' } <= 1) amountStr = it },
                                     textStyle = MaterialTheme.typography.displayLarge.copy(
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 48.sp,
-                                        textAlign = TextAlign.Center
-                                    ),
-                                    colors = TextFieldDefaults.colors(
-                                        focusedContainerColor = Color.Transparent,
-                                        unfocusedContainerColor = Color.Transparent,
-                                        focusedIndicatorColor = Color.Transparent,
-                                        unfocusedIndicatorColor = Color.Transparent
+                                        color = MaterialTheme.colorScheme.onSurface
                                     ),
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                    placeholder = {
-                                        Text("0", style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 48.sp, color = Color.LightGray))
+                                    decorationBox = { innerTextField ->
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            if (amountStr.isEmpty()) {
+                                                Text("0", style = MaterialTheme.typography.displayLarge.copy(fontWeight = FontWeight.Bold, fontSize = 48.sp, color = Color.LightGray))
+                                            } else {
+                                                innerTextField()
+                                            }
+                                        }
                                     },
                                     modifier = Modifier.width(IntrinsicSize.Min)
                                 )
@@ -384,6 +451,14 @@ fun AddExpenseSheet(
                                 isActive = selectedAccount != null,
                                 onClick = { showAccountSheet = true }
                             )
+
+                            ContextSelectorButton(
+                                title = "Receipt",
+                                value = receiptDraft?.fileName ?: "Attach receipt",
+                                icon = Icons.Default.ReceiptLong,
+                                isActive = receiptDraft != null,
+                                onClick = { showReceiptActionsSheet = true }
+                            )
                         }
                     }
                 }
@@ -399,7 +474,17 @@ fun AddExpenseSheet(
                     onClick = {
                         val amt = amountStr.toBigDecimalOrNull()
                         if (amt != null && amt > BigDecimal.ZERO) {
-                            onSave(amt, date, description, category, selectedVehicle, selectedUser, selectedAccount, expenseType)
+                            onSave(
+                                amt,
+                                date,
+                                description,
+                                category,
+                                selectedVehicle,
+                                selectedUser,
+                                selectedAccount,
+                                expenseType,
+                                receiptDraft
+                            )
                         }
                     },
                     enabled = isValid,
@@ -448,7 +533,21 @@ fun AddExpenseSheet(
                 SelectionListSheet(
                     title = "Select User",
                     items = users,
-                    itemContent = { user -> Text(user.name ?: "Unknown", fontWeight = FontWeight.SemiBold) },
+                    itemContent = { user -> 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(EzcarBackgroundLight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Person, null, tint = EzcarNavy, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(user.name ?: "Unknown", fontWeight = FontWeight.SemiBold)
+                        }
+                    },
                     onSelect = {
                         selectedUser = it
                         showUserSheet = false
@@ -456,6 +555,9 @@ fun AddExpenseSheet(
                     onClear = {
                         selectedUser = null
                         showUserSheet = false
+                    },
+                    onAddClick = {
+                        android.widget.Toast.makeText(context, "Add User feature coming soon", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -466,7 +568,22 @@ fun AddExpenseSheet(
                 SelectionListSheet(
                     title = "Select Account",
                     items = accounts,
-                    itemContent = { account -> Text(account.accountType?.replaceFirstChar { it.titlecase() } ?: "Account", fontWeight = FontWeight.SemiBold) },
+                    itemContent = { account -> 
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val isCash = account.accountType?.lowercase() == "cash"
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(EzcarBackgroundLight),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(if (isCash) Icons.Default.Money else Icons.Default.AccountBalance, null, tint = EzcarNavy, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(account.accountType?.replaceFirstChar { it.titlecase() } ?: "Account", fontWeight = FontWeight.SemiBold)
+                        }
+                    },
                     onSelect = {
                         selectedAccount = it
                         showAccountSheet = false
@@ -474,9 +591,107 @@ fun AddExpenseSheet(
                     onClear = {
                         selectedAccount = null
                         showAccountSheet = false
+                    },
+                    onAddClick = {
+                        android.widget.Toast.makeText(context, "Add Account feature coming soon", android.widget.Toast.LENGTH_SHORT).show()
                     }
                 )
             }
+        }
+
+        if (showTemplatesSheet) {
+            ModalBottomSheet(onDismissRequest = { showTemplatesSheet = false }, containerColor = Color.White) {
+                TemplateSelectionSheet(
+                    templates = templates,
+                    onDismiss = { showTemplatesSheet = false },
+                    onApply = { template ->
+                        amountStr = template.defaultAmount?.stripTrailingZeros()?.toPlainString().orEmpty()
+                        description = template.defaultDescription.orEmpty()
+                        category = template.category ?: "vehicle"
+                        selectedVehicle = vehicles.firstOrNull { it.id == template.vehicleId }
+                        selectedUser = users.firstOrNull { it.id == template.userId }
+                        selectedAccount = accounts.firstOrNull { it.id == template.accountId }
+                        showTemplatesSheet = false
+                    }
+                )
+            }
+        }
+
+        if (showReceiptActionsSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showReceiptActionsSheet = false },
+                containerColor = Color.White
+            ) {
+                ReceiptActionSheet(
+                    hasReceipt = receiptDraft != null,
+                    receiptLabel = receiptDraft?.fileName,
+                    onDismiss = { showReceiptActionsSheet = false },
+                    onTakePhoto = {
+                        showReceiptActionsSheet = false
+                        takePhotoLauncher.launch(null)
+                    },
+                    onChooseFile = {
+                        showReceiptActionsSheet = false
+                        openReceiptPickerLauncher.launch(arrayOf("image/*", "application/pdf"))
+                    },
+                    onRemove = {
+                        receiptDraft = null
+                        showReceiptActionsSheet = false
+                    }
+                )
+            }
+        }
+
+        if (showSaveTemplateDialog) {
+            AlertDialog(
+                onDismissRequest = { showSaveTemplateDialog = false },
+                title = { Text("Save Template") },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = templateName,
+                            onValueChange = { templateName = it },
+                            label = { Text("Template Name") },
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "This saves the current category, amount, description, vehicle, user and account.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onSaveTemplate(
+                                templateName,
+                                category,
+                                amountStr.toBigDecimalOrNull(),
+                                description,
+                                selectedVehicle,
+                                selectedUser,
+                                selectedAccount
+                            )
+                            showSaveTemplateDialog = false
+                            android.widget.Toast.makeText(
+                                context,
+                                "Template saved",
+                                android.widget.Toast.LENGTH_SHORT
+                            ).show()
+                        },
+                        enabled = templateName.trim().isNotEmpty()
+                    ) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSaveTemplateDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
         }
     }
 }
@@ -563,15 +778,26 @@ fun <T> SelectionListSheet(
     items: List<T>,
     itemContent: @Composable (T) -> Unit,
     onSelect: (T) -> Unit,
-    onClear: () -> Unit
+    onClear: () -> Unit,
+    onAddClick: (() -> Unit)? = null
 ) {
     Column(modifier = Modifier.padding(bottom = 50.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(20.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            if (onAddClick != null) {
+                IconButton(onClick = onAddClick) {
+                    Icon(Icons.Default.Add, contentDescription = "Add", tint = EzcarNavy)
+                }
+            }
+        }
 
         LazyColumn {
             item {
@@ -601,4 +827,203 @@ fun <T> SelectionListSheet(
             }
         }
     }
+}
+
+@Composable
+fun TemplateSelectionSheet(
+    templates: List<ExpenseTemplate>,
+    onDismiss: () -> Unit,
+    onApply: (ExpenseTemplate) -> Unit
+) {
+    Column(modifier = Modifier.padding(bottom = 50.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Templates",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+
+        if (templates.isEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "No saved templates yet",
+                    color = Color.Gray
+                )
+            }
+        } else {
+            LazyColumn {
+                items(templates) { template ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onApply(template) }
+                            .padding(horizontal = 20.dp, vertical = 14.dp)
+                    ) {
+                        Text(
+                            text = template.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        val subtitle = listOfNotNull(
+                            template.category?.replaceFirstChar { it.titlecase() },
+                            template.defaultDescription?.takeIf { it.isNotBlank() }
+                        ).joinToString(" • ")
+                        if (subtitle.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = subtitle,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ReceiptActionSheet(
+    hasReceipt: Boolean,
+    receiptLabel: String?,
+    onDismiss: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onChooseFile: () -> Unit,
+    onRemove: () -> Unit
+) {
+    Column(modifier = Modifier.padding(bottom = 50.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Receipt",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                receiptLabel?.let {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray
+                    )
+                }
+            }
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+
+        ReceiptActionRow(
+            icon = Icons.Default.PhotoCamera,
+            title = "Take Photo",
+            onClick = onTakePhoto
+        )
+        ReceiptActionRow(
+            icon = Icons.Default.AttachFile,
+            title = "Choose File",
+            onClick = onChooseFile
+        )
+        if (hasReceipt) {
+            ReceiptActionRow(
+                icon = Icons.Default.DeleteOutline,
+                title = "Remove Receipt",
+                titleColor = MaterialTheme.colorScheme.error,
+                onClick = onRemove
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReceiptActionRow(
+    icon: ImageVector,
+    title: String,
+    titleColor: Color = MaterialTheme.colorScheme.onSurface,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = titleColor
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = titleColor
+        )
+    }
+}
+
+fun readExpenseReceiptDraft(context: Context, uri: Uri): ExpenseReceiptDraft? {
+    val resolver = context.contentResolver
+    val bytes = resolver.openInputStream(uri)?.use { it.readBytes() } ?: return null
+    val rawName = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+        if (cursor.moveToFirst()) {
+            cursor.getString(0)
+        } else {
+            null
+        }
+    }
+    val contentType = resolver.getType(uri) ?: "application/octet-stream"
+    val baseFileName = rawName?.takeIf { it.isNotBlank() } ?: "receipt-${System.currentTimeMillis()}"
+    val extensionFromName = baseFileName.substringAfterLast('.', "").lowercase(Locale.US)
+    val fileExtension = extensionFromName.ifBlank {
+        MimeTypeMap.getSingleton()
+            .getExtensionFromMimeType(contentType)
+            ?.lowercase(Locale.US)
+            ?: "bin"
+    }
+    val fileName = if (extensionFromName.isBlank()) {
+        "$baseFileName.$fileExtension"
+    } else {
+        baseFileName
+    }
+    return ExpenseReceiptDraft(
+        bytes = bytes,
+        fileName = fileName,
+        contentType = contentType,
+        fileExtension = fileExtension
+    )
+}
+
+fun Bitmap.toExpenseReceiptDraft(): ExpenseReceiptDraft {
+    val output = ByteArrayOutputStream()
+    compress(Bitmap.CompressFormat.JPEG, 85, output)
+    val timestamp = System.currentTimeMillis()
+    return ExpenseReceiptDraft(
+        bytes = output.toByteArray(),
+        fileName = "receipt-$timestamp.jpg",
+        contentType = "image/jpeg",
+        fileExtension = "jpg"
+    )
 }

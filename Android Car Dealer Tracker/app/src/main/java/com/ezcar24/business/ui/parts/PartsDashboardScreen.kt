@@ -69,6 +69,9 @@ fun PartsDashboardScreen(
     var showAddPartDialog by remember { mutableStateOf(false) }
     var showReceiveStockDialog by remember { mutableStateOf(false) }
     var showAddSaleDialog by remember { mutableStateOf(false) }
+    var selectedPartDetail by remember { mutableStateOf<PartInventoryItem?>(null) }
+    var preferredReceiveStockPartId by remember { mutableStateOf<UUID?>(null) }
+    var preferredSalePartId by remember { mutableStateOf<UUID?>(null) }
 
     Scaffold(
         containerColor = EzcarBackground,
@@ -132,7 +135,8 @@ fun PartsDashboardScreen(
                 formatCurrency = regionSettingsManager::formatCurrency,
                 onToggleLowStock = { inventoryViewModel.toggleLowStockOnly(it) },
                 onCategorySelected = { inventoryViewModel.setCategory(it) },
-                onReceiveStock = { showReceiveStockDialog = true }
+                onReceiveStock = { showReceiveStockDialog = true },
+                onPartClick = { selectedPartDetail = it }
             )
         } else {
             PartsSalesContent(
@@ -169,7 +173,11 @@ fun PartsDashboardScreen(
         ReceiveStockDialog(
             parts = inventoryState.parts.map { it.part },
             accounts = inventoryState.accounts,
-            onDismiss = { showReceiveStockDialog = false },
+            preferredPartId = preferredReceiveStockPartId,
+            onDismiss = {
+                preferredReceiveStockPartId = null
+                showReceiveStockDialog = false
+            },
             onSave = { partId, quantity, unitCost, batchLabel, notes, purchaseDate, accountId ->
                 inventoryViewModel.receiveStock(
                     partId = partId,
@@ -180,6 +188,7 @@ fun PartsDashboardScreen(
                     purchaseDate = purchaseDate,
                     selectedAccountId = accountId
                 )
+                preferredReceiveStockPartId = null
                 showReceiveStockDialog = false
             }
         )
@@ -190,7 +199,11 @@ fun PartsDashboardScreen(
             parts = salesState.parts,
             accounts = salesState.accounts,
             clients = salesState.clients,
-            onDismiss = { showAddSaleDialog = false },
+            preferredPartId = preferredSalePartId,
+            onDismiss = {
+                preferredSalePartId = null
+                showAddSaleDialog = false
+            },
             onSave = { saleDate, accountId, lines, buyerName, buyerPhone, paymentMethod, notes, clientId ->
                 scope.launch {
                     val success = salesViewModel.createSale(
@@ -204,9 +217,29 @@ fun PartsDashboardScreen(
                         selectedClientId = clientId
                     )
                     if (success) {
+                        preferredSalePartId = null
                         showAddSaleDialog = false
                     }
                 }
+            }
+        )
+    }
+
+    selectedPartDetail?.let { item ->
+        PartDetailBottomSheet(
+            item = item,
+            batches = salesState.batches.filter { it.partId == item.part.id },
+            formatCurrency = regionSettingsManager::formatCurrency,
+            onDismiss = { selectedPartDetail = null },
+            onReceiveStock = {
+                preferredReceiveStockPartId = item.part.id
+                selectedPartDetail = null
+                showReceiveStockDialog = true
+            },
+            onAddSale = {
+                preferredSalePartId = item.part.id
+                selectedPartDetail = null
+                showAddSaleDialog = true
             }
         )
     }
@@ -219,7 +252,8 @@ private fun PartsInventoryContent(
     formatCurrency: (BigDecimal) -> String,
     onToggleLowStock: (Boolean) -> Unit,
     onCategorySelected: (String?) -> Unit,
-    onReceiveStock: () -> Unit
+    onReceiveStock: () -> Unit,
+    onPartClick: (PartInventoryItem) -> Unit
 ) {
     val totalValue = state.parts.fold(BigDecimal.ZERO) { total, item -> total + item.inventoryValue }
     val lowStockCount = state.parts.count { it.quantityOnHand <= BigDecimal("2") }
@@ -276,7 +310,11 @@ private fun PartsInventoryContent(
             modifier = Modifier.fillMaxSize()
         ) {
             items(state.filteredParts) { item ->
-                PartRow(item = item, formatCurrency = formatCurrency)
+                PartRow(
+                    item = item,
+                    formatCurrency = formatCurrency,
+                    onClick = { onPartClick(item) }
+                )
             }
         }
 
@@ -311,11 +349,16 @@ private fun PartsSalesContent(
 }
 
 @Composable
-private fun PartRow(item: PartInventoryItem, formatCurrency: (BigDecimal) -> String) {
+private fun PartRow(
+    item: PartInventoryItem,
+    formatCurrency: (BigDecimal) -> String,
+    onClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -506,6 +549,7 @@ private fun AddPartDialog(
 private fun ReceiveStockDialog(
     parts: List<Part>,
     accounts: List<FinancialAccount>,
+    preferredPartId: UUID? = null,
     onDismiss: () -> Unit,
     onSave: (
         partId: UUID,
@@ -517,7 +561,9 @@ private fun ReceiveStockDialog(
         accountId: UUID?
     ) -> Unit
 ) {
-    var selectedPartId by remember { mutableStateOf<UUID?>(parts.firstOrNull()?.id) }
+    var selectedPartId by remember(preferredPartId, parts) {
+        mutableStateOf(preferredPartId ?: parts.firstOrNull()?.id)
+    }
     var selectedAccountId by remember { mutableStateOf<UUID?>(accounts.firstOrNull()?.id) }
     var quantity by remember { mutableStateOf("") }
     var unitCost by remember { mutableStateOf("") }
@@ -594,6 +640,7 @@ private fun AddPartSaleDialog(
     parts: List<Part>,
     accounts: List<FinancialAccount>,
     clients: List<Client>,
+    preferredPartId: UUID? = null,
     onDismiss: () -> Unit,
     onSave: (
         saleDate: Date,
@@ -615,7 +662,7 @@ private fun AddPartSaleDialog(
     var notes by remember { mutableStateOf("") }
     var selectedClientId by remember { mutableStateOf<UUID?>(null) }
     var lineItems by remember { mutableStateOf(listOf<PartSaleLineDraft>()) }
-    var showLineDialog by remember { mutableStateOf(false) }
+    var showLineDialog by remember(preferredPartId) { mutableStateOf(preferredPartId != null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -680,6 +727,7 @@ private fun AddPartSaleDialog(
     if (showLineDialog) {
         AddLineItemDialog(
             parts = parts,
+            preferredPartId = preferredPartId,
             onDismiss = { showLineDialog = false },
             onSave = { partId, quantity, unitPrice ->
                 lineItems = lineItems + PartSaleLineDraft(partId, quantity, unitPrice)
@@ -702,10 +750,13 @@ private fun AddPartSaleDialog(
 @Composable
 private fun AddLineItemDialog(
     parts: List<Part>,
+    preferredPartId: UUID? = null,
     onDismiss: () -> Unit,
     onSave: (partId: UUID, quantity: BigDecimal, unitPrice: BigDecimal) -> Unit
 ) {
-    var selectedPartId by remember { mutableStateOf<UUID?>(parts.firstOrNull()?.id) }
+    var selectedPartId by remember(preferredPartId, parts) {
+        mutableStateOf(preferredPartId ?: parts.firstOrNull()?.id)
+    }
     var quantity by remember { mutableStateOf("") }
     var unitPrice by remember { mutableStateOf("") }
 

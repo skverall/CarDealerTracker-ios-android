@@ -5,89 +5,42 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e7d65bf1-1412-4f9e-8286-172092b3e465" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.gradle/9.1.0/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.1.0/checksums/checksums.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.1.0/checksums/md5-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.1.0/checksums/md5-checksums.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.1.0/checksums/sha1-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.1.0/checksums/sha1-checksums.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.1.0/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.1.0/fileHashes/fileHashes.bin" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/9.1.0/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.1.0/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/checksums/checksums.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/checksums/checksums.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/checksums/md5-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/checksums/md5-checksums.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/checksums/sha1-checksums.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/checksums/sha1-checksums.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/executionHistory/executionHistory.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/executionHistory/executionHistory.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/executionHistory/executionHistory.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/executionHistory/executionHistory.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/fileHashes/fileHashes.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/fileHashes/fileHashes.bin" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/fileHashes/fileHashes.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/fileHashes/fileHashes.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/9.3.1/fileHashes/resourceHashesCache.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/9.3.1/fileHashes/resourceHashesCache.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/buildOutputCleanup.lock" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/cache.properties" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/cache.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/buildOutputCleanup/outputFiles.bin" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gradle/file-system.probe" beforeDir="false" afterPath="$PROJECT_DIR$/.gradle/file-system.probe" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/caches/deviceStreaming.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/deploymentTargetSelector.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/AndroidManifest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/Ezcar24Application.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/Ezcar24Application.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/MainActivity.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/images/ImageStore.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/images/ImageStore.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/local/AppDatabase.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/local/AppDatabase.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/local/Entities.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/local/Entities.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/repository/AuthRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/repository/AuthRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/repository/ClientInteractionRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/repository/ClientInteractionRepository.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/sync/CloudSyncEnvironment.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/sync/CloudSyncEnvironment.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/billing/SubscriptionManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/billing/SubscriptionManager.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/repository/AccountRepository.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/repository/AccountRepository.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/sync/CloudSyncManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/sync/CloudSyncManager.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/sync/RemoteModels.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/data/sync/RemoteModels.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/di/AppModule.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/di/AppModule.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/auth/AuthViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/auth/AuthViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/auth/LoginScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/auth/LoginScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/client/ClientDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/client/ClientDetailScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/client/ClientDetailViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/client/ClientDetailViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/FinancialSummaryCard.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/FinancialSummaryCard.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/HoldingCostIndicator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/HoldingCostIndicator.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/ROIBadge.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/ROIBadge.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/AddInteractionSheet.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/AddInteractionSheet.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/FunnelVisualization.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/FunnelVisualization.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/InteractionItem.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/InteractionItem.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/LeadCard.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/LeadCard.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/LeadPriorityIndicator.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/LeadPriorityIndicator.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/LeadSourceBadge.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/LeadSourceBadge.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/LeadStageBadge.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/crm/LeadStageBadge.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/inventory/BurningInventoryList.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/inventory/BurningInventoryList.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/inventory/ROITable.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/inventory/ROITable.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/inventory/TurnoverMetricsCard.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/components/inventory/TurnoverMetricsCard.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/crm/LeadFunnelScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/crm/LeadFunnelScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/crm/LeadManagementScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/crm/LeadManagementScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/crm/LeadManagementViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/crm/LeadManagementViewModel.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/client/ClientListScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/client/ClientListScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/dashboard/DashboardScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/dashboard/DashboardScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/dashboard/DashboardViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/dashboard/DashboardViewModel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/expense/AddExpenseSheet.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/expense/AddExpenseSheet.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/expense/ExpenseScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/expense/ExpenseScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/expense/ExpenseViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/expense/ExpenseViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/finance/DebtScreens.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/finance/DebtScreens.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/finance/FinancialAccountScreens.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/finance/FinancialAccountScreens.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/inventory/InventoryAnalyticsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/inventory/InventoryAnalyticsScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/inventory/InventoryAnalyticsViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/inventory/InventoryAnalyticsViewModel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/main/MainScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/main/MainScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/main/MainViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/main/MainViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/parts/PartSalesViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/parts/PartSalesViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/parts/PartsDashboardScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/parts/PartsDashboardScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/parts/PartsInventoryViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/parts/PartsInventoryViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/sale/AddSaleScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/sale/AddSaleScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/sale/SalesScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/sale/SalesScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/search/GlobalSearchScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/search/GlobalSearchScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/BackupCenterScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/BackupCenterScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/BackupCenterViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/BackupCenterViewModel.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/SettingsScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/SettingsScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/SettingsViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/SettingsViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/TeamMembersScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/TeamMembersScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/TeamMembersViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/settings/TeamMembersViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/theme/Color.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/theme/Color.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/theme/Theme.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/theme/Theme.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/theme/Type.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/theme/Type.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleAddEditScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleAddEditScreen.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleDetailScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleDetailScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleListScreen.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleListScreen.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleViewModel.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/ui/vehicle/VehicleViewModel.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/worker/InventoryStatsWorker.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/worker/InventoryStatsWorker.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/reports/problems/problems-report.html" beforeDir="false" afterPath="$PROJECT_DIR$/build/reports/problems/problems-report.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle/libs.versions.toml" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/libs.versions.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" afterPath="$PROJECT_DIR$/gradle/wrapper/gradle-wrapper.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/settings.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/settings.gradle.kts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/util/UserFacingErrorMapper.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/ezcar24/business/util/UserFacingErrorMapper.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../Ezcar24business-dealers" beforeDir="false" afterPath="$PROJECT_DIR$/../Ezcar24business-dealers" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/CloudSyncManager.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Services/CloudSyncManager.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/ExpenseListView.swift" beforeDir="false" afterPath="$PROJECT_DIR$/../iOS Car Dealer Tracker/Ezcar24Business/Views/ExpenseListView.swift" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../supabase/functions/monthly_report_dispatch/reporting.ts" beforeDir="false" afterPath="$PROJECT_DIR$/../supabase/functions/monthly_report_dispatch/reporting.ts" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -137,6 +90,7 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Android App.New Run Config.executor": "Run",
     "Android App.app.executor": "Run",
     "Gradle.Configure Daemon JVM Criteria.executor": "Run",
     "GradleDaemonJvmCriteriaMigrationNotification.isNotificationDisabled": "true",
@@ -149,10 +103,81 @@
     "com.google.services.firebase.aqiPopupShown": "true",
     "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "/Users/aydmaxx/Desktop/CarDealerTracker/Android Car Dealer Tracker"
+    "last_opened_file_path": "/Users/aydmaxx/Desktop/CarDealerTracker/Android Car Dealer Tracker",
+    "settings.editor.selected.configurable": "templates.modelproviders.configurable"
   }
 }]]></component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Android App.New Run Config">
+    <configuration name="New Run Config" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
+      <module name="Car_Dealer_Tracker_android.app" />
+      <option name="ANDROID_RUN_CONFIGURATION_SCHEMA_VERSION" value="1" />
+      <option name="DEPLOY" value="true" />
+      <option name="DEPLOY_APK_FROM_BUNDLE" value="false" />
+      <option name="DEPLOY_AS_INSTANT" value="false" />
+      <option name="ARTIFACT_NAME" value="" />
+      <option name="PM_INSTALL_OPTIONS" value="" />
+      <option name="ALL_USERS" value="false" />
+      <option name="ALWAYS_INSTALL_WITH_PM" value="false" />
+      <option name="ALLOW_ASSUME_VERIFIED" value="false" />
+      <option name="CLEAR_APP_STORAGE" value="false" />
+      <option name="DYNAMIC_FEATURES_DISABLED_LIST" value="" />
+      <option name="ACTIVITY_EXTRA_FLAGS" value="" />
+      <option name="MODE" value="specific_activity" />
+      <option name="RESTORE_ENABLED" value="false" />
+      <option name="RESTORE_FILE" value="" />
+      <option name="RESTORE_FRESH_INSTALL_ONLY" value="false" />
+      <option name="CLEAR_LOGCAT" value="false" />
+      <option name="SHOW_LOGCAT_AUTOMATICALLY" value="false" />
+      <option name="TARGET_SELECTION_MODE" value="DEVICE_AND_SNAPSHOT_COMBO_BOX" />
+      <option name="DEBUGGER_TYPE" value="Auto" />
+      <Auto>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+        <option name="DEBUG_SANDBOX_SDK" value="false" />
+      </Auto>
+      <Hybrid>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+        <option name="DEBUG_SANDBOX_SDK" value="false" />
+      </Hybrid>
+      <Java>
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+        <option name="DEBUG_SANDBOX_SDK" value="false" />
+      </Java>
+      <Native>
+        <option name="USE_JAVA_AWARE_DEBUGGER" value="false" />
+        <option name="SHOW_STATIC_VARS" value="true" />
+        <option name="WORKING_DIR" value="" />
+        <option name="TARGET_LOGGING_CHANNELS" value="lldb process:gdb-remote packets" />
+        <option name="SHOW_OPTIMIZED_WARNING" value="true" />
+        <option name="ATTACH_ON_WAIT_FOR_DEBUGGER" value="false" />
+        <option name="DEBUG_SANDBOX_SDK" value="false" />
+      </Native>
+      <Profilers>
+        <option name="ADVANCED_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_ENABLED" value="false" />
+        <option name="STARTUP_CPU_PROFILING_CONFIGURATION_NAME" value="Java/Kotlin Method Sample (legacy)" />
+        <option name="STARTUP_NATIVE_MEMORY_PROFILING_ENABLED" value="false" />
+        <option name="NATIVE_MEMORY_SAMPLE_RATE_BYTES" value="2048" />
+      </Profilers>
+      <option name="DEEP_LINK" value="" />
+      <option name="ACTIVITY" value="" />
+      <option name="ACTIVITY_CLASS" value="com.ezcar24.business.MainActivity" />
+      <option name="SEARCH_ACTIVITY_IN_GLOBAL_SCOPE" value="false" />
+      <option name="SKIP_ACTIVITY_VALIDATION" value="false" />
+      <method v="2">
+        <option name="Android.Gradle.BeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="app" type="AndroidRunConfigurationType" factoryName="Android App" activateToolWindowBeforeRun="false">
       <module name="Car_Dealer_Tracker_android.app" />
       <option name="ANDROID_RUN_CONFIGURATION_SCHEMA_VERSION" value="1" />

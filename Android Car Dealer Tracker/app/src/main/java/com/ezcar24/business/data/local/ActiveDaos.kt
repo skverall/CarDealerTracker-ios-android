@@ -262,6 +262,8 @@ class ActiveExpenseTemplateDao @Inject constructor(
 
     override suspend fun delete(entity: ExpenseTemplate) = currentDatabase().expenseTemplateDao().delete(entity)
 
+    override fun getAllActive(): Flow<List<ExpenseTemplate>> = flow { it.expenseTemplateDao().getAllActive() }
+
     override suspend fun getById(id: UUID): ExpenseTemplate? = currentDatabase().expenseTemplateDao().getById(id)
 
     override suspend fun getAllIncludingDeleted(): List<ExpenseTemplate> {

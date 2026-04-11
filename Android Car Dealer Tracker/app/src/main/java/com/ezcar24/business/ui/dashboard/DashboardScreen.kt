@@ -53,8 +53,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.ezcar24.business.ui.expense.AddExpenseSheet
+import com.ezcar24.business.ui.expense.ExpenseDetailBottomSheet
 import com.ezcar24.business.ui.expense.ExpenseViewModel
 import com.ezcar24.business.data.sync.SyncState
+import com.ezcar24.business.util.expenseDisplayDateTime
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
@@ -90,7 +92,9 @@ fun DashboardScreen(
     val expenseUiState by expenseViewModel.uiState.collectAsState()
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     var showAddExpenseSheet by remember { mutableStateOf(false) }
+    var selectedExpense by remember { mutableStateOf<Expense?>(null) }
     var showCreateBusinessDialog by remember { mutableStateOf(false) }
     var pendingCreateBusiness by remember { mutableStateOf(false) }
     val pullRefreshState = rememberPullRefreshState(
@@ -191,7 +195,8 @@ fun DashboardScreen(
             item {
                 TodaysExpensesSection(
                     todaysExpenses = uiState.todaysExpenses,
-                    onAddExpense = { showAddExpenseSheet = true }
+                    onAddExpense = { showAddExpenseSheet = true },
+                    onExpenseClick = { selectedExpense = it }
                 )
             }
 
@@ -211,7 +216,8 @@ fun DashboardScreen(
                 RecentExpensesSection(
                     recentExpenses = uiState.recentExpenses,
                     vehicleTitlesById = uiState.vehicleTitlesById,
-                    onSeeAll = onNavigateToExpenses
+                    onSeeAll = onNavigateToExpenses,
+                    onExpenseClick = { selectedExpense = it }
                 )
             }
 
@@ -251,15 +257,33 @@ fun DashboardScreen(
     if (showAddExpenseSheet) {
         AddExpenseSheet(
             onDismiss = { showAddExpenseSheet = false },
-            onSave = { amount, date, desc, cat, veh, usr, acc, expenseType ->
-                expenseViewModel.saveExpense(amount, date, desc, cat, veh, usr, acc, expenseType)
+            onSave = { amount, date, desc, cat, veh, usr, acc, expenseType, receipt ->
+                expenseViewModel.saveExpense(amount, date, desc, cat, veh, usr, acc, expenseType, receipt)
                 showAddExpenseSheet = false
                 viewModel.refresh() // Refresh dashboard to show new expense
             },
+            onSaveTemplate = expenseViewModel::saveTemplate,
             vehicles = expenseUiState.vehicles,
             users = expenseUiState.users,
             accounts = expenseUiState.accounts,
+            templates = expenseUiState.templates,
             currencyCode = regionState.selectedRegion.currencyCode
+        )
+    }
+
+    selectedExpense?.let { expense ->
+        ExpenseDetailBottomSheet(
+            expense = expense,
+            vehicleTitle = expense.vehicleId?.let(uiState.vehicleTitlesById::get),
+            onDismiss = { selectedExpense = null },
+            onSaveComment = expenseViewModel::updateExpenseComment,
+            onViewReceipt = { expenseViewModel.openExpenseReceipt(context, it) },
+            onReplaceReceipt = { targetExpense, receipt, onUpdated ->
+                expenseViewModel.replaceExpenseReceipt(targetExpense, receipt, onUpdated)
+            },
+            onRemoveReceipt = { targetExpense, onUpdated ->
+                expenseViewModel.removeExpenseReceipt(targetExpense, onUpdated)
+            }
         )
     }
 
@@ -296,6 +320,7 @@ fun DashboardTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
+            .statusBarsPadding()
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
         Row(
@@ -802,7 +827,8 @@ fun FinancialCard(
 @Composable
 fun TodaysExpensesSection(
     todaysExpenses: List<Expense>,
-    onAddExpense: () -> Unit
+    onAddExpense: () -> Unit,
+    onExpenseClick: (Expense) -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
         Row(
@@ -837,7 +863,10 @@ fun TodaysExpensesSection(
                 ) {
                     rowItems.forEach { expense ->
                         Box(modifier = Modifier.weight(1f)) {
-                            TodayExpenseCard(expense)
+                            TodayExpenseCard(
+                                expense = expense,
+                                onClick = { onExpenseClick(expense) }
+                            )
                         }
                     }
                     // Fill empty space if odd number
@@ -852,7 +881,10 @@ fun TodaysExpensesSection(
 }
 
 @Composable
-fun TodayExpenseCard(expense: Expense) {
+fun TodayExpenseCard(
+    expense: Expense,
+    onClick: () -> Unit
+) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -860,7 +892,8 @@ fun TodayExpenseCard(expense: Expense) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(130.dp),
+            .height(130.dp)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -894,7 +927,7 @@ fun TodayExpenseCard(expense: Expense) {
                 
                 // Time
                 Text(
-                    text = timeFormat.format(expense.date),
+                    text = timeFormat.format(expenseDisplayDateTime(expense)),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.Gray,
                     modifier = Modifier
@@ -1358,7 +1391,8 @@ fun CategoryBreakdownRow(stat: CategoryStat) {
 fun RecentExpensesSection(
     recentExpenses: List<Expense>,
     vehicleTitlesById: Map<UUID, String>,
-    onSeeAll: () -> Unit
+    onSeeAll: () -> Unit,
+    onExpenseClick: (Expense) -> Unit
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
         Row(
@@ -1391,7 +1425,8 @@ fun RecentExpensesSection(
             recentExpenses.forEach { expense ->
                 RecentExpenseItem(
                     expense = expense,
-                    vehicleTitle = expense.vehicleId?.let(vehicleTitlesById::get)
+                    vehicleTitle = expense.vehicleId?.let(vehicleTitlesById::get),
+                    onClick = { onExpenseClick(expense) }
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
@@ -1400,12 +1435,18 @@ fun RecentExpensesSection(
 }
 
 @Composable
-fun RecentExpenseItem(expense: Expense, vehicleTitle: String?) {
+fun RecentExpenseItem(
+    expense: Expense,
+    vehicleTitle: String?,
+    onClick: () -> Unit
+) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -1439,7 +1480,7 @@ fun RecentExpenseItem(expense: Expense, vehicleTitle: String?) {
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "${vehicleTitle ?: "General"} • ${dateFormat.format(expense.date)}",
+                    text = "${vehicleTitle ?: "General"} • ${dateFormat.format(expenseDisplayDateTime(expense))}",
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.Gray
                 )
@@ -1496,7 +1537,12 @@ fun SyncStatusCard(
         Spacer(modifier = Modifier.width(8.dp))
         
         val displayMessage = when {
-            syncState is SyncState.Failure -> "Sync failed"
+            syncState is SyncState.Failure ->
+                syncState.message
+                    ?.lineSequence()
+                    ?.firstOrNull()
+                    ?.takeIf { it.isNotBlank() }
+                    ?: "Sync failed"
             lastSyncTime != null && !isSyncing -> "Synced at ${dateFormat.format(lastSyncTime)}"
             else -> text
         }
@@ -1504,7 +1550,9 @@ fun SyncStatusCard(
         Text(
             text = displayMessage,
             style = MaterialTheme.typography.labelMedium,
-            color = Color.Black.copy(alpha = 0.7f)
+            color = Color.Black.copy(alpha = 0.7f),
+            maxLines = if (syncState is SyncState.Failure) 2 else 1,
+            overflow = TextOverflow.Ellipsis
         )
 
         if (queueCount > 0) {

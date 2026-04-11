@@ -111,6 +111,7 @@ data class Expense(
     val vehicleId: UUID?,
     val userId: UUID?,
     val accountId: UUID?,
+    val receiptPath: String? = null,
     val expenseType: ExpenseCategoryType = ExpenseCategoryType.HOLDING_COST
 )
 

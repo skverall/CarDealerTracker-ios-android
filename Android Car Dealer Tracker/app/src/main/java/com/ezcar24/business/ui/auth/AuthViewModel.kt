@@ -328,7 +328,7 @@ class AuthViewModel @Inject constructor(
         val dealerId = accountRepository.bootstrapActiveOrganization()
         if (dealerId != null) {
             CloudSyncEnvironment.currentDealerId = dealerId
-            cloudSyncManager.syncAfterLogin(dealerId)
+            cloudSyncManager.syncAfterLogin(dealerId, forceRefresh = true)
         }
     }
 }

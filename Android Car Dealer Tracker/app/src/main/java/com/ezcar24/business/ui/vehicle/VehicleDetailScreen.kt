@@ -53,7 +53,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import coil.compose.SubcomposeAsyncImage
 import com.ezcar24.business.util.ImageUtils
+import com.ezcar24.business.util.expenseDisplayDateTime
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import com.ezcar24.business.ui.expense.ExpenseDetailBottomSheet
+import com.ezcar24.business.ui.expense.ExpenseViewModel
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.ui.components.*
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
@@ -74,7 +77,8 @@ fun VehicleDetailScreen(
     vehicleId: String,
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
-    viewModel: VehicleViewModel = hiltViewModel()
+    viewModel: VehicleViewModel = hiltViewModel(),
+    expenseViewModel: ExpenseViewModel = hiltViewModel()
 ) {
     LaunchedEffect(vehicleId) {
         viewModel.selectVehicle(vehicleId)
@@ -88,6 +92,7 @@ fun VehicleDetailScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
+    var selectedExpense by remember { mutableStateOf<com.ezcar24.business.data.local.Expense?>(null) }
 
     var showPhotoManager by remember { mutableStateOf(false) }
     var showPhotoViewer by remember { mutableStateOf(false) }
@@ -243,7 +248,8 @@ fun VehicleDetailScreen(
 
                 ExpensesSection(
                     expenses = detailState.expenses,
-                    totalExpenses = detailState.financialSummary.totalExpenses
+                    totalExpenses = detailState.financialSummary.totalExpenses,
+                    onExpenseClick = { selectedExpense = it }
                 )
 
                 OutlinedButton(
@@ -361,6 +367,24 @@ fun VehicleDetailScreen(
                 }
             )
         }
+    }
+
+    selectedExpense?.let { expense ->
+        ExpenseDetailBottomSheet(
+            expense = expense,
+            vehicleTitle = listOfNotNull(detailState.vehicle?.make, detailState.vehicle?.model)
+                .joinToString(" ")
+                .ifBlank { detailState.vehicle?.vin ?: "No vehicle linked" },
+            onDismiss = { selectedExpense = null },
+            onSaveComment = viewModel::updateExpenseComment,
+            onViewReceipt = { expenseViewModel.openExpenseReceipt(context, it) },
+            onReplaceReceipt = { targetExpense, receipt, onUpdated ->
+                expenseViewModel.replaceExpenseReceipt(targetExpense, receipt, onUpdated)
+            },
+            onRemoveReceipt = { targetExpense, onUpdated ->
+                expenseViewModel.removeExpenseReceipt(targetExpense, onUpdated)
+            }
+        )
     }
 }
 
@@ -1136,7 +1160,8 @@ private fun VehicleHeaderCard(
 @Composable
 private fun ExpensesSection(
     expenses: List<com.ezcar24.business.data.local.Expense>,
-    totalExpenses: BigDecimal
+    totalExpenses: BigDecimal,
+    onExpenseClick: (com.ezcar24.business.data.local.Expense) -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
@@ -1174,7 +1199,10 @@ private fun ExpensesSection(
                 )
             } else {
                 expenses.take(5).forEach { expense ->
-                    ExpenseRow(expense = expense)
+                    ExpenseRow(
+                        expense = expense,
+                        onClick = { onExpenseClick(expense) }
+                    )
                     if (expense != expenses.take(5).last()) {
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 8.dp),
@@ -1253,11 +1281,16 @@ private fun SaleDetailsCard(
 }
 
 @Composable
-private fun ExpenseRow(expense: com.ezcar24.business.data.local.Expense) {
+private fun ExpenseRow(
+    expense: com.ezcar24.business.data.local.Expense,
+    onClick: () -> Unit
+) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -1268,7 +1301,8 @@ private fun ExpenseRow(expense: com.ezcar24.business.data.local.Expense) {
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(expense.date),
+                text = SimpleDateFormat("MMM dd, yyyy • HH:mm", Locale.getDefault())
+                    .format(expenseDisplayDateTime(expense)),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )

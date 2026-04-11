@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -299,21 +300,23 @@ private fun MainTabBarItem(
         targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "tabTextTint"
     )
-    val elevation by animateDpAsState(targetValue = if (isSelected) 8.dp else 0.dp, label = "tabElevation")
+
 
     Column(
         modifier = modifier
-            .padding(horizontal = 4.dp)
             .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                indication = null,
+                onClick = onClick
+            )
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Surface(
             color = if (isSelected) item.tint.copy(alpha = 0.14f) else Color.Transparent,
             shape = CircleShape,
-            shadowElevation = elevation,
             modifier = Modifier.size(42.dp)
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -328,8 +331,11 @@ private fun MainTabBarItem(
         Text(
             text = item.title,
             style = MaterialTheme.typography.labelSmall,
+            fontSize = 10.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = textColor
+            color = textColor,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
         )
     }
 }

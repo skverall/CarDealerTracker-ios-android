@@ -197,7 +197,7 @@ class AccountRepository @Inject constructor(
         CloudSyncEnvironment.currentDealerId = organizationId
         if (forceSync) {
             cloudSyncManager.refreshLastSyncForCurrentOrg()
-            cloudSyncManager.syncAfterLogin(organizationId)
+            cloudSyncManager.syncAfterLogin(organizationId, forceRefresh = true)
         }
         active
     }

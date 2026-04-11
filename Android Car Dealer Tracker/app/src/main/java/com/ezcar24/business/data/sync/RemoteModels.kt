@@ -76,9 +76,9 @@ data class RemoteExpense(
     @SerialName("vehicle_id") val vehicleId: String? = null,
     @SerialName("user_id") val userId: String? = null,
     @SerialName("account_id") val accountId: String? = null,
+    @SerialName("receipt_path") val receiptPath: String? = null,
     @SerialName("updated_at") val updatedAt: String,
-    @SerialName("deleted_at") val deletedAt: String? = null,
-    @SerialName("expense_type") val expenseType: String = "HOLDING_COST"
+    @SerialName("deleted_at") val deletedAt: String? = null
 )
 
 @Serializable

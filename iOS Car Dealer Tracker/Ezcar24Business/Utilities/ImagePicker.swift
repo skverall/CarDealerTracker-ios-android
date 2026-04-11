@@ -38,7 +38,6 @@ struct ImagePicker: UIViewControllerRepresentable {
             if let image = info[.originalImage] as? UIImage {
                 parent.onImagePicked(image)
             }
-            parent.onCancel()
         }
 
         func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {

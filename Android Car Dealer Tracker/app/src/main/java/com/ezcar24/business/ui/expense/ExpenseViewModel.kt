@@ -1,12 +1,15 @@
 package com.ezcar24.business.ui.expense
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.util.Log
+import android.widget.Toast
 import com.ezcar24.business.data.local.*
 import com.ezcar24.business.data.local.ExpenseCategoryType
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
+import com.ezcar24.business.util.openExpenseReceipt as openExpenseReceiptFile
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.util.Date
@@ -29,6 +32,7 @@ enum class DateFilter(val label: String) {
 data class ExpenseUiState(
     val expenses: List<Expense> = emptyList(),
     val filteredExpenses: List<Expense> = emptyList(),
+    val templates: List<ExpenseTemplate> = emptyList(),
     val vehicles: List<Vehicle> = emptyList(),
     val users: List<User> = emptyList(),
     val accounts: List<FinancialAccount> = emptyList(),
@@ -51,6 +55,7 @@ data class ExpenseUiState(
 @HiltViewModel
 class ExpenseViewModel @Inject constructor(
     private val expenseDao: ExpenseDao,
+    private val expenseTemplateDao: ExpenseTemplateDao,
     private val vehicleDao: VehicleDao,
     private val userDao: UserDao,
     private val financialAccountDao: FinancialAccountDao,
@@ -186,13 +191,15 @@ class ExpenseViewModel @Inject constructor(
         dataJob = viewModelScope.launch {
             kotlinx.coroutines.flow.combine(
                 expenseDao.getAll(),
+                expenseTemplateDao.getAllActive(),
                 vehicleDao.getAllActive(),
                 userDao.getAllActive(),
                 financialAccountDao.getAll()
-            ) { expenses, vehicles, users, accounts ->
+            ) { expenses, templates, vehicles, users, accounts ->
                 _uiState.update { currentState ->
                     currentState.copy(
                         expenses = expenses,
+                        templates = templates,
                         vehicles = vehicles,
                         accounts = accounts,
                         users = users,
@@ -210,6 +217,48 @@ class ExpenseViewModel @Inject constructor(
             // loadData() // Flow updates automatically
         }
     }
+
+    fun updateExpenseComment(expense: Expense, comment: String) {
+        viewModelScope.launch {
+            val normalizedComment = comment.trim().takeIf { it.isNotEmpty() }
+            val currentComment = expense.expenseDescription?.trim()?.takeIf { it.isNotEmpty() }
+            if (normalizedComment == currentComment) return@launch
+
+            cloudSyncManager.upsertExpense(
+                expense.copy(
+                    expenseDescription = normalizedComment,
+                    updatedAt = Date()
+                )
+            )
+        }
+    }
+
+    fun saveTemplate(
+        name: String,
+        category: String,
+        defaultAmount: BigDecimal?,
+        defaultDescription: String?,
+        vehicle: Vehicle?,
+        user: User?,
+        account: FinancialAccount?
+    ) {
+        viewModelScope.launch {
+            val templateName = name.trim().takeIf { it.isNotEmpty() } ?: "Template"
+            val now = Date()
+            val template = ExpenseTemplate(
+                id = UUID.randomUUID(),
+                name = templateName,
+                category = category.trim().takeIf { it.isNotEmpty() },
+                defaultDescription = defaultDescription?.trim()?.takeIf { it.isNotEmpty() },
+                defaultAmount = defaultAmount,
+                updatedAt = now,
+                vehicleId = vehicle?.id,
+                userId = user?.id,
+                accountId = account?.id
+            )
+            cloudSyncManager.upsertTemplate(template)
+        }
+    }
     
     fun saveExpense(
         amount: BigDecimal,
@@ -219,9 +268,11 @@ class ExpenseViewModel @Inject constructor(
         vehicle: Vehicle?,
         user: User?,
         account: FinancialAccount?,
-        expenseType: ExpenseCategoryType = ExpenseCategoryType.OPERATIONAL
+        expenseType: ExpenseCategoryType = ExpenseCategoryType.OPERATIONAL,
+        receipt: ExpenseReceiptDraft? = null
     ) {
         viewModelScope.launch {
+            val now = Date()
             val newExpense = Expense(
                 id = UUID.randomUUID(),
                 amount = amount,
@@ -232,10 +283,107 @@ class ExpenseViewModel @Inject constructor(
                 userId = user?.id,
                 accountId = account?.id,
                 expenseType = expenseType,
-                createdAt = Date(),
-                updatedAt = Date()
+                createdAt = now,
+                updatedAt = now
             )
             cloudSyncManager.upsertExpense(newExpense)
+
+            if (receipt != null) {
+                val dealerId = CloudSyncEnvironment.currentDealerId
+                if (dealerId != null) {
+                    val path = cloudSyncManager.uploadExpenseReceipt(
+                        expenseId = newExpense.id,
+                        dealerId = dealerId,
+                        data = receipt.bytes,
+                        contentType = receipt.contentType,
+                        fileExtension = receipt.fileExtension
+                    )
+                    if (path != null) {
+                        cloudSyncManager.upsertExpense(
+                            newExpense.copy(
+                                receiptPath = path,
+                                updatedAt = Date()
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun openExpenseReceipt(context: Context, expense: Expense) {
+        val path = expense.receiptPath ?: return
+        viewModelScope.launch {
+            val data = cloudSyncManager.downloadExpenseReceipt(path)
+            if (data == null) {
+                Toast.makeText(context, "Could not open receipt", Toast.LENGTH_SHORT).show()
+                return@launch
+            }
+
+            val opened = openExpenseReceiptFile(
+                context = context,
+                fileName = path.substringAfterLast('/'),
+                bytes = data
+            )
+            if (!opened) {
+                Toast.makeText(context, "Could not open receipt", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun replaceExpenseReceipt(
+        expense: Expense,
+        receipt: ExpenseReceiptDraft,
+        onComplete: (Expense) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val dealerId = CloudSyncEnvironment.currentDealerId
+            if (dealerId == null) {
+                Log.w(tag, "replaceExpenseReceipt skipped: dealerId is null")
+                return@launch
+            }
+
+            val newPath = cloudSyncManager.uploadExpenseReceipt(
+                expenseId = expense.id,
+                dealerId = dealerId,
+                data = receipt.bytes,
+                contentType = receipt.contentType,
+                fileExtension = receipt.fileExtension
+            ) ?: run {
+                Log.e(tag, "replaceExpenseReceipt failed: upload returned null for expenseId=${expense.id}")
+                return@launch
+            }
+
+            val updatedExpense = expense.copy(
+                receiptPath = newPath,
+                updatedAt = Date()
+            )
+            cloudSyncManager.upsertExpense(updatedExpense)
+
+            val previousPath = expense.receiptPath
+            if (!previousPath.isNullOrBlank() && previousPath != newPath) {
+                cloudSyncManager.deleteExpenseReceipt(previousPath)
+            }
+
+            onComplete(updatedExpense)
+        }
+    }
+
+    fun removeExpenseReceipt(
+        expense: Expense,
+        onComplete: (Expense) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val previousPath = expense.receiptPath
+            if (previousPath.isNullOrBlank()) return@launch
+
+            val updatedExpense = expense.copy(
+                receiptPath = null,
+                updatedAt = Date()
+            )
+            cloudSyncManager.upsertExpense(updatedExpense)
+            cloudSyncManager.deleteExpenseReceipt(previousPath)
+            onComplete(updatedExpense)
         }
     }
 }

@@ -4,6 +4,10 @@ import UniformTypeIdentifiers
 private func expenseDisplayDateTime(_ expense: Expense) -> Date {
     let calendar = Calendar.current
     let expenseDate = expense.date ?? expense.createdAt ?? expense.updatedAt ?? .distantPast
+    let explicitTime = calendar.dateComponents([.hour, .minute, .second], from: expenseDate)
+    if explicitTime.hour != 0 || explicitTime.minute != 0 || explicitTime.second != 0 {
+        return expenseDate
+    }
     let createdTime = expense.createdAt ?? expense.updatedAt ?? expenseDate
 
     let dateComponents = calendar.dateComponents([.year, .month, .day], from: expenseDate)

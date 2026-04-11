@@ -9,6 +9,7 @@ import com.ezcar24.business.data.local.*
 import com.ezcar24.business.util.DateUtils
 import com.ezcar24.business.util.toUUID
 import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.storage.storage
 import io.ktor.http.ContentType
@@ -47,7 +48,10 @@ class CloudSyncManager @Inject constructor(
     private val imageStore: ImageStore
 ) {
     private val tag = "CloudSyncManager"
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+    }
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val db: AppDatabase
         get() = databaseProvider.currentDatabase()
@@ -76,19 +80,18 @@ class CloudSyncManager @Inject constructor(
         syncPrefs.edit().putLong(lastSyncKey(dealerId), value?.time ?: 0L).apply()
     }
 
-    suspend fun syncAfterLogin(dealerId: UUID) = withContext(Dispatchers.IO) {
+    suspend fun syncAfterLogin(dealerId: UUID, forceRefresh: Boolean = false) = withContext(Dispatchers.IO) {
         if (isSyncing) return@withContext
         isSyncing = true
         try {
             val lastSync = lastSyncTimestamp(dealerId)
             Log.i(tag, "syncAfterLogin start dealerId=$dealerId lastSync=$lastSync")
             processOfflineQueue(dealerId)
+            ensureCurrentUserExists(dealerId)
 
             val pendingDeletes = pendingDeleteIds(dealerId)
             var effectiveSince = lastSync
-
-            val localClientCount = db.clientDao().countAll()
-            if (localClientCount == 0) {
+            if (forceRefresh || shouldForceLoginRefresh(lastSync)) {
                 effectiveSince = null
             }
 
@@ -123,6 +126,69 @@ class CloudSyncManager @Inject constructor(
             logSyncError(rpc = "syncAfterLogin", dealerId = dealerId, error = e)
         } finally {
             isSyncing = false
+        }
+    }
+
+    private suspend fun shouldForceLoginRefresh(lastSync: Date?): Boolean {
+        if (lastSync == null) return true
+
+        val localUserCount = db.userDao().count()
+        val localAccountCount = db.financialAccountDao().countAll()
+        val hasBusinessData =
+            db.vehicleDao().count() > 0 ||
+                db.clientDao().countAll() > 0 ||
+                db.expenseDao().count() > 0 ||
+                db.saleDao().count() > 0 ||
+                db.partDao().count() > 0
+
+        return localUserCount == 0 || localAccountCount == 0 || !hasBusinessData
+    }
+
+    private suspend fun ensureCurrentUserExists(dealerId: UUID) {
+        val authUser = client.auth.currentUserOrNull() ?: return
+        val userId = authUser.id.toUUID() ?: return
+        val existing = db.userDao().getById(userId)
+        val resolvedName = authUser.email
+            ?.substringBefore("@")
+            ?.replaceFirstChar { char ->
+                if (char.isLowerCase()) {
+                    char.titlecase(Locale.getDefault())
+                } else {
+                    char.toString()
+                }
+            }
+            ?.takeIf { it.isNotBlank() }
+            ?: existing?.name
+            ?: "User"
+        val now = Date()
+        val localUser = User(
+            id = userId,
+            name = resolvedName,
+            createdAt = existing?.createdAt ?: now,
+            updatedAt = if (existing == null || existing.name != resolvedName || existing.deletedAt != null) now else existing.updatedAt,
+            deletedAt = null
+        )
+
+        val shouldUpsertLocally = existing == null || existing.name != localUser.name || existing.deletedAt != null
+        if (shouldUpsertLocally) {
+            db.userDao().upsert(localUser)
+        }
+
+        if (shouldUpsertLocally) {
+            val remote = localUser.toRemote(dealerId.toString())
+            try {
+                client.postgrest.rpc("sync_users", payloadParams(listOf(remote)))
+            } catch (e: Exception) {
+                logSyncError(
+                    rpc = "sync_users",
+                    dealerId = dealerId,
+                    entityType = SyncEntityType.USER,
+                    payloadId = localUser.id,
+                    extraContext = mapOf("source" to "ensureCurrentUserExists"),
+                    error = e
+                )
+                enqueueUpsert(SyncEntityType.USER, remote, dealerId)
+            }
         }
     }
 
@@ -399,6 +465,13 @@ class CloudSyncManager @Inject constructor(
         return "$dealerPart/vehicles/$vehiclePart/$photoPart.jpg"
     }
 
+    private fun receiptPath(dealerId: UUID, expenseId: UUID, fileExtension: String): String {
+        val dealerPart = dealerId.toString().lowercase(Locale.US)
+        val expensePart = expenseId.toString().lowercase(Locale.US)
+        val normalizedExtension = fileExtension.ifBlank { "jpg" }.lowercase(Locale.US)
+        return "$dealerPart/expenses/$expensePart.$normalizedExtension"
+    }
+
     @Serializable
     private data class RemoteVehiclePhotoInsert(
         val id: String,
@@ -584,6 +657,49 @@ class CloudSyncManager @Inject constructor(
             } catch (e: Exception) {
                 Log.d(tag, "No image for vehicle $vehicleId at $path")
             }
+        }
+    }
+
+    suspend fun uploadExpenseReceipt(
+        expenseId: UUID,
+        dealerId: UUID,
+        data: ByteArray,
+        contentType: String,
+        fileExtension: String
+    ): String? = withContext(Dispatchers.IO) {
+        val path = receiptPath(dealerId, expenseId, fileExtension)
+        try {
+            client.storage
+                .from("expense-receipts")
+                .upload(path, data) {
+                    upsert = true
+                    this.contentType = ContentType.parse(contentType)
+                }
+            path
+        } catch (e: Exception) {
+            Log.e(tag, "uploadExpenseReceipt failed: ${e.message}", e)
+            null
+        }
+    }
+
+    suspend fun downloadExpenseReceipt(path: String): ByteArray? = withContext(Dispatchers.IO) {
+        try {
+            client.storage
+                .from("expense-receipts")
+                .downloadAuthenticated(path)
+        } catch (e: Exception) {
+            Log.e(tag, "downloadExpenseReceipt failed: ${e.message}", e)
+            null
+        }
+    }
+
+    suspend fun deleteExpenseReceipt(path: String) = withContext(Dispatchers.IO) {
+        try {
+            client.storage
+                .from("expense-receipts")
+                .delete(listOf(path))
+        } catch (e: Exception) {
+            Log.e(tag, "deleteExpenseReceipt failed: ${e.message}", e)
         }
     }
 
@@ -1335,7 +1451,8 @@ class CloudSyncManager @Inject constructor(
             val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
             if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
 
-            val expenseDate = DateUtils.parseRemoteDateOnly(remote.date)
+            val expenseDate = DateUtils.parseDateAndTime(remote.date)
+                ?: DateUtils.parseRemoteDateOnly(remote.date)
                 ?: DateUtils.parseDateAndTime(remote.createdAt)
                 ?: Date()
             val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: expenseDate
@@ -1354,7 +1471,8 @@ class CloudSyncManager @Inject constructor(
                 deletedAt = null,
                 vehicleId = vehicleId,
                 userId = userId,
-                accountId = accountId
+                accountId = accountId,
+                receiptPath = remote.receiptPath
             )
             db.expenseDao().upsert(newExpense)
         }
@@ -3223,12 +3341,13 @@ fun Expense.toRemote(dealerId: String) = RemoteExpense(
     id = id.toString(),
     dealerId = dealerId,
     amount = amount,
-    date = DateUtils.formatDateOnly(date),
+    date = DateUtils.formatDateAndTime(date),
     expenseDescription = expenseDescription,
     category = category,
     vehicleId = vehicleId?.toString(),
     userId = userId?.toString(),
     accountId = accountId?.toString(),
+    receiptPath = receiptPath,
     createdAt = DateUtils.formatDateAndTime(createdAt),
     updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
     deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }

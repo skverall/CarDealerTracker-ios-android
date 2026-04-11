@@ -61,6 +61,7 @@ class MainViewModel @Inject constructor(
             authRepository.awaitInitialization()
             val user = authRepository.getCurrentUser()
             if (user != null) {
+                authRepository.applyPendingPostAuthActions()
                 val dealerId = accountRepository.bootstrapActiveOrganization()
                 if (dealerId != null) {
                     try {
@@ -69,7 +70,10 @@ class MainViewModel @Inject constructor(
                         cloudSyncManager.refreshLastSyncForCurrentOrg()
                         // Initial sync after bootstrap (matching iOS)
                         launch {
-                            cloudSyncManager.syncAfterLogin(dealerId)
+                            cloudSyncManager.syncAfterLogin(
+                                dealerId = dealerId,
+                                forceRefresh = cloudSyncManager.lastSyncAt == null
+                            )
                         }
                         _startDestination.value = "home"
                         // Start periodic sync

@@ -41,6 +41,7 @@ data class SettingsUiState(
     val lastBackupDate: Date? = null,
     val isLoadingAccount: Boolean = false,
     val isBackupLoading: Boolean = false,
+    val isDeduplicating: Boolean = false,
     val isFetchingReferralCode: Boolean = false,
     val isSwitchingOrganization: Boolean = false,
     val isSigningOut: Boolean = false,
@@ -186,6 +187,52 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         isBackupLoading = false,
                         errorMessage = UserFacingErrorMapper.map(e, UserFacingErrorContext.RUN_SYNC)
+                    )
+                }
+            }
+        }
+    }
+
+    fun cleanUpDuplicates() {
+        if (_uiState.value.isDeduplicating) return
+
+        viewModelScope.launch {
+            val dealerId = _uiState.value.activeOrganization?.organizationId
+            if (dealerId == null) {
+                _uiState.update {
+                    it.copy(
+                        isDeduplicating = false,
+                        errorMessage = "No active business found."
+                    )
+                }
+                return@launch
+            }
+
+            _uiState.update {
+                it.copy(
+                    isDeduplicating = true,
+                    errorMessage = null,
+                    statusMessage = null
+                )
+            }
+
+            try {
+                cloudSyncManager.deduplicateData(dealerId)
+                _uiState.update {
+                    it.copy(
+                        isDeduplicating = false,
+                        statusMessage = "Duplicate records cleaned up successfully."
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(SETTINGS_TAG, "cleanUpDuplicates failed", e)
+                _uiState.update {
+                    it.copy(
+                        isDeduplicating = false,
+                        errorMessage = UserFacingErrorMapper.map(
+                            e,
+                            UserFacingErrorContext.CLEAN_UP_DUPLICATES
+                        )
                     )
                 }
             }
