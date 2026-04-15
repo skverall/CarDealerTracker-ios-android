@@ -2,6 +2,29 @@
 import SwiftUI
 import CoreData
 
+private func expenseDetailDateTime(_ expense: Expense) -> Date {
+    let calendar = Calendar.current
+    let expenseDate = expense.date ?? expense.createdAt ?? expense.updatedAt ?? .distantPast
+    let explicitTime = calendar.dateComponents([.hour, .minute, .second], from: expenseDate)
+    if explicitTime.hour != 0 || explicitTime.minute != 0 || explicitTime.second != 0 {
+        return expenseDate
+    }
+    let createdTime = expense.createdAt ?? expense.updatedAt ?? expenseDate
+
+    let dateComponents = calendar.dateComponents([.year, .month, .day], from: expenseDate)
+    let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: createdTime)
+
+    var combined = DateComponents()
+    combined.year = dateComponents.year
+    combined.month = dateComponents.month
+    combined.day = dateComponents.day
+    combined.hour = timeComponents.hour
+    combined.minute = timeComponents.minute
+    combined.second = timeComponents.second
+
+    return calendar.date(from: combined) ?? expenseDate
+}
+
 struct ExpenseDetailSheet: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.dismiss) private var dismiss
@@ -36,7 +59,11 @@ struct ExpenseDetailSheet: View {
                     VStack(alignment: .leading, spacing: 10) {
                         DetailRow(title: "Category", value: expense.categoryTitle, icon: "tag")
                         DetailRow(title: "Vehicle", value: expense.vehicleSubtitle, icon: "car.fill")
-                        DetailRow(title: "Date", value: expense.dateString, icon: "calendar")
+                        DetailRow(
+                            title: "Date",
+                            value: expenseDetailDateTime(expense).formatted(date: .abbreviated, time: .shortened),
+                            icon: "calendar"
+                        )
                     }
 
                     if expense.receiptPath != nil {

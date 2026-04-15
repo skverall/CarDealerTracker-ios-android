@@ -6,9 +6,50 @@
 //
 
 import SwiftUI
+import PhotosUI
 import CoreData
 import UIKit
 import UniformTypeIdentifiers
+
+private struct ReceiptAttachment {
+    let data: Data
+    let fileName: String
+    let contentType: String
+    let fileExtension: String
+}
+
+private final class AddExpenseDraft: ObservableObject {
+    @Published var amount = ""
+    @Published var date = Date()
+    @Published var description = ""
+    @Published var category = "vehicle"
+    @Published var selectedVehicle: Vehicle?
+    @Published var selectedUser: User?
+    @Published var selectedAccount: FinancialAccount?
+    @Published var receiptAttachment: ReceiptAttachment? = nil
+    @Published var receiptPath: String? = nil
+    @Published var receiptRemoved = false
+    var didPrefill = false
+}
+
+private final class AddExpenseDraftStore {
+    static let shared = AddExpenseDraftStore()
+    private var drafts: [String: AddExpenseDraft] = [:]
+
+    func draft(for key: String) -> AddExpenseDraft {
+        if let existing = drafts[key] {
+            return existing
+        }
+
+        let draft = AddExpenseDraft()
+        drafts[key] = draft
+        return draft
+    }
+
+    func clear(_ key: String) {
+        drafts.removeValue(forKey: key)
+    }
+}
 
 struct AddExpenseView: View {
     @Environment(\.dismiss) private var dismiss
@@ -20,32 +61,22 @@ struct AddExpenseView: View {
     @AppStorage("lastExpenseCategory") private var lastExpenseCategory: String = "vehicle"
     @AppStorage("lastExpenseUserID") private var lastExpenseUserID: String = ""
     @AppStorage("lastExpenseAccountID") private var lastExpenseAccountID: String = ""
+    @ObservedObject private var draft: AddExpenseDraft
 
     var editingExpense: Expense? = nil
-
-    // Form State
-    @State private var amount = ""
-    @State private var date = Date()
-    @State private var description = ""
-    @State private var category = "vehicle"
-    @State private var selectedVehicle: Vehicle?
-    @State private var selectedUser: User?
-    @State private var selectedAccount: FinancialAccount?
+    private let draftKey: String
 
     // UI State
     @State private var templateName: String = ""
     @State private var isSaving: Bool = false
     @State private var showSavedToast: Bool = false
     @State private var vehicleSearchText: String = ""
-    @State private var showReceiptSourceDialog: Bool = false
     @State private var showReceiptImporter: Bool = false
-    @State private var receiptImagePickerSource: UIImagePickerController.SourceType = .photoLibrary
-    @State private var receiptAttachment: ReceiptAttachment? = nil
-    @State private var receiptPath: String? = nil
-    @State private var receiptRemoved: Bool = false
+    @State private var showReceiptCameraPicker: Bool = false
+    @State private var showReceiptPhotoPicker: Bool = false
+    @State private var selectedReceiptPhoto: PhotosPickerItem? = nil
     @State private var receiptShareUrl: URL? = nil
     @State private var showVehicleSelectionError: Bool = false
-    @State private var didPrefill: Bool = false
     
     // Quick Add States
     @State private var showAddUserAlert: Bool = false
@@ -58,15 +89,8 @@ struct AddExpenseView: View {
     enum ActiveSheet: Identifiable {
         case vehicle, user, account
         case templates, saveTemplate, addVehicle
-        case datePicker, receiptImagePicker, receiptShare
+        case datePicker, receiptOptions, receiptShare
         var id: Int { hashValue }
-    }
-
-    private struct ReceiptAttachment {
-        let data: Data
-        let fileName: String
-        let contentType: String
-        let fileExtension: String
     }
 
     @FetchRequest(
@@ -95,18 +119,21 @@ struct AddExpenseView: View {
     ]
 
     var isFormValid: Bool {
-        let trimmedAmount = amount.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedAmount = draft.amount.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let val = Decimal(string: trimmedAmount), val > 0 else { return false }
         return true
     }
 
     private var shouldShowVehicleSelectionError: Bool {
-        showVehicleSelectionError && category == "vehicle" && selectedVehicle == nil
+        showVehicleSelectionError && draft.category == "vehicle" && draft.selectedVehicle == nil
     }
     
     init(viewModel: ExpenseViewModel, editingExpense: Expense? = nil) {
         self.viewModel = viewModel
         self.editingExpense = editingExpense
+        let draftKey = editingExpense?.objectID.uriRepresentation().absoluteString ?? "new-expense"
+        self.draftKey = draftKey
+        _draft = ObservedObject(wrappedValue: AddExpenseDraftStore.shared.draft(for: draftKey))
         _vehicleViewModel = StateObject(wrappedValue: VehicleViewModel(context: PersistenceController.shared.container.viewContext))
     }
 
@@ -166,54 +193,49 @@ struct AddExpenseView: View {
                 case .addVehicle: AddVehicleView(viewModel: vehicleViewModel)
                 case .datePicker:
                     NavigationStack {
-                        DatePicker("Date", selection: $date, displayedComponents: .date)
-                            .datePickerStyle(.graphical)
-                            .tint(ColorTheme.primary)
-                            .padding()
-                            .onChange(of: date) { _, _ in
-                                activeSheet = nil
-                            }
-                            .navigationTitle("Select Date")
-                            .toolbar {
-                                ToolbarItem(placement: .confirmationAction) {
-                                    Button("done".localizedString) { activeSheet = nil }
-                                }
-                            }
-                    }
-                case .receiptImagePicker:
-                    ImagePicker(
-                        sourceType: receiptImagePickerSource,
-                        onImagePicked: { image in
-                            attachReceiptImage(image)
-                            activeSheet = nil
-                        },
-                        onCancel: {
-                            activeSheet = nil
+                        VStack(spacing: 20) {
+                            DatePicker("Date", selection: $draft.date, displayedComponents: .date)
+                                .datePickerStyle(.graphical)
+                                .tint(ColorTheme.primary)
+
+                            DatePicker("Time", selection: $draft.date, displayedComponents: .hourAndMinute)
+                                .datePickerStyle(.wheel)
+                                .labelsHidden()
                         }
-                    )
+                        .padding()
+                        .navigationTitle("Select Date & Time")
+                        .toolbar {
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("done".localizedString) { activeSheet = nil }
+                            }
+                        }
+                    }
+                case .receiptOptions:
+                    receiptOptionsView
                 case .receiptShare:
                     if let url = receiptShareUrl {
                         ActivityView(activityItems: [url])
                     }
                 }
             }
-            .confirmationDialog("attach_receipt".localizedString, isPresented: $showReceiptSourceDialog, titleVisibility: .visible) {
-                if UIImagePickerController.isSourceTypeAvailable(.camera) {
-                    Button("take_photo".localizedString) {
-                        receiptImagePickerSource = .camera
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                            activeSheet = .receiptImagePicker
-                        }
+            .sheet(isPresented: $showReceiptCameraPicker) {
+                ImagePicker(
+                    sourceType: .camera,
+                    onImagePicked: { image in
+                        attachReceiptImage(image)
+                        showReceiptCameraPicker = false
+                    },
+                    onCancel: {
+                        showReceiptCameraPicker = false
                     }
-                }
-                Button("choose_from_gallery".localizedString) {
-                    receiptImagePickerSource = .photoLibrary
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                        activeSheet = .receiptImagePicker
-                    }
-                }
-                Button("cancel".localizedString, role: .cancel) {}
+                )
             }
+            .photosPicker(
+                isPresented: $showReceiptPhotoPicker,
+                selection: $selectedReceiptPhoto,
+                matching: .images,
+                photoLibrary: .shared()
+            )
             .fileImporter(
                 isPresented: $showReceiptImporter,
                 allowedContentTypes: [.image, .pdf],
@@ -221,6 +243,9 @@ struct AddExpenseView: View {
             ) { result in
                 showReceiptImporter = false
                 handleReceiptImport(result)
+            }
+            .onChange(of: selectedReceiptPhoto) { _, newValue in
+                loadReceiptPhoto(from: newValue)
             }
             .alert("Add New User", isPresented: $showAddUserAlert) {
                 TextField("User Name", text: $newUserName)
@@ -232,17 +257,17 @@ struct AddExpenseView: View {
             }
             .onAppear {
                 viewModel.refreshFiltersIfNeeded()
-                if !didPrefill {
+                if !draft.didPrefill {
                     prefillIfNeeded()
-                    didPrefill = true
+                    draft.didPrefill = true
                 }
             }
-            .onChange(of: selectedVehicle) { _, newValue in
+            .onChange(of: draft.selectedVehicle) { _, newValue in
                 if newValue != nil {
                     showVehicleSelectionError = false
                 }
             }
-            .onChange(of: category) { _, newValue in
+            .onChange(of: draft.category) { _, newValue in
                 if newValue != "vehicle" {
                     showVehicleSelectionError = false
                 }
@@ -255,7 +280,7 @@ struct AddExpenseView: View {
     private var headerView: some View {
         HStack {
             Button {
-                dismiss()
+                closeView()
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
@@ -308,16 +333,16 @@ struct AddExpenseView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(ColorTheme.tertiaryText)
                 
-                TextField("0", text: $amount)
+                TextField("0", text: $draft.amount)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(ColorTheme.primaryText)
                     .multilineTextAlignment(.center)
                     .keyboardType(.decimalPad)
                     .frame(minWidth: 80)
                     .fixedSize(horizontal: true, vertical: false)
-                    .onChange(of: amount) { old, new in
+                    .onChange(of: draft.amount) { old, new in
                         let filtered = filterAmountInput(new)
-                        if filtered != new { amount = filtered }
+                        if filtered != new { draft.amount = filtered }
                     }
             }
         }
@@ -328,11 +353,11 @@ struct AddExpenseView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
                 ForEach(categoryOptions, id: \.0) { option in
-                    let isSelected = category == option.0
+                    let isSelected = draft.category == option.0
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            category = option.0
-                            if category != "vehicle" { selectedVehicle = nil }
+                            draft.category = option.0
+                            if draft.category != "vehicle" { draft.selectedVehicle = nil }
                         }
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     } label: {
@@ -370,19 +395,19 @@ struct AddExpenseView: View {
                     ForEach(quickAddOptions, id: \.self) { option in
                         Button {
                             withAnimation {
-                                description = option
+                                draft.description = option
                             }
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         } label: {
                             Text(option)
                                 .font(.caption)
                                 .fontWeight(.medium)
-                                .foregroundColor(description == option ? .white : ColorTheme.primary)
+                                .foregroundColor(draft.description == option ? .white : ColorTheme.primary)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
                                 .background(
                                     Capsule()
-                                        .fill(description == option ? ColorTheme.primary : ColorTheme.primary.opacity(0.1))
+                                        .fill(draft.description == option ? ColorTheme.primary : ColorTheme.primary.opacity(0.1))
                                 )
                         }
                         .buttonStyle(.plain)
@@ -401,7 +426,7 @@ struct AddExpenseView: View {
                     .foregroundColor(ColorTheme.secondaryText)
                     .padding(.top, 4)
                 
-                TextField("what_is_this_for".localizedString, text: $description, axis: .vertical)
+                TextField("what_is_this_for".localizedString, text: $draft.description, axis: .vertical)
                     .font(.body)
                     .lineLimit(2...4)
             }
@@ -424,7 +449,7 @@ struct AddExpenseView: View {
                 Button {
                     activeSheet = .datePicker
                 } label: {
-                    Text(date.formatted(date: .abbreviated, time: .omitted))
+                    Text(draft.date.formatted(date: .abbreviated, time: .shortened))
                         .font(.subheadline)
                         .foregroundColor(ColorTheme.primary)
                     Image(systemName: "chevron.down")
@@ -443,12 +468,12 @@ struct AddExpenseView: View {
     
     private var contextSection: some View {
         VStack(spacing: 12) {
-            if category == "vehicle" {
+            if draft.category == "vehicle" {
                 contextButton(
                     title: "Vehicle",
-                    value: selectedVehicle.map(vehicleDisplayName) ?? "Select Vehicle",
+                    value: draft.selectedVehicle.map(vehicleDisplayName) ?? "Select Vehicle",
                     icon: "car.fill",
-                    isActive: selectedVehicle != nil,
+                    isActive: draft.selectedVehicle != nil,
                     showsError: shouldShowVehicleSelectionError,
                     errorMessage: "expense_vehicle_required".localizedString
                 ) {
@@ -458,18 +483,18 @@ struct AddExpenseView: View {
             
             contextButton(
                 title: "Paid By",
-                value: selectedUser?.name ?? "Select User",
+                value: draft.selectedUser?.name ?? "Select User",
                 icon: "person.fill",
-                isActive: selectedUser != nil
+                isActive: draft.selectedUser != nil
             ) {
                 activeSheet = .user
             }
             
             contextButton(
                 title: "Account",
-                value: selectedAccount.map(accountDisplayName) ?? "Select Account",
+                value: draft.selectedAccount.map(accountDisplayName) ?? "Select Account",
                 icon: "creditcard.fill",
-                isActive: selectedAccount != nil
+                isActive: draft.selectedAccount != nil
             ) {
                 activeSheet = .account
             }
@@ -480,7 +505,7 @@ struct AddExpenseView: View {
     private var receiptSection: some View {
         VStack(spacing: 12) {
             Button {
-                showReceiptSourceDialog = true
+                activeSheet = .receiptOptions
             } label: {
                 HStack(spacing: 16) {
                     ZStack {
@@ -536,26 +561,42 @@ struct AddExpenseView: View {
                             .cornerRadius(12)
                     }
                 }
-            } else {
-                Button {
-                    showReceiptImporter = true
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "doc.fill")
-                            .foregroundColor(ColorTheme.secondaryText)
-                        Text("choose_file".localizedString)
-                            .font(.subheadline)
-                            .foregroundColor(ColorTheme.secondaryText)
-                        Spacer()
-                    }
-                    .padding(12)
-                    .background(ColorTheme.secondaryBackground.opacity(0.5))
-                    .cornerRadius(12)
-                }
-                .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 20)
+    }
+
+    private var receiptOptionsView: some View {
+        SelectionSheet(title: "attach_receipt".localizedString) {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button {
+                    activeSheet = nil
+                    DispatchQueue.main.async {
+                        showReceiptCameraPicker = true
+                    }
+                } label: {
+                    SelectionRow(title: "take_photo".localizedString, isSelected: false)
+                }
+            }
+
+            Button {
+                activeSheet = nil
+                DispatchQueue.main.async {
+                    showReceiptPhotoPicker = true
+                }
+            } label: {
+                SelectionRow(title: "choose_from_gallery".localizedString, isSelected: false)
+            }
+
+            Button {
+                activeSheet = nil
+                DispatchQueue.main.async {
+                    showReceiptImporter = true
+                }
+            } label: {
+                SelectionRow(title: "choose_file".localizedString, isSelected: false)
+            }
+        }
     }
     
     private func contextButton(title: String, value: String, icon: String, isActive: Bool, showsError: Bool = false, errorMessage: String? = nil, action: @escaping () -> Void) -> some View {
@@ -664,7 +705,7 @@ struct AddExpenseView: View {
                 set: { if !$0 { activeSheet = nil } }
             ),
             searchText: $vehicleSearchText,
-            selectedVehicle: $selectedVehicle,
+            selectedVehicle: $draft.selectedVehicle,
             vehicles: Array(vehicles)
         )
     }
@@ -686,20 +727,20 @@ struct AddExpenseView: View {
             }
             
             Button {
-                selectedUser = nil
+                draft.selectedUser = nil
                 activeSheet = nil
             } label: {
-                SelectionRow(title: "None", isSelected: selectedUser == nil)
+                SelectionRow(title: "None", isSelected: draft.selectedUser == nil)
             }
             
             ForEach(users, id: \.objectID) { user in
                 Button {
-                    selectedUser = user
+                    draft.selectedUser = user
                     activeSheet = nil
                 } label: {
                     SelectionRow(
                         title: user.name ?? "Unknown",
-                        isSelected: selectedUser?.objectID == user.objectID
+                        isSelected: draft.selectedUser?.objectID == user.objectID
                     )
                 }
             }
@@ -709,20 +750,20 @@ struct AddExpenseView: View {
     private var accountSelector: some View {
         SelectionSheet(title: "Select Account") {
             Button {
-                selectedAccount = nil
+                draft.selectedAccount = nil
                 activeSheet = nil
             } label: {
-                SelectionRow(title: "None", isSelected: selectedAccount == nil)
+                SelectionRow(title: "None", isSelected: draft.selectedAccount == nil)
             }
             
             ForEach(viewModel.accounts, id: \.objectID) { account in
                 Button {
-                    selectedAccount = account
+                    draft.selectedAccount = account
                     activeSheet = nil
                 } label: {
                     SelectionRow(
                         title: accountDisplayName(account),
-                        isSelected: selectedAccount?.objectID == account.objectID
+                        isSelected: draft.selectedAccount?.objectID == account.objectID
                     )
                 }
             }
@@ -799,7 +840,7 @@ struct AddExpenseView: View {
                     await CloudSyncManager.shared?.upsertUser(user, dealerId: dealerId)
                 }
             }
-            selectedUser = user
+            draft.selectedUser = user
             newUserName = ""
             activeSheet = nil // Dismiss selection sheet
         } catch {
@@ -832,14 +873,14 @@ struct AddExpenseView: View {
     }
 
     private var hasReceipt: Bool {
-        receiptAttachment != nil || receiptPath != nil
+        draft.receiptAttachment != nil || draft.receiptPath != nil
     }
 
     private var receiptLabelText: String {
-        if let attachment = receiptAttachment {
+        if let attachment = draft.receiptAttachment {
             return attachment.fileName
         }
-        if let path = receiptPath {
+        if let path = draft.receiptPath {
             return URL(fileURLWithPath: path).lastPathComponent
         }
         return "attach_receipt".localizedString
@@ -847,47 +888,46 @@ struct AddExpenseView: View {
     
     private func prefillIfNeeded() {
         if let exp = editingExpense {
-            if let dec = exp.amount as Decimal? { amount = NSDecimalNumber(decimal: dec).stringValue } else { amount = "" }
-            if amount.isEmpty { amount = String(describing: exp.amount ?? 0) }
-            date = exp.date ?? Date()
-            description = exp.expenseDescription ?? ""
-            category = exp.category ?? "vehicle"
-            selectedVehicle = exp.vehicle
-            selectedUser = exp.user
-            selectedAccount = exp.account
-            receiptPath = exp.receiptPath
+            if let dec = exp.amount as Decimal? { draft.amount = NSDecimalNumber(decimal: dec).stringValue } else { draft.amount = "" }
+            if draft.amount.isEmpty { draft.amount = String(describing: exp.amount ?? 0) }
+            draft.date = exp.date ?? Date()
+            draft.description = exp.expenseDescription ?? ""
+            draft.category = exp.category ?? "vehicle"
+            draft.selectedVehicle = exp.vehicle
+            draft.selectedUser = exp.user
+            draft.selectedAccount = exp.account
+            draft.receiptPath = exp.receiptPath
         } else {
-            // Prefill from last used
-            category = lastExpenseCategory
-            selectedVehicle = nil
+            draft.category = lastExpenseCategory
+            draft.selectedVehicle = nil
             if !lastExpenseUserID.isEmpty {
-                selectedUser = users.first { $0.id?.uuidString == lastExpenseUserID }
+                draft.selectedUser = users.first { $0.id?.uuidString == lastExpenseUserID }
             }
             if !lastExpenseAccountID.isEmpty {
-                selectedAccount = viewModel.accounts.first { $0.objectID.uriRepresentation().absoluteString == lastExpenseAccountID }
+                draft.selectedAccount = viewModel.accounts.first { $0.objectID.uriRepresentation().absoluteString == lastExpenseAccountID }
             }
         }
     }
     
     private func applyTemplate(_ t: ExpenseTemplate) {
-        if let amt = t.defaultAmount?.decimalValue { amount = NSDecimalNumber(decimal: amt).stringValue }
-        if let desc = t.defaultDescription { description = desc }
-        if let cat = t.category { category = cat }
-        selectedVehicle = t.vehicle
-        selectedUser = t.user
-        selectedAccount = t.account
+        if let amt = t.defaultAmount?.decimalValue { draft.amount = NSDecimalNumber(decimal: amt).stringValue }
+        if let desc = t.defaultDescription { draft.description = desc }
+        if let cat = t.category { draft.category = cat }
+        draft.selectedVehicle = t.vehicle
+        draft.selectedUser = t.user
+        draft.selectedAccount = t.account
     }
     
     private func saveTemplate() {
         do {
             try viewModel.saveTemplate(
                 name: templateName.isEmpty ? "Template" : templateName,
-                category: category,
-                vehicle: selectedVehicle,
-                user: selectedUser,
-                account: selectedAccount,
-                defaultAmount: Decimal(string: amount),
-                defaultDescription: description.isEmpty ? nil : description
+                category: draft.category,
+                vehicle: draft.selectedVehicle,
+                user: draft.selectedUser,
+                account: draft.selectedAccount,
+                defaultAmount: Decimal(string: draft.amount),
+                defaultDescription: draft.description.isEmpty ? nil : draft.description
             )
             templateName = ""
             activeSheet = nil
@@ -907,13 +947,13 @@ struct AddExpenseView: View {
                 let fileName = url.lastPathComponent
                 let fileExtension = url.pathExtension.lowercased()
                 let contentType = UTType(filenameExtension: fileExtension)?.preferredMIMEType ?? "application/octet-stream"
-                receiptAttachment = ReceiptAttachment(
+                draft.receiptAttachment = ReceiptAttachment(
                     data: data,
                     fileName: fileName,
                     contentType: contentType,
                     fileExtension: fileExtension
                 )
-                receiptRemoved = false
+                draft.receiptRemoved = false
             } catch {
                 print("Failed to load receipt: \(error)")
             }
@@ -925,25 +965,41 @@ struct AddExpenseView: View {
     private func attachReceiptImage(_ image: UIImage) {
         guard let data = image.jpegData(compressionQuality: 0.85) else { return }
         let fileName = "receipt-\(Int(Date().timeIntervalSince1970)).jpg"
-        receiptAttachment = ReceiptAttachment(
+        draft.receiptAttachment = ReceiptAttachment(
             data: data,
             fileName: fileName,
             contentType: "image/jpeg",
             fileExtension: "jpg"
         )
-        receiptRemoved = false
+        draft.receiptRemoved = false
+    }
+
+    private func loadReceiptPhoto(from item: PhotosPickerItem?) {
+        guard let item else { return }
+
+        Task {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let image = UIImage(data: data) else {
+                return
+            }
+
+            await MainActor.run {
+                attachReceiptImage(image)
+                selectedReceiptPhoto = nil
+            }
+        }
     }
 
     private func removeReceipt() {
-        if receiptPath != nil {
-            receiptRemoved = true
+        if draft.receiptPath != nil {
+            draft.receiptRemoved = true
         }
-        receiptAttachment = nil
-        receiptPath = nil
+        draft.receiptAttachment = nil
+        draft.receiptPath = nil
     }
 
     private func openReceipt() {
-        if let attachment = receiptAttachment {
+        if let attachment = draft.receiptAttachment {
             if let url = writeReceiptTempFile(data: attachment.data, fileName: attachment.fileName) {
                 receiptShareUrl = url
                 activeSheet = .receiptShare
@@ -951,7 +1007,7 @@ struct AddExpenseView: View {
             return
         }
 
-        guard let path = receiptPath else { return }
+        guard let path = draft.receiptPath else { return }
         Task {
             if let data = await CloudSyncManager.shared?.downloadExpenseReceipt(path: path) {
                 let fileName = URL(fileURLWithPath: path).lastPathComponent
@@ -978,7 +1034,7 @@ struct AddExpenseView: View {
     private func syncReceiptChanges(for expense: Expense, previousPath: String?) async {
         guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
 
-        if receiptRemoved {
+        if draft.receiptRemoved {
             await MainActor.run {
                 expense.receiptPath = nil
                 expense.updatedAt = Date()
@@ -989,7 +1045,7 @@ struct AddExpenseView: View {
             }
         }
 
-        if let attachment = receiptAttachment,
+        if let attachment = draft.receiptAttachment,
            let newPath = await CloudSyncManager.shared?.uploadExpenseReceipt(
                 expenseId: expense.id ?? UUID(),
                 dealerId: dealerId,
@@ -1011,11 +1067,11 @@ struct AddExpenseView: View {
     }
     
     private func saveExpense() {
-        guard let amountDecimal = Decimal(string: amount), amountDecimal > 0 else { return }
+        guard let amountDecimal = Decimal(string: draft.amount), amountDecimal > 0 else { return }
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()
 
-        if category == "vehicle" && selectedVehicle == nil {
+        if draft.category == "vehicle" && draft.selectedVehicle == nil {
             showVehicleSelectionError = true
             generator.notificationOccurred(.error)
             return
@@ -1024,22 +1080,21 @@ struct AddExpenseView: View {
         showVehicleSelectionError = false
         isSaving = true
         
-        let normalizedDate = Calendar.current.startOfDay(for: date)
+        let selectedDate = draft.date
         let previousReceiptPath = editingExpense?.receiptPath
 
-        // Simulate network/save delay for better UX feel
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             do {
                 if let exp = editingExpense {
                     try viewModel.updateExpense(
                         exp,
                         amount: amountDecimal,
-                        date: normalizedDate,
-                        description: description,
-                        category: category,
-                        vehicle: selectedVehicle,
-                        user: selectedUser,
-                        account: selectedAccount
+                        date: selectedDate,
+                        description: draft.description,
+                        category: draft.category,
+                        vehicle: draft.selectedVehicle,
+                        user: draft.selectedUser,
+                        account: draft.selectedAccount
                     )
                     
                     Task {
@@ -1048,12 +1103,12 @@ struct AddExpenseView: View {
                 } else {
                     let expense = try viewModel.addExpense(
                         amount: amountDecimal,
-                        date: normalizedDate,
-                        description: description,
-                        category: category,
-                        vehicle: selectedVehicle,
-                        user: selectedUser,
-                        account: selectedAccount,
+                        date: selectedDate,
+                        description: draft.description,
+                        category: draft.category,
+                        vehicle: draft.selectedVehicle,
+                        user: draft.selectedUser,
+                        account: draft.selectedAccount,
                         shouldRefresh: false
                     )
                     viewModel.fetchExpenses()
@@ -1063,23 +1118,19 @@ struct AddExpenseView: View {
                         await syncReceiptChanges(for: expense, previousPath: nil)
                     }
                     
-                    // Remember last used
-                    lastExpenseCategory = category
-                    lastExpenseUserID = selectedUser?.id?.uuidString ?? ""
-                    lastExpenseAccountID = selectedAccount?.objectID.uriRepresentation().absoluteString ?? ""
+                    lastExpenseCategory = draft.category
+                    lastExpenseUserID = draft.selectedUser?.id?.uuidString ?? ""
+                    lastExpenseAccountID = draft.selectedAccount?.objectID.uriRepresentation().absoluteString ?? ""
                 }
                 
-                // Sync Account Balance
                 if let dealerId = CloudSyncEnvironment.currentDealerId {
-                    // Sync the new account if selected
-                    if let newAccount = selectedAccount {
+                    if let newAccount = draft.selectedAccount {
                         Task {
                             await CloudSyncManager.shared?.upsertFinancialAccount(newAccount, dealerId: dealerId)
                         }
                     }
                     
-                    // If editing and account changed, sync the old account too
-                    if let oldAccount = editingExpense?.account, oldAccount != selectedAccount {
+                    if let oldAccount = editingExpense?.account, oldAccount != draft.selectedAccount {
                         Task {
                             await CloudSyncManager.shared?.upsertFinancialAccount(oldAccount, dealerId: dealerId)
                         }
@@ -1092,6 +1143,7 @@ struct AddExpenseView: View {
                 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                     showSavedToast = false
+                    AddExpenseDraftStore.shared.clear(draftKey)
                     dismiss()
                 }
             } catch {
@@ -1101,6 +1153,11 @@ struct AddExpenseView: View {
                 print("Failed to save expense: \(error)")
             }
         }
+    }
+
+    private func closeView() {
+        AddExpenseDraftStore.shared.clear(draftKey)
+        dismiss()
     }
 }
 

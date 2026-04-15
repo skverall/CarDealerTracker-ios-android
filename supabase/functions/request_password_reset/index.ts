@@ -136,12 +136,19 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: errorMessage(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     })
   }
 })
+
+function errorMessage(error: unknown) {
+  if (typeof error === "object" && error && "message" in error) {
+    return String((error as { message?: unknown }).message ?? "Unexpected error")
+  }
+  return "Unexpected error"
+}
 
 function extractActionLink(data: unknown): string | null {
   if (!data || typeof data !== "object") return null
@@ -173,7 +180,7 @@ function isUserExistsError(error: { message?: string }) {
 }
 
 async function findUserIdByEmail(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   email: string
 ): Promise<string | null> {
   const { data: profile, error: profileError } = await supabaseAdmin
@@ -192,7 +199,7 @@ async function findUserIdByEmail(
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
     if (error) break
     const users = data?.users ?? []
-    const match = users.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase())
+    const match = users.find((u: any) => (u.email ?? "").toLowerCase() === email.toLowerCase())
     if (match) return match.id
     if (users.length < perPage) break
     page += 1
@@ -201,7 +208,7 @@ async function findUserIdByEmail(
 }
 
 async function repairUserEmailState(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   userId: string,
   email: string
 ) {

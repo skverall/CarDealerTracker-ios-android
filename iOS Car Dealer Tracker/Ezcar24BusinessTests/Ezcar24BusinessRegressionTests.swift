@@ -178,6 +178,24 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual(viewModel.expenses.last?.objectID, earlierExpense.objectID)
     }
 
+    func testExpenseViewModelPreservesExplicitTimeComponent() throws {
+        let explicitDate = Date(timeIntervalSince1970: 1_744_735_245)
+        let viewModel = ExpenseViewModel(context: context)
+
+        let expense = try viewModel.addExpense(
+            amount: 75,
+            date: explicitDate,
+            description: "Timed",
+            category: "vehicle",
+            vehicle: nil,
+            user: nil,
+            account: nil,
+            shouldRefresh: false
+        )
+
+        XCTAssertEqual(expense.date?.timeIntervalSince1970 ?? 0, explicitDate.timeIntervalSince1970, accuracy: 0.001)
+    }
+
     func testSyncQueueLoadsPersistedItemsOnFirstAccess() async throws {
         let queueURL = try makeTemporaryQueueURL()
         let dealerId = UUID()
@@ -617,6 +635,7 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
             id: UUID(),
             dealerId: dealerId,
             vin: "QUEUE-ANCHOR-1",
+            inventoryID: nil,
             make: "Anchor",
             model: "Vehicle",
             year: 2024,

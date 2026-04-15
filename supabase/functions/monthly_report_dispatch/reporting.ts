@@ -348,7 +348,7 @@ export async function buildMonthlyReportSnapshot(
     loadHoldingCostSettings(admin, organizationId),
     loadSales(admin, organizationId, monthRange),
     loadVehicles(admin, organizationId),
-    loadExpenses(admin, organizationId),
+    loadExpenses(admin, organizationId, monthRange),
     loadFinancialAccounts(admin, organizationId),
     loadAccountTransactions(admin, organizationId, monthRange),
     loadParts(admin, organizationId),
@@ -944,12 +944,14 @@ async function loadVehicles(admin: SupabaseClient, organizationId: string) {
   return (data ?? []) as VehicleRecord[];
 }
 
-async function loadExpenses(admin: SupabaseClient, organizationId: string) {
+async function loadExpenses(admin: SupabaseClient, organizationId: string, range: ReturnType<typeof monthBounds>) {
   const { data, error } = await admin
     .from("crm_expenses")
     .select("id, amount, date, expense_description, category, expense_type, vehicle_id")
     .eq("dealer_id", organizationId)
-    .is("deleted_at", null);
+    .is("deleted_at", null)
+    .gte("date", range.startInstant.toString())
+    .lt("date", range.endInstant.toString());
 
   if (error) {
     throw error;
