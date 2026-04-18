@@ -75,14 +75,13 @@ struct VehicleListView: View {
 
 
     var body: some View {
+        let _ = regionSettings.selectedRegion
         if showNavigation {
             NavigationStack {
                 content
             }
-            .id(regionSettings.selectedRegion.rawValue) // Force re-render when currency changes
         } else {
             content
-                .id(regionSettings.selectedRegion.rawValue) // Force re-render when currency changes
         }
     }
     

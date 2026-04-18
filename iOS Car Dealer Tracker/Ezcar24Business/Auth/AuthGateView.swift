@@ -55,9 +55,6 @@ struct AuthGateView: View {
         .task {
             await sessionStore.bootstrap()
         }
-        .animation(.easeInOut, value: sessionStore.status)
-        .animation(.easeInOut, value: sessionStore.showPasswordReset)
-        .animation(.easeInOut, value: appSessionState.isGuestMode)
         .onAppear {
             refreshPeriodicSync()
         }

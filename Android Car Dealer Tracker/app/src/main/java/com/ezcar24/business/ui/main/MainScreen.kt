@@ -29,6 +29,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +61,7 @@ import com.ezcar24.business.ui.theme.EzcarNavy
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.ui.vehicle.VehicleListScreen
+import com.ezcar24.business.util.rememberRegionSettingsManager
 
 private sealed class MainTab(
     val route: String,
@@ -86,14 +88,20 @@ fun MainScreen(
     onNavigateToDataHealth: () -> Unit
 ) {
     val navController = rememberNavController()
-    val items = listOf(
-        MainTab.Dashboard,
-        MainTab.Expenses,
-        MainTab.Vehicles,
-        MainTab.Parts,
-        MainTab.Sales,
-        MainTab.Clients
-    )
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val regionState by regionSettingsManager.state.collectAsState()
+
+    val items = buildList {
+        add(MainTab.Dashboard)
+        add(MainTab.Expenses)
+        add(MainTab.Vehicles)
+        if (regionState.isPartsEnabled) {
+            add(MainTab.Parts)
+        }
+        add(MainTab.Sales)
+        add(MainTab.Clients)
+    }
+    
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 

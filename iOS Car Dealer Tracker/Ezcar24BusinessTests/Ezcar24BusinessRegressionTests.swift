@@ -196,6 +196,92 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual(expense.date?.timeIntervalSince1970 ?? 0, explicitDate.timeIntervalSince1970, accuracy: 0.001)
     }
 
+    func testExpenseViewModelDebouncesSearchUpdates() async throws {
+        let businessDate = Date(timeIntervalSince1970: 1_744_800_000)
+        _ = makeExpense(
+            description: "Wheel repair",
+            amount: 120,
+            date: businessDate
+        )
+        _ = makeExpense(
+            description: "Office rent",
+            amount: 900,
+            date: businessDate.addingTimeInterval(60)
+        )
+        try context.save()
+
+        let viewModel = ExpenseViewModel(context: context)
+        XCTAssertEqual(viewModel.expenses.count, 2)
+
+        viewModel.updateSearchQuery("Wheel")
+        XCTAssertEqual(viewModel.expenses.count, 2)
+
+        try await Task.sleep(nanoseconds: 400_000_000)
+        await drainMainQueue()
+
+        XCTAssertEqual(viewModel.expenses.count, 1)
+        XCTAssertEqual(viewModel.expenses.first?.expenseDescription, "Wheel repair")
+    }
+
+    func testExpensePresentationSnapshotBuildsStableGroupsAndTotals() throws {
+        let now = Date()
+        let todayExpense = makeExpense(
+            description: "Wheel repair",
+            amount: 120,
+            date: now
+        )
+        let olderExpense = makeExpense(
+            description: "Office rent",
+            amount: 900,
+            date: now.addingTimeInterval(-40 * 86_400)
+        )
+        todayExpense.createdAt = now
+        olderExpense.createdAt = now.addingTimeInterval(-40 * 86_400)
+        todayExpense.category = "vehicle"
+        olderExpense.category = "office"
+        try context.save()
+
+        let viewModel = ExpenseViewModel(context: context)
+        let snapshot = viewModel.presentationSnapshot
+
+        XCTAssertEqual(snapshot.totalExpenseAmount, 1_020)
+        XCTAssertEqual(snapshot.categoryGroups.map(\.key), ["vehicle", "office"])
+        XCTAssertEqual(snapshot.dateGroups.map(\.key), ["today".localizedString, "older".localizedString])
+        XCTAssertEqual(snapshot.categorySummaries["vehicle"]?.count, 1)
+        XCTAssertEqual(snapshot.categorySummaries["vehicle"]?.subtotal, 120)
+        XCTAssertEqual(snapshot.dateSummaries["today".localizedString]?.count, 1)
+        XCTAssertEqual(snapshot.dateSummaries["older".localizedString]?.subtotal, 900)
+    }
+
+    func testDashboardRefreshDebouncerCoalescesRapidRefreshRequests() async {
+        let debouncer = DashboardRefreshDebouncer(delay: 0.05)
+        var fireCount = 0
+
+        debouncer.schedule { fireCount += 1 }
+        debouncer.schedule { fireCount += 1 }
+        debouncer.schedule { fireCount += 1 }
+
+        XCTAssertEqual(fireCount, 0)
+
+        try? await Task.sleep(nanoseconds: 120_000_000)
+        await drainMainQueue()
+
+        XCTAssertEqual(fireCount, 1)
+    }
+
+    func testDashboardRefreshDebouncerCancelPreventsPendingRefresh() async {
+        let debouncer = DashboardRefreshDebouncer(delay: 0.05)
+        var fireCount = 0
+
+        debouncer.schedule { fireCount += 1 }
+        debouncer.cancel()
+
+        try? await Task.sleep(nanoseconds: 120_000_000)
+        await drainMainQueue()
+
+        XCTAssertEqual(fireCount, 0)
+    }
+
     func testSyncQueueLoadsPersistedItemsOnFirstAccess() async throws {
         let queueURL = try makeTemporaryQueueURL()
         let dealerId = UUID()

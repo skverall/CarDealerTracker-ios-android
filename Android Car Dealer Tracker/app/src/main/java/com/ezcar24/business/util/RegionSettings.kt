@@ -60,7 +60,8 @@ enum class AppLanguage(
 data class RegionSettingsState(
     val selectedRegion: AppRegion = AppRegion.UAE,
     val selectedLanguage: AppLanguage = AppLanguage.ENGLISH,
-    val hasSelectedRegion: Boolean = false
+    val hasSelectedRegion: Boolean = false,
+    val isPartsEnabled: Boolean = true
 )
 
 @Singleton
@@ -92,6 +93,13 @@ class RegionSettingsManager @Inject constructor(
             .apply()
         applyLanguage(language)
         _state.value = _state.value.copy(selectedLanguage = language)
+    }
+
+    fun updatePartsEnabled(enabled: Boolean) {
+        preferences.edit()
+            .putBoolean(PARTS_ENABLED_KEY, enabled)
+            .apply()
+        _state.value = _state.value.copy(isPartsEnabled = enabled)
     }
 
     fun formatCurrency(value: BigDecimal?): String {
@@ -136,10 +144,12 @@ class RegionSettingsManager @Inject constructor(
             ?.let { runCatching { AppLanguage.valueOf(it) }.getOrNull() }
             ?: AppLanguage.ENGLISH
         val hasSelectedRegion = preferences.getBoolean(HAS_SELECTED_REGION_KEY, false)
+        val isPartsEnabled = preferences.getBoolean(PARTS_ENABLED_KEY, true)
         return RegionSettingsState(
             selectedRegion = storedRegion,
             selectedLanguage = storedLanguage,
-            hasSelectedRegion = hasSelectedRegion
+            hasSelectedRegion = hasSelectedRegion,
+            isPartsEnabled = isPartsEnabled
         )
     }
 
@@ -167,6 +177,7 @@ class RegionSettingsManager @Inject constructor(
         private const val REGION_KEY = "app_selected_region"
         private const val LANGUAGE_KEY = "app_selected_language"
         private const val HAS_SELECTED_REGION_KEY = "app_has_selected_region"
+        private const val PARTS_ENABLED_KEY = "app_parts_enabled"
         private const val KILOMETERS_TO_MILES = 0.621371
     }
 }

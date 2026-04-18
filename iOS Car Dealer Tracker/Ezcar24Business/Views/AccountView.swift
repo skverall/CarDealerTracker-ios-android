@@ -179,8 +179,8 @@ struct AccountView: View {
             }
             
             notificationsRow
-
-
+            
+            partsToggleRow
 
             if permissionService.can(.viewFinancials) {
                 Divider().padding(.leading, 52)
@@ -684,6 +684,36 @@ struct AccountView: View {
         }
     }
 
+    private var partsToggleRow: some View {
+        VStack(spacing: 0) {
+            Divider().padding(.leading, 52)
+            
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(Color.orange.opacity(0.1))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "shippingbox")
+                        .font(.system(size: 16))
+                        .foregroundColor(.orange)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("parts_tab_title".localizedString)
+                        .font(.body)
+                        .foregroundColor(ColorTheme.primaryText)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: $regionSettings.isPartsEnabled)
+                    .labelsHidden()
+                    .toggleStyle(SwitchToggleStyle(tint: .orange))
+            }
+            .padding(16)
+        }
+    }
+
     private var userInitials: String {
         if case .signedIn(let user) = sessionStore.status, let email = user.email {
             return String(email.prefix(2)).uppercased()
@@ -1182,39 +1212,15 @@ struct DeleteAccountView: View {
 // MARK: - Account Org Switcher (Private)
 private struct AccountOrgSwitcher: View {
     @EnvironmentObject private var sessionStore: SessionStore
+    @State private var showingOrgSheet = false
     @State private var showingCreateSheet = false
     @State private var newOrgName = ""
     @State private var isCreating = false
     @State private var createError: String?
 
     var body: some View {
-        Menu {
-            if sessionStore.organizations.isEmpty {
-                Text("No organizations yet")
-            } else {
-                ForEach(sessionStore.organizations) { org in
-                    Button {
-                        Task { await sessionStore.switchOrganization(to: org.organization_id) }
-                    } label: {
-                        HStack {
-                            Text(org.organization_name)
-                            Spacer()
-                            Text(org.role.capitalized)
-                                .foregroundColor(.secondary)
-                            if org.organization_id == sessionStore.activeOrganizationId {
-                                Image(systemName: "checkmark")
-                            }
-                        }
-                    }
-                }
-            }
-
-            Divider()
-
-            Button("Create Business") {
-                showingCreateSheet = true
-            }
-            .disabled(!isSignedIn)
+        Button {
+            showingOrgSheet = true
         } label: {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 2) {
@@ -1246,6 +1252,75 @@ private struct AccountOrgSwitcher: View {
             )
         }
         .frame(maxWidth: 260)
+        .sheet(isPresented: $showingOrgSheet) {
+            NavigationStack {
+                List {
+                    Section {
+                        if sessionStore.organizations.isEmpty {
+                            Text("No organizations yet")
+                                .foregroundColor(ColorTheme.secondaryText)
+                        } else {
+                            ForEach(sessionStore.organizations) { org in
+                                Button {
+                                    showingOrgSheet = false
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        Task { await sessionStore.switchOrganization(to: org.organization_id) }
+                                    }
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(org.organization_name)
+                                                .font(.body.weight(org.organization_id == sessionStore.activeOrganizationId ? .semibold : .regular))
+                                                .foregroundColor(ColorTheme.primaryText)
+                                            Text(org.role.capitalized)
+                                                .font(.caption)
+                                                .foregroundColor(ColorTheme.secondaryText)
+                                        }
+                                        Spacer()
+                                        if org.organization_id == sessionStore.activeOrganizationId {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(ColorTheme.primary)
+                                                .font(.title3)
+                                        }
+                                    }
+                                    .padding(.vertical, 2)
+                                }
+                            }
+                        }
+                    }
+
+                    Section {
+                        Button {
+                            showingOrgSheet = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showingCreateSheet = true
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title3)
+                                Text("Create Business")
+                            }
+                            .foregroundColor(ColorTheme.primary)
+                            .font(.body.weight(.medium))
+                            .padding(.vertical, 2)
+                        }
+                        .disabled(!isSignedIn)
+                    }
+                }
+                .navigationTitle("Select Business")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") {
+                            showingOrgSheet = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.fraction(0.4), .medium, .large])
+            .presentationDragIndicator(.visible)
+        }
         .sheet(isPresented: $showingCreateSheet) {
             NavigationView {
                 Form {

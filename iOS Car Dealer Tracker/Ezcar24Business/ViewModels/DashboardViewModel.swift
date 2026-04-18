@@ -95,6 +95,34 @@ struct VehicleSpendStat: Identifiable {
     let amount: Decimal
 }
 
+final class DashboardRefreshDebouncer {
+    private let delayNanoseconds: UInt64
+    private var pendingTask: Task<Void, Never>?
+
+    init(delay: TimeInterval = 0.15) {
+        let normalizedDelay = max(delay, 0)
+        delayNanoseconds = UInt64(normalizedDelay * 1_000_000_000)
+    }
+
+    @MainActor
+    func schedule(action: @escaping @MainActor () -> Void) {
+        pendingTask?.cancel()
+        pendingTask = Task { @MainActor [weak self, delayNanoseconds] in
+            try? await Task.sleep(nanoseconds: delayNanoseconds)
+            guard let self else { return }
+            guard !Task.isCancelled else { return }
+            self.pendingTask = nil
+            action()
+        }
+    }
+
+    @MainActor
+    func cancel() {
+        pendingTask?.cancel()
+        pendingTask = nil
+    }
+}
+
 
 @MainActor
 class DashboardViewModel: ObservableObject {
@@ -141,10 +169,17 @@ class DashboardViewModel: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     private let context: NSManagedObjectContext
+    private let refreshDebouncer: DashboardRefreshDebouncer
 
-    init(context: NSManagedObjectContext) {
+    init(
+        context: NSManagedObjectContext,
+        initialRange: DashboardTimeRange = .all,
+        refreshDebouncer: DashboardRefreshDebouncer = DashboardRefreshDebouncer()
+    ) {
         self.context = context
-        fetchFinancialData(range: .all)
+        self.refreshDebouncer = refreshDebouncer
+        currentRange = initialRange
+        fetchFinancialData(range: initialRange)
         observeContextChanges()
     }
 
@@ -154,10 +189,9 @@ class DashboardViewModel: ObservableObject {
             .sink { [weak self] notification in
                 guard let self, let info = notification.userInfo else { return }
                 
-                // Check if any relevant entities changed
                 if self.shouldRefresh(userInfo: info) {
-                    // Debounce or just refresh on main thread
-                    DispatchQueue.main.async {
+                    self.refreshDebouncer.schedule { [weak self] in
+                        guard let self else { return }
                         self.fetchFinancialData(range: self.currentRange)
                     }
                 }
@@ -181,13 +215,10 @@ class DashboardViewModel: ObservableObject {
     }
 
     func fetchFinancialData(range: DashboardTimeRange = .all) {
+        refreshDebouncer.cancel()
         currentRange = range
-        // If range is all, we default it to month in logic if needed, but here we just use it.
-        // Actually for "all" we often want "All Time", so leaving as is.
-        
         let rangeStart = range.startDate
         let rangeEnd = range.endDate
-        // Fetch financial accounts
         let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
 
         do {

@@ -12,11 +12,12 @@ import Charts
 
 extension Notification.Name {
     static let dashboardDidRequestAccount = Notification.Name("dashboardDidRequestAccount")
+    static let dashboardDidRequestExpensesTab = Notification.Name("dashboardDidRequestExpensesTab")
     static let currencySettingsDidComplete = Notification.Name("currencySettingsDidComplete")
 }
 
 enum DashboardDestination: String, Identifiable, Hashable {
-    case assets, cashAccounts, bankAccounts, creditAccounts, revenue, profit, sold, allExpenses, analytics, dataHealth
+    case assets, cashAccounts, bankAccounts, creditAccounts, revenue, profit, sold, analytics, dataHealth
     var id: String { rawValue }
 }
 
@@ -57,7 +58,7 @@ struct DashboardView: View {
 
     init() {
         let context = PersistenceController.shared.container.viewContext
-        _viewModel = StateObject(wrappedValue: DashboardViewModel(context: context))
+        _viewModel = StateObject(wrappedValue: DashboardViewModel(context: context, initialRange: .week))
         _expenseEntryViewModel = StateObject(wrappedValue: ExpenseViewModel(context: context))
     }
 
@@ -65,8 +66,10 @@ struct DashboardView: View {
         NavigationStack(path: $navPath) {
             VStack(spacing: 0) {
                 topBar
-                syncStatusBar
-                    .padding(.bottom, 10)
+                if cloudSyncManager.isSyncing || offlineQueueCount > 0 {
+                    syncStatusBar
+                        .padding(.bottom, 10)
+                }
                 
                 ZStack(alignment: .bottom) {
                     if permissionService.didLoad {
@@ -91,9 +94,6 @@ struct DashboardView: View {
             AddExpenseView(viewModel: expenseEntryViewModel)
                 .environment(\.managedObjectContext, viewContext)
                 .presentationDetents([.large])
-                .onDisappear {
-                    viewModel.fetchFinancialData(range: selectedRange)
-                }
         }
         .sheet(item: $selectedExpense) { expense in
             ExpenseDetailSheet(expense: expense)
@@ -103,21 +103,9 @@ struct DashboardView: View {
             AddExpenseView(viewModel: expenseEntryViewModel, editingExpense: expense)
                 .environment(\.managedObjectContext, viewContext)
                 .presentationDetents([.large])
-                .onDisappear {
-                    viewModel.fetchFinancialData(range: selectedRange)
-                }
-        }
-        .onAppear {
-            viewModel.fetchFinancialData(range: selectedRange)
         }
         .onChange(of: selectedRange) { _, newValue in
             viewModel.fetchFinancialData(range: newValue)
-        }
-        .onChange(of: showingAddExpense) { _, isPresented in
-            if !isPresented {
-                // Force refresh when sheet is dismissed to ensure new item appears
-                viewModel.fetchFinancialData(range: selectedRange)
-            }
         }
         .onChange(of: regionSettings.selectedRegion) { _, _ in
             if !navPath.isEmpty {
@@ -151,8 +139,6 @@ struct DashboardView: View {
             SalesListView(showNavigation: false)
         case .sold:
             VehicleListView(presetStatus: "sold", showNavigation: false)
-        case .allExpenses:
-            ExpenseListView()
         case .analytics:
             AnalyticsHubView()
         case .dataHealth:
@@ -165,130 +151,129 @@ struct DashboardView: View {
 
 private extension DashboardView {
     var topBar: some View {
-        VStack(spacing: 16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(greeting)
-                        .font(.title3.italic())
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Text("dashboard_title".localizedString)
-                        .font(.title.weight(.heavy))
-                        .foregroundColor(ColorTheme.primaryText)
-                    OrganizationSwitcherView()
-                        .frame(maxWidth: 220, alignment: .leading)
-                }
+        HStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 6) {
+                OrganizationSwitcherView()
                 
-                Spacer()
-                
-                HStack(spacing: 12) {
-                    if cloudSyncManager.isSyncing {
-                        ProgressView()
-                            .controlSize(.small)
-                            .tint(ColorTheme.primary)
-                    }
-
-                    Button {
-                        showingSearch = true
-                    } label: {
-                        Image(systemName: "magnifyingglass")
-                            .font(.title3.weight(.medium))
-                            .foregroundColor(ColorTheme.secondaryText)
-                            .frame(width: 44, height: 44)
-                            .background(ColorTheme.cardBackground)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                            .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
-                    }
-
-                    Button {
-                        NotificationCenter.default.post(name: .dashboardDidRequestAccount, object: nil)
-                    } label: {
-                        Image(systemName: "person.crop.circle")
-                            .font(.title3.weight(.medium))
-                            .foregroundColor(ColorTheme.secondaryText)
-                            .frame(width: 44, height: 44)
-                            .background(ColorTheme.cardBackground)
-                            .clipShape(Circle())
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                            .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 3)
-                    }
-                    
-                    Menu {
-                        if permissionService.can(.viewExpenses) {
-                            Button {
-                                showingAddExpense = true
-                            } label: {
-                                Label("add_expense".localizedString, systemImage: "creditcard")
-                            }
-                        }
-                        
-                        if permissionService.can(.viewInventory) {
-                            Button {
-                                navPath.append(.assets)
-                            } label: {
-                                Label("view_vehicles".localizedString, systemImage: "car")
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.title2.weight(.bold))
-                            .foregroundColor(.white)
-                            .frame(width: 44, height: 44)
-                            .background(
-                                LinearGradient(
-                                    colors: [ColorTheme.primary.opacity(0.8), ColorTheme.primary],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .clipShape(Circle())
-                            .shadow(color: ColorTheme.primary.opacity(0.4), radius: 6, x: 0, y: 3)
-                    }
-                }
+                Text("dashboard_title".localizedString)
+                    .font(.title.weight(.heavy))
+                    .foregroundColor(ColorTheme.primaryText)
+                    .lineLimit(1)
             }
             
-            HStack(spacing: 6) {
-                ForEach(DashboardTimeRange.allCases) { range in
-                    Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedRange = range
+            Spacer()
+            
+            HStack(spacing: 8) {
+                if cloudSyncManager.isSyncing {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(ColorTheme.primary)
+                }
+
+                Button {
+                    showingSearch = true
+                } label: {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .frame(width: 36, height: 36)
+                        .background(ColorTheme.cardBackground)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                }
+
+                Button {
+                    NotificationCenter.default.post(name: .dashboardDidRequestAccount, object: nil)
+                } label: {
+                    Image(systemName: "person.crop.circle")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .frame(width: 36, height: 36)
+                        .background(ColorTheme.cardBackground)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+                }
+                
+                Menu {
+                    if permissionService.can(.viewExpenses) {
+                        Button {
+                            showingAddExpense = true
+                        } label: {
+                            Label("add_expense".localizedString, systemImage: "creditcard")
                         }
-                    } label: {
-                        Text(range.displayLabel)
-                            .font(.system(size: 13, weight: .semibold))
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                Group {
-                                    if selectedRange == range {
-                                        Capsule()
-                                            .fill(
-                                                LinearGradient(
-                                                    colors: [ColorTheme.primary.opacity(0.8), ColorTheme.primary],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                            )
-                                    } else {
-                                        Capsule()
-                                            .fill(ColorTheme.secondaryBackground)
-                                            .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 1)
-                                    }
-                                }
-                            )
-                            .foregroundColor(selectedRange == range ? .white : ColorTheme.primaryText.opacity(0.8))
                     }
-                    .buttonStyle(.plain)
+                    
+                    if permissionService.can(.viewInventory) {
+                        Button {
+                            navPath.append(.assets)
+                        } label: {
+                            Label("view_vehicles".localizedString, systemImage: "car")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 36, height: 36)
+                        .background(
+                            LinearGradient(
+                                colors: [ColorTheme.primary.opacity(0.8), ColorTheme.primary],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .clipShape(Circle())
+                        .shadow(color: ColorTheme.primary.opacity(0.4), radius: 4, x: 0, y: 2)
                 }
             }
-            .padding(.bottom, 8)
         }
         .padding(.horizontal, 20)
         .padding(.top, 12)
         .padding(.bottom, 12)
         .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 0))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .shadow(color: Color.black.opacity(0.05), radius: 6, x: 0, y: 3)
+    }
+
+    var timeFiltersSection: some View {
+        HStack(spacing: 6) {
+            ForEach(DashboardTimeRange.allCases) { range in
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        selectedRange = range
+                    }
+                } label: {
+                    Text(range.displayLabel)
+                        .font(.system(size: 13, weight: .semibold))
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            Group {
+                                if selectedRange == range {
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [ColorTheme.primary.opacity(0.8), ColorTheme.primary],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            )
+                                        )
+                                } else {
+                                    Capsule()
+                                        .fill(ColorTheme.secondaryBackground)
+                                        .shadow(color: Color.black.opacity(0.04), radius: 2, x: 0, y: 1)
+                                }
+                            }
+                        )
+                        .foregroundColor(selectedRange == range ? .white : ColorTheme.primaryText.opacity(0.8))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.bottom, 8)
     }
 
     var syncStatusBar: some View {
@@ -494,7 +479,7 @@ private extension DashboardView {
                                 navPath.append(.assets)
                             } label: {
                                 OperationCard(
-                                    title: "Inventory Value",
+                                    title: "Inventory",
                                     amount: viewModel.totalAssets.asCurrencyCompact(),
                                     icon: "car.2.fill",
                                     color: DashboardPalette.assets
@@ -659,7 +644,6 @@ private extension DashboardView {
                                         Button(role: .destructive) {
                                             do {
                                                 let deletedId = try expenseEntryViewModel.deleteExpense(expense)
-                                                viewModel.fetchFinancialData(range: selectedRange)
                                                 if let id = deletedId, case .signedIn(let user) = sessionStore.status {
                                                     Task {
                                                         let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
@@ -700,7 +684,7 @@ private extension DashboardView {
                     Spacer()
                     
                     Button {
-                        navPath.append(.allExpenses)
+                        NotificationCenter.default.post(name: .dashboardDidRequestExpensesTab, object: nil)
                     } label: {
                         HStack(spacing: 6) {
                             Text("see_all".localizedString)
@@ -1596,6 +1580,10 @@ extension Expense {
 private extension DashboardView {
     var dashboardList: some View {
         List {
+            timeFiltersSection
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
             financialOverviewSection
             analyticsSection
             todaysExpensesSection
@@ -1610,7 +1598,6 @@ private extension DashboardView {
         .refreshable {
             if case .signedIn(let user) = sessionStore.status {
                 await cloudSyncManager.manualSync(user: user)
-                viewModel.fetchFinancialData(range: selectedRange)
             }
         }
     }
@@ -1622,63 +1609,100 @@ private extension DashboardView {
 
 struct OrganizationSwitcherView: View {
     @EnvironmentObject private var sessionStore: SessionStore
+    @State private var showingOrgSheet = false
     @State private var showingCreateSheet = false
     @State private var newOrgName = ""
     @State private var isCreating = false
     @State private var createError: String?
 
     var body: some View {
-        Menu {
-            if sessionStore.organizations.isEmpty {
-                Text("No organizations yet")
-            } else {
-                ForEach(sessionStore.organizations) { org in
-                    Button {
-                        Task { await sessionStore.switchOrganization(to: org.organization_id) }
-                    } label: {
-                        HStack {
-                            Text(org.organization_name)
-                            Spacer()
-                            Text(org.role.capitalized)
-                                .foregroundColor(.secondary)
-                            if org.organization_id == sessionStore.activeOrganizationId {
-                                Image(systemName: "checkmark")
+        Button {
+            showingOrgSheet = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "building.2.crop.circle.fill")
+                    .foregroundColor(ColorTheme.primary)
+                
+                Text(sessionStore.activeOrganizationName ?? "Business")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .lineLimit(1)
+                
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.caption2)
+                    .foregroundColor(ColorTheme.secondaryText.opacity(0.6))
+            }
+            .padding(.vertical, 4)
+        }
+        .sheet(isPresented: $showingOrgSheet) {
+            NavigationStack {
+                List {
+                    Section {
+                        if sessionStore.organizations.isEmpty {
+                            Text("No organizations yet")
+                                .foregroundColor(ColorTheme.secondaryText)
+                        } else {
+                            ForEach(sessionStore.organizations) { org in
+                                Button {
+                                    showingOrgSheet = false
+                                    // slight delay to allow sheet to close before switching org (avoids UI glitches)
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        Task { await sessionStore.switchOrganization(to: org.organization_id) }
+                                    }
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(org.organization_name)
+                                                .font(.body.weight(org.organization_id == sessionStore.activeOrganizationId ? .semibold : .regular))
+                                                .foregroundColor(ColorTheme.primaryText)
+                                            Text(org.role.capitalized)
+                                                .font(.caption)
+                                                .foregroundColor(ColorTheme.secondaryText)
+                                        }
+                                        Spacer()
+                                        if org.organization_id == sessionStore.activeOrganizationId {
+                                            Image(systemName: "checkmark.circle.fill")
+                                                .foregroundColor(ColorTheme.primary)
+                                                .font(.title3)
+                                        }
+                                    }
+                                    .padding(.vertical, 2)
+                                }
                             }
+                        }
+                    }
+                    
+                    Section {
+                        Button {
+                            showingOrgSheet = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                showingCreateSheet = true
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title3)
+                                Text("Create Business")
+                            }
+                            .foregroundColor(ColorTheme.primary)
+                            .font(.body.weight(.medium))
+                            .padding(.vertical, 2)
+                        }
+                        .disabled(!isSignedIn)
+                    }
+                }
+                .navigationTitle("Select Business")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") {
+                            showingOrgSheet = false
                         }
                     }
                 }
             }
-
-            Divider()
-
-            Button("Create Business") {
-                showingCreateSheet = true
-            }
-            .disabled(!isSignedIn)
-        } label: {
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(sessionStore.activeOrganizationName ?? "Select Business")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(ColorTheme.primaryText)
-                        .lineLimit(1)
-                    if let role = sessionStore.activeOrganizationRole {
-                        Text(role.capitalized)
-                            .font(.caption)
-                            .foregroundColor(ColorTheme.secondaryText)
-                    }
-                }
-                Spacer()
-                Image(systemName: "chevron.down")
-                    .font(.caption)
-                    .foregroundColor(ColorTheme.secondaryText)
-            }
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
-            .background(ColorTheme.cardBackground)
-            .cornerRadius(12)
-            .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+            .presentationDetents([.fraction(0.4), .medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showingCreateSheet) {
             NavigationView {

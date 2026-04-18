@@ -10,6 +10,53 @@ import CoreData
 import Combine
 
 class ExpenseViewModel: ObservableObject {
+    struct ExpenseGroup: Identifiable {
+        let key: String
+        let items: [Expense]
+        let subtotal: Decimal
+
+        var id: String { key }
+    }
+
+    struct ExpenseGroupSummary {
+        let count: Int
+        let subtotal: Decimal
+
+        static let zero = ExpenseGroupSummary(count: 0, subtotal: 0)
+    }
+
+    struct ExpensePresentationSnapshot {
+        let categoryGroups: [ExpenseGroup]
+        let dateGroups: [ExpenseGroup]
+        let categorySummaries: [String: ExpenseGroupSummary]
+        let dateSummaries: [String: ExpenseGroupSummary]
+        let totalExpenseAmount: Decimal
+        let currentWeekTotal: Decimal
+        let lastWeekTotal: Decimal
+
+        var weekDeltaPercent: Double? {
+            guard lastWeekTotal != 0 else { return nil }
+            let diff = (currentWeekTotal - lastWeekTotal) / lastWeekTotal
+            return NSDecimalNumber(decimal: diff * 100).doubleValue
+        }
+
+        static let empty = ExpensePresentationSnapshot(
+            categoryGroups: [],
+            dateGroups: [],
+            categorySummaries: [:],
+            dateSummaries: [:],
+            totalExpenseAmount: 0,
+            currentWeekTotal: 0,
+            lastWeekTotal: 0
+        )
+    }
+
+    private struct ExpensePresentationCache {
+        let freshnessToken: Int
+        let language: AppLanguage
+        let snapshot: ExpensePresentationSnapshot
+    }
+
     @Published var expenses: [Expense] = []
     @Published var selectedCategory: String = "all"
     @Published var selectedVehicle: Vehicle? = nil
@@ -28,6 +75,8 @@ class ExpenseViewModel: ObservableObject {
     }
     @Published var sortOption: SortOption = .dateDesc
     private var cancellables = Set<AnyCancellable>()
+    private var pendingSearchWorkItem: DispatchWorkItem?
+    private var presentationCache: ExpensePresentationCache?
 
     private let context: NSManagedObjectContext
 
@@ -39,6 +88,9 @@ class ExpenseViewModel: ObservableObject {
     }
 
     func fetchExpenses() {
+        pendingSearchWorkItem?.cancel()
+        pendingSearchWorkItem = nil
+
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
         // Sorting
         switch sortOption {
@@ -85,9 +137,28 @@ class ExpenseViewModel: ObservableObject {
 
         do {
             expenses = try context.fetch(request)
+            invalidatePresentationSnapshot()
         } catch {
+            expenses = []
+            invalidatePresentationSnapshot()
             print("Error fetching expenses: \(error)")
         }
+    }
+
+    func updateSearchQuery(_ query: String) {
+        searchQuery = query
+        pendingSearchWorkItem?.cancel()
+
+        if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            fetchExpenses()
+            return
+        }
+
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.fetchExpenses()
+        }
+        pendingSearchWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
     }
 
     func fetchFilters() {
@@ -219,6 +290,27 @@ class ExpenseViewModel: ObservableObject {
 
     func totalExpenses() -> Decimal {
         expenses.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
+    }
+
+    @MainActor
+    var presentationSnapshot: ExpensePresentationSnapshot {
+        let now = Date()
+        let freshnessToken = Self.presentationFreshnessToken(now)
+        let language = RegionSettingsManager.shared.selectedLanguage
+
+        if let presentationCache,
+           presentationCache.freshnessToken == freshnessToken,
+           presentationCache.language == language {
+            return presentationCache.snapshot
+        }
+
+        let snapshot = Self.buildPresentationSnapshot(from: expenses, now: now)
+        presentationCache = ExpensePresentationCache(
+            freshnessToken: freshnessToken,
+            language: language,
+            snapshot: snapshot
+        )
+        return snapshot
     }
 
     private func saveContext() throws {
@@ -410,6 +502,146 @@ class ExpenseViewModel: ObservableObject {
         // Try ISO
         let iso = ISO8601DateFormatter()
         return iso.date(from: s)
+    }
+
+    private func invalidatePresentationSnapshot() {
+        presentationCache = nil
+    }
+
+    private static func presentationFreshnessToken(_ now: Date) -> Int {
+        Int(now.timeIntervalSince1970 / 60)
+    }
+
+    @MainActor
+    private static func buildPresentationSnapshot(from expenses: [Expense], now: Date) -> ExpensePresentationSnapshot {
+        guard !expenses.isEmpty else {
+            return .empty
+        }
+
+        let calendar = Calendar.current
+        let categoryGroups = buildCategoryGroups(from: expenses)
+        let dateGroups = buildDateGroups(from: expenses, now: now, calendar: calendar)
+        let totalExpenseAmount = expenses.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
+        let currentWeekInterval = weekInterval(containing: now, calendar: calendar)
+        let lastWeekStart = calendar.date(byAdding: .weekOfYear, value: -1, to: currentWeekInterval.start) ?? currentWeekInterval.start
+        let lastWeekInterval = DateInterval(start: lastWeekStart, end: currentWeekInterval.start)
+
+        return ExpensePresentationSnapshot(
+            categoryGroups: categoryGroups,
+            dateGroups: dateGroups,
+            categorySummaries: Dictionary(uniqueKeysWithValues: categoryGroups.map {
+                ($0.key, ExpenseGroupSummary(count: $0.items.count, subtotal: $0.subtotal))
+            }),
+            dateSummaries: Dictionary(uniqueKeysWithValues: dateGroups.map {
+                ($0.key, ExpenseGroupSummary(count: $0.items.count, subtotal: $0.subtotal))
+            }),
+            totalExpenseAmount: totalExpenseAmount,
+            currentWeekTotal: total(in: currentWeekInterval, expenses: expenses),
+            lastWeekTotal: total(in: lastWeekInterval, expenses: expenses)
+        )
+    }
+
+    @MainActor
+    private static func buildCategoryGroups(from expenses: [Expense]) -> [ExpenseGroup] {
+        let groups = Dictionary(grouping: expenses) { expense -> String in
+            let category = expense.category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return category.isEmpty ? "Uncategorized" : category
+        }
+
+        return groups
+            .map { key, items in
+                ExpenseGroup(
+                    key: key,
+                    items: items,
+                    subtotal: items.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
+                )
+            }
+            .sorted { a, b in
+                let leftOrder = categoryOrder(for: a.key)
+                let rightOrder = categoryOrder(for: b.key)
+                if leftOrder != rightOrder {
+                    return leftOrder < rightOrder
+                }
+                return a.key.localizedCaseInsensitiveCompare(b.key) == .orderedAscending
+            }
+    }
+
+    @MainActor
+    private static func buildDateGroups(from expenses: [Expense], now: Date, calendar: Calendar) -> [ExpenseGroup] {
+        let groups = Dictionary(grouping: expenses) { expense in
+            dateBucket(for: expense.date, now: now, calendar: calendar)
+        }
+
+        return groups
+            .map { key, items in
+                let sortedItems = items.sorted { left, right in
+                    expenseDisplayDateTime(left) > expenseDisplayDateTime(right)
+                }
+                return ExpenseGroup(
+                    key: key,
+                    items: sortedItems,
+                    subtotal: sortedItems.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
+                )
+            }
+            .sorted { a, b in
+                let leftOrder = dateBucketOrder(for: a.key)
+                let rightOrder = dateBucketOrder(for: b.key)
+                if leftOrder != rightOrder {
+                    return leftOrder < rightOrder
+                }
+                return a.key < b.key
+            }
+    }
+
+    @MainActor
+    private static func dateBucket(for date: Date?, now: Date, calendar: Calendar) -> String {
+        guard let date else { return "older".localizedString }
+
+        let normalizedDate = calendar.startOfDay(for: date)
+        let todayStart = calendar.startOfDay(for: now)
+        let yesterdayStart = calendar.date(byAdding: .day, value: -1, to: todayStart) ?? todayStart
+        let sevenDaysAgo = calendar.date(byAdding: .day, value: -7, to: now) ?? now
+        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: now) ?? now
+
+        if normalizedDate >= todayStart { return "today".localizedString }
+        if normalizedDate >= yesterdayStart { return "yesterday".localizedString }
+        if normalizedDate >= sevenDaysAgo { return "last_7_days".localizedString }
+        if normalizedDate >= thirtyDaysAgo { return "last_30_days".localizedString }
+        return "older".localizedString
+    }
+
+    @MainActor
+    private static func dateBucketOrder(for key: String) -> Int {
+        switch key {
+        case "today".localizedString: return 0
+        case "yesterday".localizedString: return 1
+        case "last_7_days".localizedString: return 2
+        case "last_30_days".localizedString: return 3
+        default: return 4
+        }
+    }
+
+    private static func categoryOrder(for key: String) -> Int {
+        switch key.lowercased() {
+        case "vehicle": return 0
+        case "personal": return 1
+        case "employee": return 2
+        default: return 3
+        }
+    }
+
+    private static func total(in interval: DateInterval, expenses: [Expense]) -> Decimal {
+        expenses.reduce(0) { partial, expense in
+            guard let date = expense.date else { return partial }
+            guard interval.contains(date) else { return partial }
+            return partial + (expense.amount?.decimalValue ?? 0)
+        }
+    }
+
+    private static func weekInterval(containing date: Date, calendar: Calendar) -> DateInterval {
+        let start = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: date)) ?? date
+        let end = calendar.date(byAdding: .day, value: 7, to: start) ?? date
+        return DateInterval(start: start, end: end)
     }
 
 }

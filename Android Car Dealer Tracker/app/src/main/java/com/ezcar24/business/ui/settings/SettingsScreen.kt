@@ -271,6 +271,15 @@ fun SettingsScreen(
                         onCheckedChange = viewModel::toggleNotifications
                     )
                     SectionDivider()
+                    SwitchRow(
+                        title = "Inventory & Parts",
+                        subtitle = "Enable parts tracking module",
+                        icon = Icons.Default.Inventory2,
+                        color = EzcarOrange,
+                        checked = regionState.isPartsEnabled,
+                        onCheckedChange = { regionSettingsManager.updatePartsEnabled(it) }
+                    )
+                    SectionDivider()
                     SettingsRow(
                         title = "Region & Language",
                         subtitle = "${regionState.selectedRegion.displayName} • ${regionState.selectedLanguage.nativeName}",
@@ -1012,6 +1021,58 @@ private fun NotificationRow(
             )
             Text(
                 text = "Client follow-ups, debts and inventory reminders",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color.White,
+                checkedTrackColor = EzcarGreen
+            )
+        )
+    }
+}
+
+@Composable
+fun SwitchRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    color: Color,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .background(color.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

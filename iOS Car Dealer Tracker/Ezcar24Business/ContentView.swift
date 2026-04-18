@@ -13,6 +13,7 @@ import Supabase
 struct ContentView: View {
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var sessionStore: SessionStore
+    @EnvironmentObject private var regionSettings: RegionSettingsManager
     @ObservedObject private var permissionService = PermissionService.shared
     @State private var selectedTab: Tab = .dashboard
     @State private var showProfileSheet = false
@@ -126,22 +127,24 @@ struct ContentView: View {
                 .tag(Tab.vehicles)
 
                 // 4. Parts
-                Group {
-                    if shouldGatePermissions {
-                        if permissionService.didLoad {
-                            if permissionService.can(.viewPartsInventory) {
-                                PartsDashboardView()
+                if regionSettings.isPartsEnabled {
+                    Group {
+                        if shouldGatePermissions {
+                            if permissionService.didLoad {
+                                if permissionService.can(.viewPartsInventory) {
+                                    PartsDashboardView()
+                                } else {
+                                    RestrictedAccessView(title: "parts_tab_title".localizedString)
+                                }
                             } else {
-                                RestrictedAccessView(title: "parts_tab_title".localizedString)
+                                PermissionLoadingView(title: "parts_tab_title".localizedString)
                             }
                         } else {
-                            PermissionLoadingView(title: "parts_tab_title".localizedString)
+                            PartsDashboardView()
                         }
-                    } else {
-                        PartsDashboardView()
                     }
+                    .tag(Tab.parts)
                 }
-                .tag(Tab.parts)
                 
                 // 5. Sales
                 Group {
@@ -246,6 +249,11 @@ struct ContentView: View {
         .onReceive(NotificationCenter.default.publisher(for: .dashboardDidRequestAccount)) { _ in
             showProfileSheet = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .dashboardDidRequestExpensesTab)) { _ in
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                selectedTab = .expenses
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .currencySettingsDidComplete)) { _ in
             showProfileSheet = false // Close the Account sheet
             selectedTab = .dashboard // Switch to Dashboard tab
@@ -255,10 +263,11 @@ struct ContentView: View {
 
 struct CustomTabBar: View {
     @Binding var selectedTab: ContentView.Tab
+    @EnvironmentObject private var regionSettings: RegionSettingsManager
     
     var body: some View {
         HStack(spacing: 0) {
-            ForEach(ContentView.Tab.allCases) { tab in
+            ForEach(ContentView.Tab.allCases.filter { tab in tab != .parts || regionSettings.isPartsEnabled }) { tab in
                 Button(action: {
                     let generator = UIImpactFeedbackGenerator(style: .light)
                     generator.impactOccurred()

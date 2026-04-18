@@ -1,7 +1,7 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-private func expenseDisplayDateTime(_ expense: Expense) -> Date {
+func expenseDisplayDateTime(_ expense: Expense) -> Date {
     let calendar = Calendar.current
     let expenseDate = expense.date ?? expense.createdAt ?? expense.updatedAt ?? .distantPast
     let explicitTime = calendar.dateComponents([.hour, .minute, .second], from: expenseDate)
@@ -339,131 +339,6 @@ struct ExpenseListView: View {
             .padding(.vertical, 8)
         }
     }
-
-
-    // Group expenses by category with subtotals
-    private var groupedByCategory: [(key: String, items: [Expense], subtotal: Decimal)] {
-        let groups = Dictionary(grouping: viewModel.expenses) { (e: Expense) -> String in
-            let category = e.category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return category.isEmpty ? "Uncategorized" : category
-        }
-        // Order: vehicle, personal, employee, then others alphabetically
-        func groupOrder(_ key: String) -> Int {
-            switch key.lowercased() {
-            case "vehicle": return 0
-            case "personal": return 1
-            case "employee": return 2
-            default: return 3
-            }
-        }
-        let mapped = groups.map { (key, items) -> (String, [Expense], Decimal) in
-            let subtotal = items.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
-            return (key, items, subtotal)
-        }
-        return mapped.sorted { (a, b) in
-            let oa = groupOrder(a.0)
-            let ob = groupOrder(b.0)
-            if oa != ob { return oa < ob }
-            return a.0.localizedCaseInsensitiveCompare(b.0) == .orderedAscending
-        }
-    }
-
-
-    // Helper: map a date to a bucket title used in the UI (Today, Yesterday, Last 7 Days, Last 30 Days, Older)
-    private func dateBucket(for date: Date?) -> String {
-        let cal = Calendar.current
-        guard let d = date else { return "Older" }
-        
-        // Normalize to start of day in local timezone for correct comparison
-        let normalizedDate = cal.startOfDay(for: d)
-        let now = Date()
-        let todayStart = cal.startOfDay(for: now)
-        let yesterdayStart = cal.date(byAdding: .day, value: -1, to: todayStart) ?? todayStart
-        
-        if normalizedDate >= todayStart { return "today".localizedString }
-        if normalizedDate >= yesterdayStart { return "yesterday".localizedString }
-        if let seven = cal.date(byAdding: .day, value: -7, to: now), normalizedDate >= seven { return "last_7_days".localizedString }
-        if let thirty = cal.date(byAdding: .day, value: -30, to: now), normalizedDate >= thirty { return "last_30_days".localizedString }
-        return "older".localizedString
-    }
-
-    // Group expenses by date buckets with subtotals (Today, Yesterday, Last 7 Days, Last 30 Days, Older)
-    private var groupedByDate: [(key: String, items: [Expense], subtotal: Decimal)] {
-        let cal = Calendar.current
-        let now = Date()
-        let sevenDaysAgo = cal.date(byAdding: .day, value: -7, to: now) ?? now
-        let thirtyDaysAgo = cal.date(byAdding: .day, value: -30, to: now) ?? now
-
-        func bucket(for date: Date?) -> String {
-            guard let d = date else { return "Older" }
-            // Normalize to start of day in local timezone for correct comparison
-            let normalizedDate = cal.startOfDay(for: d)
-            let todayStart = cal.startOfDay(for: now)
-            let yesterdayStart = cal.date(byAdding: .day, value: -1, to: todayStart) ?? todayStart
-            
-            if normalizedDate >= todayStart { return "today".localizedString }
-            if normalizedDate >= yesterdayStart { return "yesterday".localizedString }
-            if normalizedDate >= sevenDaysAgo { return "last_7_days".localizedString }
-            if normalizedDate >= thirtyDaysAgo { return "last_30_days".localizedString }
-            return "older".localizedString
-        }
-
-        // Group
-        let groups = Dictionary(grouping: viewModel.expenses) { (e: Expense) -> String in
-            bucket(for: e.date)
-        }
-
-        // Sort items inside each group by date desc; compute subtotal
-        let mapped: [(String, [Expense], Decimal)] = groups.map { (key, items) in
-            let sortedItems = items.sorted { (a, b) in
-                expenseDisplayDateTime(a) > expenseDisplayDateTime(b)
-            }
-            let subtotal = sortedItems.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
-
-            return (key, sortedItems, subtotal)
-        }
-
-        func order(_ key: String) -> Int {
-            switch key {
-            case "today".localizedString: return 0
-            case "yesterday".localizedString: return 1
-            case "last_7_days".localizedString: return 2
-            case "last_30_days".localizedString: return 3
-            default: return 4
-            }
-        }
-
-        return mapped.sorted { a, b in
-            let oa = order(a.0)
-            let ob = order(b.0)
-            if oa != ob { return oa < ob }
-            return a.0 < b.0
-        }
-    }
-    // Fast summaries for headers to avoid heavy recomputation on every render
-    private var dateSummary: [String: (count: Int, subtotal: Decimal)] {
-        var dict: [String: (count: Int, subtotal: Decimal)] = [:]
-        for e in viewModel.expenses {
-            let key = dateBucket(for: e.date)
-            let amt = e.amount?.decimalValue ?? 0
-            let cur = dict[key] ?? (count: 0, subtotal: Decimal(0))
-            dict[key] = (count: cur.count + 1, subtotal: cur.subtotal + amt)
-        }
-        return dict
-    }
-
-    private var categorySummary: [String: (count: Int, subtotal: Decimal)] {
-        var dict: [String: (count: Int, subtotal: Decimal)] = [:]
-        for e in viewModel.expenses {
-            let category = e.category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let key = category.isEmpty ? "Uncategorized" : category
-            let amt = e.amount?.decimalValue ?? 0
-            let cur = dict[key] ?? (count: 0, subtotal: Decimal(0))
-            dict[key] = (count: cur.count + 1, subtotal: cur.subtotal + amt)
-        }
-        return dict
-    }
-
     private func mutateExpense<T>(_ action: () throws -> T) -> T? {
         do {
             return try action()
@@ -563,6 +438,9 @@ struct ExpenseListView: View {
 
 
     var body: some View {
+        let _ = regionSettings.selectedRegion
+        let _ = regionSettings.selectedLanguage
+        let expensePresentation = viewModel.presentationSnapshot
         NavigationStack {
             VStack(spacing: 0) {
                 // Filters bar
@@ -581,7 +459,7 @@ struct ExpenseListView: View {
                                 .fontWeight(.semibold)
                                 .foregroundColor(ColorTheme.primaryText)
 
-                            ForEach(groupedByCategory, id: \.key) { group in
+                            ForEach(expensePresentation.categoryGroups) { group in
                                 HStack {
                                     HStack(spacing: 8) {
                                         Circle()
@@ -627,7 +505,7 @@ struct ExpenseListView: View {
 
 
                         if groupMode == .date {
-                            ForEach(groupedByDate, id: \.key) { group in
+                            ForEach(expensePresentation.dateGroups) { group in
                                 // Header row for date bucket
                                 HStack(spacing: 10) {
                                     Button(action: {
@@ -646,7 +524,7 @@ struct ExpenseListView: View {
                                         .fontWeight(.semibold)
                                         .foregroundColor(ColorTheme.primaryText)
                                     Spacer()
-                                    let s = dateSummary[group.key] ?? (count: 0, subtotal: Decimal(0))
+                                    let s = expensePresentation.dateSummaries[group.key] ?? .zero
                                     Text("\(s.count) · \(s.subtotal.asCurrency())")
                                         .font(.subheadline)
                                         .fontWeight(.semibold)
@@ -664,7 +542,7 @@ struct ExpenseListView: View {
                         }
                     }
                 } else {
-                    ForEach(groupedByCategory, id: \.key) { group in
+                    ForEach(expensePresentation.categoryGroups) { group in
                                 // Non-sticky header row for the category
                                 HStack(spacing: 10) {
                                     Button(action: {
@@ -681,7 +559,7 @@ struct ExpenseListView: View {
                                     CategoryBadge(category: group.key)
                                     Spacer()
 
-                                    let s = categorySummary[group.key] ?? (count: 0, subtotal: Decimal(0))
+                                    let s = expensePresentation.categorySummaries[group.key] ?? .zero
                                     Text("\(s.count) · \(s.subtotal.asCurrency())")
                                         .font(.subheadline)
                                         .fontWeight(.semibold)
@@ -706,7 +584,7 @@ struct ExpenseListView: View {
                                     .font(.headline)
                                     .foregroundColor(ColorTheme.primaryText)
                                 Spacer()
-                                Text(viewModel.totalExpenses().asCurrency())
+                                Text(expensePresentation.totalExpenseAmount.asCurrency())
                                     .font(.headline)
                                     .fontWeight(.bold)
                                     .foregroundColor(ColorTheme.primaryText)
@@ -970,8 +848,7 @@ struct ExpenseListView: View {
             .navigationTitle("expenses".localizedString)
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search expenses")
             .onChange(of: searchText) { _, newValue in
-                viewModel.searchQuery = newValue
-                viewModel.fetchExpenses()
+                viewModel.updateSearchQuery(newValue)
             }
             .onAppear {
                 if !appliedPreset, let d = presetStartDate {
@@ -995,12 +872,17 @@ struct ExpenseListView: View {
             }
 
         }
-        .id(regionSettings.selectedRegion.rawValue) // Force re-render when currency changes
     }
 }
 
 struct ExpenseRow: View {
     @ObservedObject var expense: Expense
+    private static let shortDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "d MMM, h:mm a"
+        formatter.timeZone = .autoupdatingCurrent
+        return formatter
+    }()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -1056,7 +938,7 @@ struct ExpenseRow: View {
                 }
 
                 // Show date from expense.date combined with time from createdAt
-                Text(expenseDisplayDateTime(expense), formatter: shortDateFormatter)
+                Text(expenseDisplayDateTime(expense), formatter: Self.shortDateFormatter)
                     .font(.caption2)
                     .foregroundColor(ColorTheme.tertiaryText)
             }
@@ -1064,13 +946,6 @@ struct ExpenseRow: View {
         .padding(.vertical, 10) // Reduced padding
         .padding(.horizontal, 12) // Reduced padding
         .cardStyle()
-    }
-
-    private var shortDateFormatter: DateFormatter {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d MMM, h:mm a"
-        formatter.timeZone = .autoupdatingCurrent
-        return formatter
     }
 }
 
@@ -1150,23 +1025,6 @@ struct DealerExpenseDashboardView: View {
     }
 
     private let chipBackground = ColorTheme.background
-    
-    private let amountFormatter: NumberFormatter = {
-        let nf = NumberFormatter()
-        nf.numberStyle = .decimal
-        nf.maximumFractionDigits = 0
-        nf.minimumFractionDigits = 0
-        nf.groupingSeparator = " "
-        nf.locale = Locale.current
-        return nf
-    }()
-    
-    private let detailDateFormatter: DateFormatter = {
-        let df = DateFormatter()
-        df.dateFormat = "d MMM, h:mm a"
-        df.locale = Locale.current
-        return df
-    }()
 
     var showNavigation: Bool = true
 
@@ -1177,6 +1035,8 @@ struct DealerExpenseDashboardView: View {
     }
 
     var body: some View {
+        let _ = regionSettings.selectedRegion
+        let _ = regionSettings.selectedLanguage
         Group {
             if showNavigation {
                 NavigationStack {
@@ -1190,7 +1050,8 @@ struct DealerExpenseDashboardView: View {
     }
 
     var content: some View {
-        ZStack(alignment: .bottomTrailing) {
+        let expensePresentation = viewModel.presentationSnapshot
+        return ZStack(alignment: .bottomTrailing) {
                 ColorTheme.background.ignoresSafeArea()
 
                 VStack(spacing: 0) {
@@ -1209,13 +1070,13 @@ struct DealerExpenseDashboardView: View {
                     .background(ColorTheme.background)
 
                     List {
-                        if groupedExpenses.isEmpty {
+                        if expensePresentation.dateGroups.isEmpty {
                             emptyState
                                 .listRowSeparator(.hidden)
                                 .listRowInsets(EdgeInsets())
                                 .listRowBackground(Color.clear)
                         } else {
-                            ForEach(groupedExpenses, id: \.key) { group in
+                            ForEach(expensePresentation.dateGroups) { group in
                                 Section {
                                     ForEach(group.items, id: \.objectID) { expense in
                                         Button {
@@ -1301,15 +1162,15 @@ struct DealerExpenseDashboardView: View {
             }
             .searchable(text: $searchText, placement: .automatic, prompt: Text("search_expenses_placeholder".localizedString))
             .onChange(of: searchText) { _, newValue in
-                viewModel.searchQuery = newValue
-                viewModel.fetchExpenses()
+                viewModel.updateSearchQuery(newValue)
             }
         }
 
 
 
     private var header: some View {
-        VStack(spacing: 20) {
+        let expensePresentation = viewModel.presentationSnapshot
+        return VStack(spacing: 20) {
             HStack(alignment: .center) {
                 Text("expenses".localizedString)
                     .font(.largeTitle.weight(.bold))
@@ -1354,7 +1215,7 @@ struct DealerExpenseDashboardView: View {
                     
                     Spacer()
                     
-                    if let delta = weekDeltaPercent {
+                    if let delta = expensePresentation.weekDeltaPercent {
                         HStack(spacing: 4) {
                             Image(systemName: delta > 0 ? "arrow.up.right" : "arrow.down.right")
                             Text(String(format: "%.0f%%", abs(delta)))
@@ -1384,7 +1245,7 @@ struct DealerExpenseDashboardView: View {
                         .tracking(2)
                         .shadow(color: .black.opacity(0.3), radius: 2)
                     
-                    Text(thisWeekTotal.asCurrencyCompact())
+                    Text(expensePresentation.currentWeekTotal.asCurrencyCompact())
                         .font(.system(size: 38, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
                         .minimumScaleFactor(0.5)
@@ -1535,8 +1396,16 @@ struct DealerExpenseDashboardView: View {
     
     private struct CompactExpenseRow: View {
         @ObservedObject var expense: Expense
+        private static let dateFormatter: DateFormatter = {
+            let formatter = DateFormatter()
+            formatter.dateFormat = "d MMM, h:mm a"
+            formatter.locale = Locale(identifier: "en_AE")
+            formatter.timeZone = .autoupdatingCurrent
+            return formatter
+        }()
         
         var body: some View {
+            let subtitle = subtitleText(for: expense)
             HStack(spacing: 12) {
                 // Icon
                 ZStack {
@@ -1556,13 +1425,13 @@ struct DealerExpenseDashboardView: View {
                         .lineLimit(1)
                     
                     HStack(spacing: 4) {
-                        Text(subtitleText(for: expense))
+                        Text(subtitle)
                             .lineLimit(1)
-                        if !subtitleText(for: expense).isEmpty {
+                        if !subtitle.isEmpty {
                             Text("•")
                                 .opacity(0.5)
                         }
-                        Text(expenseDisplayDateTime(expense), formatter: dateFormatter)
+                        Text(expenseDisplayDateTime(expense), formatter: Self.dateFormatter)
                     }
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
@@ -1626,14 +1495,6 @@ struct DealerExpenseDashboardView: View {
             }
             return parts.isEmpty ? "no_details".localizedString : parts.joined(separator: " • ")
         }
-        
-        private var dateFormatter: DateFormatter {
-            let df = DateFormatter()
-            df.dateFormat = "d MMM, h:mm a"
-            df.locale = Locale(identifier: "en_AE")
-            df.timeZone = .autoupdatingCurrent
-            return df
-        }
     }
 
     private var fab: some View {
@@ -1671,58 +1532,6 @@ struct DealerExpenseDashboardView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - Helpers
-
-    private var groupedExpenses: [(key: String, items: [Expense], subtotal: Decimal)] {
-        let cal = Calendar.current
-        let now = Date()
-        let sevenDaysAgo = cal.date(byAdding: .day, value: -7, to: now) ?? now
-        let thirtyDaysAgo = cal.date(byAdding: .day, value: -30, to: now) ?? now
-
-        func bucket(for date: Date?) -> String {
-            guard let d = date else { return "older".localizedString }
-            // Normalize to start of day in local timezone for correct comparison
-            let normalizedDate = cal.startOfDay(for: d)
-            let todayStart = cal.startOfDay(for: now)
-            let yesterdayStart = cal.date(byAdding: .day, value: -1, to: todayStart) ?? todayStart
-            
-            if normalizedDate >= todayStart { return "today".localizedString }
-            if normalizedDate >= yesterdayStart { return "yesterday".localizedString }
-            if normalizedDate >= sevenDaysAgo { return "last_7_days".localizedString }
-            if normalizedDate >= thirtyDaysAgo { return "last_30_days".localizedString }
-            return "older".localizedString
-        }
-
-        let groups = Dictionary(grouping: viewModel.expenses) { (e: Expense) -> String in
-            bucket(for: e.date)
-        }
-
-        let mapped: [(String, [Expense], Decimal)] = groups.map { (key, items) in
-            let sortedItems = items.sorted { (a, b) in
-                expenseDisplayDateTime(a) > expenseDisplayDateTime(b)
-            }
-            let subtotal = sortedItems.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
-            return (key, sortedItems, subtotal)
-        }
-
-        func order(_ key: String) -> Int {
-            switch key {
-            case "today".localizedString: return 0
-            case "yesterday".localizedString: return 1
-            case "last_7_days".localizedString: return 2
-            case "last_30_days".localizedString: return 3
-            default: return 4
-            }
-        }
-
-        return mapped.sorted { a, b in
-            let oa = order(a.0)
-            let ob = order(b.0)
-            if oa != ob { return oa < ob }
-            return a.0 < b.0
-        }
-    }
-
     private var vehicleChipTitle: String {
         guard let v = viewModel.selectedVehicle else { return "vehicle".localizedString }
         let make = v.make ?? ""
@@ -1740,48 +1549,6 @@ struct DealerExpenseDashboardView: View {
         let title = viewModel.selectedCategory
         if title.lowercased() == "all" { return "category".localizedString }
         return title.capitalized
-    }
-
-    private var thisWeekTotal: Decimal {
-        let interval = currentWeekInterval
-        return total(in: interval)
-    }
-
-    private var lastWeekTotal: Decimal {
-        let cal = Calendar.current
-        guard let lastWeekStart = cal.date(byAdding: .weekOfYear, value: -1, to: currentWeekInterval.start),
-              let lastWeekEnd = cal.date(byAdding: .second, value: -1, to: currentWeekInterval.start) else {
-            return 0
-        }
-        return total(in: DateInterval(start: lastWeekStart, end: lastWeekEnd))
-    }
-
-    private var weekDeltaPercent: Double? {
-        let last = lastWeekTotal
-        guard last != 0 else { return nil }
-        let diff = (thisWeekTotal - last) / last
-        return NSDecimalNumber(decimal: diff * 100).doubleValue
-    }
-
-    private func total(in interval: DateInterval) -> Decimal {
-        viewModel.expenses.reduce(0) { partial, expense in
-            guard let date = expense.date else { return partial }
-            guard interval.contains(date) else { return partial }
-            return partial + (expense.amount?.decimalValue ?? 0)
-        }
-    }
-
-    private var currentWeekInterval: DateInterval {
-        let cal = Calendar.current
-        let now = Date()
-        let start = cal.date(from: cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: now)) ?? now
-        let end = cal.date(byAdding: .day, value: 7, to: start) ?? now
-        return DateInterval(start: start, end: end)
-    }
-
-    private func formattedBigAmount(_ value: Decimal) -> String {
-        let number = NSDecimalNumber(decimal: value)
-        return amountFormatter.string(from: number) ?? "0"
     }
 
     private func iconName(for expense: Expense) -> String {

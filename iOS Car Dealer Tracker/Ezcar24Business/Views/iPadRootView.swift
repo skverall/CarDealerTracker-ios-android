@@ -51,6 +51,9 @@ struct iPadRootView: View {
         .onReceive(NotificationCenter.default.publisher(for: .dashboardDidRequestAccount)) { _ in
             showProfileSheet = true
         }
+        .onReceive(NotificationCenter.default.publisher(for: .dashboardDidRequestExpensesTab)) { _ in
+            selectedTab = .expenses
+        }
         .onReceive(NotificationCenter.default.publisher(for: .currencySettingsDidComplete)) { _ in
             showProfileSheet = false
             selectedTab = .dashboard
@@ -91,14 +94,18 @@ struct iPadRootView: View {
                 VehicleListView()
             }
         case .parts:
-            if shouldGatePermissions {
-                if permissionService.can(.viewPartsInventory) {
-                    PartsDashboardView()
+            if regionSettings.isPartsEnabled {
+                if shouldGatePermissions {
+                    if permissionService.can(.viewPartsInventory) {
+                        PartsDashboardView()
+                    } else {
+                        RestrictedAccessView(title: "parts_tab_title".localizedString)
+                    }
                 } else {
-                    RestrictedAccessView(title: "parts_tab_title".localizedString)
+                    PartsDashboardView()
                 }
             } else {
-                PartsDashboardView()
+                EmptyView()
             }
         case .sales:
             if shouldGatePermissions {
@@ -127,11 +134,12 @@ struct iPadRootView: View {
 struct SidebarView: View {
     @Binding var selectedTab: ContentView.Tab?
     @EnvironmentObject private var sessionStore: SessionStore
+    @EnvironmentObject private var regionSettings: RegionSettingsManager
     
     var body: some View {
         List(selection: $selectedTab) {
             Section("Menu") {
-                ForEach(ContentView.Tab.allCases) { tab in
+                ForEach(ContentView.Tab.allCases.filter { tab in tab != .parts || regionSettings.isPartsEnabled }) { tab in
                     NavigationLink(value: tab) {
                         Label {
                             Text(tab.title)

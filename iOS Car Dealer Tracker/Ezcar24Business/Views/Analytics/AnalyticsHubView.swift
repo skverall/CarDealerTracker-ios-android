@@ -53,7 +53,7 @@ struct AnalyticsHubView: View {
 
     init() {
         let context = PersistenceController.shared.container.viewContext
-        _financeViewModel = StateObject(wrappedValue: DashboardViewModel(context: context))
+        _financeViewModel = StateObject(wrappedValue: DashboardViewModel(context: context, initialRange: .month))
         _inventoryViewModel = StateObject(wrappedValue: InventoryAnalyticsViewModel(context: context))
         _crmViewModel = StateObject(wrappedValue: CRMAnalyticsViewModel(context: context))
     }
@@ -138,7 +138,7 @@ struct AnalyticsHubView: View {
             refreshAll()
         }
         .onAppear {
-            refreshAll()
+            refreshSupportingData()
         }
         .onChange(of: selectedRange) { _, newValue in
             financeViewModel.fetchFinancialData(range: newValue)
@@ -147,6 +147,11 @@ struct AnalyticsHubView: View {
 
     private func refreshAll() {
         financeViewModel.fetchFinancialData(range: selectedRange)
+        inventoryViewModel.refreshData()
+        crmViewModel.refresh()
+    }
+
+    private func refreshSupportingData() {
         inventoryViewModel.refreshData()
         crmViewModel.refresh()
     }

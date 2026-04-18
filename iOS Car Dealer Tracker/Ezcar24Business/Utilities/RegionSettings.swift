@@ -161,6 +161,13 @@ final class RegionSettingsManager: ObservableObject {
     private let regionKey = "app_selected_region"
     private let languageKey = "app_selected_language"
     private let hasSelectedRegionKey = "app_has_selected_region"
+    private let partsEnabledKey = "app_parts_enabled"
+    
+    @Published var isPartsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(isPartsEnabled, forKey: partsEnabledKey)
+        }
+    }
     
     @Published var selectedRegion: AppRegion {
         didSet {
@@ -188,6 +195,12 @@ final class RegionSettingsManager: ObservableObject {
     private(set) var numberFormatter: NumberFormatter!
     
     private init() {
+        if UserDefaults.standard.object(forKey: partsEnabledKey) == nil {
+            self.isPartsEnabled = true
+        } else {
+            self.isPartsEnabled = UserDefaults.standard.bool(forKey: partsEnabledKey)
+        }
+
         // Load saved preferences or use defaults
         if let savedRegion = UserDefaults.standard.string(forKey: regionKey),
            let region = AppRegion(rawValue: savedRegion) {
