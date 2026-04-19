@@ -74,17 +74,24 @@ class InventoryAnalyticsViewModel: ObservableObject {
     private let context: NSManagedObjectContext
     private var cancellables = Set<AnyCancellable>()
     private var inventoryStatsManager: InventoryStatsManager
+    private let refreshDebouncer: DashboardRefreshDebouncer
     
     var burningThreshold: Int {
         NotificationPreference.inventoryStaleThreshold
     }
     
-    init(context: NSManagedObjectContext? = nil) {
+    init(
+        context: NSManagedObjectContext? = nil,
+        refreshDebouncer: DashboardRefreshDebouncer = DashboardRefreshDebouncer()
+    ) {
         self.context = context ?? PersistenceController.shared.container.viewContext
+        self.refreshDebouncer = refreshDebouncer
         self.inventoryStatsManager = InventoryStatsManager.shared
         
         setupBindings()
-        loadData()
+        DispatchQueue.main.async { [weak self] in
+            self?.loadData()
+        }
     }
     
     private func setupBindings() {
@@ -119,7 +126,8 @@ class InventoryAnalyticsViewModel: ObservableObject {
             .sink { [weak self] notification in
                 guard let self, let userInfo = notification.userInfo else { return }
                 if Self.shouldRefreshAnalytics(userInfo: userInfo) {
-                    DispatchQueue.main.async {
+                    self.refreshDebouncer.schedule { [weak self] in
+                        guard let self else { return }
                         self.loadData()
                     }
                 }
@@ -139,6 +147,7 @@ class InventoryAnalyticsViewModel: ObservableObject {
     }
     
     func loadData() {
+        refreshDebouncer.cancel()
         isLoading = true
         
         fetchVehicles()

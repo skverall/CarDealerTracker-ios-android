@@ -77,7 +77,7 @@ struct ClientListView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
                         showFilters.toggle()
                     }
                     if !showFilters {

@@ -76,7 +76,7 @@ struct RegionSelectionSheet: View {
                                         region: region,
                                         isSelected: selectedRegion == region
                                     ) {
-                                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
                                             selectedRegion = region
                                         }
                                     }

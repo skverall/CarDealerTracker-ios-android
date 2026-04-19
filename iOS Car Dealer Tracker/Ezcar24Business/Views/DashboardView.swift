@@ -241,7 +241,7 @@ private extension DashboardView {
         HStack(spacing: 6) {
             ForEach(DashboardTimeRange.allCases) { range in
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
                         selectedRange = range
                     }
                 } label: {

@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 import Supabase
-import UIKit
 
 struct AccountView: View {
     @EnvironmentObject private var sessionStore: SessionStore
@@ -357,29 +356,15 @@ struct AccountView: View {
 
     @ViewBuilder
     private var accountHeader: some View {
-        VStack(spacing: 20) {
-            // Avatar is now handled inside AccountUserProfileView
-//            ZStack {
-//                Circle()
-//                    .strokeBorder(ColorTheme.primary.opacity(0.1), lineWidth: 1)
-//                    .background(Circle().fill(ColorTheme.cardBackground)) // Ensure solid background behind avatar
-//                    .frame(width: 90, height: 90)
-//                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
-//                
-//                Text(userInitials)
-//                    .font(.system(size: 34, weight: .bold, design: .rounded))
-//                    .foregroundColor(ColorTheme.primary)
-//            }
-//            .padding(.top, 8)
-            
-            VStack(spacing: 12) {
-                if case .signedIn(let authUser) = sessionStore.status {
-                    AccountUserProfileView(
-                        userId: authUser.id,
-                        authEmail: authUser.email,
-                        authPendingEmail: sessionStore.pendingEmailChange
-                    )
-                } else {
+        VStack(spacing: 0) {
+            if case .signedIn(let authUser) = sessionStore.status {
+                AccountUserProfileView(
+                    userId: authUser.id,
+                    authEmail: authUser.email,
+                    authPendingEmail: sessionStore.pendingEmailChange
+                )
+            } else {
+                VStack(spacing: 12) {
                     Text("not_signed_in".localizedString)
                         .font(.headline)
                         .foregroundColor(ColorTheme.secondaryText)
@@ -393,27 +378,30 @@ struct AccountView: View {
                     .controlSize(.regular)
                     .padding(.top, 4)
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 32)
+                .padding(.horizontal, 20)
             }
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 32)
-        .padding(.horizontal, 20)
-        .background {
-            RoundedRectangle(cornerRadius: 24)
-                .fill(ColorTheme.cardBackground)
-                .shadow(color: Color.black.opacity(0.08), radius: 15, x: 0, y: 8)
-        }
-        .padding(.horizontal, 4)
+        .background(ColorTheme.cardBackground)
+        .cornerRadius(16)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
     
     @ViewBuilder
     private var subscriptionCard: some View {
-        HStack {
-            Image(systemName: subscriptionManager.isProAccessActive ? "crown.fill" : "circle")
-                .foregroundColor(subscriptionManager.isProAccessActive ? .yellow : .gray)
-                .font(.system(size: 24))
+        HStack(spacing: 16) {
+            ZStack {
+                LinearGradient(colors: subscriptionManager.isProAccessActive ? [.yellow, .orange] : [.gray.opacity(0.5), .gray.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                
+                Image(systemName: subscriptionManager.isProAccessActive ? "crown.fill" : "star.fill")
+                    .foregroundColor(.white)
+                    .font(.title3)
+            }
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(subscriptionManager.isProAccessActive ? "dealer_pro".localizedString : "free_plan".localizedString)
                     .font(.headline)
                     .foregroundColor(ColorTheme.primaryText)
@@ -438,8 +426,8 @@ struct AccountView: View {
                     }
                 } else {
                     Text("upgrade_to_unlock".localizedString)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.subheadline)
+                        .foregroundColor(ColorTheme.secondaryText)
                 }
             }
             
@@ -469,47 +457,59 @@ struct AccountView: View {
         .padding(16)
         .background(ColorTheme.cardBackground)
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
 
     @ViewBuilder
     private var referralCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Image(systemName: "gift.fill")
-                    .foregroundColor(.pink)
-                Text("invite_dealer".localizedString)
-                    .font(.headline)
-                    .foregroundColor(ColorTheme.primaryText)
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 16) {
+                ZStack {
+                    LinearGradient(colors: [.purple, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing)
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    
+                    Image(systemName: "gift.fill")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("invite_dealer".localizedString)
+                        .font(.headline)
+                        .foregroundColor(ColorTheme.primaryText)
+                    
+                    Text("invite_dealer_subtitle".localizedString)
+                        .font(.subheadline)
+                        .foregroundColor(ColorTheme.secondaryText)
+                }
             }
-
-            Text("invite_dealer_subtitle".localizedString)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
+            .padding(16)
+            
             if let bonusUntil = subscriptionManager.bonusAccessUntil, bonusUntil > Date() {
                 Text(String(format: "referral_bonus_until".localizedString, bonusUntil.formatted(date: .numeric, time: .omitted)))
                     .font(.caption)
                     .foregroundColor(.green)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 8)
             }
 
             if let code = referralCode {
                 HStack {
                     Text(code)
-                        .font(.caption.weight(.semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundColor(ColorTheme.primaryText)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(ColorTheme.background.opacity(0.7))
-                        .cornerRadius(10)
-
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .background(ColorTheme.secondaryBackground)
+                        .cornerRadius(6)
                     Spacer()
-
                     Button("copy".localizedString) {
                         UIPasteboard.general.string = code
                     }
-                    .font(.caption.weight(.semibold))
+                    .font(.footnote.weight(.bold))
+                    .foregroundColor(ColorTheme.primary)
                 }
+                .padding(.horizontal, 16).padding(.bottom, 12)
             }
 
             Button {
@@ -517,44 +517,62 @@ struct AccountView: View {
             } label: {
                 HStack {
                     if isFetchingReferralCode {
-                        ProgressView()
-                            .tint(.white)
+                        ProgressView().tint(.white).padding(.trailing, 4)
                     }
                     Text("invite_dealer".localizedString)
                         .font(.subheadline.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .background(ColorTheme.primary)
                 .foregroundColor(.white)
-                .cornerRadius(12)
+                .cornerRadius(10)
             }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 16)
             .disabled(isFetchingReferralCode)
-
-            HStack {
-                NavigationLink {
-                    ReferralStatsView()
-                } label: {
+            
+            Divider()
+            
+            NavigationLink {
+                ReferralStatsView()
+            } label: {
+                HStack {
                     Text("referral_view_stats".localizedString)
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(ColorTheme.primary)
+                        .font(.subheadline)
+                        .foregroundColor(ColorTheme.primaryText)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote)
+                        .foregroundColor(ColorTheme.tertiaryText)
                 }
-                
-                Spacer()
-                
-                Button {
-                    showingJoinTeamByCodeSheet = true
-                } label: {
-                    Text("Join Team by Code")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(ColorTheme.primary)
-                }
+                .padding(16)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            
+            Divider().padding(.leading, 16)
+            
+            Button {
+                showingJoinTeamByCodeSheet = true
+            } label: {
+                HStack {
+                    Text("Join Team by Code")
+                        .font(.subheadline)
+                        .foregroundColor(ColorTheme.primaryText)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote)
+                        .foregroundColor(ColorTheme.tertiaryText)
+                }
+                .padding(16)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
-        .padding(16)
         .background(ColorTheme.cardBackground)
         .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
     }
     
     private func menuSection<Content: View>(title: LocalizedStringKey, @ViewBuilder content: () -> Content) -> some View {
@@ -1211,6 +1229,7 @@ struct DeleteAccountView: View {
 
 // MARK: - Account Org Switcher (Private)
 private struct AccountOrgSwitcher: View {
+    let userEmail: String?
     @EnvironmentObject private var sessionStore: SessionStore
     @State private var showingOrgSheet = false
     @State private var showingCreateSheet = false
@@ -1222,36 +1241,51 @@ private struct AccountOrgSwitcher: View {
         Button {
             showingOrgSheet = true
         } label: {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(sessionStore.activeOrganizationName ?? "Select Business")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(ColorTheme.primaryText)
-                        .lineLimit(1)
-                    if let role = sessionStore.activeOrganizationRole {
-                        Text(role.capitalized)
-                            .font(.caption)
-                            .foregroundColor(ColorTheme.primary.opacity(0.9))
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(ColorTheme.primary.opacity(0.12))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: "building.2.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(ColorTheme.primary)
+                }
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Business".localizedString)
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(ColorTheme.secondaryText)
+
+                    HStack(spacing: 8) {
+                        Text(organizationTitle)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(ColorTheme.primaryText)
+                            .lineLimit(1)
+
+                        if let roleTitle, shouldShowRoleBadge {
+                            Text(roleTitle)
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(ColorTheme.primary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(ColorTheme.primary.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
                     }
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption)
-                    .foregroundColor(ColorTheme.secondaryText)
+                    .font(.subheadline)
+                    .foregroundColor(ColorTheme.tertiaryText)
             }
-            .padding(.vertical, 12)
-            .padding(.horizontal, 16)
+            .padding(14)
             .background(ColorTheme.secondaryBackground)
-            .cornerRadius(16)
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(ColorTheme.primary.opacity(0.05), lineWidth: 1)
-            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .contentShape(Rectangle())
         }
-        .frame(maxWidth: 260)
+        .buttonStyle(.plain)
         .sheet(isPresented: $showingOrgSheet) {
             NavigationStack {
                 List {
@@ -1371,6 +1405,32 @@ private struct AccountOrgSwitcher: View {
         if case .signedIn = sessionStore.status { return true }
         return false
     }
+
+    private var organizationTitle: String {
+        if let organizationName = normalized(sessionStore.activeOrganizationName) {
+            if let userEmail = normalized(userEmail), organizationName.caseInsensitiveCompare(userEmail) == .orderedSame {
+                return roleTitle ?? "Business".localizedString
+            }
+            return organizationName
+        }
+
+        return "Select Business".localizedString
+    }
+
+    private var roleTitle: String? {
+        normalized(sessionStore.activeOrganizationRole)?.capitalized
+    }
+
+    private var shouldShowRoleBadge: Bool {
+        normalized(sessionStore.activeOrganizationName) != nil && organizationTitle != roleTitle
+    }
+
+    private func normalized(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+        return value
+    }
 }
 struct AccountUserProfileView: View {
     let userId: UUID
@@ -1391,124 +1451,122 @@ struct AccountUserProfileView: View {
     }
     
     var body: some View {
-        let displayEmail: String? = {
-            if let authEmail, !authEmail.isEmpty {
-                return authEmail
-            }
-            if let user = users.first, let email = user.email, !email.isEmpty {
-                return email
-            }
-            return nil
-        }()
-        
-        let avatarURL: URL? = {
-            guard let user = users.first, let avatarUrl = user.avatarUrl?.trimmingCharacters(in: .whitespacesAndNewlines), !avatarUrl.isEmpty else {
-                return nil
-            }
-            return URL(string: avatarUrl)
-        }()
+        let user = users.first
+        let displayName = normalized(user?.name)
+        let displayEmail = resolvedEmail(for: user)
+        let displayPhone = normalized(user?.phone)
+        let pendingEmail = normalized(authPendingEmail)
+        let avatarURL = resolvedAvatarURL(for: user)
 
-        VStack(spacing: 12) {
-            // Avatar
-            Button {
-                showingEditProfile = true
-            } label: {
-                ZStack {
-                    if let url = avatarURL {
-                        AsyncImage(url: url) { image in
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        } placeholder: {
-                            ProgressView()
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 16) {
+                Button {
+                    showingEditProfile = true
+                } label: {
+                    ZStack(alignment: .bottomTrailing) {
+                        if let url = avatarURL {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            } placeholder: {
+                                ProgressView()
+                            }
+                            .frame(width: 72, height: 72)
+                            .clipShape(Circle())
+                        } else {
+                            ZStack {
+                                Circle()
+                                    .fill(ColorTheme.primary.opacity(0.12))
+                                    .frame(width: 72, height: 72)
+                                
+                                Text(getInitials())
+                                    .font(.system(size: 28, weight: .semibold, design: .rounded))
+                                    .foregroundColor(ColorTheme.primary)
+                            }
                         }
-                        .frame(width: 90, height: 90)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(ColorTheme.primary.opacity(0.1), lineWidth: 1))
-                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
-                    } else {
-                        // Fallback
-                        ZStack {
-                            Circle()
-                                .strokeBorder(ColorTheme.primary.opacity(0.1), lineWidth: 1)
-                                .background(Circle().fill(ColorTheme.cardBackground))
-                                .frame(width: 90, height: 90)
-                                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
-                            
-                            Text(getInitials())
-                                .font(.system(size: 34, weight: .bold, design: .rounded))
-                                .foregroundColor(ColorTheme.primary)
-                        }
-                    }
-                    
-                    // Edit badge
-                    if avatarURL == nil {
-                        Circle()
-                            .fill(ColorTheme.primary)
-                            .frame(width: 28, height: 28)
-                            .overlay(
-                                Image(systemName: "pencil")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                            )
-                            .offset(x: 32, y: 32)
+                        Image(systemName: "camera.fill")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(6)
+                            .background(ColorTheme.primary)
+                            .clipShape(Circle())
+                            .overlay(Circle().stroke(ColorTheme.cardBackground, lineWidth: 2))
+                            .offset(x: 2, y: 2)
                     }
                 }
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 8)
+                .buttonStyle(.plain)
 
-            // Name & Email
-            VStack(spacing: 4) {
-                if let user = users.first, let name = user.name, !name.isEmpty {
-                    Text(name)
-                        .font(.title3)
-                        .fontWeight(.bold)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(displayName ?? displayEmail ?? "User")
+                        .font(.title2.weight(.bold))
                         .foregroundColor(ColorTheme.primaryText)
-                        .multilineTextAlignment(.center)
-                    
-                    if let displayEmail, !displayEmail.isEmpty {
+                        .lineLimit(2)
+
+                    if displayName != nil, let displayEmail {
                         Text(displayEmail)
                             .font(.subheadline)
                             .foregroundColor(ColorTheme.secondaryText)
+                            .lineLimit(1)
                     }
 
-                    if let authPendingEmail {
-                        Label("Pending confirmation: \(authPendingEmail)", systemImage: "clock.badge.exclamationmark")
-                            .font(.caption)
+                    if let displayPhone {
+                        HStack(spacing: 8) {
+                            Image(systemName: "phone.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(ColorTheme.primary)
+
+                            Text(displayPhone)
+                                .font(.subheadline)
+                                .foregroundColor(ColorTheme.secondaryText)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(ColorTheme.secondaryBackground)
+                        .clipShape(Capsule())
+                    }
+                }
+
+                Spacer()
+            }
+
+            if let pendingEmail {
+                HStack(spacing: 10) {
+                    Image(systemName: "clock.badge.exclamationmark.fill")
+                        .font(.subheadline)
+                        .foregroundColor(.orange)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Pending confirmation".localizedString)
+                            .font(.caption.weight(.semibold))
                             .foregroundColor(.orange)
+
+                        Text(String(format: "Pending: %@".localizedString, pendingEmail))
+                            .font(.footnote)
+                            .foregroundColor(ColorTheme.secondaryText)
                     }
-                } else {
-                    Text(displayEmail ?? "User")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                        .foregroundColor(ColorTheme.primaryText)
-                        .multilineTextAlignment(.center)
                 }
-            }
-            
-            // Phone if available
-            if let user = users.first, let phone = user.phone, !phone.isEmpty {
-                 Text(phone)
-                    .font(.caption)
-                    .foregroundColor(ColorTheme.secondaryText)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
 
-            AccountOrgSwitcher()
-            
-            // Member Since
-            if let user = users.first {
-                HStack(spacing: 6) {
-                    Image(systemName: "calendar")
-                        .font(.caption2)
-                    Text(String(format: "Member since %@", (user.createdAt ?? Date()).formatted(date: .abbreviated, time: .omitted)))
-                        .font(.caption)
-                        .fontWeight(.medium)
+            VStack(spacing: 12) {
+                AccountOrgSwitcher(userEmail: displayEmail)
+
+                if let memberSince = user?.createdAt {
+                    AccountProfileMetaRow(
+                        icon: "calendar",
+                        tint: .gray,
+                        title: "Member Since".localizedString,
+                        value: memberSince.formatted(date: .abbreviated, time: .omitted)
+                    )
                 }
-                .foregroundColor(ColorTheme.secondaryText)
-                .padding(.top, 4)
             }
         }
+        .padding(18)
         .sheet(isPresented: $showingEditProfile) {
             if let user = users.first {
                 EditProfileView(user: user)
@@ -1527,5 +1585,62 @@ struct AccountUserProfileView: View {
              return String(name.prefix(2)).uppercased()
         }
         return String((authEmail ?? "?").prefix(2)).uppercased()
+    }
+
+    private func resolvedEmail(for user: Ezcar24Business.User?) -> String? {
+        if let authEmail = normalized(authEmail) {
+            return authEmail
+        }
+        return normalized(user?.email)
+    }
+
+    private func resolvedAvatarURL(for user: Ezcar24Business.User?) -> URL? {
+        guard let avatarUrl = normalized(user?.avatarUrl) else {
+            return nil
+        }
+        return URL(string: avatarUrl)
+    }
+
+    private func normalized(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+        return value
+    }
+}
+
+private struct AccountProfileMetaRow: View {
+    let icon: String
+    let tint: Color
+    let title: String
+    let value: String
+
+    var body: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(tint.opacity(0.12))
+                    .frame(width: 42, height: 42)
+
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(tint)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(ColorTheme.secondaryText)
+
+                Text(value)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(ColorTheme.primaryText)
+            }
+
+            Spacer()
+        }
+        .padding(14)
+        .background(ColorTheme.secondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

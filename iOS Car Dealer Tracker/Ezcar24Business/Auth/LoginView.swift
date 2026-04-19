@@ -224,7 +224,7 @@ struct LoginView: View {
                     .foregroundStyle(ColorTheme.secondaryText)
                 
                 Button(appSessionState.mode == .signIn ? "Sign Up" : "Sign In") {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                    withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
                         appSessionState.mode = appSessionState.mode == .signIn ? .signUp : .signIn
                     }
                 }
@@ -256,7 +256,7 @@ struct LoginView: View {
     private var optionalCodesSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             Button {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
                     showingOptionalCodes.toggle()
                 }
             } label: {

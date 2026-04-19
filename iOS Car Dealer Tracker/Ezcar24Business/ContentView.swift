@@ -215,33 +215,39 @@ struct ContentView: View {
                 .padding(.bottom, overlayBottomPadding)
 
             // Error Toast Overlay
-            if let errorMessage = cloudSyncManager.errorMessage {
-                VStack {
-                    Spacer()
-                    ToastView(
-                        message: errorMessage,
-                        isError: true,
-                        onDismiss: { cloudSyncManager.errorMessage = nil }
-                    )
-                    .padding(.bottom, overlayBottomPadding + 24)
+            Group {
+                if let errorMessage = cloudSyncManager.errorMessage {
+                    VStack {
+                        Spacer()
+                        ToastView(
+                            message: errorMessage,
+                            isError: true,
+                            onDismiss: { cloudSyncManager.errorMessage = nil }
+                        )
+                        .padding(.bottom, overlayBottomPadding + 24)
+                    }
+                    .zIndex(100)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                .zIndex(100)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+            .animation(.snappy(duration: 0.28, extraBounce: 0.02), value: cloudSyncManager.errorMessage != nil)
 
-            if let inviteMessage = sessionStore.inviteToastMessage {
-                VStack {
-                    Spacer()
-                    ToastView(
-                        message: inviteMessage,
-                        isError: sessionStore.inviteToastIsError,
-                        onDismiss: { sessionStore.dismissInviteToast() }
-                    )
-                    .padding(.bottom, overlayBottomPadding + 24)
+            Group {
+                if let inviteMessage = sessionStore.inviteToastMessage {
+                    VStack {
+                        Spacer()
+                        ToastView(
+                            message: inviteMessage,
+                            isError: sessionStore.inviteToastIsError,
+                            onDismiss: { sessionStore.dismissInviteToast() }
+                        )
+                        .padding(.bottom, overlayBottomPadding + 24)
+                    }
+                    .zIndex(100)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                .zIndex(100)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
+            .animation(.snappy(duration: 0.28, extraBounce: 0.02), value: sessionStore.inviteToastMessage != nil)
         }
         .sheet(isPresented: $showProfileSheet) {
             AccountView()
@@ -250,7 +256,7 @@ struct ContentView: View {
             showProfileSheet = true
         }
         .onReceive(NotificationCenter.default.publisher(for: .dashboardDidRequestExpensesTab)) { _ in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            withAnimation(.snappy(duration: 0.28, extraBounce: 0.04)) {
                 selectedTab = .expenses
             }
         }
@@ -271,7 +277,7 @@ struct CustomTabBar: View {
                 Button(action: {
                     let generator = UIImpactFeedbackGenerator(style: .light)
                     generator.impactOccurred()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(.snappy(duration: 0.28, extraBounce: 0.04)) {
                         selectedTab = tab
                     }
                 }) {
@@ -317,33 +323,50 @@ struct SyncHUDOverlay: View {
     @State private var isSpinning = false
 
     var body: some View {
-        Group {
+        ZStack {
+            if cloudSyncManager.syncHUDState == .some(.syncing) {
+                Color.black.opacity(0.12)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+            }
+
             switch cloudSyncManager.syncHUDState {
             case .some(.syncing):
-                hudView(
+                syncCard(
                     icon: "arrow.triangle.2.circlepath",
                     iconColor: ColorTheme.primary,
                     title: "synchronizing".localizedString,
-                    subtitle: "please_wait".localizedString
+                    subtitle: "please_wait".localizedString,
+                    compact: false
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .onAppear { isSpinning = true }
+                .onDisappear { isSpinning = false }
 
             case .some(.success):
-                hudView(
+                syncCard(
                     icon: "checkmark.circle.fill",
                     iconColor: .green,
                     title: "synced".localizedString,
-                    subtitle: "all_data_up_to_date".localizedString
+                    subtitle: "all_data_up_to_date".localizedString,
+                    compact: true
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
                 .onAppear { isSpinning = false }
 
             case .some(.failure):
-                hudView(
+                syncCard(
                     icon: "xmark.octagon.fill",
                     iconColor: .red,
                     title: "sync_failed".localizedString,
-                    subtitle: "please_try_again".localizedString
+                    subtitle: "please_try_again".localizedString,
+                    compact: true
                 )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 24)
                 .onAppear { isSpinning = false }
 
             case .none:
@@ -351,44 +374,79 @@ struct SyncHUDOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .animation(.spring(response: 0.35, dampingFraction: 0.9), value: cloudSyncManager.syncHUDState)
+        .allowsHitTesting(cloudSyncManager.syncHUDState == .some(.syncing))
+        .animation(.snappy(duration: 0.3, extraBounce: 0.03), value: cloudSyncManager.syncHUDState)
     }
 
     @ViewBuilder
-    private func hudView(icon: String, iconColor: Color, title: String, subtitle: String?) -> some View {
-        ZStack {
-            Color.black.opacity(0.15)
-                .ignoresSafeArea()
+    private func syncCard(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        subtitle: String?,
+        compact: Bool
+    ) -> some View {
+        Group {
+            if compact {
+                HStack(spacing: 12) {
+                    syncIcon(icon: icon, iconColor: iconColor)
 
-            VStack(spacing: 12) {
-                Image(systemName: icon)
-                // Use .degrees(isSpinning ? 360 : 0) directly if compatible, or handle animation carefully
-                    .font(.system(size: 32, weight: .semibold))
-                    .foregroundColor(iconColor)
-                    .rotationEffect(.degrees(isSpinning ? 360 : 0))
-                    .animation(
-                        isSpinning
-                        ? .linear(duration: 1.0).repeatForever(autoreverses: false)
-                        : .default,
-                        value: isSpinning
-                    )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(ColorTheme.primaryText)
 
-                Text(title)
-                    .font(.headline)
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(.caption)
+                                .foregroundColor(ColorTheme.secondaryText)
+                        }
+                    }
 
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.subheadline)
-                        .foregroundColor(ColorTheme.secondaryText)
+                    Spacer(minLength: 0)
                 }
+                .padding(.vertical, 14)
+                .padding(.horizontal, 16)
+                .frame(maxWidth: 340)
+            } else {
+                VStack(spacing: 12) {
+                    syncIcon(icon: icon, iconColor: iconColor)
+
+                    Text(title)
+                        .font(.headline)
+                        .foregroundColor(ColorTheme.primaryText)
+
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.subheadline)
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+                }
+                .padding(20)
+                .frame(maxWidth: 260)
             }
-            .padding(20)
-            .frame(maxWidth: 260)
-            .background(.ultraThinMaterial)
-            .cornerRadius(16)
-            .shadow(color: Color.black.opacity(0.25), radius: 12, x: 0, y: 8)
         }
-        .transition(.opacity.combined(with: .scale))
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: compact ? 18 : 20, style: .continuous))
+        .shadow(color: Color.black.opacity(0.18), radius: compact ? 10 : 14, x: 0, y: compact ? 4 : 8)
+        .transition(
+            compact
+            ? .move(edge: .bottom).combined(with: .opacity)
+            : .opacity.combined(with: .scale(scale: 0.96))
+        )
+    }
+
+    private func syncIcon(icon: String, iconColor: Color) -> some View {
+        Image(systemName: icon)
+            .font(.system(size: 24, weight: .semibold))
+            .foregroundColor(iconColor)
+            .rotationEffect(.degrees(isSpinning ? 360 : 0))
+            .animation(
+                isSpinning
+                ? .linear(duration: 1.0).repeatForever(autoreverses: false)
+                : .default,
+                value: isSpinning
+            )
     }
 }
 
@@ -424,8 +482,7 @@ struct ToastView: View {
                 .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 5)
         )
         .padding(.horizontal, 16)
-        .transition(.move(edge: .top).combined(with: .opacity))
-        .animation(.spring(), value: message)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
     }
 }
 

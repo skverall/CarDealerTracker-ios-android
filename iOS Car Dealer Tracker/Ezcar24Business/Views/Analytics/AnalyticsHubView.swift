@@ -137,9 +137,6 @@ struct AnalyticsHubView: View {
         .refreshable {
             refreshAll()
         }
-        .onAppear {
-            refreshSupportingData()
-        }
         .onChange(of: selectedRange) { _, newValue in
             financeViewModel.fetchFinancialData(range: newValue)
         }
@@ -151,16 +148,11 @@ struct AnalyticsHubView: View {
         crmViewModel.refresh()
     }
 
-    private func refreshSupportingData() {
-        inventoryViewModel.refreshData()
-        crmViewModel.refresh()
-    }
-
     private var rangePicker: some View {
         HStack(spacing: 6) {
             ForEach(DashboardTimeRange.allCases) { range in
                 Button {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
                         selectedRange = range
                     }
                 } label: {

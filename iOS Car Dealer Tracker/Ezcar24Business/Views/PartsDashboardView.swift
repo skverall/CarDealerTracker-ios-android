@@ -119,7 +119,7 @@ struct PartsDashboardView: View {
             HStack(spacing: 0) {
                 ForEach(PartsSection.allCases) { section in
                     Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
                             selectedSection = section
                         }
                     } label: {

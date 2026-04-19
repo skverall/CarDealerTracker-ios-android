@@ -43,13 +43,18 @@ class InventoryStatsManager: ObservableObject {
         }
         
         self.vehicleStats = newStats
-        self.totalHoldingCost = totalHolding
         
         let statsArray = Array(newStats.values)
-        self.agingDistribution = InventoryMetricsCalculator.calculateAgingDistribution(stats: statsArray)
-        self.healthScore = InventoryMetricsCalculator.calculateHealthScore(
+        let newAgingDistribution = InventoryMetricsCalculator.calculateAgingDistribution(stats: statsArray)
+        let newHealthScore = InventoryMetricsCalculator.calculateHealthScore(
             vehicles: vehicles,
             stats: newStats
+        )
+        
+        publishSummary(
+            totalHoldingCost: totalHolding,
+            agingDistribution: newAgingDistribution,
+            healthScore: newHealthScore
         )
     }
     
@@ -68,7 +73,10 @@ class InventoryStatsManager: ObservableObject {
             newAlerts.append(contentsOf: vehicleAlerts)
         }
         
-        self.alerts = newAlerts.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+        let sortedAlerts = newAlerts.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+        DispatchQueue.main.async { [weak self] in
+            self?.alerts = sortedAlerts
+        }
     }
     
     func getStats(for vehicleId: UUID) -> VehicleInventoryStats? {
@@ -164,14 +172,33 @@ class InventoryStatsManager: ObservableObject {
     private func recalculateTotals() {
         let statsArray = Array(vehicleStats.values)
         
-        totalHoldingCost = statsArray.reduce(Decimal(0)) { $0 + ($1.holdingCostAccumulated?.decimalValue ?? 0) }
-        agingDistribution = InventoryMetricsCalculator.calculateAgingDistribution(stats: statsArray)
+        let newTotal = statsArray.reduce(Decimal(0)) { $0 + ($1.holdingCostAccumulated?.decimalValue ?? 0) }
+        let newDistribution = InventoryMetricsCalculator.calculateAgingDistribution(stats: statsArray)
         
         let vehicles = fetchVehicles(withIds: Array(vehicleStats.keys))
-        healthScore = InventoryMetricsCalculator.calculateHealthScore(
+        let newScore = InventoryMetricsCalculator.calculateHealthScore(
             vehicles: vehicles,
             stats: vehicleStats
         )
+        
+        publishSummary(
+            totalHoldingCost: newTotal,
+            agingDistribution: newDistribution,
+            healthScore: newScore
+        )
+    }
+
+    private func publishSummary(
+        totalHoldingCost: Decimal,
+        agingDistribution: [AgingBucket: Int],
+        healthScore: Int
+    ) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.totalHoldingCost = totalHoldingCost
+            self.agingDistribution = agingDistribution
+            self.healthScore = healthScore
+        }
     }
     
     private func fetchHoldingCostSettings() -> HoldingCostSettings {
