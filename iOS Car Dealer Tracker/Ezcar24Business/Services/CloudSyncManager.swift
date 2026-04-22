@@ -48,6 +48,7 @@ final class CloudSyncManager: ObservableObject {
     static let pushTimestampPrefix = "lastPushTimestamp_"
     static let syncFailureTimestampPrefix = "lastSyncFailureTimestamp_"
     static let syncFailureMessagePrefix = "lastSyncFailureMessage_"
+    static let expenseDateRepairPrefix = "expenseDateRepair_"
 
     private let client: SupabaseClient
     private var writeClient: SupabaseClient { client }
@@ -103,10 +104,16 @@ final class CloudSyncManager: ObservableObject {
     init(client: SupabaseClient, context: NSManagedObjectContext) {
         self.client = client
         self.context = context
+        Task { [weak self] in
+            await self?.repairLegacyExpenseDatesIfNeeded()
+        }
     }
 
     func updateContext(_ context: NSManagedObjectContext) {
         self.context = context
+        Task { [weak self] in
+            await self?.repairLegacyExpenseDatesIfNeeded()
+        }
     }
 
     func syncCurrentUserProfile(user: Auth.User) async {
@@ -669,6 +676,10 @@ final class CloudSyncManager: ObservableObject {
         "\(Self.syncFailureMessagePrefix)\(dealerId.uuidString)"
     }
 
+    private func expenseDateRepairKey(for storeKey: String) -> String {
+        "\(Self.expenseDateRepairPrefix)\(storeKey)"
+    }
+
     private func resolveSyncTimestamp(_ snapshot: RemoteSnapshot) -> Date {
         snapshot.serverNow ?? Date()
     }
@@ -775,8 +786,45 @@ final class CloudSyncManager: ObservableObject {
             key.hasPrefix(syncTimestampPrefix) ||
             key.hasPrefix(pushTimestampPrefix) ||
             key.hasPrefix(syncFailureTimestampPrefix) ||
-            key.hasPrefix(syncFailureMessagePrefix) {
+            key.hasPrefix(syncFailureMessagePrefix) ||
+            key.hasPrefix(expenseDateRepairPrefix) {
             defaults.removeObject(forKey: key)
+        }
+    }
+
+    private func repairLegacyExpenseDatesIfNeeded() async {
+        let storeKey = PersistenceController.shared.activeStoreKey
+        guard storeKey != PersistenceController.guestStoreKey else { return }
+
+        let defaults = UserDefaults.standard
+        let repairKey = expenseDateRepairKey(for: storeKey)
+        guard !defaults.bool(forKey: repairKey) else { return }
+
+        let bgContext = PersistenceController.shared.newBackgroundContext()
+
+        do {
+            try await bgContext.perform {
+                let request: NSFetchRequest<Expense> = Expense.fetchRequest()
+                request.includesPendingChanges = false
+                request.predicate = NSPredicate(format: "date != nil")
+
+                let expenses = try bgContext.fetch(request)
+                for expense in expenses {
+                    guard let date = expense.date else { continue }
+                    guard let repairedDate = CloudSyncManager.repairLocalExpenseDateIfNeeded(date, createdAt: expense.createdAt) else {
+                        continue
+                    }
+                    expense.date = repairedDate
+                }
+
+                if bgContext.hasChanges {
+                    try bgContext.save()
+                }
+            }
+
+            defaults.set(true, forKey: repairKey)
+        } catch {
+            print("CloudSyncManager repairLegacyExpenseDatesIfNeeded error: \(error)")
         }
     }
 
@@ -2845,7 +2893,7 @@ final class CloudSyncManager: ObservableObject {
         if let sales = try? context.fetch(saleRequest) {
             for sale in sales {
                 guard let accountId = sale.account?.id else { continue }
-                let amount = sale.amount?.decimalValue ?? 0
+                let amount = sale.accountDepositAmount
                 add(accountId, amount)
             }
         }
@@ -3126,7 +3174,7 @@ final class CloudSyncManager: ObservableObject {
             }
 
             if let sd = v.saleDate {
-                obj.saleDate = CloudSyncManager.parseDateAndTime(sd) ?? CloudSyncManager.parseDateOnly(sd)
+                obj.saleDate = CloudSyncManager.parseRemoteDateOnly(sd)
             }
 
             // photoURL is handled separately via image download
@@ -3275,7 +3323,7 @@ final class CloudSyncManager: ObservableObject {
 
                 obj.id = s.id
                 obj.amount = NSDecimalNumber(decimal: s.amount)
-                if let d = CloudSyncManager.parseDateAndTime(s.date) ?? CloudSyncManager.parseDateOnly(s.date) {
+                if let d = CloudSyncManager.parseRemoteDateOnly(s.date) {
                     obj.date = d
                 } else {
                     obj.date = s.createdAt
@@ -3342,7 +3390,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.id = e.id
                 obj.amount = NSDecimalNumber(decimal: e.amount)
                 
-                if let d = CloudSyncManager.parseDateAndTime(e.date) ?? CloudSyncManager.parseRemoteDateOnly(e.date) {
+                if let d = CloudSyncManager.parseRemoteExpenseDate(e.date, createdAt: e.createdAt) {
                     obj.date = d
                 } else {
                     obj.date = e.createdAt
@@ -3374,7 +3422,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.id = s.id
                 obj.amount = NSDecimalNumber(decimal: s.amount)
                 
-                if let d = CloudSyncManager.parseDateAndTime(s.date) ?? CloudSyncManager.parseDateOnly(s.date) {
+                if let d = CloudSyncManager.parseRemoteDateOnly(s.date) {
                     obj.date = d
                 } else {
                     obj.date = s.createdAt
@@ -3383,6 +3431,15 @@ final class CloudSyncManager: ObservableObject {
                 obj.buyerName = s.buyerName
                 obj.buyerPhone = s.buyerPhone
                 obj.paymentMethod = s.paymentMethod
+                obj.dealDeskPayload = s.dealDeskPayload?.jsonString
+                obj.dealDeskTemplateCode = s.dealDeskTemplateCode
+                obj.dealDeskTemplateVersion = Int32(s.dealDeskTemplateVersion ?? 0)
+                obj.jurisdictionType = s.jurisdictionType
+                obj.jurisdictionCode = s.jurisdictionCode
+                obj.outTheDoorTotal = s.outTheDoorTotal.map { NSDecimalNumber(decimal: $0) }
+                obj.cashReceivedNow = s.cashReceivedNow.map { NSDecimalNumber(decimal: $0) }
+                obj.amountFinanced = s.amountFinanced.map { NSDecimalNumber(decimal: $0) }
+                obj.monthlyPaymentEstimate = s.monthlyPaymentEstimate.map { NSDecimalNumber(decimal: $0) }
                 obj.createdAt = s.createdAt
                 obj.updatedAt = s.updatedAt
                 obj.deletedAt = nil
@@ -3475,7 +3532,7 @@ final class CloudSyncManager: ObservableObject {
 
                 obj.id = p.id
                 obj.amount = NSDecimalNumber(decimal: p.amount)
-                if let parsed = CloudSyncManager.parseDateAndTime(p.date) ?? CloudSyncManager.parseRemoteDateOnly(p.date) {
+                if let parsed = CloudSyncManager.parseRemoteDateOnly(p.date) {
                     obj.date = parsed
                 } else {
                     obj.date = p.createdAt
@@ -3686,6 +3743,12 @@ final class CloudSyncManager: ObservableObject {
 
     // MARK: - Mapping helpers
 
+    nonisolated static let expenseDateTimeMigrationCutoff: Date = {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        return calendar.date(from: DateComponents(year: 2026, month: 4, day: 9, hour: 9, minute: 30, second: 0)) ?? .distantFuture
+    }()
+
     nonisolated private static func parseDateOnly(_ string: String) -> Date? {
         let f = DateFormatter()
         f.calendar = Calendar(identifier: .gregorian)
@@ -3728,6 +3791,49 @@ final class CloudSyncManager: ObservableObject {
         f.dateFormat = "yyyy-MM-dd"
         return f.string(from: date)
     }
+
+    nonisolated static func encodeRemoteExpenseDate(_ date: Date) -> String {
+        formatDateAndTime(date)
+    }
+
+    nonisolated static func encodeRemoteCalendarDate(_ date: Date) -> String {
+        formatDateOnly(date)
+    }
+
+    nonisolated static func parseRemoteExpenseDate(_ string: String, createdAt: Date?) -> Date? {
+        if let parsedDateTime = parseDateAndTime(string) {
+            if shouldTreatExpenseTimestampAsFloatingDate(parsedDateTime, createdAt: createdAt) {
+                return normalizeDateOnly(parsedDateTime)
+            }
+            return parsedDateTime
+        }
+        return parseRemoteDateOnly(string)
+    }
+
+    nonisolated static func repairLocalExpenseDateIfNeeded(_ date: Date, createdAt: Date?) -> Date? {
+        guard shouldTreatExpenseTimestampAsFloatingDate(date, createdAt: createdAt) else { return nil }
+        let normalizedDate = normalizeDateOnly(date)
+        guard abs(normalizedDate.timeIntervalSince(date)) >= 1 else { return nil }
+        return normalizedDate
+    }
+
+    nonisolated private static func shouldTreatExpenseTimestampAsFloatingDate(_ date: Date, createdAt: Date?) -> Bool {
+        if let createdAt, createdAt < expenseDateTimeMigrationCutoff {
+            return true
+        }
+        return hasMidnightUTCComponents(date)
+    }
+
+    nonisolated private static func hasMidnightUTCComponents(_ date: Date) -> Bool {
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .current
+        let components = utcCalendar.dateComponents([.hour, .minute, .second, .nanosecond], from: date)
+        return components.hour == 0 &&
+            components.minute == 0 &&
+            components.second == 0 &&
+            components.nanosecond == 0
+    }
+
     struct SyncPayload<T: Encodable>: Encodable {
         let payload: [T]
     }
@@ -4077,14 +4183,6 @@ final class CloudSyncManager: ObservableObject {
         return f.string(from: date)
     }
 
-    nonisolated private static func hasExplicitTime(_ date: Date) -> Bool {
-        let components = Calendar.current.dateComponents([.hour, .minute, .second, .nanosecond], from: date)
-        return components.hour != 0 ||
-            components.minute != 0 ||
-            components.second != 0 ||
-            components.nanosecond != 0
-    }
-
     nonisolated private static func pushAnchorCandidate<T: PushAnchorTimestamped>(for remote: T) -> Date? {
         remote.updatedAt
     }
@@ -4128,7 +4226,7 @@ final class CloudSyncManager: ObservableObject {
             notes: vehicle.notes,
             createdAt: vehicle.createdAt ?? Date(),
             salePrice: vehicle.salePrice as Decimal?,
-            saleDate: vehicle.saleDate.map { CloudSyncManager.formatDateAndTime($0) },
+            saleDate: vehicle.saleDate.map { CloudSyncManager.encodeRemoteCalendarDate($0) },
             photoURL: nil,
             askingPrice: vehicle.askingPrice as Decimal?,
             reportURL: vehicle.reportURL,
@@ -4140,18 +4238,11 @@ final class CloudSyncManager: ObservableObject {
 
     nonisolated private func makeRemoteExpense(from expense: Expense, dealerId: UUID) -> RemoteExpense? {
         guard let id = expense.id else { return nil }
-        let originalDate = expense.date ?? Date()
-        let encodedDate: String
-        if CloudSyncManager.hasExplicitTime(originalDate) {
-            encodedDate = CloudSyncManager.formatDateAndTime(originalDate)
-        } else {
-            encodedDate = CloudSyncManager.formatDateOnly(Calendar.current.startOfDay(for: originalDate))
-        }
         return RemoteExpense(
             id: id,
             dealerId: dealerId,
             amount: (expense.amount as Decimal?) ?? 0,
-            date: encodedDate,
+            date: CloudSyncManager.encodeRemoteExpenseDate(expense.date ?? Date()),
             expenseDescription: expense.expenseDescription,
             category: expense.category ?? "",
             receiptPath: expense.receiptPath,
@@ -4179,7 +4270,7 @@ final class CloudSyncManager: ObservableObject {
             amount: (sale.amount as Decimal?) ?? 0,
             salePrice: (sale.amount as Decimal?) ?? 0,
             profit: nil,
-            date: CloudSyncManager.formatDateAndTime(date),
+            date: CloudSyncManager.encodeRemoteCalendarDate(date),
             buyerName: sale.buyerName,
             buyerPhone: sale.buyerPhone,
             paymentMethod: sale.paymentMethod,
@@ -4187,7 +4278,16 @@ final class CloudSyncManager: ObservableObject {
             vatRefundPercent: sale.vatRefundPercent as Decimal?,
             vatRefundAmount: sale.vatRefundAmount as Decimal?,
             notes: nil,
-            createdAt: Date(),
+            dealDeskPayload: sale.dealDeskSnapshotValue,
+            dealDeskTemplateCode: sale.dealDeskTemplateCode,
+            dealDeskTemplateVersion: sale.dealDeskTemplateVersion > 0 ? Int(sale.dealDeskTemplateVersion) : nil,
+            jurisdictionType: sale.jurisdictionType,
+            jurisdictionCode: sale.jurisdictionCode,
+            outTheDoorTotal: sale.outTheDoorTotal?.decimalValue,
+            cashReceivedNow: sale.cashReceivedNow?.decimalValue,
+            amountFinanced: sale.amountFinanced?.decimalValue,
+            monthlyPaymentEstimate: sale.monthlyPaymentEstimate?.decimalValue,
+            createdAt: sale.createdAt ?? Date(),
             updatedAt: sale.updatedAt ?? Date(),
             deletedAt: sale.deletedAt
         )
@@ -4289,7 +4389,7 @@ final class CloudSyncManager: ObservableObject {
             id: id,
             dealerId: dealerId,
             amount: (sale.amount as Decimal?) ?? 0,
-            date: CloudSyncManager.formatDateAndTime(date),
+            date: CloudSyncManager.encodeRemoteCalendarDate(date),
             buyerName: sale.buyerName,
             buyerPhone: sale.buyerPhone,
             paymentMethod: sale.paymentMethod,

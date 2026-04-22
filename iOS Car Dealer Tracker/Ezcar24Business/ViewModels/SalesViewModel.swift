@@ -157,9 +157,9 @@ class SalesViewModel: ObservableObject {
             }
         }
         
-        if let account = sale.account, let amount = sale.amount {
+        if let account = sale.account {
             let currentBalance = account.balance?.decimalValue ?? 0
-            account.balance = NSDecimalNumber(decimal: currentBalance - amount.decimalValue)
+            account.balance = NSDecimalNumber(decimal: currentBalance - sale.accountDepositAmount)
             account.updatedAt = Date()
             if let dealerId = CloudSyncEnvironment.currentDealerId {
                 Task {

@@ -223,6 +223,7 @@ object LeadFunnelCalculator {
             val totalValue = sourceClients
                 .map { it.estimatedValue ?: BigDecimal.ZERO }
                 .fold(BigDecimal.ZERO) { acc, value -> acc.add(value) }
+                .setScale(DISPLAY_SCALE, RoundingMode.HALF_UP)
             val averageLeadValue = if (leadCount > 0) {
                 totalValue.divide(BigDecimal(leadCount), DISPLAY_SCALE, RoundingMode.HALF_UP)
             } else {

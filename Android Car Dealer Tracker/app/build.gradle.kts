@@ -25,8 +25,8 @@ android {
         applicationId = "com.ezcar24.business"
         minSdk = 26
         targetSdk = 34
-        versionCode = 217
-        versionName = "2.1.7"
+        versionCode = 219
+        versionName = "2.1.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -35,7 +35,7 @@ android {
         create("release") {
             val storeFilePath = keystoreProperties["storeFile"] as? String
             if (storeFilePath != null) {
-                storeFile = file(storeFilePath)
+                storeFile = rootProject.file(storeFilePath)
                 storePassword = keystoreProperties["storePassword"] as String
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String

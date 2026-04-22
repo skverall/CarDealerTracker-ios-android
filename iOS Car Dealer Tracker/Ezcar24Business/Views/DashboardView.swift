@@ -1612,6 +1612,7 @@ struct OrganizationSwitcherView: View {
     @State private var showingOrgSheet = false
     @State private var showingCreateSheet = false
     @State private var newOrgName = ""
+    @State private var newOrgBusinessRegion: DealDeskBusinessRegionCode = .generic
     @State private var isCreating = false
     @State private var createError: String?
 
@@ -1712,6 +1713,15 @@ struct OrganizationSwitcherView: View {
                             .autocapitalization(.words)
                     }
 
+                    Section(header: Text("Business Region")) {
+                        Picker("Business Region", selection: $newOrgBusinessRegion) {
+                            ForEach(DealDeskBusinessRegionCode.allCases) { region in
+                                Text(region.displayName).tag(region)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+
                     if let createError {
                         Section {
                             Text(createError)
@@ -1724,10 +1734,14 @@ struct OrganizationSwitcherView: View {
                             isCreating = true
                             defer { isCreating = false }
                             do {
-                                let newId = try await sessionStore.createOrganization(name: newOrgName)
+                                let newId = try await sessionStore.createOrganization(
+                                    name: newOrgName,
+                                    businessRegionCode: newOrgBusinessRegion
+                                )
                                 await sessionStore.switchOrganization(to: newId)
                                 showingCreateSheet = false
                                 newOrgName = ""
+                                newOrgBusinessRegion = .generic
                                 createError = nil
                             } catch {
                                 createError = error.localizedDescription
@@ -1742,6 +1756,7 @@ struct OrganizationSwitcherView: View {
                         Button("Cancel") {
                             showingCreateSheet = false
                             newOrgName = ""
+                            newOrgBusinessRegion = .generic
                             createError = nil
                         }
                     }

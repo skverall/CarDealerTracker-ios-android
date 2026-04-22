@@ -1,4 +1,392 @@
+import CoreData
 import Foundation
+
+enum DealDeskBusinessRegionCode: String, Codable, CaseIterable, Identifiable {
+    case usa = "USA"
+    case canada = "Canada"
+    case generic = "generic"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .usa:
+            return "USA"
+        case .canada:
+            return "Canada"
+        case .generic:
+            return "Other"
+        }
+    }
+
+    var defaultTemplateCode: DealDeskTemplateCode {
+        switch self {
+        case .usa:
+            return .usa
+        case .canada:
+            return .canada
+        case .generic:
+            return .generic
+        }
+    }
+
+    var isEnabledByDefaultForNewDealer: Bool {
+        switch self {
+        case .usa, .canada:
+            return true
+        case .generic:
+            return false
+        }
+    }
+}
+
+enum DealDeskTemplateCode: String, Codable, CaseIterable, Identifiable {
+    case usa
+    case canada
+    case generic
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .usa:
+            return "USA"
+        case .canada:
+            return "Canada"
+        case .generic:
+            return "Generic"
+        }
+    }
+}
+
+enum DealDeskJurisdictionType: String, Codable, CaseIterable {
+    case state
+    case province
+    case generic
+}
+
+enum DealDeskLineCalculationType: String, Codable, CaseIterable {
+    case fixedAmount = "fixed_amount"
+    case percentOfSalePrice = "percent_of_sale_price"
+}
+
+struct DealDeskJurisdictionOption: Identifiable, Equatable {
+    let code: String
+    let title: String
+
+    var id: String { code }
+}
+
+struct DealDeskLine: Codable, Identifiable, Equatable {
+    var id: UUID = UUID()
+    var lineCode: String
+    var title: String
+    var calculationType: DealDeskLineCalculationType
+    var value: Decimal
+
+    func resolvedAmount(for salePrice: Decimal) -> Decimal {
+        switch calculationType {
+        case .fixedAmount:
+            return value
+        case .percentOfSalePrice:
+            return salePrice * value / 100
+        }
+    }
+}
+
+struct DealDeskPaymentPlan: Codable, Equatable {
+    var methodCode: String
+    var downPayment: Decimal
+    var aprPercent: Decimal?
+    var termMonths: Int?
+}
+
+struct DealDeskTotals: Codable, Equatable {
+    var salePrice: Decimal
+    var taxTotal: Decimal
+    var feeTotal: Decimal
+    var outTheDoorTotal: Decimal
+    var cashReceivedNow: Decimal
+    var amountFinanced: Decimal
+    var monthlyPaymentEstimate: Decimal?
+}
+
+struct DealDeskSnapshot: Codable, Equatable {
+    var version: Int = 1
+    var templateCode: String
+    var templateVersion: Int
+    var jurisdictionType: DealDeskJurisdictionType
+    var jurisdictionCode: String
+    var taxLines: [DealDeskLine]
+    var feeLines: [DealDeskLine]
+    var paymentPlan: DealDeskPaymentPlan
+    var totals: DealDeskTotals
+}
+
+struct DealDeskSettings: Codable, Equatable {
+    var isEnabled: Bool
+    var businessRegionCode: DealDeskBusinessRegionCode
+    var defaultTemplateCode: DealDeskTemplateCode
+    var templateVersion: Int
+    var taxOverrides: [DealDeskLine]
+    var feeOverrides: [DealDeskLine]
+}
+
+enum DealDeskTemplateCatalog {
+    static func defaultSettings(
+        for businessRegionCode: DealDeskBusinessRegionCode,
+        isEnabled: Bool? = nil
+    ) -> DealDeskSettings {
+        DealDeskSettings(
+            isEnabled: isEnabled ?? businessRegionCode.isEnabledByDefaultForNewDealer,
+            businessRegionCode: businessRegionCode,
+            defaultTemplateCode: businessRegionCode.defaultTemplateCode,
+            templateVersion: 1,
+            taxOverrides: defaultTaxLines(for: businessRegionCode.defaultTemplateCode),
+            feeOverrides: defaultFeeLines(for: businessRegionCode.defaultTemplateCode)
+        )
+    }
+
+    static func defaultTaxLines(for templateCode: DealDeskTemplateCode) -> [DealDeskLine] {
+        switch templateCode {
+        case .usa:
+            return [
+                DealDeskLine(lineCode: "sales_tax", title: "Sales tax", calculationType: .percentOfSalePrice, value: 0)
+            ]
+        case .canada:
+            return [
+                DealDeskLine(lineCode: "gst", title: "GST", calculationType: .percentOfSalePrice, value: 0),
+                DealDeskLine(lineCode: "hst", title: "HST", calculationType: .percentOfSalePrice, value: 0),
+                DealDeskLine(lineCode: "pst", title: "PST", calculationType: .percentOfSalePrice, value: 0),
+                DealDeskLine(lineCode: "qst", title: "QST", calculationType: .percentOfSalePrice, value: 0)
+            ]
+        case .generic:
+            return [
+                DealDeskLine(lineCode: "tax", title: "VAT / Tax", calculationType: .percentOfSalePrice, value: 0)
+            ]
+        }
+    }
+
+    static func defaultFeeLines(for templateCode: DealDeskTemplateCode) -> [DealDeskLine] {
+        switch templateCode {
+        case .usa:
+            return [
+                DealDeskLine(lineCode: "doc_fee", title: "Doc fee", calculationType: .fixedAmount, value: 0),
+                DealDeskLine(lineCode: "title", title: "Title", calculationType: .fixedAmount, value: 0),
+                DealDeskLine(lineCode: "registration", title: "Registration", calculationType: .fixedAmount, value: 0),
+                DealDeskLine(lineCode: "license", title: "License", calculationType: .fixedAmount, value: 0)
+            ]
+        case .canada:
+            return [
+                DealDeskLine(lineCode: "admin_fee", title: "Admin fee", calculationType: .fixedAmount, value: 0),
+                DealDeskLine(lineCode: "licensing", title: "Licensing", calculationType: .fixedAmount, value: 0)
+            ]
+        case .generic:
+            return [
+                DealDeskLine(lineCode: "fees", title: "Fees", calculationType: .fixedAmount, value: 0)
+            ]
+        }
+    }
+
+    static func defaultJurisdictionType(for templateCode: DealDeskTemplateCode) -> DealDeskJurisdictionType {
+        switch templateCode {
+        case .usa:
+            return .state
+        case .canada:
+            return .province
+        case .generic:
+            return .generic
+        }
+    }
+
+    static func defaultJurisdictionCode(for templateCode: DealDeskTemplateCode) -> String {
+        switch templateCode {
+        case .usa:
+            return "US-XX"
+        case .canada:
+            return "CA-XX"
+        case .generic:
+            return "GENERIC"
+        }
+    }
+
+    static func jurisdictionOptions(for templateCode: DealDeskTemplateCode) -> [DealDeskJurisdictionOption] {
+        switch templateCode {
+        case .usa:
+            return usJurisdictions
+        case .canada:
+            return canadaJurisdictions
+        case .generic:
+            return [DealDeskJurisdictionOption(code: "GENERIC", title: "Generic")]
+        }
+    }
+
+    static func mergedTaxLines(from settings: DealDeskSettings) -> [DealDeskLine] {
+        mergedLines(
+            defaults: defaultTaxLines(for: settings.defaultTemplateCode),
+            overrides: settings.taxOverrides
+        )
+    }
+
+    static func mergedFeeLines(from settings: DealDeskSettings) -> [DealDeskLine] {
+        mergedLines(
+            defaults: defaultFeeLines(for: settings.defaultTemplateCode),
+            overrides: settings.feeOverrides
+        )
+    }
+
+    private static func mergedLines(defaults: [DealDeskLine], overrides: [DealDeskLine]) -> [DealDeskLine] {
+        guard !overrides.isEmpty else { return defaults }
+        let overrideMap = Dictionary(uniqueKeysWithValues: overrides.map { ($0.lineCode, $0) })
+        let mergedDefaults = defaults.map { overrideMap[$0.lineCode] ?? $0 }
+        let extraOverrides = overrides.filter { override in
+            defaults.contains(where: { $0.lineCode == override.lineCode }) == false
+        }
+        return mergedDefaults + extraOverrides
+    }
+
+    private static let usJurisdictions: [DealDeskJurisdictionOption] = [
+        DealDeskJurisdictionOption(code: "US-XX", title: "Unspecified"),
+        DealDeskJurisdictionOption(code: "US-AL", title: "Alabama"),
+        DealDeskJurisdictionOption(code: "US-AK", title: "Alaska"),
+        DealDeskJurisdictionOption(code: "US-AZ", title: "Arizona"),
+        DealDeskJurisdictionOption(code: "US-AR", title: "Arkansas"),
+        DealDeskJurisdictionOption(code: "US-CA", title: "California"),
+        DealDeskJurisdictionOption(code: "US-CO", title: "Colorado"),
+        DealDeskJurisdictionOption(code: "US-CT", title: "Connecticut"),
+        DealDeskJurisdictionOption(code: "US-DE", title: "Delaware"),
+        DealDeskJurisdictionOption(code: "US-FL", title: "Florida"),
+        DealDeskJurisdictionOption(code: "US-GA", title: "Georgia"),
+        DealDeskJurisdictionOption(code: "US-HI", title: "Hawaii"),
+        DealDeskJurisdictionOption(code: "US-ID", title: "Idaho"),
+        DealDeskJurisdictionOption(code: "US-IL", title: "Illinois"),
+        DealDeskJurisdictionOption(code: "US-IN", title: "Indiana"),
+        DealDeskJurisdictionOption(code: "US-IA", title: "Iowa"),
+        DealDeskJurisdictionOption(code: "US-KS", title: "Kansas"),
+        DealDeskJurisdictionOption(code: "US-KY", title: "Kentucky"),
+        DealDeskJurisdictionOption(code: "US-LA", title: "Louisiana"),
+        DealDeskJurisdictionOption(code: "US-ME", title: "Maine"),
+        DealDeskJurisdictionOption(code: "US-MD", title: "Maryland"),
+        DealDeskJurisdictionOption(code: "US-MA", title: "Massachusetts"),
+        DealDeskJurisdictionOption(code: "US-MI", title: "Michigan"),
+        DealDeskJurisdictionOption(code: "US-MN", title: "Minnesota"),
+        DealDeskJurisdictionOption(code: "US-MS", title: "Mississippi"),
+        DealDeskJurisdictionOption(code: "US-MO", title: "Missouri"),
+        DealDeskJurisdictionOption(code: "US-MT", title: "Montana"),
+        DealDeskJurisdictionOption(code: "US-NE", title: "Nebraska"),
+        DealDeskJurisdictionOption(code: "US-NV", title: "Nevada"),
+        DealDeskJurisdictionOption(code: "US-NH", title: "New Hampshire"),
+        DealDeskJurisdictionOption(code: "US-NJ", title: "New Jersey"),
+        DealDeskJurisdictionOption(code: "US-NM", title: "New Mexico"),
+        DealDeskJurisdictionOption(code: "US-NY", title: "New York"),
+        DealDeskJurisdictionOption(code: "US-NC", title: "North Carolina"),
+        DealDeskJurisdictionOption(code: "US-ND", title: "North Dakota"),
+        DealDeskJurisdictionOption(code: "US-OH", title: "Ohio"),
+        DealDeskJurisdictionOption(code: "US-OK", title: "Oklahoma"),
+        DealDeskJurisdictionOption(code: "US-OR", title: "Oregon"),
+        DealDeskJurisdictionOption(code: "US-PA", title: "Pennsylvania"),
+        DealDeskJurisdictionOption(code: "US-RI", title: "Rhode Island"),
+        DealDeskJurisdictionOption(code: "US-SC", title: "South Carolina"),
+        DealDeskJurisdictionOption(code: "US-SD", title: "South Dakota"),
+        DealDeskJurisdictionOption(code: "US-TN", title: "Tennessee"),
+        DealDeskJurisdictionOption(code: "US-TX", title: "Texas"),
+        DealDeskJurisdictionOption(code: "US-UT", title: "Utah"),
+        DealDeskJurisdictionOption(code: "US-VT", title: "Vermont"),
+        DealDeskJurisdictionOption(code: "US-VA", title: "Virginia"),
+        DealDeskJurisdictionOption(code: "US-WA", title: "Washington"),
+        DealDeskJurisdictionOption(code: "US-WV", title: "West Virginia"),
+        DealDeskJurisdictionOption(code: "US-WI", title: "Wisconsin"),
+        DealDeskJurisdictionOption(code: "US-WY", title: "Wyoming"),
+        DealDeskJurisdictionOption(code: "US-DC", title: "District of Columbia")
+    ]
+
+    private static let canadaJurisdictions: [DealDeskJurisdictionOption] = [
+        DealDeskJurisdictionOption(code: "CA-XX", title: "Unspecified"),
+        DealDeskJurisdictionOption(code: "CA-AB", title: "Alberta"),
+        DealDeskJurisdictionOption(code: "CA-BC", title: "British Columbia"),
+        DealDeskJurisdictionOption(code: "CA-MB", title: "Manitoba"),
+        DealDeskJurisdictionOption(code: "CA-NB", title: "New Brunswick"),
+        DealDeskJurisdictionOption(code: "CA-NL", title: "Newfoundland and Labrador"),
+        DealDeskJurisdictionOption(code: "CA-NS", title: "Nova Scotia"),
+        DealDeskJurisdictionOption(code: "CA-NT", title: "Northwest Territories"),
+        DealDeskJurisdictionOption(code: "CA-NU", title: "Nunavut"),
+        DealDeskJurisdictionOption(code: "CA-ON", title: "Ontario"),
+        DealDeskJurisdictionOption(code: "CA-PE", title: "Prince Edward Island"),
+        DealDeskJurisdictionOption(code: "CA-QC", title: "Quebec"),
+        DealDeskJurisdictionOption(code: "CA-SK", title: "Saskatchewan"),
+        DealDeskJurisdictionOption(code: "CA-YT", title: "Yukon")
+    ]
+}
+
+extension DealDeskSettings {
+    var seededTaxLines: [DealDeskLine] {
+        DealDeskTemplateCatalog.mergedTaxLines(from: self)
+    }
+
+    var seededFeeLines: [DealDeskLine] {
+        DealDeskTemplateCatalog.mergedFeeLines(from: self)
+    }
+}
+
+extension DealDeskSnapshot {
+    private static let jsonEncoder = JSONEncoder()
+    private static let jsonDecoder = JSONDecoder()
+
+    var jsonString: String? {
+        guard let data = try? Self.jsonEncoder.encode(self) else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    static func decode(from jsonString: String?) -> DealDeskSnapshot? {
+        guard
+            let jsonString,
+            let data = jsonString.data(using: .utf8)
+        else { return nil }
+        return try? Self.jsonDecoder.decode(DealDeskSnapshot.self, from: data)
+    }
+}
+
+extension Sale {
+    var dealDeskSnapshotValue: DealDeskSnapshot? {
+        DealDeskSnapshot.decode(from: dealDeskPayload)
+    }
+
+    var accountDepositAmount: Decimal {
+        cashReceivedNow?.decimalValue ?? amount?.decimalValue ?? 0
+    }
+
+    var dealerRevenueAmount: Decimal {
+        amount?.decimalValue ?? 0
+    }
+
+    var isDealDeskSale: Bool {
+        dealDeskSnapshotValue != nil || !(dealDeskTemplateCode?.isEmpty ?? true)
+    }
+
+    func applyDealDeskSnapshot(_ snapshot: DealDeskSnapshot?) {
+        dealDeskPayload = snapshot?.jsonString
+        dealDeskTemplateCode = snapshot?.templateCode
+        dealDeskTemplateVersion = Int32(snapshot?.templateVersion ?? 0)
+        jurisdictionType = snapshot?.jurisdictionType.rawValue
+        jurisdictionCode = snapshot?.jurisdictionCode
+        outTheDoorTotal = snapshot.map { NSDecimalNumber(decimal: $0.totals.outTheDoorTotal) }
+        cashReceivedNow = snapshot.map { NSDecimalNumber(decimal: $0.totals.cashReceivedNow) }
+        amountFinanced = snapshot.map { NSDecimalNumber(decimal: $0.totals.amountFinanced) }
+        monthlyPaymentEstimate = snapshot?.totals.monthlyPaymentEstimate.map { NSDecimalNumber(decimal: $0) }
+    }
+
+    func clearDealDeskSnapshot() {
+        dealDeskPayload = nil
+        dealDeskTemplateCode = nil
+        dealDeskTemplateVersion = 0
+        jurisdictionType = nil
+        jurisdictionCode = nil
+        outTheDoorTotal = nil
+        cashReceivedNow = nil
+        amountFinanced = nil
+        monthlyPaymentEstimate = nil
+    }
+}
 
 struct RemoteDealerUser: Codable {
     let id: UUID
@@ -186,6 +574,15 @@ struct RemoteSale: Codable {
     let vatRefundPercent: Decimal?
     let vatRefundAmount: Decimal?
     let notes: String?
+    let dealDeskPayload: DealDeskSnapshot?
+    let dealDeskTemplateCode: String?
+    let dealDeskTemplateVersion: Int?
+    let jurisdictionType: String?
+    let jurisdictionCode: String?
+    let outTheDoorTotal: Decimal?
+    let cashReceivedNow: Decimal?
+    let amountFinanced: Decimal?
+    let monthlyPaymentEstimate: Decimal?
     let createdAt: Date
     let updatedAt: Date
     let deletedAt: Date?
@@ -205,6 +602,15 @@ struct RemoteSale: Codable {
         case vatRefundPercent = "vat_refund_percent"
         case vatRefundAmount = "vat_refund_amount"
         case notes
+        case dealDeskPayload = "deal_desk_payload"
+        case dealDeskTemplateCode = "deal_desk_template_code"
+        case dealDeskTemplateVersion = "deal_desk_template_version"
+        case jurisdictionType = "jurisdiction_type"
+        case jurisdictionCode = "jurisdiction_code"
+        case outTheDoorTotal = "out_the_door_total"
+        case cashReceivedNow = "cash_received_now"
+        case amountFinanced = "amount_financed"
+        case monthlyPaymentEstimate = "monthly_payment_estimate"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
         case deletedAt = "deleted_at"

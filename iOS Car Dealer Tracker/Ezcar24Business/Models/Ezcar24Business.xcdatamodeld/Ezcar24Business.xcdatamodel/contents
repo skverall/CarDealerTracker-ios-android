@@ -131,10 +131,19 @@
     <entity name="Sale" representedClassName="Sale" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
         <attribute name="amount" optional="YES" attributeType="Decimal" />
+        <attribute name="amountFinanced" optional="YES" attributeType="Decimal" />
         <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO" />
         <attribute name="buyerName" optional="YES" attributeType="String" />
         <attribute name="buyerPhone" optional="YES" attributeType="String" />
+        <attribute name="cashReceivedNow" optional="YES" attributeType="Decimal" />
         <attribute name="paymentMethod" optional="YES" attributeType="String" />
+        <attribute name="dealDeskPayload" optional="YES" attributeType="String" />
+        <attribute name="dealDeskTemplateCode" optional="YES" attributeType="String" />
+        <attribute name="dealDeskTemplateVersion" optional="YES" attributeType="Integer 32" />
+        <attribute name="jurisdictionCode" optional="YES" attributeType="String" />
+        <attribute name="jurisdictionType" optional="YES" attributeType="String" />
+        <attribute name="monthlyPaymentEstimate" optional="YES" attributeType="Decimal" />
+        <attribute name="outTheDoorTotal" optional="YES" attributeType="Decimal" />
         <attribute name="vatRefundPercent" optional="YES" attributeType="Decimal" />
         <attribute name="vatRefundAmount" optional="YES" attributeType="Decimal" />
         <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />

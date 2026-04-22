@@ -12,6 +12,7 @@ import java.util.concurrent.TimeUnit
 object HoldingCostCalculator {
 
     private const val INTERMEDIATE_SCALE = 4
+    private const val RATE_SCALE = 8
     private const val DISPLAY_SCALE = 2
     private const val DAYS_IN_YEAR = 365
 
@@ -21,13 +22,11 @@ object HoldingCostCalculator {
         improvementExpenses: List<Expense>
     ): BigDecimal {
         if (!settings.isEnabled) {
-            return BigDecimal.ZERO
+            return BigDecimal.ZERO.setScale(DISPLAY_SCALE, RoundingMode.HALF_UP)
         }
 
         val capitalTiedUp = getCapitalTiedUp(vehicle, improvementExpenses)
-        val dailyRate = settings.annualRatePercent
-            .divide(BigDecimal(DAYS_IN_YEAR), INTERMEDIATE_SCALE, RoundingMode.HALF_UP)
-            .divide(BigDecimal(100), INTERMEDIATE_SCALE, RoundingMode.HALF_UP)
+        val dailyRate = calculateDailyRateFromAnnual(settings.annualRatePercent)
 
         return capitalTiedUp
             .multiply(dailyRate)
@@ -41,12 +40,12 @@ object HoldingCostCalculator {
         asOfDate: Date = Date()
     ): BigDecimal {
         if (!settings.isEnabled) {
-            return BigDecimal.ZERO
+            return BigDecimal.ZERO.setScale(DISPLAY_SCALE, RoundingMode.HALF_UP)
         }
 
         val daysInInventory = calculateDaysInInventory(vehicle, asOfDate)
         if (daysInInventory <= 0) {
-            return BigDecimal.ZERO
+            return BigDecimal.ZERO.setScale(DISPLAY_SCALE, RoundingMode.HALF_UP)
         }
 
         val improvementExpenses = getImprovementExpenses(allExpenses)
@@ -86,8 +85,8 @@ object HoldingCostCalculator {
 
     fun calculateDailyRateFromAnnual(annualRatePercent: BigDecimal): BigDecimal {
         return annualRatePercent
-            .divide(BigDecimal(DAYS_IN_YEAR), INTERMEDIATE_SCALE, RoundingMode.HALF_UP)
-            .divide(BigDecimal(100), INTERMEDIATE_SCALE, RoundingMode.HALF_UP)
+            .divide(BigDecimal(DAYS_IN_YEAR), RATE_SCALE, RoundingMode.HALF_UP)
+            .divide(BigDecimal(100), RATE_SCALE, RoundingMode.HALF_UP)
     }
 
     fun calculateAnnualRateFromDaily(dailyRatePercent: BigDecimal): BigDecimal {

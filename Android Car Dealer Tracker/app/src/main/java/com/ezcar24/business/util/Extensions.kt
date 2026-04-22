@@ -21,6 +21,7 @@ import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 
 object DateUtils {
+    private val expenseDateTimeMigrationCutoff = Date.from(Instant.parse("2026-04-09T09:30:00Z"))
     private val isoParser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSX", Locale.US).apply {
         timeZone = TimeZone.getTimeZone("UTC")
     }
@@ -58,6 +59,8 @@ object DateUtils {
         return isoParser.format(date)
     }
 
+    fun encodeRemoteExpenseDate(date: Date): String = formatDateAndTime(date)
+
     fun parseDateOnly(str: String): Date? {
         return try { dateOnlyParser.parse(str) } catch (e: Exception) { null }
     }
@@ -66,10 +69,29 @@ object DateUtils {
         return dateOnlyParser.format(date)
     }
 
+    fun encodeRemoteCalendarDate(date: Date): String = formatDateOnly(date)
+
     fun parseRemoteDateOnly(str: String): Date? {
         parseDateOnly(str)?.let { return it }
         val parsed = parseDateAndTime(str) ?: return null
         return normalizeDateOnly(parsed)
+    }
+
+    fun parseRemoteExpenseDate(str: String, createdAt: Date?): Date? {
+        val parsedDateTime = parseDateAndTime(str)
+        if (parsedDateTime != null) {
+            if (shouldTreatExpenseTimestampAsFloatingDate(parsedDateTime, createdAt)) {
+                return normalizeDateOnly(parsedDateTime)
+            }
+            return parsedDateTime
+        }
+        return parseRemoteDateOnly(str)
+    }
+
+    fun repairLocalExpenseDateIfNeeded(date: Date, createdAt: Date?): Date? {
+        if (!shouldTreatExpenseTimestampAsFloatingDate(date, createdAt)) return null
+        val normalizedDate = normalizeDateOnly(date)
+        return if (kotlin.math.abs(normalizedDate.time - date.time) >= 1000L) normalizedDate else null
     }
 
     private fun normalizeDateOnly(date: Date): Date {
@@ -84,6 +106,22 @@ object DateUtils {
         localCalendar.set(year, month, day, 0, 0, 0)
         localCalendar.set(java.util.Calendar.MILLISECOND, 0)
         return localCalendar.time
+    }
+
+    private fun shouldTreatExpenseTimestampAsFloatingDate(date: Date, createdAt: Date?): Boolean {
+        if (createdAt != null && createdAt.before(expenseDateTimeMigrationCutoff)) {
+            return true
+        }
+        return hasMidnightUtcComponents(date)
+    }
+
+    private fun hasMidnightUtcComponents(date: Date): Boolean {
+        val utcCalendar = java.util.Calendar.getInstance(TimeZone.getTimeZone("UTC"), Locale.US)
+        utcCalendar.time = date
+        return utcCalendar.get(java.util.Calendar.HOUR_OF_DAY) == 0 &&
+            utcCalendar.get(java.util.Calendar.MINUTE) == 0 &&
+            utcCalendar.get(java.util.Calendar.SECOND) == 0 &&
+            utcCalendar.get(java.util.Calendar.MILLISECOND) == 0
     }
 }
 

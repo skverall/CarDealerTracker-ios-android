@@ -86,6 +86,7 @@ class CloudSyncManager @Inject constructor(
         try {
             val lastSync = lastSyncTimestamp(dealerId)
             Log.i(tag, "syncAfterLogin start dealerId=$dealerId lastSync=$lastSync")
+            repairLegacyExpenseDatesIfNeeded(dealerId)
             processOfflineQueue(dealerId)
             ensureCurrentUserExists(dealerId)
 
@@ -289,7 +290,9 @@ class CloudSyncManager @Inject constructor(
     }
 
     fun clearAllSyncState() {
-        val keysToRemove = syncPrefs.all.keys.filter { it.startsWith(KEY_LAST_SYNC_PREFIX) }
+        val keysToRemove = syncPrefs.all.keys.filter {
+            it.startsWith(KEY_LAST_SYNC_PREFIX) || it.startsWith(KEY_EXPENSE_DATE_REPAIR_PREFIX)
+        }
         if (keysToRemove.isNotEmpty()) {
             val editor = syncPrefs.edit()
             keysToRemove.forEach(editor::remove)
@@ -1327,9 +1330,7 @@ class CloudSyncManager @Inject constructor(
             val purchaseDate = DateUtils.parseRemoteDateOnly(remote.purchaseDate)
                 ?: DateUtils.parseDateAndTime(remote.createdAt)
                 ?: Date()
-            val saleDate = remote.saleDate?.let {
-                DateUtils.parseDateAndTime(it) ?: DateUtils.parseDateOnly(it)
-            }
+            val saleDate = remote.saleDate?.let(DateUtils::parseRemoteDateOnly)
             val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: purchaseDate
 
             val newVehicle = Vehicle(
@@ -1451,11 +1452,11 @@ class CloudSyncManager @Inject constructor(
             val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
             if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
 
-            val expenseDate = DateUtils.parseDateAndTime(remote.date)
-                ?: DateUtils.parseRemoteDateOnly(remote.date)
-                ?: DateUtils.parseDateAndTime(remote.createdAt)
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt)
+            val expenseDate = DateUtils.parseRemoteExpenseDate(remote.date, createdAt)
+                ?: createdAt
                 ?: Date()
-            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: expenseDate
+            val resolvedCreatedAt = createdAt ?: expenseDate
             val vehicleId = remote.vehicleId?.toUUID()?.takeIf { it in vehicleIds }
             val userId = remote.userId?.toUUID()?.takeIf { it in userIds }
             val accountId = remote.accountId?.toUUID()?.takeIf { it in accountIds }
@@ -1466,7 +1467,7 @@ class CloudSyncManager @Inject constructor(
                 date = expenseDate,
                 expenseDescription = remote.expenseDescription,
                 category = remote.category,
-                createdAt = createdAt,
+                createdAt = resolvedCreatedAt,
                 updatedAt = remoteUpdated,
                 deletedAt = null,
                 vehicleId = vehicleId,
@@ -1476,6 +1477,21 @@ class CloudSyncManager @Inject constructor(
             )
             db.expenseDao().upsert(newExpense)
         }
+    }
+
+    private suspend fun repairLegacyExpenseDatesIfNeeded(dealerId: UUID) {
+        val repairKey = expenseDateRepairKey(dealerId)
+        if (syncPrefs.getBoolean(repairKey, false)) return
+
+        db.withTransaction {
+            val expenses = db.expenseDao().getAllIncludingDeleted()
+            expenses.forEach { expense ->
+                val repairedDate = DateUtils.repairLocalExpenseDateIfNeeded(expense.date, expense.createdAt) ?: return@forEach
+                db.expenseDao().upsert(expense.copy(date = repairedDate))
+            }
+        }
+
+        syncPrefs.edit().putBoolean(repairKey, true).apply()
     }
 
     private suspend fun mergeSales(remoteSales: List<RemoteSale>) {
@@ -1496,8 +1512,7 @@ class CloudSyncManager @Inject constructor(
             val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
             if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
 
-            val saleDate = DateUtils.parseDateAndTime(remote.date)
-                ?: DateUtils.parseDateOnly(remote.date)
+            val saleDate = DateUtils.parseRemoteDateOnly(remote.date)
                 ?: DateUtils.parseDateAndTime(remote.createdAt)
                 ?: Date()
             val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: saleDate
@@ -1730,8 +1745,7 @@ class CloudSyncManager @Inject constructor(
             val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
             if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
 
-            val saleDate = DateUtils.parseDateAndTime(remote.date)
-                ?: DateUtils.parseRemoteDateOnly(remote.date)
+            val saleDate = DateUtils.parseRemoteDateOnly(remote.date)
                 ?: remoteUpdated
             val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: saleDate
             val accountId = remote.accountId?.toUUID()?.takeIf { it in accountIds }
@@ -3155,6 +3169,7 @@ class CloudSyncManager @Inject constructor(
 
     companion object {
         private const val KEY_LAST_SYNC_PREFIX = "lastSyncTimestamp"
+        private const val KEY_EXPENSE_DATE_REPAIR_PREFIX = "expenseDateRepair"
     }
 
     @Serializable
@@ -3173,6 +3188,10 @@ class CloudSyncManager @Inject constructor(
 
     private fun lastSyncKey(dealerId: UUID): String {
         return "${KEY_LAST_SYNC_PREFIX}_${dealerId}"
+    }
+
+    private fun expenseDateRepairKey(dealerId: UUID): String {
+        return "${KEY_EXPENSE_DATE_REPAIR_PREFIX}_${dealerId}"
     }
 }
 
@@ -3294,7 +3313,7 @@ fun Sale.toRemote(dealerId: String): RemoteSale? {
         amount = amount ?: BigDecimal.ZERO,
         salePrice = amount ?: BigDecimal.ZERO,
         profit = null,
-        date = DateUtils.formatDateAndTime(dateValue),
+        date = DateUtils.encodeRemoteCalendarDate(dateValue),
         buyerName = buyerName,
         buyerPhone = buyerPhone,
         paymentMethod = paymentMethod,
@@ -3322,7 +3341,7 @@ fun Vehicle.toRemote(dealerId: String) = RemoteVehicle(
     updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
     deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) },
     salePrice = salePrice,
-    saleDate = saleDate?.let { DateUtils.formatDateAndTime(it) },
+    saleDate = saleDate?.let { DateUtils.encodeRemoteCalendarDate(it) },
     askingPrice = askingPrice,
     reportUrl = reportURL,
     photoUrl = photoUrl
@@ -3341,7 +3360,7 @@ fun Expense.toRemote(dealerId: String) = RemoteExpense(
     id = id.toString(),
     dealerId = dealerId,
     amount = amount,
-    date = DateUtils.formatDateAndTime(date),
+    date = DateUtils.encodeRemoteExpenseDate(date),
     expenseDescription = expenseDescription,
     category = category,
     vehicleId = vehicleId?.toString(),
@@ -3445,7 +3464,7 @@ fun PartSale.toRemote(dealerId: String) = RemotePartSale(
     id = id.toString(),
     dealerId = dealerId,
     amount = amount,
-    date = DateUtils.formatDateAndTime(date),
+    date = DateUtils.encodeRemoteCalendarDate(date),
     buyerName = buyerName,
     buyerPhone = buyerPhone,
     paymentMethod = paymentMethod,

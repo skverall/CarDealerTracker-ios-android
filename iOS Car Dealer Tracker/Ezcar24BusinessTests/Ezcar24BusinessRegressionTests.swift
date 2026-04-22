@@ -196,6 +196,78 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual(expense.date?.timeIntervalSince1970 ?? 0, explicitDate.timeIntervalSince1970, accuracy: 0.001)
     }
 
+    func testCloudSyncManagerNormalizesLegacyExpenseTimestampToFloatingDay() throws {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let createdAt = try XCTUnwrap(formatter.date(from: "2026-03-28T15:02:36.000Z"))
+        let parsedDate = try XCTUnwrap(
+            CloudSyncManager.parseRemoteExpenseDate(
+                "2026-03-28T15:02:36.000Z",
+                createdAt: createdAt
+            )
+        )
+
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: parsedDate)
+        XCTAssertEqual(components.year, 2026)
+        XCTAssertEqual(components.month, 3)
+        XCTAssertEqual(components.day, 28)
+        XCTAssertEqual(components.hour, 0)
+        XCTAssertEqual(components.minute, 0)
+        XCTAssertEqual(components.second, 0)
+    }
+
+    func testCloudSyncManagerKeepsPostMigrationExpenseTimestamp() throws {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let createdAt = try XCTUnwrap(formatter.date(from: "2026-04-21T18:07:42.000Z"))
+        let parsedDate = try XCTUnwrap(
+            CloudSyncManager.parseRemoteExpenseDate(
+                "2026-04-21T18:07:42.000Z",
+                createdAt: createdAt
+            )
+        )
+
+        XCTAssertEqual(parsedDate.timeIntervalSince1970, createdAt.timeIntervalSince1970, accuracy: 0.001)
+    }
+
+    func testCloudSyncManagerTreatsUtcMidnightExpenseTimestampAsFloatingDay() throws {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+        let createdAt = try XCTUnwrap(formatter.date(from: "2026-04-21T18:07:42.000Z"))
+        let parsedDate = try XCTUnwrap(
+            CloudSyncManager.parseRemoteExpenseDate(
+                "2026-04-21T00:00:00.000Z",
+                createdAt: createdAt
+            )
+        )
+
+        let components = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: parsedDate)
+        XCTAssertEqual(components.year, 2026)
+        XCTAssertEqual(components.month, 4)
+        XCTAssertEqual(components.day, 21)
+        XCTAssertEqual(components.hour, 0)
+        XCTAssertEqual(components.minute, 0)
+        XCTAssertEqual(components.second, 0)
+    }
+
+    func testCloudSyncManagerAlwaysEncodesExpenseDateWithTimestamp() {
+        let midnight = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_745_193_600))
+        let encoded = CloudSyncManager.encodeRemoteExpenseDate(midnight)
+
+        XCTAssertTrue(encoded.contains("T"))
+    }
+
+    func testCloudSyncManagerCalendarDateEncodingOmitsTimestamp() {
+        let midnight = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_745_193_600))
+        let encoded = CloudSyncManager.encodeRemoteCalendarDate(midnight)
+
+        XCTAssertFalse(encoded.contains("T"))
+        XCTAssertEqual(encoded.count, 10)
+    }
+
     func testExpenseViewModelDebouncesSearchUpdates() async throws {
         let businessDate = Date(timeIntervalSince1970: 1_744_800_000)
         _ = makeExpense(
@@ -1356,6 +1428,66 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual(snapshot.cashMovement.depositsTotal, Decimal(400))
         XCTAssertEqual(snapshot.cashMovement.withdrawalsTotal, Decimal(150))
         XCTAssertEqual(snapshot.cashMovement.netMovement, Decimal(250))
+    }
+
+    func testDealDeskSnapshotRoundTripUsesCashReceivedNowForAccountDeposit() {
+        let sale = Sale(context: context)
+        sale.id = UUID()
+        sale.amount = NSDecimalNumber(decimal: 18_500)
+
+        let snapshot = DealDeskSnapshot(
+            templateCode: DealDeskTemplateCode.usa.rawValue,
+            templateVersion: 1,
+            jurisdictionType: .state,
+            jurisdictionCode: "US-TX",
+            taxLines: [
+                DealDeskLine(lineCode: "sales_tax", title: "Sales tax", calculationType: .percentOfSalePrice, value: 6.25)
+            ],
+            feeLines: [
+                DealDeskLine(lineCode: "doc_fee", title: "Doc fee", calculationType: .fixedAmount, value: 250)
+            ],
+            paymentPlan: DealDeskPaymentPlan(methodCode: "finance", downPayment: 3_000, aprPercent: 7.9, termMonths: 60),
+            totals: DealDeskTotals(
+                salePrice: 18_500,
+                taxTotal: 1_156.25,
+                feeTotal: 250,
+                outTheDoorTotal: 19_906.25,
+                cashReceivedNow: 3_000,
+                amountFinanced: 16_906.25,
+                monthlyPaymentEstimate: 342.18
+            )
+        )
+
+        sale.applyDealDeskSnapshot(snapshot)
+
+        XCTAssertEqual(sale.accountDepositAmount, 3_000)
+        XCTAssertEqual(sale.dealerRevenueAmount, 18_500)
+        XCTAssertEqual(sale.dealDeskSnapshotValue?.jurisdictionCode, "US-TX")
+        XCTAssertEqual(sale.dealDeskSnapshotValue?.totals.outTheDoorTotal, 19_906.25)
+    }
+
+    func testLegacySaleDepositFallsBackToSaleAmount() {
+        let sale = Sale(context: context)
+        sale.id = UUID()
+        sale.amount = NSDecimalNumber(decimal: 12_750)
+
+        XCTAssertEqual(sale.accountDepositAmount, 12_750)
+        XCTAssertNil(sale.dealDeskSnapshotValue)
+    }
+
+    func testDealDeskDefaultSettingsOnlyAutoEnableUsAndCanada() {
+        let usa = DealDeskTemplateCatalog.defaultSettings(for: .usa)
+        let canada = DealDeskTemplateCatalog.defaultSettings(for: .canada)
+        let generic = DealDeskTemplateCatalog.defaultSettings(for: .generic)
+
+        XCTAssertTrue(usa.isEnabled)
+        XCTAssertEqual(usa.defaultTemplateCode, .usa)
+
+        XCTAssertTrue(canada.isEnabled)
+        XCTAssertEqual(canada.defaultTemplateCode, .canada)
+
+        XCTAssertFalse(generic.isEnabled)
+        XCTAssertEqual(generic.defaultTemplateCode, .generic)
     }
 
     private func decodedTextFile(prefix: String, from payload: BackupArchivePayload) throws -> String {

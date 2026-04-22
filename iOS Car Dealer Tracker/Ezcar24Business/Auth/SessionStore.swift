@@ -16,6 +16,16 @@ private struct DeleteAccountResponse: Decodable {
     let success: Bool
 }
 
+private struct DealDeskSettingsUpsertParams: Encodable {
+    let p_organization_id: String
+    let p_is_enabled: Bool
+    let p_business_region_code: String
+    let p_default_template_code: String
+    let p_template_version: Int
+    let p_tax_overrides: [DealDeskLine]
+    let p_fee_overrides: [DealDeskLine]
+}
+
 enum AuthRedirect {
     static let callbackURL = URL(string: "com.ezcar24.business://login-callback")!
     static let universalLinkCallbackURLs = [
@@ -73,6 +83,7 @@ final class SessionStore: ObservableObject {
     private let pendingProfileEmailKeyPrefix = "pendingProfileEmail_"
     private let activeOrganizationKeyPrefix = "activeOrganizationId"
     private let dealerReferralCodeKeyPrefix = "dealerReferralCode_"
+    private let dealDeskSettingsCacheKeyPrefix = "dealDeskSettingsCache_v1"
 
     private let client: SupabaseClient
     private var authChangeTask: Task<Void, Never>?
@@ -104,6 +115,10 @@ final class SessionStore: ObservableObject {
 
     deinit {
         authChangeTask?.cancel()
+    }
+
+    var supabaseClient: SupabaseClient {
+        client
     }
 
     var shouldShowEmailReminderBanner: Bool {
@@ -722,14 +737,78 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    func createOrganization(name: String) async throws -> UUID {
+    func createOrganization(
+        name: String,
+        businessRegionCode: DealDeskBusinessRegionCode = .generic
+    ) async throws -> UUID {
         let params = ["_name": name]
         let orgId: UUID = try await client
             .rpc("create_organization", params: params)
             .execute()
             .value
+
+        let seededSettings = DealDeskTemplateCatalog.defaultSettings(
+            for: businessRegionCode,
+            isEnabled: businessRegionCode.isEnabledByDefaultForNewDealer
+        )
+        do {
+            _ = try await saveDealDeskSettings(seededSettings, for: orgId)
+        } catch {
+            print("SessionStore createOrganization seed deal desk settings error: \(error)")
+        }
+
         await loadOrganizations()
         return orgId
+    }
+
+    func loadDealDeskSettings(for organizationId: UUID) async -> DealDeskSettings? {
+        let cached = cachedDealDeskSettings(for: organizationId)
+
+        do {
+            let params: [String: AnyJSON] = [
+                "p_organization_id": .string(organizationId.uuidString)
+            ]
+            let settings: DealDeskSettings = try await client
+                .rpc("get_organization_deal_desk_settings", params: params)
+                .execute()
+                .value
+            cacheDealDeskSettings(settings, organizationId: organizationId)
+            return settings
+        } catch {
+            if let cached {
+                return cached
+            }
+            print("SessionStore loadDealDeskSettings error: \(error)")
+            return nil
+        }
+    }
+
+    func saveDealDeskSettings(
+        _ settings: DealDeskSettings,
+        for organizationId: UUID
+    ) async throws -> DealDeskSettings {
+        let params = DealDeskSettingsUpsertParams(
+            p_organization_id: organizationId.uuidString,
+            p_is_enabled: settings.isEnabled,
+            p_business_region_code: settings.businessRegionCode.rawValue,
+            p_default_template_code: settings.defaultTemplateCode.rawValue,
+            p_template_version: settings.templateVersion,
+            p_tax_overrides: settings.taxOverrides,
+            p_fee_overrides: settings.feeOverrides
+        )
+
+        let saved: DealDeskSettings = try await client
+            .rpc("upsert_organization_deal_desk_settings", params: params)
+            .execute()
+            .value
+        cacheDealDeskSettings(saved, organizationId: organizationId)
+        return saved
+    }
+
+    func cachedDealDeskSettings(for organizationId: UUID) -> DealDeskSettings? {
+        guard let key = dealDeskSettingsCacheKey(for: organizationId) else { return nil }
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(DealDeskSettings.self, from: data)
     }
 
     func switchOrganization(to organizationId: UUID) async {
@@ -771,6 +850,17 @@ final class SessionStore: ObservableObject {
 
     private func activeOrganizationDefaultsKey(for userId: UUID) -> String {
         "\(activeOrganizationKeyPrefix)_\(userId.uuidString)"
+    }
+
+    private func dealDeskSettingsCacheKey(for organizationId: UUID) -> String? {
+        guard case .signedIn(let user) = status else { return nil }
+        return "\(dealDeskSettingsCacheKeyPrefix)_\(user.id.uuidString.lowercased())_\(organizationId.uuidString.lowercased())"
+    }
+
+    private func cacheDealDeskSettings(_ settings: DealDeskSettings, organizationId: UUID) {
+        guard let key = dealDeskSettingsCacheKey(for: organizationId) else { return }
+        guard let data = try? JSONEncoder().encode(settings) else { return }
+        UserDefaults.standard.set(data, forKey: key)
     }
 
     private func handleInviteDeepLink(_ url: URL) async -> Bool {

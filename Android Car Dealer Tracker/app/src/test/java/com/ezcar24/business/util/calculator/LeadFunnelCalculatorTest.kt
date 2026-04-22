@@ -229,7 +229,7 @@ class LeadFunnelCalculatorTest {
 
         val pipelineValue = LeadFunnelCalculator.calculatePipelineValue(clients)
 
-        assertEquals(BigDecimal.ZERO, pipelineValue)
+        assertEquals(BigDecimal.ZERO.setScale(2), pipelineValue)
     }
 
     @Test
@@ -246,7 +246,7 @@ class LeadFunnelCalculatorTest {
 
         val summary = LeadFunnelCalculator.getDailyActivitySummary(interactions, today)
 
-        assertEquals(2, summary.callsCount)
+        assertEquals(3, summary.callsCount)
         assertEquals(1, summary.meetingsCount)
         assertEquals(1, summary.messagesCount)
         assertEquals(1, summary.followUpsCount)

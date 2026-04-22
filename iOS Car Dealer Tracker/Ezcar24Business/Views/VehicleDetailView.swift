@@ -1718,6 +1718,7 @@ struct VehicleDetailView: View {
         withAnimation { saveError = nil; showSavedToast = false; isSaving = true }
         let existingSale = currentSale(for: vehicle)
         let previousSaleAmount = existingSale?.amount?.decimalValue ?? 0
+        let previousDepositAmount = existingSale?.accountDepositAmount ?? previousSaleAmount
         let previousAccount = existingSale?.account
         let previousPurchasePrice = vehicle.purchasePrice?.decimalValue ?? 0
         let purchaseAccountId = vehicle.purchaseAccountId
@@ -1798,16 +1799,17 @@ struct VehicleDetailView: View {
 
                 let targetAccount = selectedAccount ?? previousAccount ?? defaultSaleAccount()
                 sale.account = targetAccount
+                let nextDepositAmount = existingSale?.cashReceivedNow?.decimalValue ?? sp
 
                 if existingSale == nil {
                     if let account = targetAccount {
                         let currentBalance = account.balance?.decimalValue ?? 0
-                        account.balance = NSDecimalNumber(decimal: currentBalance + sp)
+                        account.balance = NSDecimalNumber(decimal: currentBalance + nextDepositAmount)
                         account.updatedAt = Date()
                         trackAccount(account)
                     }
                 } else if let account = targetAccount, account.objectID == previousAccount?.objectID {
-                    let delta = sp - previousSaleAmount
+                    let delta = nextDepositAmount - previousDepositAmount
                     if delta != 0 {
                         let currentBalance = account.balance?.decimalValue ?? 0
                         account.balance = NSDecimalNumber(decimal: currentBalance + delta)
@@ -1817,13 +1819,13 @@ struct VehicleDetailView: View {
                 } else {
                     if let oldAccount = previousAccount {
                         let currentBalance = oldAccount.balance?.decimalValue ?? 0
-                        oldAccount.balance = NSDecimalNumber(decimal: currentBalance - previousSaleAmount)
+                        oldAccount.balance = NSDecimalNumber(decimal: currentBalance - previousDepositAmount)
                         oldAccount.updatedAt = Date()
                         trackAccount(oldAccount)
                     }
                     if let newAccount = targetAccount {
                         let currentBalance = newAccount.balance?.decimalValue ?? 0
-                        newAccount.balance = NSDecimalNumber(decimal: currentBalance + sp)
+                        newAccount.balance = NSDecimalNumber(decimal: currentBalance + nextDepositAmount)
                         newAccount.updatedAt = Date()
                         trackAccount(newAccount)
                     }
