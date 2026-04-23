@@ -26,6 +26,33 @@ private struct DealDeskSettingsUpsertParams: Encodable {
     let p_fee_overrides: [DealDeskLine]
 }
 
+enum DealDeskSettingsSeedOperation {
+    static func run<T>(
+        maxAttempts: Int = 3,
+        retryDelayNanoseconds: UInt64 = 300_000_000,
+        operation: @escaping () async throws -> T
+    ) async throws -> T {
+        let attempts = max(1, maxAttempts)
+        var lastError: Error?
+
+        for attempt in 1...attempts {
+            do {
+                return try await operation()
+            } catch {
+                lastError = error
+                guard attempt < attempts else { break }
+                try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
+            }
+        }
+
+        throw lastError ?? NSError(
+            domain: "DealDeskSettingsSeedOperation",
+            code: 1,
+            userInfo: [NSLocalizedDescriptionKey: "Failed to seed Deal Desk settings."]
+        )
+    }
+}
+
 enum AuthRedirect {
     static let callbackURL = URL(string: "com.ezcar24.business://login-callback")!
     static let universalLinkCallbackURLs = [
@@ -752,8 +779,11 @@ final class SessionStore: ObservableObject {
             isEnabled: businessRegionCode.isEnabledByDefaultForNewDealer
         )
         do {
-            _ = try await saveDealDeskSettings(seededSettings, for: orgId)
+            _ = try await DealDeskSettingsSeedOperation.run {
+                try await self.saveDealDeskSettings(seededSettings, for: orgId)
+            }
         } catch {
+            cacheDealDeskSettings(seededSettings, organizationId: orgId)
             print("SessionStore createOrganization seed deal desk settings error: \(error)")
         }
 

@@ -131,17 +131,19 @@ private struct VehicleSaleForm: View {
     
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.make, ascending: true)],
-        predicate: NSPredicate(format: "status != 'sold'"),
+        predicate: NSPredicate(format: "deletedAt == nil AND (status != 'sold' OR status == nil)"),
         animation: .default)
     private var vehicles: FetchedResults<Vehicle>
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \FinancialAccount.accountType, ascending: true)],
+        predicate: NSPredicate(format: "deletedAt == nil"),
         animation: .default)
     private var accounts: FetchedResults<FinancialAccount>
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Client.updatedAt, ascending: false)],
+        predicate: NSPredicate(format: "deletedAt == nil"),
         animation: .default)
     private var clients: FetchedResults<Client>
 
@@ -157,8 +159,9 @@ private struct VehicleSaleForm: View {
     }
     
     var totalExpenses: Decimal {
-        guard let v = selectedVehicle, let expenses = v.expenses as? Set<Expense> else { return 0 }
-        return expenses.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
+        ((selectedVehicle?.expenses as? Set<Expense>) ?? [])
+            .filter { $0.deletedAt == nil }
+            .reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
     }
     
     var totalCost: Decimal {
@@ -1015,23 +1018,18 @@ private struct VehicleSaleForm: View {
                         interaction.id = UUID()
                         interaction.title = "Vehicle Purchased"
                         interaction.detail = "Purchased \(vehicle.make ?? "") \(vehicle.model ?? "") for \(request.saleAmount.asCurrencyFallback())"
-                        interaction.occurredAt = Date()
+                        interaction.occurredAt = request.date
                         interaction.stage = InteractionStage.closedWon.rawValue
                         interaction.value = NSDecimalNumber(decimal: request.saleAmount)
+                        interaction.createdAt = Date()
+                        interaction.updatedAt = interaction.createdAt
+                        interaction.deletedAt = nil
                         interaction.client = clientToUse
                         
                         try? viewContext.save()
                         
-                        // Sync Client & Interaction
                         await CloudSyncManager.shared?.upsertClient(clientToUse, dealerId: dealerId)
-                        // Note: We need upsertInteraction in CloudSyncManager, but we can rely on Client sync if it cascades?
-                        // Supabase RPC 'sync_clients' usually handles the client record. Interactions might need separate table sync or be included.
-                        // Checking CloudSyncManager... it seems to handle entities separately.
-                        // Assuming basic Client sync for now. Interaction logs might not sync if there's no specific RPC for them yet
-                        // OR if they are synced as part of Client payload?
-                        // Based on existing code, `upsertClient` only sends Client data.
-                        // We should check if we can sync interaction. If not, at least the client is created/updated.
-                        
+                        await CloudSyncManager.shared?.upsertClientInteraction(interaction, dealerId: dealerId)
                         await CloudSyncManager.shared?.upsertSale(newSale, dealerId: dealerId)
                         await CloudSyncManager.shared?.upsertVehicle(vehicle, dealerId: dealerId)
                         
@@ -1102,6 +1100,7 @@ private struct DealDeskSaleView: View {
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \FinancialAccount.accountType, ascending: true)],
+        predicate: NSPredicate(format: "deletedAt == nil"),
         animation: .default
     )
     private var accounts: FetchedResults<FinancialAccount>
@@ -1236,6 +1235,14 @@ private struct DealDeskSaleView: View {
         DealDeskTemplateCatalog.jurisdictionOptions(for: settings.defaultTemplateCode)
     }
 
+    private var setupGuidanceMessage: String? {
+        DealDeskTemplateCatalog.setupGuidanceMessage(
+            for: settings.defaultTemplateCode,
+            taxLines: taxLines,
+            feeLines: feeLines
+        )
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -1255,6 +1262,13 @@ private struct DealDeskSaleView: View {
                                             }
                                         }
                                         .pickerStyle(.menu)
+                                    }
+
+                                    if let setupGuidanceMessage {
+                                        Text(setupGuidanceMessage)
+                                            .font(.subheadline)
+                                            .foregroundColor(ColorTheme.secondaryText)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
                                     }
 
                                     HStack(spacing: 12) {
@@ -1492,6 +1506,14 @@ struct DealDeskSettingsView: View {
         permissionService.currentRole == "owner" || permissionService.currentRole == "admin"
     }
 
+    private var setupGuidanceMessage: String? {
+        DealDeskTemplateCatalog.setupGuidanceMessage(
+            for: settings.defaultTemplateCode,
+            taxLines: taxLines,
+            feeLines: feeLines
+        )
+    }
+
     var body: some View {
         Form {
             Section {
@@ -1535,6 +1557,12 @@ struct DealDeskSettingsView: View {
 
                 if !canEdit {
                     Text("Only owner or admin can change these settings.")
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText)
+                }
+
+                if let setupGuidanceMessage {
+                    Text(setupGuidanceMessage)
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                 }

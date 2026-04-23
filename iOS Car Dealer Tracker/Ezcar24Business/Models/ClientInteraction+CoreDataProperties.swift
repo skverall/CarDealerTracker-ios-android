@@ -17,6 +17,9 @@ extension ClientInteraction {
     @NSManaged public var outcome: String?
     @NSManaged public var durationMinutes: Int32
     @NSManaged public var isFollowUpRequired: Bool
+    @NSManaged public var createdAt: Date?
+    @NSManaged public var updatedAt: Date?
+    @NSManaged public var deletedAt: Date?
     @NSManaged public var client: Client?
 }
 

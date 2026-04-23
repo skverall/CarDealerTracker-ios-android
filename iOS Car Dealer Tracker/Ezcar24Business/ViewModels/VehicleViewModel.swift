@@ -377,7 +377,7 @@ class VehicleViewModel: ObservableObject {
 
         // Always fetch to avoid stale relationship caching.
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
-        request.predicate = NSPredicate(format: "vehicle == %@", vehicle)
+        request.predicate = NSPredicate(format: "vehicle == %@ AND deletedAt == nil", vehicle)
         
         do {
             let fetchedExpenses = try context.fetch(request)
@@ -391,7 +391,7 @@ class VehicleViewModel: ObservableObject {
 
     func expenseCount(for vehicle: Vehicle) -> Int {
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
-        request.predicate = NSPredicate(format: "vehicle == %@", vehicle)
+        request.predicate = NSPredicate(format: "vehicle == %@ AND deletedAt == nil", vehicle)
         
         do {
             return try context.count(for: request)

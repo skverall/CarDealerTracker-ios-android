@@ -84,7 +84,11 @@ struct Ezcar24BusinessApp: App {
 
         if !AppRuntime.isRunningTests {
             _ = LocalNotificationManager.shared
-            Purchases.logLevel = .debug
+            #if DEBUG
+            Purchases.logLevel = ProcessInfo.processInfo.environment["REVENUECAT_DEBUG_LOGS"] == "1" ? .debug : .error
+            #else
+            Purchases.logLevel = .error
+            #endif
             let currentAppUserId = provider.client.auth.currentSession?.user.id.uuidString
             Purchases.configure(withAPIKey: RevenueCatKeyProvider.currentKey, appUserID: currentAppUserId)
         }

@@ -480,7 +480,7 @@ private extension DashboardView {
                             } label: {
                                 OperationCard(
                                     title: "Inventory",
-                                    amount: viewModel.totalAssets.asCurrencyCompact(),
+                                    amount: viewModel.inventoryOperationValue.asCurrencyCompact(),
                                     icon: "car.2.fill",
                                     color: DashboardPalette.assets
                                 )

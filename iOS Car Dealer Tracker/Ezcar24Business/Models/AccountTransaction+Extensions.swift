@@ -50,6 +50,8 @@ extension AccountTransaction {
 extension FinancialAccount {
     var transactionsArray: [AccountTransaction] {
         let set = transactions as? Set<AccountTransaction> ?? []
-        return set.sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+        return set
+            .filter { $0.deletedAt == nil }
+            .sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
     }
 }

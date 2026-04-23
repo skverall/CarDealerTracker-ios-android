@@ -76,7 +76,7 @@ final class BackupExportManager: ObservableObject {
             let email = client.email ?? ""
             let notes = client.notes ?? ""
             let createdAt = client.createdAt.map { formatter.string(from: $0) } ?? ""
-            let reminder = (client.reminders as? Set<ClientReminder>)?.first?.dueDate.map { formatter.string(from: $0) } ?? ""
+            let reminder = client.nextReminder?.dueDate.map { formatter.string(from: $0) } ?? ""
 
             csv += [name, phone, email, notes, createdAt, reminder]
                 .map { "\"\($0.replacingOccurrences(of: "\"", with: "\"\""))\"" }

@@ -214,12 +214,19 @@ class DashboardViewModel: ObservableObject {
         return false
     }
 
+    private func activeExpenseTotal(for vehicle: Vehicle?) -> Decimal {
+        ((vehicle?.expenses as? Set<Expense>) ?? [])
+            .filter { $0.deletedAt == nil }
+            .reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
+    }
+
     func fetchFinancialData(range: DashboardTimeRange = .all) {
         refreshDebouncer.cancel()
         currentRange = range
         let rangeStart = range.startDate
         let rangeEnd = range.endDate
         let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+        accountRequest.predicate = NSPredicate(format: "deletedAt == nil")
 
         do {
             let accounts = try context.fetch(accountRequest)
@@ -232,6 +239,7 @@ class DashboardViewModel: ObservableObject {
 
         // Fetch vehicles
         let vehicleRequest: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
+        vehicleRequest.predicate = NSPredicate(format: "deletedAt == nil")
 
         do {
             let vehicles = try context.fetch(vehicleRequest)
@@ -252,7 +260,7 @@ class DashboardViewModel: ObservableObject {
                 }
 
                 let purchasePrice = vehicle.purchasePrice?.decimalValue ?? 0
-                let vehicleExpenses = (vehicle.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+                let vehicleExpenses = activeExpenseTotal(for: vehicle)
                 return total + purchasePrice + vehicleExpenses
             }
         } catch {
@@ -262,7 +270,7 @@ class DashboardViewModel: ObservableObject {
         // Fetch Sales for Revenue/Profit calculations
         // Fetch Parts Inventory Value
         let batchRequest: NSFetchRequest<PartBatch> = PartBatch.fetchRequest()
-        batchRequest.predicate = NSPredicate(format: "quantityRemaining > 0")
+        batchRequest.predicate = NSPredicate(format: "deletedAt == nil AND quantityRemaining > 0")
         do {
             let batches = try context.fetch(batchRequest)
             totalPartsValue = batches.reduce(Decimal(0)) { total, batch in
@@ -277,6 +285,7 @@ class DashboardViewModel: ObservableObject {
 
         // Fetch Sales for Revenue/Profit calculations
         let vehicleSaleRequest: NSFetchRequest<Sale> = Sale.fetchRequest()
+        vehicleSaleRequest.predicate = NSPredicate(format: "deletedAt == nil")
         let partSaleRequest: NSFetchRequest<PartSale> = PartSale.fetchRequest()
         partSaleRequest.predicate = NSPredicate(format: "deletedAt == nil")
         var fetchedVehicleSales: [Sale] = []
@@ -328,7 +337,7 @@ class DashboardViewModel: ObservableObject {
         if currentStart != nil, currentEnd == nil {
             currentEnd = Date()
         }
-        var expensePredicates: [NSPredicate] = []
+        var expensePredicates: [NSPredicate] = [NSPredicate(format: "deletedAt == nil")]
         if let start = currentStart {
             expensePredicates.append(NSPredicate(format: "date >= %@", start as NSDate))
         }
@@ -345,7 +354,12 @@ class DashboardViewModel: ObservableObject {
 
             // KPIs for the selected period
             periodTransactionCount = expenses.count
-            let uniqueVehicles = Set(expenses.compactMap { $0.vehicle?.objectID })
+            let uniqueVehicles = Set(
+                expenses.compactMap { expense -> NSManagedObjectID? in
+                    guard let vehicle = expense.vehicle, vehicle.deletedAt == nil else { return nil }
+                    return vehicle.objectID
+                }
+            )
             periodUniqueVehicles = uniqueVehicles.count
 
             vehicleExpenses = expenses.filter { $0.category == "vehicle" }.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
@@ -374,7 +388,7 @@ class DashboardViewModel: ObservableObject {
             var vehicleSums: [NSManagedObjectID: Decimal] = [:]
             var vehicleRef: [NSManagedObjectID: Vehicle] = [:]
             for e in expenses {
-                if let v = e.vehicle {
+                if let v = e.vehicle, v.deletedAt == nil {
                     let key = v.objectID
                     vehicleSums[key, default: 0] += (e.amount?.decimalValue ?? 0)
                     vehicleRef[key] = v
@@ -397,7 +411,11 @@ class DashboardViewModel: ObservableObject {
                 
                 // Expenses Trend
                 let prevReq: NSFetchRequest<Expense> = Expense.fetchRequest()
-                prevReq.predicate = NSPredicate(format: "date >= %@ AND date < %@", prevStart as NSDate, start as NSDate)
+                prevReq.predicate = NSPredicate(
+                    format: "deletedAt == nil AND date >= %@ AND date < %@",
+                    prevStart as NSDate,
+                    start as NSDate
+                )
                 let prevExpenses = try context.fetch(prevReq)
                 let prevTotal = prevExpenses.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
                 let prev = (prevTotal as NSDecimalNumber).doubleValue
@@ -424,7 +442,11 @@ class DashboardViewModel: ObservableObject {
                 // The Sold Count card typically refers to Vehicles sold.
                 // Keeping it as Vehicle Sales count for now as "Sold" usually implies Cars in this context.
                 let prevSaleReq: NSFetchRequest<Sale> = Sale.fetchRequest()
-                prevSaleReq.predicate = NSPredicate(format: "date >= %@ AND date < %@", prevStart as NSDate, start as NSDate)
+                prevSaleReq.predicate = NSPredicate(
+                    format: "deletedAt == nil AND date >= %@ AND date < %@",
+                    prevStart as NSDate,
+                    start as NSDate
+                )
                 let prevSalesCount = try context.count(for: prevSaleReq)
                 soldChange = soldInPeriod - prevSalesCount
             } else {
@@ -607,7 +629,7 @@ class DashboardViewModel: ObservableObject {
             let revenue = sale.amount?.decimalValue ?? 0
             let vehicle = sale.vehicle
             let cost = vehicle?.purchasePrice?.decimalValue ?? 0
-            let expenses = (vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+            let expenses = activeExpenseTotal(for: vehicle)
             let holdingCost = holdingCostForSale(sale, settings: settings)
             let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
             return NSDecimalNumber(decimal: revenue - (cost + expenses + holdingCost) + vatRefund).doubleValue
@@ -741,7 +763,11 @@ class DashboardViewModel: ObservableObject {
         let todayStart = Calendar.current.startOfDay(for: Date())
         let tomorrowStart = Calendar.current.date(byAdding: .day, value: 1, to: todayStart) ?? todayStart
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
-        request.predicate = NSPredicate(format: "date >= %@ AND date < %@", todayStart as NSDate, tomorrowStart as NSDate)
+        request.predicate = NSPredicate(
+            format: "deletedAt == nil AND date >= %@ AND date < %@",
+            todayStart as NSDate,
+            tomorrowStart as NSDate
+        )
         request.sortDescriptors = [
             NSSortDescriptor(keyPath: \Expense.createdAt, ascending: false),
             NSSortDescriptor(keyPath: \Expense.date, ascending: false)
@@ -757,6 +783,7 @@ class DashboardViewModel: ObservableObject {
 
     private func loadRecentExpenses() {
         let request: NSFetchRequest<Expense> = Expense.fetchRequest()
+        request.predicate = NSPredicate(format: "deletedAt == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Expense.date, ascending: false)]
         request.fetchLimit = 4
 
@@ -777,6 +804,10 @@ class DashboardViewModel: ObservableObject {
 
     var totalAssets: Decimal {
         totalCash + totalBank + totalVehicleValue + totalPartsValue
+    }
+
+    var inventoryOperationValue: Decimal {
+        totalVehicleValue
     }
     
     var totalAssetsCount: Int {
@@ -826,7 +857,7 @@ class DashboardViewModel: ObservableObject {
             let revenue = sale.amount?.decimalValue ?? 0
             let vehicle = sale.vehicle
             let cost = vehicle?.purchasePrice?.decimalValue ?? 0
-            let expenses = (vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+            let expenses = activeExpenseTotal(for: vehicle)
             let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
             let holdingCost = holdingCostForSale(sale, settings: settings)
             return sum + (revenue - (cost + expenses + holdingCost) + vatRefund)
@@ -838,7 +869,7 @@ class DashboardViewModel: ObservableObject {
             let revenue = sale.amount?.decimalValue ?? 0
             
             // Calculate COGS
-            let lineItems = sale.lineItems as? Set<PartSaleLineItem> ?? []
+            let lineItems = sale.activeLineItemsArray
             let cogs = lineItems.reduce(Decimal(0)) { total, item in
                 let cost = item.unitCost?.decimalValue ?? 0
                 let qty = item.quantity?.decimalValue ?? 0
@@ -860,7 +891,7 @@ class DashboardViewModel: ObservableObject {
             let revenue = sale.amount?.decimalValue ?? 0
             let vehicle = sale.vehicle
             let cost = vehicle?.purchasePrice?.decimalValue ?? 0
-            let expenses = (vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+            let expenses = activeExpenseTotal(for: vehicle)
             let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
             let holdingCost = holdingCostForSale(sale, settings: settings)
             return sum + (revenue - (cost + expenses + holdingCost) + vatRefund)
@@ -868,7 +899,7 @@ class DashboardViewModel: ObservableObject {
         
         let partProfit = partSales.reduce(Decimal(0)) { sum, sale in
             let revenue = sale.amount?.decimalValue ?? 0
-            let lineItems = sale.lineItems as? Set<PartSaleLineItem> ?? []
+            let lineItems = sale.activeLineItemsArray
             let cogs = lineItems.reduce(Decimal(0)) { total, item in
                 let cost = item.unitCost?.decimalValue ?? 0
                 let qty = item.quantity?.decimalValue ?? 0
@@ -900,7 +931,7 @@ class DashboardViewModel: ObservableObject {
             let revenue = s.amount?.decimalValue ?? 0
             let v = s.vehicle
             let cost = v?.purchasePrice?.decimalValue ?? 0
-            let expenses = (v?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+            let expenses = activeExpenseTotal(for: v)
             let holdingCost = holdingCostForSale(s, settings: settings)
             let vatRefund = s.vatRefundAmount?.decimalValue ?? 0
             let p = NSDecimalNumber(decimal: revenue - (cost + expenses + holdingCost) + vatRefund).doubleValue
@@ -911,7 +942,7 @@ class DashboardViewModel: ObservableObject {
         for s in partSales {
             guard let d = s.date else { continue }
             let revenue = s.amount?.decimalValue ?? 0
-            let lineItems = s.lineItems as? Set<PartSaleLineItem> ?? []
+            let lineItems = s.activeLineItemsArray
             let cogs = lineItems.reduce(Decimal(0)) { total, item in
                 let cost = item.unitCost?.decimalValue ?? 0
                 let qty = item.quantity?.decimalValue ?? 0

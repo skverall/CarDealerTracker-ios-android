@@ -21,6 +21,11 @@ class SubscriptionManager: ObservableObject {
     private var canUseRevenueCat: Bool {
         Purchases.isConfigured
     }
+
+    var currentSubscriptionPackages: [Package] {
+        guard let currentOffering else { return [] }
+        return filteredPackages(currentOffering.availablePackages)
+    }
     
     enum RestoreStatus: Equatable {
         case idle
@@ -79,11 +84,8 @@ class SubscriptionManager: ObservableObject {
                     self.currentOffering = offerings.current
                     print("Offerings fetched: \(offerings.current?.identifier ?? "None")")
                     
-                    // Check eligibility for available packages
-                    if let packages = offerings.current?.availablePackages {
-                        let products = packages.map { $0.storeProduct }
-                        self.checkIntroEligibility(for: products)
-                    }
+                    let products = self.currentSubscriptionPackages.map(\.storeProduct)
+                    self.checkIntroEligibility(for: products)
                 }
             }
         }
@@ -272,5 +274,30 @@ class SubscriptionManager: ObservableObject {
         let hasRevenueCat = !(customerInfo?.entitlements.active.isEmpty ?? true)
         let hasBonus = (bonusAccessUntil ?? .distantPast) > Date()
         self.isProAccessActive = hasRevenueCat || hasBonus
+    }
+
+    private func filteredPackages(_ packages: [Package]) -> [Package] {
+        packages
+            .filter {
+                guard $0.storeProduct.productType != .nonConsumable,
+                      let period = $0.storeProduct.subscriptionPeriod else { return false }
+                return period.unit == .month || period.unit == .year
+            }
+            .sorted { lhs, rhs in
+                sortOrder(for: lhs) < sortOrder(for: rhs)
+            }
+    }
+
+    private func sortOrder(for package: Package) -> Int {
+        guard let period = package.storeProduct.subscriptionPeriod else { return 99 }
+
+        switch period.unit {
+        case .month:
+            return period.value == 1 ? 1 : 2
+        case .year:
+            return 3
+        default:
+            return 99
+        }
     }
 }

@@ -44,7 +44,7 @@ final class DebtViewModel: ObservableObject {
 
     func fetchDebts() {
         let request: NSFetchRequest<Debt> = Debt.fetchRequest()
-        var predicates: [NSPredicate] = []
+        var predicates: [NSPredicate] = [NSPredicate(format: "deletedAt == nil")]
 
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if !trimmed.isEmpty {

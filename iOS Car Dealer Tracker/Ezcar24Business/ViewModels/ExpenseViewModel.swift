@@ -110,7 +110,7 @@ class ExpenseViewModel: ObservableObject {
         case .amountAsc:   request.sortDescriptors = [NSSortDescriptor(keyPath: \Expense.amount, ascending: true)]
         }
 
-        var predicates: [NSPredicate] = []
+        var predicates: [NSPredicate] = [NSPredicate(format: "deletedAt == nil")]
         if selectedCategory != "all" {
             predicates.append(NSPredicate(format: "category == %@", selectedCategory))
         }
@@ -131,9 +131,7 @@ class ExpenseViewModel: ObservableObject {
             predicates.append(NSPredicate(format: "expenseDescription CONTAINS[cd] %@", q))
         }
 
-        if !predicates.isEmpty {
-            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
-        }
+        request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
 
         do {
             expenses = try context.fetch(request)
@@ -164,6 +162,7 @@ class ExpenseViewModel: ObservableObject {
     func fetchFilters() {
         do {
             let vReq: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
+            vReq.predicate = NSPredicate(format: "deletedAt == nil")
             vReq.sortDescriptors = [NSSortDescriptor(key: "make", ascending: true)]
             vehicles = try context.fetch(vReq)
         } catch {
@@ -172,6 +171,7 @@ class ExpenseViewModel: ObservableObject {
 
         do {
             let uReq: NSFetchRequest<User> = User.fetchRequest()
+            uReq.predicate = NSPredicate(format: "deletedAt == nil")
             uReq.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
             users = try context.fetch(uReq)
         } catch {
@@ -180,6 +180,7 @@ class ExpenseViewModel: ObservableObject {
 
         do {
             let aReq: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+            aReq.predicate = NSPredicate(format: "deletedAt == nil")
             aReq.sortDescriptors = [NSSortDescriptor(key: "accountType", ascending: true)]
             accounts = try context.fetch(aReq)
         } catch {
@@ -353,6 +354,7 @@ class ExpenseViewModel: ObservableObject {
     func fetchTemplates() {
         do {
             let tReq: NSFetchRequest<ExpenseTemplate> = ExpenseTemplate.fetchRequest()
+            tReq.predicate = NSPredicate(format: "deletedAt == nil")
             tReq.sortDescriptors = [NSSortDescriptor(key: "name", ascending: true)]
             templates = try context.fetch(tReq)
         } catch {

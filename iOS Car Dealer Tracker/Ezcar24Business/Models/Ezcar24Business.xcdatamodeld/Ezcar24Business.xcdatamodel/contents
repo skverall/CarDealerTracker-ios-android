@@ -117,6 +117,9 @@
         <attribute name="outcome" optional="YES" attributeType="String" />
         <attribute name="durationMinutes" optional="YES" attributeType="Integer 32" usesScalarValueType="YES" />
         <attribute name="isFollowUpRequired" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" />
+        <attribute name="createdAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
         <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="interactions" inverseEntity="Client" />
     </entity>
     <entity name="ClientReminder" representedClassName="ClientReminder" syncable="YES" codeGenerationType="class">
@@ -126,6 +129,8 @@
         <attribute name="dueDate" optional="NO" attributeType="Date" usesScalarValueType="NO" />
         <attribute name="isCompleted" optional="NO" attributeType="Boolean" defaultValueString="NO" usesScalarValueType="YES" />
         <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
         <relationship name="client" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Client" inverseName="reminders" inverseEntity="Client" />
     </entity>
     <entity name="Sale" representedClassName="Sale" syncable="YES" codeGenerationType="class">

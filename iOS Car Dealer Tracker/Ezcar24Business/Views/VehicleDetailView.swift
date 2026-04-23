@@ -86,7 +86,19 @@ struct VehicleDetailView: View {
         return true
     }
 
+    private var lockedDealDeskSale: Sale? {
+        guard editStatus == "sold" else { return nil }
+        guard let sale = currentSale(for: vehicle), sale.isDealDeskSale else { return nil }
+        return sale
+    }
 
+    private var isDealDeskFinancialsLocked: Bool {
+        lockedDealDeskSale != nil
+    }
+
+    private var dealDeskFinancialLockMessage: String {
+        "This sale was created with Deal Desk. Revenue and payment method stay locked here so taxes, fees, and collected cash stay correct."
+    }
 
     private func filterAmountInput(_ s: String) -> String {
         var result = ""
@@ -121,6 +133,7 @@ struct VehicleDetailView: View {
     
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \FinancialAccount.accountType, ascending: true)],
+        predicate: NSPredicate(format: "deletedAt == nil"),
         animation: .default
     )
     private var accounts: FetchedResults<FinancialAccount>
@@ -130,7 +143,7 @@ struct VehicleDetailView: View {
         _isEditing = State(initialValue: startEditing)
         _expenses = FetchRequest(
             sortDescriptors: [NSSortDescriptor(keyPath: \Expense.date, ascending: false)],
-            predicate: NSPredicate(format: "vehicle == %@", vehicle),
+            predicate: NSPredicate(format: "vehicle == %@ AND deletedAt == nil", vehicle),
             animation: .default
         )
     }
@@ -344,7 +357,7 @@ struct VehicleDetailView: View {
     private func currentUserRecord() -> User? {
         guard case .signedIn(let authUser) = sessionStore.status else { return nil }
         let request: NSFetchRequest<User> = User.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", authUser.id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@ AND deletedAt == nil", authUser.id as CVarArg)
         request.fetchLimit = 1
         if let existing = try? viewContext.fetch(request).first {
             return existing
@@ -1089,8 +1102,22 @@ struct VehicleDetailView: View {
 
                     if editStatus == "sold" {
                         Divider().padding(.leading)
+
+                        if isDealDeskFinancialsLocked {
+                            Text(dealDeskFinancialLockMessage)
+                                .font(.caption)
+                                .foregroundColor(ColorTheme.secondaryText)
+                                .padding(.horizontal)
+                                .padding(.top, 8)
+                        }
                         
-                        editRow(label: "sale_price".localizedString, text: $editSalePrice, placeholder: "0.00", keyboardType: .decimalPad)
+                        editRow(
+                            label: "sale_price".localizedString,
+                            text: $editSalePrice,
+                            placeholder: "0.00",
+                            keyboardType: .decimalPad,
+                            disabled: isDealDeskFinancialsLocked
+                        )
                         Divider().padding(.leading)
                         
                         DatePicker("sale_date".localizedString, selection: $editSaleDate, displayedComponents: .date)
@@ -1113,7 +1140,8 @@ struct VehicleDetailView: View {
                                 }
                             }
                             .pickerStyle(.menu)
-                             .tint(ColorTheme.accent)
+                            .tint(ColorTheme.accent)
+                            .disabled(isDealDeskFinancialsLocked)
                         }
                         .padding()
                         
@@ -1173,7 +1201,7 @@ struct VehicleDetailView: View {
         .padding(.bottom, 40)
     }
 
-    private func editRow(label: String, text: Binding<String>, placeholder: String, keyboardType: UIKeyboardType = .default, autocapitalization: TextInputAutocapitalization = .sentences) -> some View {
+    private func editRow(label: String, text: Binding<String>, placeholder: String, keyboardType: UIKeyboardType = .default, autocapitalization: TextInputAutocapitalization = .sentences, disabled: Bool = false) -> some View {
         HStack {
             Text(label)
                 .foregroundColor(ColorTheme.primaryText)
@@ -1182,6 +1210,7 @@ struct VehicleDetailView: View {
                 .keyboardType(keyboardType)
                 .textInputAutocapitalization(autocapitalization)
                 .multilineTextAlignment(.trailing)
+                .disabled(disabled)
         }
         .padding()
     }
@@ -1330,6 +1359,12 @@ struct VehicleDetailView: View {
                 
                 if editStatus == "sold" {
                     Divider()
+
+                    if isDealDeskFinancialsLocked {
+                        Text(dealDeskFinancialLockMessage)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
                     
                     HStack {
                         Text("sale_price".localizedString)
@@ -1343,6 +1378,7 @@ struct VehicleDetailView: View {
                             }
                             .multilineTextAlignment(.trailing)
                             .frame(width: 140)
+                            .disabled(isDealDeskFinancialsLocked)
                     }
                     
                     DatePicker("sale_date".localizedString, selection: $editSaleDate, displayedComponents: .date)
@@ -1363,6 +1399,7 @@ struct VehicleDetailView: View {
                                 Text(method).tag(method)
                             }
                         }
+                        .disabled(isDealDeskFinancialsLocked)
                         
                         HStack {
                             Text("deposit_to".localizedString)
@@ -1717,12 +1754,13 @@ struct VehicleDetailView: View {
         guard !isSaving else { return }
         withAnimation { saveError = nil; showSavedToast = false; isSaving = true }
         let existingSale = currentSale(for: vehicle)
-        let previousSaleAmount = existingSale?.amount?.decimalValue ?? 0
-        let previousDepositAmount = existingSale?.accountDepositAmount ?? previousSaleAmount
+        let isExistingDealDeskSale = existingSale?.isDealDeskSale == true
         let previousAccount = existingSale?.account
         let previousPurchasePrice = vehicle.purchasePrice?.decimalValue ?? 0
         let purchaseAccountId = vehicle.purchaseAccountId
+        let saleAmount = sanitizedDecimal(from: editSalePrice)
         var saleToSync: Sale? = nil
+        var saleIdToDelete: UUID? = nil
         var accountsToSync: [FinancialAccount] = []
         
         func trackAccount(_ account: FinancialAccount?) {
@@ -1737,6 +1775,22 @@ struct VehicleDetailView: View {
         let generator = UINotificationFeedbackGenerator()
         generator.prepare()
         #endif
+
+        if editStatus == "sold" && !isExistingDealDeskSale {
+            guard let saleAmount, saleAmount > 0 else {
+                #if os(iOS)
+                generator.notificationOccurred(.error)
+                #endif
+                withAnimation {
+                    isSaving = false
+                    saveError = "Sale price is required for sold vehicles."
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                    withAnimation { saveError = nil }
+                }
+                return
+            }
+        }
 
         // Basic info from edit fields
         vehicle.vin = editVIN
@@ -1770,74 +1824,21 @@ struct VehicleDetailView: View {
             vehicle.purchasePrice = NSDecimalNumber(decimal: newPurchasePrice)
         }
         vehicle.status = editStatus
-        if editStatus == "sold" {
-            let saleAmount = sanitizedDecimal(from: editSalePrice)
-            if let sp = saleAmount {
-                vehicle.salePrice = NSDecimalNumber(decimal: sp)
-            } else {
-                vehicle.salePrice = nil
-            }
-            vehicle.saleDate = editSaleDate
-            vehicle.buyerName = editBuyerName
-            vehicle.buyerPhone = editBuyerPhone
-            vehicle.paymentMethod = editPaymentMethod
-            
-            if let sp = saleAmount {
-                let sale = existingSale ?? Sale(context: viewContext)
-                if existingSale == nil {
-                    sale.id = UUID()
-                    sale.createdAt = Date()
-                    sale.vehicle = vehicle
-                }
-                sale.amount = NSDecimalNumber(decimal: sp)
-                sale.date = editSaleDate
-                sale.buyerName = editBuyerName
-                sale.buyerPhone = editBuyerPhone
-                sale.paymentMethod = editPaymentMethod
-                sale.updatedAt = Date()
-                saleToSync = sale
-
-                let targetAccount = selectedAccount ?? previousAccount ?? defaultSaleAccount()
-                sale.account = targetAccount
-                let nextDepositAmount = existingSale?.cashReceivedNow?.decimalValue ?? sp
-
-                if existingSale == nil {
-                    if let account = targetAccount {
-                        let currentBalance = account.balance?.decimalValue ?? 0
-                        account.balance = NSDecimalNumber(decimal: currentBalance + nextDepositAmount)
-                        account.updatedAt = Date()
-                        trackAccount(account)
-                    }
-                } else if let account = targetAccount, account.objectID == previousAccount?.objectID {
-                    let delta = nextDepositAmount - previousDepositAmount
-                    if delta != 0 {
-                        let currentBalance = account.balance?.decimalValue ?? 0
-                        account.balance = NSDecimalNumber(decimal: currentBalance + delta)
-                        account.updatedAt = Date()
-                        trackAccount(account)
-                    }
-                } else {
-                    if let oldAccount = previousAccount {
-                        let currentBalance = oldAccount.balance?.decimalValue ?? 0
-                        oldAccount.balance = NSDecimalNumber(decimal: currentBalance - previousDepositAmount)
-                        oldAccount.updatedAt = Date()
-                        trackAccount(oldAccount)
-                    }
-                    if let newAccount = targetAccount {
-                        let currentBalance = newAccount.balance?.decimalValue ?? 0
-                        newAccount.balance = NSDecimalNumber(decimal: currentBalance + nextDepositAmount)
-                        newAccount.updatedAt = Date()
-                        trackAccount(newAccount)
-                    }
-                }
-            }
-        } else {
-            vehicle.salePrice = nil
-            vehicle.saleDate = nil
-            vehicle.buyerName = nil
-            vehicle.buyerPhone = nil
-            vehicle.paymentMethod = nil
-        }
+        let saleMutation = VehicleSaleEditMutationResolver.apply(
+            vehicle: vehicle,
+            existingSale: existingSale,
+            status: editStatus,
+            saleAmount: saleAmount,
+            saleDate: editSaleDate,
+            buyerName: editBuyerName,
+            buyerPhone: editBuyerPhone,
+            paymentMethod: editPaymentMethod,
+            targetAccount: editStatus == "sold" ? (selectedAccount ?? previousAccount ?? defaultSaleAccount()) : nil,
+            now: Date()
+        )
+        saleToSync = saleMutation.saleToSync
+        saleIdToDelete = saleMutation.deletedSaleId
+        saleMutation.accountsToSync.forEach(trackAccount)
         vehicle.updatedAt = Date()
         do {
             try viewContext.save()
@@ -1847,7 +1848,9 @@ struct VehicleDetailView: View {
             if let dealerId = CloudSyncEnvironment.currentDealerId {
                 Task {
                     await CloudSyncManager.shared?.upsertVehicle(vehicle, dealerId: dealerId)
-                    if let saleToSync {
+                    if let saleIdToDelete {
+                        await CloudSyncManager.shared?.deleteSale(id: saleIdToDelete, dealerId: dealerId)
+                    } else if let saleToSync {
                         await CloudSyncManager.shared?.upsertSale(saleToSync, dealerId: dealerId)
                     }
                     for account in accountsToSync {
@@ -2296,7 +2299,7 @@ struct VehicleDetailView: View {
 
     private func fetchAccount(by id: UUID) -> FinancialAccount? {
         let request: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
-        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.predicate = NSPredicate(format: "id == %@ AND deletedAt == nil", id as CVarArg)
         request.fetchLimit = 1
         return try? viewContext.fetch(request).first
     }
@@ -3659,6 +3662,129 @@ struct VehiclePhotoThumbnail: View {
         ) { loaded in
             self.image = loaded
         }
+    }
+}
+
+struct VehicleSaleEditMutationResult {
+    let saleToSync: Sale?
+    let deletedSaleId: UUID?
+    let accountsToSync: [FinancialAccount]
+}
+
+enum VehicleSaleEditMutationResolver {
+    static func apply(
+        vehicle: Vehicle,
+        existingSale: Sale?,
+        status: String,
+        saleAmount: Decimal?,
+        saleDate: Date,
+        buyerName: String,
+        buyerPhone: String,
+        paymentMethod: String,
+        targetAccount: FinancialAccount?,
+        now: Date
+    ) -> VehicleSaleEditMutationResult {
+        var accountsToSync: [FinancialAccount] = []
+
+        func trackAccount(_ account: FinancialAccount?) {
+            guard let account else { return }
+            if !accountsToSync.contains(where: { $0.objectID == account.objectID }) {
+                accountsToSync.append(account)
+            }
+        }
+
+        func applyAccountDelta(_ account: FinancialAccount?, delta: Decimal) {
+            guard let account, delta != 0 else { return }
+            let currentBalance = account.balance?.decimalValue ?? 0
+            account.balance = NSDecimalNumber(decimal: currentBalance + delta)
+            account.updatedAt = now
+            trackAccount(account)
+        }
+
+        let previousRevenueAmount = existingSale?.dealerRevenueAmount ?? 0
+        let previousDepositAmount = existingSale?.accountDepositAmount ?? previousRevenueAmount
+        let previousAccount = existingSale?.account
+        let isDealDeskSale = existingSale?.isDealDeskSale == true
+
+        if status == "sold" {
+            let resolvedSaleAmount = isDealDeskSale ? previousRevenueAmount : (saleAmount ?? 0)
+            let resolvedPaymentMethod = isDealDeskSale ? (existingSale?.paymentMethod ?? paymentMethod) : paymentMethod
+
+            vehicle.salePrice = resolvedSaleAmount > 0 ? NSDecimalNumber(decimal: resolvedSaleAmount) : nil
+            vehicle.saleDate = saleDate
+            vehicle.buyerName = buyerName
+            vehicle.buyerPhone = buyerPhone
+            vehicle.paymentMethod = resolvedPaymentMethod
+
+            guard resolvedSaleAmount > 0 else {
+                return VehicleSaleEditMutationResult(
+                    saleToSync: nil,
+                    deletedSaleId: nil,
+                    accountsToSync: accountsToSync
+                )
+            }
+
+            let sale: Sale
+            if let existingSale {
+                sale = existingSale
+            } else {
+                guard let context = vehicle.managedObjectContext else {
+                    return VehicleSaleEditMutationResult(
+                        saleToSync: nil,
+                        deletedSaleId: nil,
+                        accountsToSync: accountsToSync
+                    )
+                }
+                sale = Sale(context: context)
+                sale.id = UUID()
+                sale.createdAt = now
+                sale.vehicle = vehicle
+            }
+
+            sale.amount = NSDecimalNumber(decimal: resolvedSaleAmount)
+            sale.date = saleDate
+            sale.buyerName = buyerName
+            sale.buyerPhone = buyerPhone
+            sale.paymentMethod = resolvedPaymentMethod
+            sale.account = targetAccount
+            sale.updatedAt = now
+
+            let nextDepositAmount = isDealDeskSale ? previousDepositAmount : resolvedSaleAmount
+
+            if existingSale == nil {
+                applyAccountDelta(targetAccount, delta: nextDepositAmount)
+            } else if targetAccount?.objectID == previousAccount?.objectID {
+                applyAccountDelta(targetAccount, delta: nextDepositAmount - previousDepositAmount)
+            } else {
+                applyAccountDelta(previousAccount, delta: -previousDepositAmount)
+                applyAccountDelta(targetAccount, delta: nextDepositAmount)
+            }
+
+            return VehicleSaleEditMutationResult(
+                saleToSync: sale,
+                deletedSaleId: nil,
+                accountsToSync: accountsToSync
+            )
+        }
+
+        vehicle.salePrice = nil
+        vehicle.saleDate = nil
+        vehicle.buyerName = nil
+        vehicle.buyerPhone = nil
+        vehicle.paymentMethod = nil
+
+        var deletedSaleId: UUID? = nil
+        if let existingSale {
+            applyAccountDelta(previousAccount, delta: -previousDepositAmount)
+            deletedSaleId = existingSale.id
+            existingSale.managedObjectContext?.delete(existingSale)
+        }
+
+        return VehicleSaleEditMutationResult(
+            saleToSync: nil,
+            deletedSaleId: deletedSaleId,
+            accountsToSync: accountsToSync
+        )
     }
 }
 

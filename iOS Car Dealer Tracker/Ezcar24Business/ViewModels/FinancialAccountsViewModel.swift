@@ -22,6 +22,7 @@ class FinancialAccountsViewModel: ObservableObject {
     
     func fetchAccounts() {
         let request: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+        request.predicate = NSPredicate(format: "deletedAt == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \FinancialAccount.accountType, ascending: true)]
         
         do {

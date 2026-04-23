@@ -34,6 +34,7 @@ struct AddVehicleView: View {
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \FinancialAccount.accountType, ascending: true)],
+        predicate: NSPredicate(format: "deletedAt == nil"),
         animation: .default
     )
     private var accounts: FetchedResults<FinancialAccount>

@@ -55,6 +55,7 @@ class SalesViewModel: ObservableObject {
     private func fetchVehicleSales() {
         let request: NSFetchRequest<Sale> = Sale.fetchRequest()
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Sale.date, ascending: false)]
+        request.predicate = NSPredicate(format: "deletedAt == nil")
         
         do {
             allVehicleSales = try viewContext.fetch(request)
@@ -110,7 +111,7 @@ class SalesViewModel: ObservableObject {
                 let matchesPhone = sale.buyerPhone?.lowercased().contains(query) ?? false
                 
                 // Search in line items
-                let lineItems = sale.lineItems as? Set<PartSaleLineItem> ?? []
+                let lineItems = sale.activeLineItemsArray
                 let matchesPart = lineItems.contains { item in
                     item.part?.displayName.lowercased().contains(query) == true
                 }
@@ -176,7 +177,7 @@ class SalesViewModel: ObservableObject {
     
     @MainActor
     private func deletePartSale(_ sale: PartSale) {
-        let lineItems = (sale.lineItems as? Set<PartSaleLineItem>) ?? []
+        let lineItems = sale.activeLineItemsArray
         var updatedBatches: [PartBatch] = []
         var updatedPartsById: [UUID: Part] = [:]
         let now = Date()
@@ -366,7 +367,9 @@ struct UnifiedSaleItem: Identifiable {
         self.amount = price
         
         let purchasePrice = vehicleSale.vehicle?.purchasePrice?.decimalValue ?? 0
-        let expenses = (vehicleSale.vehicle?.expenses as? Set<Expense>)?.reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) } ?? 0
+        let expenses = ((vehicleSale.vehicle?.expenses as? Set<Expense>) ?? [])
+            .filter { $0.deletedAt == nil }
+            .reduce(Decimal(0)) { $0 + ($1.amount?.decimalValue ?? 0) }
         self.cost = purchasePrice + expenses + holdingCost
         
         // Include VAT refund in profit

@@ -67,17 +67,26 @@ struct GlobalSearchView: View {
         
         // Search Vehicles
         let vehicleReq: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
-        vehicleReq.predicate = NSPredicate(format: "make CONTAINS[cd] %@ OR model CONTAINS[cd] %@ OR vin CONTAINS[cd] %@", query, query, query)
+        vehicleReq.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "deletedAt == nil"),
+            NSPredicate(format: "make CONTAINS[cd] %@ OR model CONTAINS[cd] %@ OR vin CONTAINS[cd] %@", query, query, query)
+        ])
         vehicleReq.fetchLimit = 5
         
         // Search Clients
         let clientReq: NSFetchRequest<Client> = Client.fetchRequest()
-        clientReq.predicate = NSPredicate(format: "name CONTAINS[cd] %@ OR phone CONTAINS[cd] %@", query, query)
+        clientReq.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "deletedAt == nil"),
+            NSPredicate(format: "name CONTAINS[cd] %@ OR phone CONTAINS[cd] %@", query, query)
+        ])
         clientReq.fetchLimit = 5
         
         // Search Expenses
         let expenseReq: NSFetchRequest<Expense> = Expense.fetchRequest()
-        expenseReq.predicate = NSPredicate(format: "expenseDescription CONTAINS[cd] %@ OR category CONTAINS[cd] %@", query, query)
+        expenseReq.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            NSPredicate(format: "deletedAt == nil"),
+            NSPredicate(format: "expenseDescription CONTAINS[cd] %@ OR category CONTAINS[cd] %@", query, query)
+        ])
         expenseReq.fetchLimit = 5
         
         do {

@@ -135,7 +135,11 @@ struct PaywallView: View {
         }
         .onChange(of: subscriptionManager.currentOffering) { _, newOffering in
             if let offering = newOffering {
-                // Always try to select if nothing is selected, or re-validate
+                let packages = filteredPackages(offering.availablePackages)
+                if let selectedPackage,
+                   !packages.contains(where: { $0.identifier == selectedPackage.identifier }) {
+                    self.selectedPackage = nil
+                }
                 if selectedPackage == nil {
                     selectBestPackage(from: offering)
                 }
@@ -329,7 +333,7 @@ struct PaywallView: View {
                 .foregroundColor(.secondary)
                 .tracking(1.5)
             
-            if let package = selectedPackage ?? subscriptionManager.currentOffering?.availablePackages.first {
+            if let package = selectedPackage ?? subscriptionManager.currentSubscriptionPackages.first {
                 Text(planSummary(for: package))
                     .font(.footnote)
                     .foregroundColor(ColorTheme.primaryText)

@@ -19,7 +19,7 @@ final class AccountTransactionsViewModel: ObservableObject {
 
     func fetchTransactions() {
         let request: NSFetchRequest<AccountTransaction> = AccountTransaction.fetchRequest()
-        request.predicate = NSPredicate(format: "account == %@", account)
+        request.predicate = NSPredicate(format: "account == %@ AND deletedAt == nil", account)
         request.sortDescriptors = [NSSortDescriptor(keyPath: \AccountTransaction.date, ascending: false)]
 
         do {

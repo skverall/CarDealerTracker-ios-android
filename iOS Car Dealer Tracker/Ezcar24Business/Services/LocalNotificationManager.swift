@@ -102,7 +102,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         let now = Date()
         let reminders: [ClientReminder] = await context.perform {
             let request: NSFetchRequest<ClientReminder> = ClientReminder.fetchRequest()
-            request.predicate = NSPredicate(format: "isCompleted == NO AND dueDate != nil")
+            request.predicate = NSPredicate(format: "deletedAt == nil AND isCompleted == NO AND dueDate != nil AND client.deletedAt == nil")
             request.sortDescriptors = [NSSortDescriptor(keyPath: \ClientReminder.dueDate, ascending: true)]
             return (try? context.fetch(request)) ?? []
         }
@@ -114,7 +114,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
 
         let debts: [Debt] = await context.perform {
             let request: NSFetchRequest<Debt> = Debt.fetchRequest()
-            request.predicate = NSPredicate(format: "dueDate != nil")
+            request.predicate = NSPredicate(format: "deletedAt == nil AND dueDate != nil")
             request.sortDescriptors = [NSSortDescriptor(keyPath: \Debt.dueDate, ascending: true)]
             return (try? context.fetch(request)) ?? []
         }

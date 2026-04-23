@@ -33,12 +33,16 @@ extension Client {
 
     public var sortedInteractions: [ClientInteraction] {
         let set = interactions as? Set<ClientInteraction> ?? []
-        return set.sorted { ($0.occurredAt ?? .distantPast) > ($1.occurredAt ?? .distantPast) }
+        return set
+            .filter { $0.deletedAt == nil }
+            .sorted { ($0.occurredAt ?? .distantPast) > ($1.occurredAt ?? .distantPast) }
     }
 
     public var sortedReminders: [ClientReminder] {
         let set = reminders as? Set<ClientReminder> ?? []
-        return set.sorted { ($0.dueDate ?? .distantPast) < ($1.dueDate ?? .distantPast) }
+        return set
+            .filter { $0.deletedAt == nil }
+            .sorted { ($0.dueDate ?? .distantPast) < ($1.dueDate ?? .distantPast) }
     }
 
     public var nextReminder: ClientReminder? {

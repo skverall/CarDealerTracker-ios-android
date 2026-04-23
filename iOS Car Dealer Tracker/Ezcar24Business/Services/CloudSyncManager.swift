@@ -35,6 +35,8 @@ extension RemoteDebt: PushAnchorTimestamped {}
 extension RemoteDebtPayment: PushAnchorTimestamped {}
 extension RemoteAccountTransaction: PushAnchorTimestamped {}
 extension RemoteClient: PushAnchorTimestamped {}
+extension RemoteClientInteraction: PushAnchorTimestamped {}
+extension RemoteClientReminder: PushAnchorTimestamped {}
 extension RemotePart: PushAnchorTimestamped {}
 extension RemotePartBatch: PushAnchorTimestamped {}
 extension RemotePartSale: PushAnchorTimestamped {}
@@ -77,6 +79,8 @@ final class CloudSyncManager: ObservableObject {
         let debts: [RemoteDebt]
         let debtPayments: [RemoteDebtPayment]
         let clients: [RemoteClient]
+        let clientInteractions: [RemoteClientInteraction]
+        let clientReminders: [RemoteClientReminder]
         let templates: [RemoteExpenseTemplate]
         let parts: [RemotePart]
         let partBatches: [RemotePartBatch]
@@ -93,6 +97,8 @@ final class CloudSyncManager: ObservableObject {
             debts.isEmpty &&
             debtPayments.isEmpty &&
             clients.isEmpty &&
+            clientInteractions.isEmpty &&
+            clientReminders.isEmpty &&
             templates.isEmpty &&
             parts.isEmpty &&
             partBatches.isEmpty &&
@@ -184,6 +190,7 @@ final class CloudSyncManager: ObservableObject {
             let localClientCount = try await bgContext.perform {
                 let request: NSFetchRequest<Client> = Client.fetchRequest()
                 request.includesPendingChanges = false
+                request.predicate = NSPredicate(format: "deletedAt == nil")
                 return try bgContext.count(for: request)
             }
             if localClientCount == 0 {
@@ -203,7 +210,10 @@ final class CloudSyncManager: ObservableObject {
 
             // 3. Ensure default accounts exist remotely if none locally
             let localAccountCount = try await bgContext.perform {
-                try bgContext.count(for: FinancialAccount.fetchRequest())
+                let request: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
+                request.includesPendingChanges = false
+                request.predicate = NSPredicate(format: "deletedAt == nil")
+                return try bgContext.count(for: request)
             }
             let accountsForMerge: [RemoteFinancialAccount]
             if localAccountCount == 0 {
@@ -222,6 +232,8 @@ final class CloudSyncManager: ObservableObject {
                 debts: filteredSnapshot.debts,
                 debtPayments: filteredSnapshot.debtPayments,
                 clients: filteredSnapshot.clients,
+                clientInteractions: filteredSnapshot.clientInteractions,
+                clientReminders: filteredSnapshot.clientReminders,
                 parts: filteredSnapshot.parts,
                 partBatches: filteredSnapshot.partBatches,
                 partSales: filteredSnapshot.partSales,
@@ -364,6 +376,18 @@ final class CloudSyncManager: ObservableObject {
                 } else if let remote = try? decoder.decode(RemoteClient.self, from: item.payload) {
                     protect(.client, id: remote.id)
                 }
+            case .clientInteraction:
+                if item.operation == .delete {
+                    if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.clientInteraction, id: id) }
+                } else if let remote = try? decoder.decode(RemoteClientInteraction.self, from: item.payload) {
+                    protect(.clientInteraction, id: remote.id)
+                }
+            case .clientReminder:
+                if item.operation == .delete {
+                    if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.clientReminder, id: id) }
+                } else if let remote = try? decoder.decode(RemoteClientReminder.self, from: item.payload) {
+                    protect(.clientReminder, id: remote.id)
+                }
             case .user:
                 if item.operation == .delete {
                     if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.user, id: id) }
@@ -442,6 +466,7 @@ final class CloudSyncManager: ObservableObject {
             let hasChanges = !snapshot.vehicles.isEmpty || !snapshot.expenses.isEmpty ||
                             !snapshot.sales.isEmpty || !snapshot.debts.isEmpty ||
                             !snapshot.debtPayments.isEmpty || !snapshot.clients.isEmpty ||
+                            !snapshot.clientInteractions.isEmpty || !snapshot.clientReminders.isEmpty ||
                             !snapshot.users.isEmpty || !snapshot.accounts.isEmpty ||
                             !snapshot.accountTransactions.isEmpty || !snapshot.templates.isEmpty ||
                             !snapshot.parts.isEmpty || !snapshot.partBatches.isEmpty ||
@@ -464,6 +489,8 @@ final class CloudSyncManager: ObservableObject {
                     .debt: Set(snapshot.debts.map { $0.id }),
                     .debtPayment: Set(snapshot.debtPayments.map { $0.id }),
                     .client: Set(snapshot.clients.map { $0.id }),
+                    .clientInteraction: Set(snapshot.clientInteractions.map { $0.id }),
+                    .clientReminder: Set(snapshot.clientReminders.map { $0.id }),
                     .user: Set(snapshot.users.map { $0.id }),
                     .account: Set(snapshot.accounts.map { $0.id }),
                     .accountTransaction: Set(snapshot.accountTransactions.map { $0.id }),
@@ -586,6 +613,8 @@ final class CloudSyncManager: ObservableObject {
                 .debt: count("Debt"),
                 .debtPayment: count("DebtPayment"),
                 .client: count("Client"),
+                .clientInteraction: count("ClientInteraction"),
+                .clientReminder: count("ClientReminder"),
                 .user: count("User"),
                 .account: count("FinancialAccount"),
                 .accountTransaction: count("AccountTransaction"),
@@ -613,6 +642,8 @@ final class CloudSyncManager: ObservableObject {
                 .debt: countActive(snapshot.debts) { $0.deletedAt },
                 .debtPayment: countActive(snapshot.debtPayments) { $0.deletedAt },
                 .client: countActive(snapshot.clients) { $0.deletedAt },
+                .clientInteraction: countActive(snapshot.clientInteractions) { $0.deletedAt },
+                .clientReminder: countActive(snapshot.clientReminders) { $0.deletedAt },
                 .user: countActive(snapshot.users) { user in
                     guard let deletedAt = user.deletedAt else { return nil }
                     return CloudSyncManager.parseDateAndTime(deletedAt)
@@ -745,6 +776,10 @@ final class CloudSyncManager: ObservableObject {
             return (try? decoder.decode(RemoteSale.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
         case .client:
             return (try? decoder.decode(RemoteClient.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .clientInteraction:
+            return (try? decoder.decode(RemoteClientInteraction.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .clientReminder:
+            return (try? decoder.decode(RemoteClientReminder.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
         case .user:
             return (try? decoder.decode(RemoteDealerUser.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
         case .account:
@@ -1109,6 +1144,8 @@ final class CloudSyncManager: ObservableObject {
                         case .expense: return "sync_expenses"
                         case .sale: return "sync_sales"
                         case .client: return "sync_clients"
+                        case .clientInteraction: return "sync_client_interactions"
+                        case .clientReminder: return "sync_client_reminders"
                         case .user: return "sync_users"
                         case .account: return "sync_accounts"
                         case .accountTransaction: return "sync_account_transactions"
@@ -1126,6 +1163,8 @@ final class CloudSyncManager: ObservableObject {
                         case .expense: return "delete_crm_expenses"
                         case .sale: return "delete_crm_sales"
                         case .client: return "delete_crm_dealer_clients"
+                        case .clientInteraction: return "delete_crm_client_interactions"
+                        case .clientReminder: return "delete_crm_client_reminders"
                         case .user: return "delete_crm_dealer_users"
                         case .account: return "delete_crm_financial_accounts"
                         case .accountTransaction: return "delete_crm_account_transactions"
@@ -1189,6 +1228,10 @@ final class CloudSyncManager: ObservableObject {
             rpcName = "delete_crm_sales"
         case .client:
             rpcName = "delete_crm_dealer_clients"
+        case .clientInteraction:
+            rpcName = "delete_crm_client_interactions"
+        case .clientReminder:
+            rpcName = "delete_crm_client_reminders"
         case .user:
             rpcName = "delete_crm_dealer_users"
         case .account:
@@ -1249,6 +1292,16 @@ final class CloudSyncManager: ObservableObject {
         case .client:
             if let client = fetchLocalEntity(Client.self, id: id) {
                 await deleteClient(client, dealerId: dealerId)
+                return
+            }
+        case .clientInteraction:
+            if let interaction = fetchLocalEntity(ClientInteraction.self, id: id) {
+                await deleteClientInteraction(interaction, dealerId: dealerId)
+                return
+            }
+        case .clientReminder:
+            if let reminder = fetchLocalEntity(ClientReminder.self, id: id) {
+                await deleteClientReminder(reminder, dealerId: dealerId)
                 return
             }
         case .user:
@@ -1341,6 +1394,12 @@ final class CloudSyncManager: ObservableObject {
         case .client:
             let remote = try decoder.decode(RemoteClient.self, from: item.payload)
             try await writeClient.rpc("sync_clients", params: ["payload": [remote]]).execute()
+        case .clientInteraction:
+            let remote = try decoder.decode(RemoteClientInteraction.self, from: item.payload)
+            try await writeClient.rpc("sync_client_interactions", params: ["payload": [remote]]).execute()
+        case .clientReminder:
+            let remote = try decoder.decode(RemoteClientReminder.self, from: item.payload)
+            try await writeClient.rpc("sync_client_reminders", params: ["payload": [remote]]).execute()
         case .user:
             let remote = try decoder.decode(RemoteDealerUser.self, from: item.payload)
             try await writeClient.rpc("sync_users", params: ["payload": [remote]]).execute()
@@ -2099,6 +2158,54 @@ final class CloudSyncManager: ObservableObject {
         }
     }
 
+    func upsertClientInteraction(_ interaction: ClientInteraction, dealerId: UUID) async {
+        guard let remote = makeRemoteClientInteraction(from: interaction, dealerId: dealerId) else { return }
+
+        Task {
+            do {
+                try await writeClient
+                    .rpc("sync_client_interactions", params: SyncPayload<RemoteClientInteraction>(payload: [remote]))
+                    .execute()
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
+            } catch {
+                print("CloudSyncManager upsertClientInteraction error: \(error)")
+                await logSyncError(
+                    rpc: "sync_client_interactions",
+                    dealerId: dealerId,
+                    entityType: .clientInteraction,
+                    payloadId: remote.id,
+                    error: error
+                )
+                showError(savedLocallySyncFailureMessage(for: error))
+                await enqueueUpsertPayload(remote, entityType: .clientInteraction, recordId: remote.id, dealerId: dealerId)
+            }
+        }
+    }
+
+    func upsertClientReminder(_ reminder: ClientReminder, dealerId: UUID) async {
+        guard let remote = makeRemoteClientReminder(from: reminder, dealerId: dealerId) else { return }
+
+        Task {
+            do {
+                try await writeClient
+                    .rpc("sync_client_reminders", params: SyncPayload<RemoteClientReminder>(payload: [remote]))
+                    .execute()
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
+            } catch {
+                print("CloudSyncManager upsertClientReminder error: \(error)")
+                await logSyncError(
+                    rpc: "sync_client_reminders",
+                    dealerId: dealerId,
+                    entityType: .clientReminder,
+                    payloadId: remote.id,
+                    error: error
+                )
+                showError(savedLocallySyncFailureMessage(for: error))
+                await enqueueUpsertPayload(remote, entityType: .clientReminder, recordId: remote.id, dealerId: dealerId)
+            }
+        }
+    }
+
     func deleteFinancialAccount(_ account: FinancialAccount, dealerId: UUID) async {
         account.deletedAt = Date()
         account.updatedAt = Date()
@@ -2247,6 +2354,88 @@ final class CloudSyncManager: ObservableObject {
             )
             showError("Deleted locally. Will sync when online.")
             await enqueueDelete(.client, id: id, dealerId: dealerId)
+        }
+    }
+
+    func deleteClientInteraction(_ interaction: ClientInteraction, dealerId: UUID) async {
+        interaction.deletedAt = Date()
+        interaction.updatedAt = Date()
+        guard let remote = makeRemoteClientInteraction(from: interaction, dealerId: dealerId) else { return }
+
+        do {
+            try await writeClient
+                .rpc("sync_client_interactions", params: SyncPayload<RemoteClientInteraction>(payload: [remote]))
+                .execute()
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
+        } catch {
+            await logSyncError(
+                rpc: "sync_client_interactions",
+                dealerId: dealerId,
+                entityType: .clientInteraction,
+                payloadId: remote.id,
+                extraContext: ["operation": "delete"],
+                error: error
+            )
+            await enqueueUpsertPayload(remote, entityType: .clientInteraction, recordId: remote.id, dealerId: dealerId)
+        }
+    }
+
+    func deleteClientInteraction(id: UUID, dealerId: UUID) async {
+        do {
+            try await deleteEntityById(id, dealerId: dealerId, entity: .clientInteraction)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
+        } catch {
+            print("CloudSyncManager deleteClientInteraction(id:) error: \(error)")
+            await logSyncError(
+                rpc: "delete_crm_client_interactions",
+                dealerId: dealerId,
+                entityType: .clientInteraction,
+                payloadId: id,
+                error: error
+            )
+            showError("Deleted locally. Will sync when online.")
+            await enqueueDelete(.clientInteraction, id: id, dealerId: dealerId)
+        }
+    }
+
+    func deleteClientReminder(_ reminder: ClientReminder, dealerId: UUID) async {
+        reminder.deletedAt = Date()
+        reminder.updatedAt = Date()
+        guard let remote = makeRemoteClientReminder(from: reminder, dealerId: dealerId) else { return }
+
+        do {
+            try await writeClient
+                .rpc("sync_client_reminders", params: SyncPayload<RemoteClientReminder>(payload: [remote]))
+                .execute()
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
+        } catch {
+            await logSyncError(
+                rpc: "sync_client_reminders",
+                dealerId: dealerId,
+                entityType: .clientReminder,
+                payloadId: remote.id,
+                extraContext: ["operation": "delete"],
+                error: error
+            )
+            await enqueueUpsertPayload(remote, entityType: .clientReminder, recordId: remote.id, dealerId: dealerId)
+        }
+    }
+
+    func deleteClientReminder(id: UUID, dealerId: UUID) async {
+        do {
+            try await deleteEntityById(id, dealerId: dealerId, entity: .clientReminder)
+            await processSuccessfulDelivery(anchor: nil, dealerId: dealerId)
+        } catch {
+            print("CloudSyncManager deleteClientReminder(id:) error: \(error)")
+            await logSyncError(
+                rpc: "delete_crm_client_reminders",
+                dealerId: dealerId,
+                entityType: .clientReminder,
+                payloadId: id,
+                error: error
+            )
+            showError("Deleted locally. Will sync when online.")
+            await enqueueDelete(.clientReminder, id: id, dealerId: dealerId)
         }
     }
 
@@ -2717,6 +2906,8 @@ final class CloudSyncManager: ObservableObject {
         let debtIds = skippingIds[.debt] ?? []
         let debtPaymentIds = skippingIds[.debtPayment] ?? []
         let clientIds = skippingIds[.client] ?? []
+        let clientInteractionIds = skippingIds[.clientInteraction] ?? []
+        let clientReminderIds = skippingIds[.clientReminder] ?? []
         let userIds = skippingIds[.user] ?? []
         let accountIds = skippingIds[.account] ?? []
         let accountTransactionIds = skippingIds[.accountTransaction] ?? []
@@ -2746,6 +2937,16 @@ final class CloudSyncManager: ObservableObject {
         let filteredClients = snapshot.clients.filter { client in
             if clientIds.contains(client.id) { return false }
             if let vId = client.vehicleId, vehicleIds.contains(vId) { return false }
+            return true
+        }
+        let filteredClientInteractions = snapshot.clientInteractions.filter { interaction in
+            if clientInteractionIds.contains(interaction.id) { return false }
+            if clientIds.contains(interaction.clientId) { return false }
+            return true
+        }
+        let filteredClientReminders = snapshot.clientReminders.filter { reminder in
+            if clientReminderIds.contains(reminder.id) { return false }
+            if clientIds.contains(reminder.clientId) { return false }
             return true
         }
 
@@ -2792,6 +2993,8 @@ final class CloudSyncManager: ObservableObject {
             debts: filteredDebts,
             debtPayments: filteredDebtPayments,
             clients: filteredClients,
+            clientInteractions: filteredClientInteractions,
+            clientReminders: filteredClientReminders,
             parts: filteredParts,
             partBatches: filteredPartBatches,
             partSales: filteredPartSales,
@@ -3020,7 +3223,7 @@ final class CloudSyncManager: ObservableObject {
         
         func findLocalUserByName(_ name: String) -> User? {
             let request: NSFetchRequest<User> = User.fetchRequest()
-            request.predicate = NSPredicate(format: "name ==[c] %@", name)
+            request.predicate = NSPredicate(format: "name ==[c] %@ AND deletedAt == nil", name)
             return (try? context.fetch(request))?.first
         }
 
@@ -3069,7 +3272,7 @@ final class CloudSyncManager: ObservableObject {
         // Helper to find ALL local duplicates by type
         func findLocalAccountsByType(_ type: String) -> [FinancialAccount] {
             let request: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
-            request.predicate = NSPredicate(format: "accountType ==[c] %@", type)
+            request.predicate = NSPredicate(format: "accountType ==[c] %@ AND deletedAt == nil", type)
             return (try? context.fetch(request)) ?? []
         }
 
@@ -3185,7 +3388,7 @@ final class CloudSyncManager: ObservableObject {
             obj.reportURL = v.reportURL
         }
 
-        // 4. Clients
+            // 4. Clients
             let clientIds = snapshot.clients.map { $0.id }
             let existingClients: [UUID: Client] = fetchExisting(entityName: "Client", ids: clientIds)
             for c in snapshot.clients {
@@ -3216,7 +3419,68 @@ final class CloudSyncManager: ObservableObject {
                 obj.status = c.status
             }
 
-            // 5. Templates
+            // 5. Client Interactions
+            let clientInteractionIds = snapshot.clientInteractions.map { $0.id }
+            let existingClientInteractions: [UUID: ClientInteraction] = fetchExisting(
+                entityName: "ClientInteraction",
+                ids: clientInteractionIds
+            )
+            for interaction in snapshot.clientInteractions {
+                let obj = existingClientInteractions[interaction.id] ?? ClientInteraction(context: context)
+
+                if interaction.deletedAt != nil {
+                    context.delete(obj)
+                    continue
+                }
+
+                if let localUpdated = obj.updatedAt, localUpdated > interaction.updatedAt {
+                    continue
+                }
+
+                obj.id = interaction.id
+                obj.title = interaction.title
+                obj.detail = interaction.detail
+                obj.occurredAt = interaction.occurredAt
+                obj.stage = interaction.stage
+                obj.value = interaction.value.map { NSDecimalNumber(decimal: $0) }
+                obj.interactionType = interaction.interactionType
+                obj.outcome = interaction.outcome
+                obj.durationMinutes = Int32(interaction.durationMinutes)
+                obj.isFollowUpRequired = interaction.isFollowUpRequired
+                obj.createdAt = interaction.createdAt
+                obj.updatedAt = interaction.updatedAt
+                obj.deletedAt = nil
+            }
+
+            // 6. Client Reminders
+            let clientReminderIds = snapshot.clientReminders.map { $0.id }
+            let existingClientReminders: [UUID: ClientReminder] = fetchExisting(
+                entityName: "ClientReminder",
+                ids: clientReminderIds
+            )
+            for reminder in snapshot.clientReminders {
+                let obj = existingClientReminders[reminder.id] ?? ClientReminder(context: context)
+
+                if reminder.deletedAt != nil {
+                    context.delete(obj)
+                    continue
+                }
+
+                if let localUpdated = obj.updatedAt, localUpdated > reminder.updatedAt {
+                    continue
+                }
+
+                obj.id = reminder.id
+                obj.title = reminder.title
+                obj.notes = reminder.notes
+                obj.dueDate = reminder.dueDate
+                obj.isCompleted = reminder.isCompleted
+                obj.createdAt = reminder.createdAt
+                obj.updatedAt = reminder.updatedAt
+                obj.deletedAt = nil
+            }
+
+            // 7. Templates
             let templateIds = snapshot.templates.map { $0.id }
             let existingTemplates: [UUID: ExpenseTemplate] = fetchExisting(entityName: "ExpenseTemplate", ids: templateIds)
             for t in snapshot.templates {
@@ -3241,7 +3505,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 6. Parts
+            // 7. Parts
             let partIds = snapshot.parts.map { $0.id }
             var existingParts: [UUID: Part] = fetchExisting(entityName: "Part", ids: partIds)
             for p in snapshot.parts {
@@ -3267,7 +3531,7 @@ final class CloudSyncManager: ObservableObject {
                 existingParts[p.id] = obj
             }
 
-            // 7. Part Batches
+            // 8. Part Batches
             let partBatchIds = snapshot.partBatches.map { $0.id }
             var existingPartBatches: [UUID: PartBatch] = fetchExisting(entityName: "PartBatch", ids: partBatchIds)
             for b in snapshot.partBatches {
@@ -3306,7 +3570,7 @@ final class CloudSyncManager: ObservableObject {
                 existingPartBatches[b.id] = obj
             }
 
-            // 8. Part Sales
+            // 9. Part Sales
             let partSaleIds = snapshot.partSales.map { $0.id }
             var existingPartSales: [UUID: PartSale] = fetchExisting(entityName: "PartSale", ids: partSaleIds)
             for s in snapshot.partSales {
@@ -3338,7 +3602,7 @@ final class CloudSyncManager: ObservableObject {
                 existingPartSales[s.id] = obj
             }
 
-            // 9. Part Sale Line Items
+            // 10. Part Sale Line Items
             let partSaleLineItemIds = snapshot.partSaleLineItems.map { $0.id }
             let existingPartSaleLineItems: [UUID: PartSaleLineItem] = fetchExisting(entityName: "PartSaleLineItem", ids: partSaleLineItemIds)
             for item in snapshot.partSaleLineItems {
@@ -3372,7 +3636,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.batch = batch
             }
 
-            // 10. Expenses
+            // 11. Expenses
             let expenseIds = snapshot.expenses.map { $0.id }
             let existingExpenses: [UUID: Expense] = fetchExisting(entityName: "Expense", ids: expenseIds)
             for e in snapshot.expenses {
@@ -3404,7 +3668,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 11. Sales
+            // 12. Sales
             let saleIds = snapshot.sales.map { $0.id }
             let existingSales: [UUID: Sale] = fetchExisting(entityName: "Sale", ids: saleIds)
             for s in snapshot.sales {
@@ -3445,7 +3709,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 12. Account Transactions
+            // 13. Account Transactions
             let accountTransactionIds = snapshot.accountTransactions.map { $0.id }
             let existingAccountTransactions: [UUID: AccountTransaction] = fetchExisting(entityName: "AccountTransaction", ids: accountTransactionIds)
             for t in snapshot.accountTransactions {
@@ -3474,7 +3738,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 13. Debts
+            // 14. Debts
             let debtIds = snapshot.debts.map { $0.id }
             let existingDebts: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: debtIds)
             for d in snapshot.debts {
@@ -3505,7 +3769,7 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
-            // 14. Debt Payments
+            // 15. Debt Payments
             // Build debt map first so we can link the required relationship immediately
             let allDebtIdsForPayments = Set(snapshot.debts.map { $0.id } + snapshot.debtPayments.map { $0.debtId })
             let debtMapForPayments: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: Array(allDebtIdsForPayments))
@@ -3559,6 +3823,7 @@ final class CloudSyncManager: ObservableObject {
             
             // Re-fetch maps to include newly created objects
             let allVehicles: [UUID: Vehicle] = fetchExisting(entityName: "Vehicle", ids: snapshot.vehicles.map { $0.id } + snapshot.clients.compactMap { $0.vehicleId } + snapshot.sales.map { $0.vehicleId } + snapshot.expenses.compactMap { $0.vehicleId })
+            let allClients: [UUID: Client] = fetchExisting(entityName: "Client", ids: snapshot.clients.map { $0.id } + snapshot.clientInteractions.map { $0.clientId } + snapshot.clientReminders.map { $0.clientId })
             let allUsers: [UUID: User] = fetchExisting(entityName: "User", ids: snapshot.users.map { $0.id } + snapshot.expenses.compactMap { $0.userId })
             let allAccounts: [UUID: FinancialAccount] = fetchExisting(entityName: "FinancialAccount", ids: snapshot.accounts.map { $0.id } + snapshot.expenses.compactMap { $0.accountId } + snapshot.debtPayments.compactMap { $0.accountId } + snapshot.accountTransactions.map { $0.accountId } + snapshot.sales.compactMap { $0.accountId } + snapshot.partSales.compactMap { $0.accountId })
             let allDebts: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: snapshot.debts.map { $0.id } + snapshot.debtPayments.map { $0.debtId })
@@ -3570,6 +3835,20 @@ final class CloudSyncManager: ObservableObject {
             for c in snapshot.clients {
                 if let vId = c.vehicleId, let client = existingClients[c.id] ?? (try? context.fetch(Client.fetchRequest()).first(where: { $0.id == c.id })) {
                     client.vehicle = allVehicles[vId]
+                }
+            }
+
+            // Link Client Interactions -> Client
+            for interaction in snapshot.clientInteractions {
+                if let localInteraction = existingClientInteractions[interaction.id] ?? (try? context.fetch(ClientInteraction.fetchRequest()).first(where: { $0.id == interaction.id })) {
+                    localInteraction.client = allClients[interaction.clientId]
+                }
+            }
+
+            // Link Client Reminders -> Client
+            for reminder in snapshot.clientReminders {
+                if let localReminder = existingClientReminders[reminder.id] ?? (try? context.fetch(ClientReminder.fetchRequest()).first(where: { $0.id == reminder.id })) {
+                    localReminder.client = allClients[reminder.clientId]
                 }
             }
             
@@ -3665,6 +3944,8 @@ final class CloudSyncManager: ObservableObject {
                 cleanupEntity(entityName: "Debt", type: .debt)
                 cleanupEntity(entityName: "DebtPayment", type: .debtPayment)
                 cleanupEntity(entityName: "Client", type: .client)
+                cleanupEntity(entityName: "ClientInteraction", type: .clientInteraction)
+                cleanupEntity(entityName: "ClientReminder", type: .clientReminder)
                 cleanupEntity(entityName: "User", type: .user)
                 cleanupEntity(entityName: "FinancialAccount", type: .account)
                 cleanupEntity(entityName: "ExpenseTemplate", type: .template)
@@ -3873,6 +4154,10 @@ final class CloudSyncManager: ObservableObject {
             applyWindow(debtPaymentRequest)
             let clientRequest: NSFetchRequest<Client> = Client.fetchRequest()
             applyWindow(clientRequest)
+            let clientInteractionRequest: NSFetchRequest<ClientInteraction> = ClientInteraction.fetchRequest()
+            applyWindow(clientInteractionRequest)
+            let clientReminderRequest: NSFetchRequest<ClientReminder> = ClientReminder.fetchRequest()
+            applyWindow(clientReminderRequest)
             let templateRequest: NSFetchRequest<ExpenseTemplate> = ExpenseTemplate.fetchRequest()
             applyWindow(templateRequest)
             let partRequest: NSFetchRequest<Part> = Part.fetchRequest()
@@ -3912,6 +4197,18 @@ final class CloudSyncManager: ObservableObject {
                 .filter { client in
                     guard let vId = client.vehicle?.id else { return true }
                     return !skippingVehicleIds.contains(vId)
+                }
+            let clientInteractions = try context
+                .fetch(clientInteractionRequest)
+                .filter { interaction in
+                    guard let vehicleId = interaction.client?.vehicle?.id else { return true }
+                    return !skippingVehicleIds.contains(vehicleId)
+                }
+            let clientReminders = try context
+                .fetch(clientReminderRequest)
+                .filter { reminder in
+                    guard let vehicleId = reminder.client?.vehicle?.id else { return true }
+                    return !skippingVehicleIds.contains(vehicleId)
                 }
             let templates = try context.fetch(templateRequest)
             let parts = try context.fetch(partRequest)
@@ -3961,6 +4258,8 @@ final class CloudSyncManager: ObservableObject {
                 debts: debts.compactMap { self.makeRemoteDebt(from: $0, dealerId: dealerId) },
                 debtPayments: debtPayments.compactMap { self.makeRemoteDebtPayment(from: $0, dealerId: dealerId) },
                 clients: clients.compactMap { self.makeRemoteClient(from: $0, dealerId: dealerId) },
+                clientInteractions: clientInteractions.compactMap { self.makeRemoteClientInteraction(from: $0, dealerId: dealerId) },
+                clientReminders: clientReminders.compactMap { self.makeRemoteClientReminder(from: $0, dealerId: dealerId) },
                 templates: templates.compactMap { self.makeRemoteTemplate(from: $0, dealerId: dealerId) },
                 parts: parts.compactMap { self.makeRemotePart(from: $0, dealerId: dealerId) },
                 partBatches: partBatches.compactMap { self.makeRemotePartBatch(from: $0, dealerId: dealerId) },
@@ -4040,6 +4339,18 @@ final class CloudSyncManager: ObservableObject {
         if !payload.clients.isEmpty {
             try await writeClient
                 .rpc("sync_clients", params: SyncPayload<RemoteClient>(payload: payload.clients))
+                .execute()
+        }
+
+        if !payload.clientInteractions.isEmpty {
+            try await writeClient
+                .rpc("sync_client_interactions", params: SyncPayload<RemoteClientInteraction>(payload: payload.clientInteractions))
+                .execute()
+        }
+
+        if !payload.clientReminders.isEmpty {
+            try await writeClient
+                .rpc("sync_client_reminders", params: SyncPayload<RemoteClientReminder>(payload: payload.clientReminders))
                 .execute()
         }
 
@@ -4346,6 +4657,43 @@ final class CloudSyncManager: ObservableObject {
         )
     }
 
+    nonisolated private func makeRemoteClientInteraction(from interaction: ClientInteraction, dealerId: UUID) -> RemoteClientInteraction? {
+        guard let id = interaction.id, let clientId = interaction.client?.id else { return nil }
+        return RemoteClientInteraction(
+            id: id,
+            dealerId: dealerId,
+            clientId: clientId,
+            title: interaction.title,
+            detail: interaction.detail,
+            occurredAt: interaction.occurredAt ?? Date(),
+            stage: interaction.stage ?? "update",
+            value: interaction.value?.decimalValue,
+            interactionType: interaction.interactionType,
+            outcome: interaction.outcome,
+            durationMinutes: Int(interaction.durationMinutes),
+            isFollowUpRequired: interaction.isFollowUpRequired,
+            createdAt: interaction.createdAt ?? interaction.occurredAt ?? Date(),
+            updatedAt: interaction.updatedAt ?? Date(),
+            deletedAt: interaction.deletedAt
+        )
+    }
+
+    nonisolated private func makeRemoteClientReminder(from reminder: ClientReminder, dealerId: UUID) -> RemoteClientReminder? {
+        guard let id = reminder.id, let clientId = reminder.client?.id else { return nil }
+        return RemoteClientReminder(
+            id: id,
+            dealerId: dealerId,
+            clientId: clientId,
+            title: reminder.title ?? "Reminder",
+            notes: reminder.notes,
+            dueDate: reminder.dueDate ?? Date(),
+            isCompleted: reminder.isCompleted,
+            createdAt: reminder.createdAt ?? reminder.dueDate ?? Date(),
+            updatedAt: reminder.updatedAt ?? Date(),
+            deletedAt: reminder.deletedAt
+        )
+    }
+
     nonisolated private func makeRemotePart(from part: Part, dealerId: UUID) -> RemotePart? {
         guard let id = part.id else { return nil }
         return RemotePart(
@@ -4435,9 +4783,10 @@ final class CloudSyncManager: ObservableObject {
                 .eq("dealer_id", value: dealerId)
                 .execute()
                 .value
+            let activeVehicles = vehicles.filter { $0.deletedAt == nil }
             
             // Group by VIN
-            let groupedVehicles = Dictionary(grouping: vehicles, by: { $0.vin })
+            let groupedVehicles = Dictionary(grouping: activeVehicles, by: { $0.vin })
             
             for (vin, group) in groupedVehicles {
                 if group.count > 1 {
@@ -4465,8 +4814,9 @@ final class CloudSyncManager: ObservableObject {
                 .eq("dealer_id", value: dealerId)
                 .execute()
                 .value
+            let activeClients = clients.filter { $0.deletedAt == nil }
             
-            let groupedClients = Dictionary(grouping: clients, by: { $0.phone })
+            let groupedClients = Dictionary(grouping: activeClients, by: { $0.phone })
             
             for (phone, group) in groupedClients {
                 if group.count > 1 {
@@ -4494,8 +4844,9 @@ final class CloudSyncManager: ObservableObject {
                 .eq("dealer_id", value: dealerId)
                 .execute()
                 .value
+            let activeAccounts = accounts.filter { $0.deletedAt == nil }
             
-            let groupedAccounts = Dictionary(grouping: accounts, by: { $0.accountType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+            let groupedAccounts = Dictionary(grouping: activeAccounts, by: { $0.accountType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
             
             for (normalizedType, group) in groupedAccounts {
                 if normalizedType.isEmpty { continue }
@@ -4531,8 +4882,9 @@ final class CloudSyncManager: ObservableObject {
                 .eq("dealer_id", value: dealerId)
                 .execute()
                 .value
+            let activeUsers = users.filter { $0.deletedAt == nil }
             
-            let groupedUsers = Dictionary(grouping: users, by: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
+            let groupedUsers = Dictionary(grouping: activeUsers, by: { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() })
             
             for (normalizedName, group) in groupedUsers {
                 if normalizedName.isEmpty { continue }
@@ -4592,6 +4944,12 @@ final class CloudSyncManager: ObservableObject {
 
         // 2.5. Debts
         try await writeClient.from("crm_debts").delete().eq("dealer_id", value: dealerId).execute()
+
+        // 2.6. Client Interactions
+        try await writeClient.from("crm_client_interactions").delete().eq("dealer_id", value: dealerId).execute()
+
+        // 2.7. Client Reminders
+        try await writeClient.from("crm_client_reminders").delete().eq("dealer_id", value: dealerId).execute()
         
         // 3. Clients
         try await writeClient.from("crm_dealer_clients").delete().eq("dealer_id", value: dealerId).execute()
@@ -4633,6 +4991,8 @@ enum SyncEntityType: String, Codable, CaseIterable, Hashable {
     case debt
     case debtPayment
     case client
+    case clientInteraction
+    case clientReminder
     case user
     case account
     case accountTransaction
@@ -4668,6 +5028,8 @@ extension SyncEntityType {
         case .debt: return "Debts"
         case .debtPayment: return "Debt Payments"
         case .client: return "Clients"
+        case .clientInteraction: return "Client Interactions"
+        case .clientReminder: return "Client Reminders"
         case .user: return "Users"
         case .account: return "Accounts"
         case .accountTransaction: return "Account Transactions"
@@ -4687,14 +5049,16 @@ extension SyncEntityType {
         case .debt: return 3
         case .debtPayment: return 4
         case .client: return 5
-        case .user: return 6
-        case .account: return 7
-        case .accountTransaction: return 8
-        case .template: return 9
-        case .part: return 10
-        case .partBatch: return 11
-        case .partSale: return 12
-        case .partSaleLineItem: return 13
+        case .clientInteraction: return 6
+        case .clientReminder: return 7
+        case .user: return 8
+        case .account: return 9
+        case .accountTransaction: return 10
+        case .template: return 11
+        case .part: return 12
+        case .partBatch: return 13
+        case .partSale: return 14
+        case .partSaleLineItem: return 15
         }
     }
 }
@@ -4894,6 +5258,8 @@ private extension SyncQueueItem {
             case .expense: return (try? decoder.decode(RemoteExpense.self, from: payload))?.id
             case .sale: return (try? decoder.decode(RemoteSale.self, from: payload))?.id
             case .client: return (try? decoder.decode(RemoteClient.self, from: payload))?.id
+            case .clientInteraction: return (try? decoder.decode(RemoteClientInteraction.self, from: payload))?.id
+            case .clientReminder: return (try? decoder.decode(RemoteClientReminder.self, from: payload))?.id
             case .user: return (try? decoder.decode(RemoteDealerUser.self, from: payload))?.id
             case .account: return (try? decoder.decode(RemoteFinancialAccount.self, from: payload))?.id
             case .accountTransaction: return (try? decoder.decode(RemoteAccountTransaction.self, from: payload))?.id

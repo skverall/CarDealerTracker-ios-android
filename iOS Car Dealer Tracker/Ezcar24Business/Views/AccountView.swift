@@ -1470,7 +1470,7 @@ struct AccountUserProfileView: View {
         self.authPendingEmail = authPendingEmail
         self._users = FetchRequest(
             sortDescriptors: [],
-            predicate: NSPredicate(format: "id == %@", userId as CVarArg)
+            predicate: NSPredicate(format: "id == %@ AND deletedAt == nil", userId as CVarArg)
         )
     }
     

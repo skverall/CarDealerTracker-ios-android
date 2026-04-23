@@ -41,7 +41,7 @@ final class PartSalesViewModel: ObservableObject {
     }
 
     func deleteSale(_ sale: PartSale) {
-        let lineItems = (sale.lineItems as? Set<PartSaleLineItem>) ?? []
+        let lineItems = sale.activeLineItemsArray
         var updatedBatches: [PartBatch] = []
         var updatedPartsById: [UUID: Part] = [:]
         let now = Date()
@@ -104,7 +104,7 @@ final class PartSalesViewModel: ObservableObject {
         return sales.filter { sale in
             if sale.buyerName?.lowercased().contains(lower) == true { return true }
             if sale.buyerPhone?.lowercased().contains(lower) == true { return true }
-            let items = sale.lineItems as? Set<PartSaleLineItem> ?? []
+            let items = sale.activeLineItemsArray
             return items.contains { item in
                 item.part?.name?.lowercased().contains(lower) == true
             }
@@ -151,7 +151,7 @@ struct PartSaleItem: Identifiable {
         self.saleDate = sale.date ?? Date()
         self.buyerName = sale.buyerName?.isEmpty == false ? sale.buyerName! : "Walk-in"
 
-        let items = sale.lineItems as? Set<PartSaleLineItem> ?? []
+        let items = sale.activeLineItemsArray
         if items.isEmpty {
             self.totalAmount = sale.amount?.decimalValue ?? 0
             self.totalCost = 0

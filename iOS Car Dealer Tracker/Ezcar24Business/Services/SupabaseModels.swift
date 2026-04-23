@@ -235,6 +235,37 @@ enum DealDeskTemplateCatalog {
         )
     }
 
+    static func setupGuidanceMessage(
+        for templateCode: DealDeskTemplateCode,
+        taxLines: [DealDeskLine],
+        feeLines: [DealDeskLine]
+    ) -> String? {
+        let missingTaxes = !taxLines.isEmpty && taxLines.allSatisfy { $0.value == 0 }
+        let missingFees = !feeLines.isEmpty && feeLines.allSatisfy { $0.value == 0 }
+
+        guard missingTaxes || missingFees else { return nil }
+
+        switch templateCode {
+        case .usa, .canada:
+            let regionName = templateCode.displayName
+            if missingTaxes && missingFees {
+                return "\(regionName) template lines are placeholders until you enter your local taxes and fees."
+            }
+            if missingTaxes {
+                return "\(regionName) tax lines are placeholders until you enter your local rates."
+            }
+            return "\(regionName) fee lines are placeholders until you enter your local amounts."
+        case .generic:
+            if missingTaxes && missingFees {
+                return "Generic template starts empty. Add only the taxes and fees you actually collect."
+            }
+            if missingTaxes {
+                return "Generic tax line is optional. Enter it only if you collect tax."
+            }
+            return "Generic fee line is optional. Enter it only if you collect fees."
+        }
+    }
+
     private static func mergedLines(defaults: [DealDeskLine], overrides: [DealDeskLine]) -> [DealDeskLine] {
         guard !overrides.isEmpty else { return defaults }
         let overrideMap = Dictionary(uniqueKeysWithValues: overrides.map { ($0.lineCode, $0) })
@@ -731,6 +762,68 @@ struct RemoteClient: Codable {
     }
 }
 
+struct RemoteClientInteraction: Codable {
+    let id: UUID
+    let dealerId: UUID
+    let clientId: UUID
+    let title: String?
+    let detail: String?
+    let occurredAt: Date
+    let stage: String
+    let value: Decimal?
+    let interactionType: String?
+    let outcome: String?
+    let durationMinutes: Int
+    let isFollowUpRequired: Bool
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case dealerId = "dealer_id"
+        case clientId = "client_id"
+        case title
+        case detail
+        case occurredAt = "occurred_at"
+        case stage
+        case value
+        case interactionType = "interaction_type"
+        case outcome
+        case durationMinutes = "duration_minutes"
+        case isFollowUpRequired = "is_follow_up_required"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
+}
+
+struct RemoteClientReminder: Codable {
+    let id: UUID
+    let dealerId: UUID
+    let clientId: UUID
+    let title: String
+    let notes: String?
+    let dueDate: Date
+    let isCompleted: Bool
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case dealerId = "dealer_id"
+        case clientId = "client_id"
+        case title
+        case notes
+        case dueDate = "due_date"
+        case isCompleted = "is_completed"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
+}
+
 struct RemotePart: Codable {
     let id: UUID
     let dealerId: UUID
@@ -856,6 +949,8 @@ struct RemoteSnapshot: Decodable {
     let debts: [RemoteDebt]
     let debtPayments: [RemoteDebtPayment]
     let clients: [RemoteClient]
+    let clientInteractions: [RemoteClientInteraction]
+    let clientReminders: [RemoteClientReminder]
     let parts: [RemotePart]
     let partBatches: [RemotePartBatch]
     let partSales: [RemotePartSale]
@@ -873,6 +968,8 @@ struct RemoteSnapshot: Decodable {
         case debts
         case debtPayments = "debt_payments"
         case clients
+        case clientInteractions = "client_interactions"
+        case clientReminders = "client_reminders"
         case parts
         case partBatches = "part_batches"
         case partSales = "part_sales"
@@ -891,6 +988,8 @@ struct RemoteSnapshot: Decodable {
         debts: [RemoteDebt],
         debtPayments: [RemoteDebtPayment],
         clients: [RemoteClient],
+        clientInteractions: [RemoteClientInteraction],
+        clientReminders: [RemoteClientReminder],
         parts: [RemotePart],
         partBatches: [RemotePartBatch],
         partSales: [RemotePartSale],
@@ -907,6 +1006,8 @@ struct RemoteSnapshot: Decodable {
         self.debts = debts
         self.debtPayments = debtPayments
         self.clients = clients
+        self.clientInteractions = clientInteractions
+        self.clientReminders = clientReminders
         self.parts = parts
         self.partBatches = partBatches
         self.partSales = partSales
@@ -926,6 +1027,8 @@ struct RemoteSnapshot: Decodable {
         debts = try container.decodeIfPresent([RemoteDebt].self, forKey: .debts) ?? []
         debtPayments = try container.decodeIfPresent([RemoteDebtPayment].self, forKey: .debtPayments) ?? []
         clients = try container.decodeIfPresent([RemoteClient].self, forKey: .clients) ?? []
+        clientInteractions = try container.decodeIfPresent([RemoteClientInteraction].self, forKey: .clientInteractions) ?? []
+        clientReminders = try container.decodeIfPresent([RemoteClientReminder].self, forKey: .clientReminders) ?? []
         parts = try container.decodeIfPresent([RemotePart].self, forKey: .parts) ?? []
         partBatches = try container.decodeIfPresent([RemotePartBatch].self, forKey: .partBatches) ?? []
         partSales = try container.decodeIfPresent([RemotePartSale].self, forKey: .partSales) ?? []

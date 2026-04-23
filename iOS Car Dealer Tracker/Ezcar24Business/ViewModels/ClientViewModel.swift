@@ -17,6 +17,7 @@ class ClientViewModel: ObservableObject {
 
     func fetchClients() {
         let request: NSFetchRequest<Client> = Client.fetchRequest()
+        request.predicate = NSPredicate(format: "deletedAt == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \Client.createdAt, ascending: false)]
         do {
             clients = try context.fetch(request)

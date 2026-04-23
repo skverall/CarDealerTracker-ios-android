@@ -95,12 +95,13 @@ struct AddExpenseView: View {
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.make, ascending: true)],
-        predicate: NSPredicate(format: "status != 'sold' OR status == nil"),
+        predicate: NSPredicate(format: "deletedAt == nil AND (status != 'sold' OR status == nil)"),
         animation: .default)
     private var vehicles: FetchedResults<Vehicle>
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \User.name, ascending: true)],
+        predicate: NSPredicate(format: "deletedAt == nil"),
         animation: .default)
     private var users: FetchedResults<User>
 

@@ -7,11 +7,12 @@ struct VehicleSelectionSheet: View {
     let vehicles: [Vehicle]
 
     private var filteredVehicles: [Vehicle] {
+        let availableVehicles = vehicles.filter { $0.deletedAt == nil }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if query.isEmpty {
-            return vehicles
+            return availableVehicles
         }
-        return vehicles.filter { $0.matchesVehicleSearchQuery(query) }
+        return availableVehicles.filter { $0.matchesVehicleSearchQuery(query) }
     }
 
     var body: some View {

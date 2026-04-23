@@ -266,7 +266,7 @@ class InventoryStatsManager: ObservableObject {
         guard !ids.isEmpty else { return [] }
         
         let request = Vehicle.fetchRequest()
-        request.predicate = NSPredicate(format: "id IN %@", ids)
+        request.predicate = NSPredicate(format: "id IN %@ AND deletedAt == nil", ids)
         
         do {
             return try context.fetch(request)

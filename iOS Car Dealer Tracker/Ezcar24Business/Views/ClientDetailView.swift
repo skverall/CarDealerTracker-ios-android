@@ -59,6 +59,7 @@ struct ClientDetailView: View {
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Vehicle.createdAt, ascending: false)],
+        predicate: NSPredicate(format: "deletedAt == nil"),
         animation: .default)
     private var vehicles: FetchedResults<Vehicle>
 
@@ -1092,13 +1093,19 @@ struct ClientDetailView: View {
             clientObject.clientStatus = status
             clientObject.updatedAt = Date()
             
-            syncInteractions(for: clientObject)
-            syncReminders(for: clientObject)
+            let interactionsToSync = syncInteractions(for: clientObject)
+            let remindersToSync = syncReminders(for: clientObject)
 
             do {
                 try context.save()
                 Task {
                     await CloudSyncManager.shared?.upsertClient(clientObject, dealerId: dealerId)
+                    for interaction in interactionsToSync {
+                        await CloudSyncManager.shared?.upsertClientInteraction(interaction, dealerId: dealerId)
+                    }
+                    for reminder in remindersToSync {
+                        await CloudSyncManager.shared?.upsertClientReminder(reminder, dealerId: dealerId)
+                    }
                 }
                 Task {
                     if shouldScheduleReminders(), !NotificationPreference.isEnabled {
@@ -1138,7 +1145,7 @@ struct ClientDetailView: View {
         }
     }
     
-    private func syncInteractions(for clientObject: Client) {
+    private func syncInteractions(for clientObject: Client) -> [ClientInteraction] {
         let existing = (clientObject.interactions as? Set<ClientInteraction>) ?? []
         var existingMap: [UUID: ClientInteraction] = [:]
         for item in existing {
@@ -1146,10 +1153,15 @@ struct ClientDetailView: View {
                 existingMap[id] = item
             }
         }
+        let now = Date()
+        var interactionsToSync: [ClientInteraction] = []
 
         let draftIds = Set(interactionDrafts.map { $0.id })
         for interaction in existing where !(interaction.id.map { draftIds.contains($0) } ?? false) {
-            context.delete(interaction)
+            interaction.deletedAt = now
+            interaction.updatedAt = now
+            interaction.client = clientObject
+            interactionsToSync.append(interaction)
         }
 
         for draft in interactionDrafts {
@@ -1164,13 +1176,21 @@ struct ClientDetailView: View {
             interaction.occurredAt = draft.occurredAt
             interaction.interactionStage = draft.stage
             interaction.value = draft.value.map { NSDecimalNumber(decimal: $0) }
+            interaction.createdAt = interaction.createdAt ?? now
+            interaction.updatedAt = now
+            interaction.deletedAt = nil
             interaction.client = clientObject
+            interactionsToSync.append(interaction)
         }
+
+        return interactionsToSync
     }
 
-    private func syncReminders(for clientObject: Client) {
+    private func syncReminders(for clientObject: Client) -> [ClientReminder] {
         let existing = (clientObject.reminders as? Set<ClientReminder>) ?? []
         var existingMap: [UUID: ClientReminder] = [:]
+        let now = Date()
+        var remindersToSync: [ClientReminder] = []
         for reminder in existing {
             if let id = reminder.id {
                 existingMap[id] = reminder
@@ -1179,7 +1199,10 @@ struct ClientDetailView: View {
 
         let draftIds = Set(reminderDrafts.map { $0.id })
         for reminder in existing where !(reminder.id.map { draftIds.contains($0) } ?? false) {
-            context.delete(reminder)
+            reminder.deletedAt = now
+            reminder.updatedAt = now
+            reminder.client = clientObject
+            remindersToSync.append(reminder)
         }
 
         for draft in reminderDrafts {
@@ -1193,9 +1216,14 @@ struct ClientDetailView: View {
             reminder.notes = trimmedNotes.isEmpty ? nil : trimmedNotes
             reminder.dueDate = draft.dueDate
             reminder.isCompleted = draft.isCompleted
-            reminder.createdAt = reminder.createdAt ?? Date()
+            reminder.createdAt = reminder.createdAt ?? now
+            reminder.updatedAt = now
+            reminder.deletedAt = nil
             reminder.client = clientObject
+            remindersToSync.append(reminder)
         }
+
+        return remindersToSync
     }
 
     private func interactionBinding(for id: UUID) -> Binding<InteractionDraft>? {

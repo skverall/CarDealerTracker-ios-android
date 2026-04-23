@@ -25,6 +25,7 @@ class UserViewModel: ObservableObject {
     
     func fetchUsers() {
         let request: NSFetchRequest<User> = User.fetchRequest()
+        request.predicate = NSPredicate(format: "deletedAt == nil")
         request.sortDescriptors = [NSSortDescriptor(keyPath: \User.name, ascending: true)]
 
         do {
@@ -65,11 +66,13 @@ class UserViewModel: ObservableObject {
     }
 
     func expenseCount(for user: User) -> Int {
-        return (user.expenses as? Set<Expense>)?.count ?? 0
+        return (user.expenses as? Set<Expense>)?.filter { $0.deletedAt == nil }.count ?? 0
     }
     
     func totalExpenses(for user: User) -> Decimal {
-        return (user.expenses as? Set<Expense>)?.reduce(0) { $0 + ($1.amount as Decimal? ?? 0) } ?? 0
+        return (user.expenses as? Set<Expense>)?
+            .filter { $0.deletedAt == nil }
+            .reduce(0) { $0 + ($1.amount as Decimal? ?? 0) } ?? 0
     }
     
     private func saveContext() {

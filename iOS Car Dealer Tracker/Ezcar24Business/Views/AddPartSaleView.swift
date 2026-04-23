@@ -807,6 +807,7 @@ struct ClientSelectionView: View {
     
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \Client.updatedAt, ascending: false)],
+        predicate: NSPredicate(format: "deletedAt == nil"),
         animation: .default)
     private var clients: FetchedResults<Client>
 

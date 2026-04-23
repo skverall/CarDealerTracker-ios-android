@@ -26,3 +26,12 @@ extension Part {
         }
     }
 }
+
+extension PartSale {
+    var activeLineItemsArray: [PartSaleLineItem] {
+        let set = lineItems as? Set<PartSaleLineItem> ?? []
+        return set
+            .filter { $0.deletedAt == nil }
+            .sorted { ($0.createdAt ?? .distantPast) < ($1.createdAt ?? .distantPast) }
+    }
+}
