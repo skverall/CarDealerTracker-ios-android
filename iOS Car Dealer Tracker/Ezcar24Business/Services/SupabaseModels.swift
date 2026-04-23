@@ -452,6 +452,7 @@ struct RemoteFinancialAccount: Codable {
     let dealerId: UUID
     let accountType: String
     let balance: Decimal
+    let openingBalance: Decimal?
     let updatedAt: Date
     let deletedAt: Date?
 
@@ -460,6 +461,7 @@ struct RemoteFinancialAccount: Codable {
         case dealerId = "dealer_id"
         case accountType = "account_type"
         case balance
+        case openingBalance = "opening_balance"
         case updatedAt = "updated_at"
         case deletedAt = "deleted_at"
     }
@@ -889,6 +891,7 @@ struct RemotePartSale: Codable {
     let buyerPhone: String?
     let paymentMethod: String?
     let accountId: UUID?
+    let clientId: UUID?
     let notes: String?
     let createdAt: Date
     let updatedAt: Date
@@ -903,6 +906,7 @@ struct RemotePartSale: Codable {
         case buyerPhone = "buyer_phone"
         case paymentMethod = "payment_method"
         case accountId = "account_id"
+        case clientId = "client_id"
         case notes
         case createdAt = "created_at"
         case updatedAt = "updated_at"

@@ -1,4 +1,6 @@
-import { createClient } from "npm:@supabase/supabase-js@2"
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2"
+
+type AnySupabaseClient = SupabaseClient<any, any, any>
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -38,14 +40,20 @@ Deno.serve(async (req) => {
     }
 
     const allowedPermissions = new Set([
+      "view_financials",
       "view_expenses",
       "view_inventory",
       "create_sale",
+      "view_parts_inventory",
+      "manage_parts_inventory",
+      "create_part_sale",
       "manage_team",
       "view_leads",
       "delete_records",
       "view_vehicle_cost",
       "view_vehicle_profit",
+      "view_part_cost",
+      "view_part_profit",
     ])
     const normalizedPermissions: Record<string, boolean> = {}
     if (permissions && typeof permissions === "object" && !Array.isArray(permissions)) {
@@ -83,13 +91,15 @@ Deno.serve(async (req) => {
       }
       targetOrgId = memberships[0].organization_id
     }
+    if (!targetOrgId) throw new Error("Organization membership not found")
+    const organizationId = targetOrgId
 
     // 3. Verify Permission (The Gatekeeper)
     let canManage = false
     for (const permKey of ["manage_team", "MANAGE_TEAM"]) {
       const { data, error } = await supabaseClient.rpc("has_permission", {
         _user_id: user.id,
-        _org_id: targetOrgId,
+        _org_id: organizationId,
         _perm_key: permKey,
       })
       if (error) throw error
@@ -139,7 +149,7 @@ Deno.serve(async (req) => {
       const { data: existingMember, error: memberCheckError } = await supabaseAdmin
         .from('dealer_team_members')
         .select('id')
-        .eq('organization_id', targetOrgId)
+        .eq('organization_id', organizationId)
         .eq('user_id', targetUserId)
         .maybeSingle()
 
@@ -149,7 +159,7 @@ Deno.serve(async (req) => {
       const { error: memberInsertError } = await supabaseAdmin
         .from('dealer_team_members')
         .insert({
-          organization_id: targetOrgId,
+          organization_id: organizationId,
           user_id: targetUserId,
           role: normalizedRole,
           status: 'active',
@@ -160,15 +170,15 @@ Deno.serve(async (req) => {
 
       await supabaseAdmin.from('team_invitations')
         .delete()
-        .eq('organization_id', targetOrgId)
+        .eq('organization_id', organizationId)
         .eq('email', normalizedEmail)
       await supabaseAdmin.from("team_invite_codes")
         .delete()
-        .eq("organization_id", targetOrgId)
+        .eq("organization_id", organizationId)
         .eq("invited_email", normalizedEmail)
 
       await supabaseAdmin.from('audit_logs').insert({
-        organization_id: targetOrgId,
+        organization_id: organizationId,
         actor_id: user.id,
         action: 'ADD_TEAM_MEMBER',
         details: { email: normalizedEmail, role: normalizedRole, permissions: normalizedPermissions, existing_user: existingUser }
@@ -194,21 +204,21 @@ Deno.serve(async (req) => {
 
     await supabaseAdmin.from("team_invite_codes")
       .delete()
-      .eq("organization_id", targetOrgId)
+      .eq("organization_id", organizationId)
       .eq("invited_email", normalizedEmail)
     await supabaseAdmin.from("team_invitations")
       .delete()
-      .eq("organization_id", targetOrgId)
+      .eq("organization_id", organizationId)
       .eq("email", normalizedEmail)
 
     // 4. Create Invitation
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h
 
-    const { error: inviteError } = await supabaseClient
+    const { error: inviteError } = await supabaseAdmin
       .from('team_invitations')
       .insert({
-        organization_id: targetOrgId,
+        organization_id: organizationId,
         email: normalizedEmail,
         role: normalizedRole,
         token,
@@ -222,7 +232,7 @@ Deno.serve(async (req) => {
     const inviteCode = await createInviteCode({
       supabaseAdmin,
       invitationToken: token,
-      organizationId: targetOrgId,
+      organizationId,
       invitedEmail: normalizedEmail,
       expiresAt,
       createdBy: user.id,
@@ -230,8 +240,8 @@ Deno.serve(async (req) => {
     })
 
     // 5. Audit Log
-    await supabaseClient.from('audit_logs').insert({
-      organization_id: targetOrgId,
+    await supabaseAdmin.from('audit_logs').insert({
+      organization_id: organizationId,
       actor_id: user.id,
       action: 'INVITE_MEMBER',
       details: {
@@ -296,7 +306,7 @@ function isUserExistsError(error: { message?: string }) {
   return message.includes("already") && (message.includes("registered") || message.includes("exists"))
 }
 
-async function findUserIdByEmail(supabaseAdmin: ReturnType<typeof createClient>, email: string) {
+async function findUserIdByEmail(supabaseAdmin: AnySupabaseClient, email: string) {
   const { data: profile, error: profileError } = await supabaseAdmin
     .from("profiles")
     .select("user_id")
@@ -322,7 +332,7 @@ async function findUserIdByEmail(supabaseAdmin: ReturnType<typeof createClient>,
 }
 
 async function createInviteCode(payload: {
-  supabaseAdmin: ReturnType<typeof createClient>
+  supabaseAdmin: AnySupabaseClient
   invitationToken: string
   organizationId: string
   invitedEmail: string

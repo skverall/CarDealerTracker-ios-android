@@ -59,6 +59,7 @@
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
         <attribute name="accountType" optional="NO" attributeType="String" />
         <attribute name="balance" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="openingBalance" optional="YES" attributeType="Decimal" />
         <attribute name="updatedAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
         <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
         <relationship name="expenses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Expense" inverseName="account" inverseEntity="Expense" />

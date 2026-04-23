@@ -1,4 +1,6 @@
-import { createClient } from "npm:@supabase/supabase-js@2"
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2"
+
+type AnySupabaseClient = SupabaseClient<any, any, any>
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -185,7 +187,7 @@ function getErrorCode(error: unknown) {
 }
 
 async function resolveInviteByToken(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: AnySupabaseClient,
   token: string
 ): Promise<InviteRow> {
   const { data, error } = await supabaseAdmin
@@ -200,7 +202,7 @@ async function resolveInviteByToken(
 }
 
 async function resolveInviteByCode(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: AnySupabaseClient,
   inviteCode: string
 ): Promise<{ invite: InviteRow; codeRow: InviteCodeRow }> {
   const nowIso = new Date().toISOString()
@@ -233,7 +235,7 @@ async function resolveInviteByCode(
 }
 
 async function isInviteCodeRateLimited(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: AnySupabaseClient,
   userId: string,
   inviteCode: string
 ) {
@@ -261,7 +263,7 @@ async function isInviteCodeRateLimited(
 }
 
 async function logInviteCodeAttempt(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: AnySupabaseClient,
   userId: string,
   inviteCode: string,
   success: boolean,

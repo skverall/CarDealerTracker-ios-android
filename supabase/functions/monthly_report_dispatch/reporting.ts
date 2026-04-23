@@ -356,6 +356,15 @@ export async function buildMonthlyReportSnapshot(
     loadPartSales(admin, organizationId, monthRange),
   ]);
 
+  const soldVehicleIds = Array.from(new Set(
+    sales
+      .map((sale) => sale.vehicle_id)
+      .filter((vehicleId): vehicleId is string => Boolean(vehicleId)),
+  ));
+  const vehicleSaleExpenses = soldVehicleIds.length > 0
+    ? await loadVehicleSaleExpenses(admin, organizationId, soldVehicleIds, monthRange)
+    : [];
+
   const partSaleIds = partSales.map((sale) => sale.id);
   const partSaleLineItems = partSaleIds.length > 0
     ? await loadPartSaleLineItems(admin, organizationId, partSaleIds)
@@ -367,7 +376,7 @@ export async function buildMonthlyReportSnapshot(
   const partBatchesById = new Map(partBatches.map((batch) => [batch.id, batch]));
 
   const vehicleExpenseMap = new Map<string, ExpenseRecord[]>();
-  for (const expense of expenses) {
+  for (const expense of vehicleSaleExpenses) {
     if (!expense.vehicle_id) {
       continue;
     }
@@ -951,6 +960,27 @@ async function loadExpenses(admin: SupabaseClient, organizationId: string, range
     .eq("dealer_id", organizationId)
     .is("deleted_at", null)
     .gte("date", range.startInstant.toString())
+    .lt("date", range.endInstant.toString());
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as ExpenseRecord[];
+}
+
+async function loadVehicleSaleExpenses(
+  admin: SupabaseClient,
+  organizationId: string,
+  vehicleIds: string[],
+  range: ReturnType<typeof monthBounds>,
+) {
+  const { data, error } = await admin
+    .from("crm_expenses")
+    .select("id, amount, date, expense_description, category, expense_type, vehicle_id")
+    .eq("dealer_id", organizationId)
+    .is("deleted_at", null)
+    .in("vehicle_id", vehicleIds)
     .lt("date", range.endInstant.toString());
 
   if (error) {

@@ -1587,6 +1587,231 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertTrue(payload.clients.isEmpty)
     }
 
+    func testVehicleInventoryIDSavesLocallyAndSyncs() async throws {
+        let dealerId = UUID()
+        let purchaseDate = Date(timeIntervalSince1970: 1_745_000_000)
+        let vehicleViewModel = VehicleViewModel(context: context)
+
+        let vehicle = vehicleViewModel.addVehicle(
+            vin: "1HGCM82633A004352",
+            inventoryID: "  Stock-101  ",
+            make: "Honda",
+            model: "Accord",
+            year: 2024,
+            purchasePrice: 18_500,
+            purchaseDate: purchaseDate,
+            status: "owned",
+            notes: ""
+        )
+
+        XCTAssertEqual(vehicle.inventoryID, "Stock-101")
+
+        let manager = makeCloudSyncManager()
+        let payload = try await manager.prepareLocalPushPayload(
+            context: context,
+            dealerId: dealerId,
+            window: .init(changedAfter: nil, changedBeforeOrAt: Date())
+        )
+
+        let remoteVehicle = try XCTUnwrap(payload.vehicles.first { $0.id == vehicle.id })
+        XCTAssertEqual(remoteVehicle.inventoryID, "Stock-101")
+    }
+
+    func testPrepareLocalPushPayloadIncludesComputedVehicleSaleProfit() async throws {
+        let dealerId = UUID()
+        let saleDate = Date(timeIntervalSince1970: 1_744_940_000)
+        let vehicle = makeVehicle(
+            make: "Profit",
+            model: "Source",
+            status: "sold",
+            purchasePrice: 10_000,
+            salePrice: 15_000,
+            purchaseDate: saleDate.addingTimeInterval(-86_400),
+            saleDate: saleDate
+        )
+        let sale = makeVehicleSale(
+            vehicle: vehicle,
+            amount: 15_000,
+            date: saleDate,
+            buyerName: "Buyer"
+        )
+
+        try context.save()
+
+        let manager = makeCloudSyncManager()
+        let payload = try await manager.prepareLocalPushPayload(
+            context: context,
+            dealerId: dealerId,
+            window: .init(changedAfter: nil, changedBeforeOrAt: saleDate.addingTimeInterval(60))
+        )
+
+        let remoteSale = try XCTUnwrap(payload.sales.first(where: { $0.id == sale.id }))
+        XCTAssertEqual(remoteSale.profit, Decimal(5_000))
+    }
+
+    func testDeleteVehiclePersistsTombstoneBeforeRemoteSyncFailure() async throws {
+        let dealerId = UUID()
+        let vehicleId = UUID()
+        let vehicle = makeVehicle(
+            make: "Delete",
+            model: "Persist",
+            status: "owned",
+            purchasePrice: 9_000,
+            purchaseDate: Date(timeIntervalSince1970: 1_744_950_000)
+        )
+        vehicle.id = vehicleId
+        try context.save()
+
+        let manager = CloudSyncManager(
+            client: SupabaseClient(
+                supabaseURL: URL(string: "http://127.0.0.1:9")!,
+                supabaseKey: "dummy"
+            ),
+            context: context
+        )
+
+        await manager.deleteVehicle(vehicle, dealerId: dealerId)
+
+        let backgroundContext = persistenceController.newBackgroundContext()
+        let persistedDeletedAt = try await backgroundContext.perform {
+            let request: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
+            request.fetchLimit = 1
+            request.predicate = NSPredicate(format: "id == %@", vehicleId as CVarArg)
+            return try backgroundContext.fetch(request).first?.deletedAt
+        }
+
+        XCTAssertNotNil(persistedDeletedAt)
+    }
+
+    func testPrepareLocalPushPayloadIncludesAccountOpeningBalance() async throws {
+        let dealerId = UUID()
+        let account = makeFinancialAccount(accountType: "Cash")
+        account.balance = NSDecimalNumber(decimal: 1_250)
+        account.openingBalance = NSDecimalNumber(decimal: 1_250)
+        account.updatedAt = Date(timeIntervalSince1970: 1_744_960_000)
+        try context.save()
+
+        let manager = makeCloudSyncManager()
+        let payload = try await manager.prepareLocalPushPayload(
+            context: context,
+            dealerId: dealerId,
+            window: .init(changedAfter: nil, changedBeforeOrAt: Date(timeIntervalSince1970: 1_744_960_060))
+        )
+
+        let remoteAccount = try XCTUnwrap(payload.accounts.first(where: { $0.id == account.id }))
+        XCTAssertEqual(remoteAccount.openingBalance, Decimal(1_250))
+    }
+
+    func testRecalculateAccountBalancesInfersLegacyOpeningBalance() {
+        let account = makeFinancialAccount(accountType: "Legacy Cash")
+        account.balance = NSDecimalNumber(decimal: 1_300)
+        account.updatedAt = Date(timeIntervalSince1970: 1_744_970_000)
+
+        _ = makeAccountTransaction(
+            account: account,
+            amount: 300,
+            type: .deposit,
+            date: Date(timeIntervalSince1970: 1_744_970_100),
+            note: "Activity"
+        )
+
+        let manager = makeCloudSyncManager()
+        let updatedIds = manager.recalculateAccountBalances(context: context)
+
+        XCTAssertEqual(account.openingBalance?.decimalValue, Decimal(1_000))
+        XCTAssertEqual(account.balance?.decimalValue, Decimal(1_300))
+        XCTAssertTrue(updatedIds.contains(account.id ?? UUID()))
+    }
+
+    func testPrepareLocalPushPayloadIncludesPartSaleClientId() async throws {
+        let dealerId = UUID()
+        let client = makeClient(name: "Part Buyer")
+        let sale = makePartSale(
+            amount: 450,
+            date: Date(timeIntervalSince1970: 1_744_980_000),
+            buyerName: "Part Buyer"
+        )
+        sale.client = client
+        try context.save()
+
+        let manager = makeCloudSyncManager()
+        let payload = try await manager.prepareLocalPushPayload(
+            context: context,
+            dealerId: dealerId,
+            window: .init(changedAfter: nil, changedBeforeOrAt: Date(timeIntervalSince1970: 1_744_980_060))
+        )
+
+        let remoteSale = try XCTUnwrap(payload.partSales.first(where: { $0.id == sale.id }))
+        XCTAssertEqual(remoteSale.clientId, client.id)
+    }
+
+    func testMergeRemoteChangesLinksPartSaleClient() throws {
+        let dealerId = UUID()
+        let clientId = UUID()
+        let saleId = UUID()
+        let now = Date(timeIntervalSince1970: 1_744_990_000)
+        let manager = makeCloudSyncManager()
+
+        let snapshot = RemoteSnapshot(
+            users: [],
+            accounts: [],
+            accountTransactions: [],
+            vehicles: [],
+            templates: [],
+            expenses: [],
+            sales: [],
+            debts: [],
+            debtPayments: [],
+            clients: [
+                RemoteClient(
+                    id: clientId,
+                    dealerId: dealerId,
+                    name: "Remote Client",
+                    phone: "+15550000000",
+                    email: nil,
+                    notes: nil,
+                    requestDetails: nil,
+                    preferredDate: nil,
+                    createdAt: now,
+                    status: "new",
+                    vehicleId: nil,
+                    updatedAt: now,
+                    deletedAt: nil
+                )
+            ],
+            clientInteractions: [],
+            clientReminders: [],
+            parts: [],
+            partBatches: [],
+            partSales: [
+                RemotePartSale(
+                    id: saleId,
+                    dealerId: dealerId,
+                    amount: 600,
+                    date: CloudSyncManager.encodeRemoteCalendarDate(now),
+                    buyerName: "Remote Client",
+                    buyerPhone: "+15550000000",
+                    paymentMethod: "Cash",
+                    accountId: nil,
+                    clientId: clientId,
+                    notes: nil,
+                    createdAt: now,
+                    updatedAt: now,
+                    deletedAt: nil
+                )
+            ],
+            partSaleLineItems: [],
+            serverNow: now
+        )
+
+        try manager.mergeRemoteChanges(snapshot, context: context, dealerId: dealerId)
+
+        let request: NSFetchRequest<PartSale> = PartSale.fetchRequest()
+        request.predicate = NSPredicate(format: "id == %@", saleId as CVarArg)
+        let sale = try XCTUnwrap(context.fetch(request).first)
+        XCTAssertEqual(sale.client?.id, clientId)
+    }
+
     func testSyncQueueQuarantinesCorruptedPersistenceFile() async throws {
         let queueURL = try makeTemporaryQueueURL()
         let directoryURL = queueURL.deletingLastPathComponent()

@@ -16,7 +16,7 @@ struct VehicleDetailView: View {
     @EnvironmentObject private var sessionStore: SessionStore
     @ObservedObject private var permissionService = PermissionService.shared
     @ObservedObject private var inventoryStatsManager = InventoryStatsManager.shared
-    let vehicle: Vehicle
+    @ObservedObject var vehicle: Vehicle
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var pendingPhotos: [PendingVehiclePhoto] = []
     @State private var showPhotoUploadSheet: Bool = false
@@ -139,7 +139,7 @@ struct VehicleDetailView: View {
     private var accounts: FetchedResults<FinancialAccount>
 
     init(vehicle: Vehicle, startEditing: Bool = false) {
-        self.vehicle = vehicle
+        _vehicle = ObservedObject(wrappedValue: vehicle)
         _isEditing = State(initialValue: startEditing)
         _expenses = FetchRequest(
             sortDescriptors: [NSSortDescriptor(keyPath: \Expense.date, ascending: false)],

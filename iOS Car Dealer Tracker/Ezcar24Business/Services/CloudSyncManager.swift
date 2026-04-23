@@ -1468,7 +1468,17 @@ final class CloudSyncManager: ObservableObject {
         // Soft delete: Update local object, then sync
         vehicle.deletedAt = Date()
         vehicle.updatedAt = Date()
-        // We need to save context? The caller usually saves.
+        let objectContext = vehicle.managedObjectContext ?? context
+
+        do {
+            if objectContext.hasChanges {
+                try objectContext.save()
+            }
+        } catch {
+            print("CloudSyncManager deleteVehicle local save error: \(error)")
+            showError("Couldn't delete the vehicle locally. Please try again.")
+            return
+        }
         
         guard let remote = makeRemoteVehicle(from: vehicle, dealerId: dealerId) else { return }
         
@@ -3026,6 +3036,7 @@ final class CloudSyncManager: ObservableObject {
                 dealerId: dealerId,
                 accountType: "Cash",
                 balance: 0,
+                openingBalance: 0,
                 updatedAt: now,
                 deletedAt: nil
             ))
@@ -3037,6 +3048,7 @@ final class CloudSyncManager: ObservableObject {
                 dealerId: dealerId,
                 accountType: "Bank",
                 balance: 0,
+                openingBalance: 0,
                 updatedAt: now,
                 deletedAt: nil
             ))
@@ -3165,7 +3177,7 @@ final class CloudSyncManager: ObservableObject {
         return AccountLedgerSnapshot(totals: totals, activeAccounts: activeAccounts)
     }
 
-    nonisolated private func recalculateAccountBalances(context: NSManagedObjectContext) -> Set<UUID> {
+    nonisolated func recalculateAccountBalances(context: NSManagedObjectContext) -> Set<UUID> {
         let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
         accountRequest.predicate = NSPredicate(format: "deletedAt == nil")
         let accounts = (try? context.fetch(accountRequest)) ?? []
@@ -3176,11 +3188,35 @@ final class CloudSyncManager: ObservableObject {
 
         for account in accounts {
             guard let id = account.id else { continue }
-            guard ledgerSnapshot.activeAccounts.contains(id) else { continue }
-            let newBalance = ledgerSnapshot.totals[id] ?? 0
             let currentBalance = account.balance?.decimalValue ?? 0
+            let ledgerTotal = ledgerSnapshot.totals[id] ?? 0
+            let hasLedgerActivity = ledgerSnapshot.activeAccounts.contains(id)
+            let needsOpeningBalanceInference = account.openingBalance == nil && (hasLedgerActivity || currentBalance != 0)
+            let openingBalance: Decimal
+
+            if let persistedOpeningBalance = account.openingBalance?.decimalValue {
+                openingBalance = persistedOpeningBalance
+            } else {
+                openingBalance = currentBalance - ledgerTotal
+            }
+
+            let shouldRecalculateBalance = hasLedgerActivity || account.openingBalance != nil || needsOpeningBalanceInference
+            var didChange = false
+
+            if needsOpeningBalanceInference {
+                account.openingBalance = NSDecimalNumber(decimal: openingBalance)
+                didChange = true
+            }
+
+            guard shouldRecalculateBalance else { continue }
+
+            let newBalance = openingBalance + ledgerTotal
             if decimalAbs(newBalance - currentBalance) > epsilon {
                 account.balance = NSDecimalNumber(decimal: newBalance)
+                didChange = true
+            }
+
+            if didChange {
                 account.updatedAt = now
                 updatedIds.insert(id)
             }
@@ -3192,7 +3228,20 @@ final class CloudSyncManager: ObservableObject {
         value < 0 ? -value : value
     }
     
-    nonisolated private func mergeRemoteChanges(
+    nonisolated func mergeRemoteChanges(
+        _ snapshot: RemoteSnapshot,
+        context: NSManagedObjectContext,
+        dealerId: UUID
+    ) throws {
+        try mergeRemoteChanges(
+            snapshot,
+            context: context,
+            dealerId: dealerId,
+            missingCleanup: nil
+        )
+    }
+
+    private nonisolated func mergeRemoteChanges(
         _ snapshot: RemoteSnapshot,
         context: NSManagedObjectContext,
         dealerId: UUID,
@@ -3325,6 +3374,7 @@ final class CloudSyncManager: ObservableObject {
             account.id = a.id
             account.accountType = a.accountType
             account.balance = NSDecimalNumber(decimal: a.balance)
+            account.openingBalance = a.openingBalance.map { NSDecimalNumber(decimal: $0) }
             account.updatedAt = a.updatedAt
             account.deletedAt = nil
         }
@@ -3823,7 +3873,7 @@ final class CloudSyncManager: ObservableObject {
             
             // Re-fetch maps to include newly created objects
             let allVehicles: [UUID: Vehicle] = fetchExisting(entityName: "Vehicle", ids: snapshot.vehicles.map { $0.id } + snapshot.clients.compactMap { $0.vehicleId } + snapshot.sales.map { $0.vehicleId } + snapshot.expenses.compactMap { $0.vehicleId })
-            let allClients: [UUID: Client] = fetchExisting(entityName: "Client", ids: snapshot.clients.map { $0.id } + snapshot.clientInteractions.map { $0.clientId } + snapshot.clientReminders.map { $0.clientId })
+            let allClients: [UUID: Client] = fetchExisting(entityName: "Client", ids: snapshot.clients.map { $0.id } + snapshot.clientInteractions.map { $0.clientId } + snapshot.clientReminders.map { $0.clientId } + snapshot.partSales.compactMap { $0.clientId })
             let allUsers: [UUID: User] = fetchExisting(entityName: "User", ids: snapshot.users.map { $0.id } + snapshot.expenses.compactMap { $0.userId })
             let allAccounts: [UUID: FinancialAccount] = fetchExisting(entityName: "FinancialAccount", ids: snapshot.accounts.map { $0.id } + snapshot.expenses.compactMap { $0.accountId } + snapshot.debtPayments.compactMap { $0.accountId } + snapshot.accountTransactions.map { $0.accountId } + snapshot.sales.compactMap { $0.accountId } + snapshot.partSales.compactMap { $0.accountId })
             let allDebts: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: snapshot.debts.map { $0.id } + snapshot.debtPayments.map { $0.debtId })
@@ -3875,13 +3925,18 @@ final class CloudSyncManager: ObservableObject {
                 }
             }
 
-            // Link Part Sales -> Account
+            // Link Part Sales -> Account, Client
             for s in snapshot.partSales {
                 if let sale = existingPartSales[s.id] ?? (try? context.fetch(PartSale.fetchRequest()).first(where: { $0.id == s.id })) {
                     if let aId = s.accountId {
                         sale.account = allAccounts[aId]
                     } else {
                         sale.account = nil
+                    }
+                    if let clientId = s.clientId {
+                        sale.client = allClients[clientId]
+                    } else {
+                        sale.client = nil
                     }
                 }
             }
@@ -4441,6 +4496,7 @@ final class CloudSyncManager: ObservableObject {
     nonisolated private func makeRemoteFinancialAccount(from account: FinancialAccount, dealerId: UUID) -> RemoteFinancialAccount? {
         guard let id = account.id else { return nil }
         let balanceDecimal = account.balance?.decimalValue ?? 0
+        let openingBalanceDecimal = account.openingBalance?.decimalValue
         let updatedAt = account.updatedAt ?? Date()
         let type = account.accountType ?? "Account"
         return RemoteFinancialAccount(
@@ -4448,6 +4504,7 @@ final class CloudSyncManager: ObservableObject {
             dealerId: dealerId,
             accountType: type,
             balance: balanceDecimal,
+            openingBalance: openingBalanceDecimal,
             updatedAt: updatedAt,
             deletedAt: account.deletedAt
         )
@@ -4580,7 +4637,7 @@ final class CloudSyncManager: ObservableObject {
             vehicleId: vehicleId,
             amount: (sale.amount as Decimal?) ?? 0,
             salePrice: (sale.amount as Decimal?) ?? 0,
-            profit: nil,
+            profit: resolvedSaleProfit(for: sale, dealerId: dealerId),
             date: CloudSyncManager.encodeRemoteCalendarDate(date),
             buyerName: sale.buyerName,
             buyerPhone: sale.buyerPhone,
@@ -4602,6 +4659,41 @@ final class CloudSyncManager: ObservableObject {
             updatedAt: sale.updatedAt ?? Date(),
             deletedAt: sale.deletedAt
         )
+    }
+
+    nonisolated private func resolvedSaleProfit(for sale: Sale, dealerId: UUID) -> Decimal {
+        guard let vehicle = sale.vehicle else { return 0 }
+
+        let salePrice = sale.amount?.decimalValue ?? 0
+        let expenses = ((vehicle.expenses as? Set<Expense>) ?? [])
+            .filter { $0.deletedAt == nil }
+        let holdingCost = resolvedHoldingCost(for: vehicle, dealerId: dealerId, asOf: sale.date ?? vehicle.saleDate ?? Date())
+        let totalCost = VehicleFinancialsCalculator.calculateTotalCost(
+            vehicle: vehicle,
+            expenses: Array(expenses),
+            holdingCost: holdingCost
+        )
+        let vatRefund = sale.vatRefundAmount?.decimalValue ?? 0
+
+        return VehicleFinancialsCalculator.calculateActualProfit(
+            salePrice: salePrice,
+            totalCost: totalCost
+        ) + vatRefund
+    }
+
+    nonisolated private func resolvedHoldingCost(for vehicle: Vehicle, dealerId: UUID, asOf date: Date) -> Decimal {
+        guard let objectContext = vehicle.managedObjectContext else { return 0 }
+
+        let request = HoldingCostSettings.fetchRequest()
+        request.fetchLimit = 1
+        request.sortDescriptors = [
+            NSSortDescriptor(keyPath: \HoldingCostSettings.updatedAt, ascending: false),
+            NSSortDescriptor(keyPath: \HoldingCostSettings.createdAt, ascending: false)
+        ]
+        request.predicate = NSPredicate(format: "dealerId == %@", dealerId as CVarArg)
+
+        guard let settings = try? objectContext.fetch(request).first else { return 0 }
+        return HoldingCostCalculator(settings: settings).calculateHoldingCost(for: vehicle, asOfDate: date)
     }
 
     nonisolated private func makeRemoteDebt(from debt: Debt, dealerId: UUID) -> RemoteDebt? {
@@ -4742,6 +4834,7 @@ final class CloudSyncManager: ObservableObject {
             buyerPhone: sale.buyerPhone,
             paymentMethod: sale.paymentMethod,
             accountId: sale.account?.id,
+            clientId: sale.client?.id,
             notes: sale.notes,
             createdAt: sale.createdAt ?? Date(),
             updatedAt: sale.updatedAt ?? Date(),

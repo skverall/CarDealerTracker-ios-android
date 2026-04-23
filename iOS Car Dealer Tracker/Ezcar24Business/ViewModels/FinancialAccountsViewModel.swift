@@ -34,17 +34,21 @@ class FinancialAccountsViewModel: ObservableObject {
     }
     
     func createDefaultAccounts() {
+        let now = Date()
+
         let cashAccount = FinancialAccount(context: context)
         cashAccount.id = UUID()
         cashAccount.accountType = FinancialAccountKind.compose(kind: .cash, name: nil)
         cashAccount.balance = NSDecimalNumber(value: 0)
-        cashAccount.updatedAt = Date()
+        cashAccount.openingBalance = NSDecimalNumber(value: 0)
+        cashAccount.updatedAt = now
 
         let bankAccount = FinancialAccount(context: context)
         bankAccount.id = UUID()
         bankAccount.accountType = FinancialAccountKind.compose(kind: .bank, name: nil)
         bankAccount.balance = NSDecimalNumber(value: 0)
-        bankAccount.updatedAt = Date()
+        bankAccount.openingBalance = NSDecimalNumber(value: 0)
+        bankAccount.updatedAt = now
 
         saveContext()
         fetchAccounts()
@@ -62,10 +66,12 @@ class FinancialAccountsViewModel: ObservableObject {
         }
 
         let account = FinancialAccount(context: context)
+        let now = Date()
         account.id = UUID()
         account.accountType = accountType
         account.balance = NSDecimalNumber(decimal: startingBalance)
-        account.updatedAt = Date()
+        account.openingBalance = NSDecimalNumber(decimal: startingBalance)
+        account.updatedAt = now
 
         saveContext()
         fetchAccounts()
