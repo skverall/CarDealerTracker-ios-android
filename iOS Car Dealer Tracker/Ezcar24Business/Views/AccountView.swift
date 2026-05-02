@@ -176,7 +176,10 @@ struct AccountView: View {
             } label: {
                 MenuRow(icon: "globe", title: "region_language".localizedKey, color: .indigo)
             }
+
+            themeToggleRow
             
+            Divider().padding(.leading, 52)
             notificationsRow
             
             partsToggleRow
@@ -399,74 +402,166 @@ struct AccountView: View {
     
     @ViewBuilder
     private var subscriptionCard: some View {
-        HStack(spacing: 16) {
-            ZStack {
-                LinearGradient(colors: subscriptionManager.isProAccessActive ? [.yellow, .orange] : [.gray.opacity(0.5), .gray.opacity(0.3)], startPoint: .topLeading, endPoint: .bottomTrailing)
-                    .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                
-                Image(systemName: subscriptionManager.isProAccessActive ? "crown.fill" : "star.fill")
-                    .foregroundColor(.white)
-                    .font(.title3)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(subscriptionManager.isProAccessActive ? "dealer_pro".localizedString : "free_plan".localizedString)
-                    .font(.headline)
-                    .foregroundColor(ColorTheme.primaryText)
-                
-                if subscriptionManager.isProAccessActive {
-                    if let expirationDate = subscriptionManager.expirationDate {
-                        let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: expirationDate).day ?? 0
-                        
-                        if daysRemaining <= 7 {
-                            Text(String(format: "subscription_ends_in_days".localizedString, max(0, daysRemaining)))
-                                .font(.caption)
-                                .foregroundColor(.orange)
-                        } else {
-                            Text(String(format: "subscription_active_until".localizedString, expirationDate.formatted(date: .numeric, time: .omitted)))
-                                .font(.caption)
-                                .foregroundColor(.green)
-                        }
-                    } else {
-                        Text("active_subscription".localizedString)
-                            .font(.caption)
-                            .foregroundColor(.green)
-                    }
-                } else {
-                    Text("upgrade_to_unlock".localizedString)
-                        .font(.subheadline)
-                        .foregroundColor(ColorTheme.secondaryText)
-                }
-            }
-            
-            Spacer()
-            
-            Button {
-                if subscriptionManager.isProAccessActive {
-                    subscriptionManager.showManageSubscriptions()
-                } else {
-                    if case .signedIn = sessionStore.status {
-                        showingPaywall = true
-                    } else {
-                        appSessionState.exitGuestModeForLogin()
-                        showingLogin = true
-                    }
-                }
-            } label: {
-                Text(subscriptionManager.isProAccessActive ? "manage".localizedString : "upgrade".localizedString)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(subscriptionManager.isProAccessActive ? .blue : .white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(subscriptionManager.isProAccessActive ? Color.blue.opacity(0.1) : Color.blue)
-                    .cornerRadius(20)
+        Button {
+            openSubscriptionDestination()
+        } label: {
+            if subscriptionManager.isProAccessActive {
+                activeSubscriptionCard
+            } else {
+                freeSubscriptionCard
             }
         }
-        .padding(16)
-        .background(ColorTheme.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 2)
+        .buttonStyle(.hapticScale)
+    }
+
+    private var freeSubscriptionCard: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 50, height: 50)
+
+                    Image(systemName: "crown.fill")
+                        .font(.title3)
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("free_plan".localizedString)
+                        .font(.headline.weight(.bold))
+                        .foregroundColor(.white)
+
+                    Text("upgrade_to_unlock".localizedString)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.8))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+            }
+
+            HStack(spacing: 8) {
+                Text("upgrade".localizedString)
+                Image(systemName: "sparkles")
+                    .font(.subheadline.weight(.semibold))
+            }
+            .font(.headline.weight(.bold))
+            .foregroundColor(.black)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(
+                LinearGradient(colors: [.yellow, .orange], startPoint: .leading, endPoint: .trailing)
+            )
+            .clipShape(Capsule())
+            .shadow(color: Color.orange.opacity(0.3), radius: 8, x: 0, y: 4)
+        }
+        .padding(20)
+        .background(
+            ZStack {
+                Color(red: 0.07, green: 0.07, blue: 0.1)
+                
+                Circle()
+                    .fill(Color.orange.opacity(0.15))
+                    .frame(width: 150)
+                    .blur(radius: 40)
+                    .offset(x: 80, y: -40)
+                
+                Circle()
+                    .fill(Color.blue.opacity(0.15))
+                    .frame(width: 150)
+                    .blur(radius: 40)
+                    .offset(x: -80, y: 40)
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.0), .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 15, x: 0, y: 8)
+    }
+
+    private var activeSubscriptionCard: some View {
+        HStack(spacing: 16) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(LinearGradient(colors: [.yellow, .orange], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 50, height: 50)
+
+                Image(systemName: "crown.fill")
+                    .foregroundColor(.white)
+                    .font(.title3)
+                    .shadow(color: .black.opacity(0.2), radius: 2, x: 0, y: 1)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("dealer_pro".localizedString)
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(.white)
+
+                if let expirationDate = subscriptionManager.expirationDate {
+                    let daysRemaining = Calendar.current.dateComponents([.day], from: Date(), to: expirationDate).day ?? 0
+
+                    if daysRemaining <= 7 {
+                        Text(String(format: "subscription_ends_in_days".localizedString, max(0, daysRemaining)))
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(.orange)
+                    } else {
+                        Text(String(format: "subscription_active_until".localizedString, expirationDate.formatted(date: .numeric, time: .omitted)))
+                            .font(.caption.weight(.medium))
+                            .foregroundColor(.white.opacity(0.8))
+                    }
+                } else {
+                    Text("active_subscription".localizedString)
+                        .font(.caption.weight(.medium))
+                        .foregroundColor(Color(red: 0.16, green: 0.8, blue: 0.4))
+                }
+            }
+
+            Spacer()
+
+            Text("manage".localizedString)
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(.black)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.white)
+                .clipShape(Capsule())
+                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+        }
+        .padding(20)
+        .background(
+            ZStack {
+                Color(red: 0.07, green: 0.07, blue: 0.1)
+                
+                Circle()
+                    .fill(Color.orange.opacity(0.15))
+                    .frame(width: 150)
+                    .blur(radius: 40)
+                    .offset(x: 80, y: -40)
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.0), .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 15, x: 0, y: 8)
+    }
+
+    private func openSubscriptionDestination() {
+        if subscriptionManager.isProAccessActive {
+            subscriptionManager.showManageSubscriptions()
+        } else {
+            if case .signedIn = sessionStore.status {
+                showingPaywall = true
+            } else {
+                appSessionState.exitGuestModeForLogin()
+                showingLogin = true
+            }
+        }
     }
 
     @ViewBuilder
@@ -474,13 +569,13 @@ struct AccountView: View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 16) {
                 ZStack {
-                    LinearGradient(colors: [.purple, .indigo], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(ColorTheme.purple.opacity(0.12))
                         .frame(width: 44, height: 44)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     
                     Image(systemName: "gift.fill")
                         .font(.title3)
-                        .foregroundColor(.white)
+                        .foregroundColor(ColorTheme.purple)
                 }
                 
                 VStack(alignment: .leading, spacing: 4) {
@@ -524,19 +619,25 @@ struct AccountView: View {
             Button {
                 Task { await shareDealerInvite() }
             } label: {
-                HStack {
+                HStack(spacing: 8) {
                     if isFetchingReferralCode {
-                        ProgressView().tint(.white).padding(.trailing, 4)
+                        ProgressView()
+                            .tint(ColorTheme.primary)
                     }
                     Text("invite_dealer".localizedString)
                         .font(.subheadline.weight(.semibold))
                 }
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(ColorTheme.primary)
-                .foregroundColor(.white)
-                .cornerRadius(10)
+                .padding(.vertical, 11)
+                .background(ColorTheme.primary.opacity(0.08))
+                .foregroundColor(ColorTheme.primary)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(ColorTheme.primary.opacity(0.14), lineWidth: 1)
+                )
             }
+            .buttonStyle(.hapticScale)
             .padding(.horizontal, 16)
             .padding(.bottom, 16)
             .disabled(isFetchingReferralCode)
@@ -708,6 +809,51 @@ struct AccountView: View {
                 }
                 .padding(16)
             }
+        }
+    }
+
+    private var themeToggleRow: some View {
+        VStack(spacing: 0) {
+            Divider().padding(.leading, 52)
+
+            Button {
+                let generator = UIImpactFeedbackGenerator(style: .light)
+                generator.impactOccurred()
+                regionSettings.selectedTheme = regionSettings.selectedTheme == .light ? .dark : .light
+            } label: {
+                HStack(spacing: 16) {
+                    ZStack {
+                        Circle()
+                            .fill(ColorTheme.primary.opacity(0.1))
+                            .frame(width: 36, height: 36)
+                        Image(systemName: regionSettings.selectedTheme == .light ? "sun.max.fill" : "moon.fill")
+                            .font(.system(size: 16))
+                            .foregroundColor(ColorTheme.primary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("appearance_theme".localizedString)
+                            .font(.body)
+                            .foregroundColor(ColorTheme.primaryText)
+                        Text(regionSettings.selectedTheme.displayName)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+
+                    Spacer()
+
+                    Text(regionSettings.selectedTheme == .light ? "theme_dark".localizedString : "theme_light".localizedString)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(ColorTheme.primary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(ColorTheme.primary.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+                .padding(16)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 

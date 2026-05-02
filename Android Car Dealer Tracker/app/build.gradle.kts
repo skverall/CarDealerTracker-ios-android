@@ -25,8 +25,8 @@ android {
         applicationId = "com.ezcar24.business"
         minSdk = 26
         targetSdk = 34
-        versionCode = 219
-        versionName = "2.1.9"
+        versionCode = 2112
+        versionName = "2.1.12"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

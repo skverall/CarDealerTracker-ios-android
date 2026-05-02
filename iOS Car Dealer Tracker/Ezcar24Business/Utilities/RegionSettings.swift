@@ -152,6 +152,27 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     }
 }
 
+enum AppTheme: String, CaseIterable, Codable, Identifiable {
+    case light
+    case dark
+
+    var id: String { rawValue }
+
+    @MainActor var displayName: String {
+        switch self {
+        case .light: return "theme_light".localizedString
+        case .dark: return "theme_dark".localizedString
+        }
+    }
+
+    var colorScheme: ColorScheme {
+        switch self {
+        case .light: return .light
+        case .dark: return .dark
+        }
+    }
+}
+
 // MARK: - Region Settings Manager
 
 @MainActor
@@ -162,6 +183,7 @@ final class RegionSettingsManager: ObservableObject {
     private let languageKey = "app_selected_language"
     private let hasSelectedRegionKey = "app_has_selected_region"
     private let partsEnabledKey = "app_parts_enabled"
+    private let themeKey = "app_selected_theme"
     
     @Published var isPartsEnabled: Bool {
         didSet {
@@ -179,6 +201,12 @@ final class RegionSettingsManager: ObservableObject {
     @Published var selectedLanguage: AppLanguage {
         didSet {
             UserDefaults.standard.set(selectedLanguage.rawValue, forKey: languageKey)
+        }
+    }
+
+    @Published var selectedTheme: AppTheme {
+        didSet {
+            UserDefaults.standard.set(selectedTheme.rawValue, forKey: themeKey)
         }
     }
     
@@ -214,6 +242,13 @@ final class RegionSettingsManager: ObservableObject {
             self.selectedLanguage = language
         } else {
             self.selectedLanguage = .english
+        }
+
+        if let savedTheme = UserDefaults.standard.string(forKey: themeKey),
+           let theme = AppTheme(rawValue: savedTheme) {
+            self.selectedTheme = theme
+        } else {
+            self.selectedTheme = .light
         }
         
         self.hasSelectedRegion = UserDefaults.standard.bool(forKey: hasSelectedRegionKey)

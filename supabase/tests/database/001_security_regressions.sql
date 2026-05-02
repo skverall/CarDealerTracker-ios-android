@@ -3,7 +3,7 @@ begin;
 create schema if not exists extensions;
 create extension if not exists pgtap with schema extensions;
 
-select plan(22);
+select plan(30);
 
 select is(
   (
@@ -172,6 +172,64 @@ select is(
   ),
   'search_path=public, auth, extensions, pg_temp',
   'token-gated admin user listing RPC should pin search_path'
+);
+
+select ok(
+  has_function_privilege('authenticated', 'public.assert_crm_permission(uuid,text[])', 'EXECUTE'),
+  'authenticated should execute assert_crm_permission'
+);
+
+select ok(
+  pg_get_functiondef('public.get_changes(uuid,text)'::regprocedure) like '%crm_effective_permission%',
+  'get_changes should enforce effective permission filters'
+);
+
+select ok(
+  pg_get_functiondef('public.get_changes(uuid,text)'::regprocedure) like '%CASE WHEN can_view_financials%',
+  'get_changes should keep snapshot keys while filtering financial data'
+);
+
+select ok(
+  pg_get_functiondef('public.create_vehicle_share_link(uuid,uuid,text,text)'::regprocedure) like '%assert_crm_permission%',
+  'create_vehicle_share_link should check CRM permissions'
+);
+
+select ok(
+  pg_get_functiondef('public.create_vehicle_share_link(uuid,uuid,text,text)'::regprocedure) like '%v.dealer_id = p_dealer_id%',
+  'create_vehicle_share_link should verify vehicle ownership'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_trigger
+    where tgrelid = 'crm.sales'::regclass
+      and tgname = 'trg_crm_sales_permission_guard'
+      and not tgisinternal
+  ),
+  'crm.sales should have a write permission guard trigger'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_trigger
+    where tgrelid = 'crm.vehicles'::regclass
+      and tgname = 'trg_crm_vehicles_permission_guard'
+      and not tgisinternal
+  ),
+  'crm.vehicles should have a write permission guard trigger'
+);
+
+select ok(
+  exists (
+    select 1
+    from pg_trigger
+    where tgrelid = 'public.crm_part_sales'::regclass
+      and tgname = 'trg_crm_part_sales_permission_guard'
+      and not tgisinternal
+  ),
+  'crm_part_sales should have a write permission guard trigger'
 );
 
 select * from finish();

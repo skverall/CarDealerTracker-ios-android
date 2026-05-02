@@ -106,6 +106,7 @@ struct Ezcar24BusinessApp: App {
                 .environmentObject(regionSettings)
                 .environment(\.managedObjectContext, persistenceController.viewContext)
                 .environment(\.locale, regionSettings.selectedLanguage.locale)
+                .preferredColorScheme(regionSettings.selectedTheme.colorScheme)
                 .id("\(regionSettings.selectedLanguage.id)-\(persistenceController.activeStoreKey)")
                 .onOpenURL { url in
                     Task {

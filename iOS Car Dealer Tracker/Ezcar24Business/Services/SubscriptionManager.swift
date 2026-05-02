@@ -14,6 +14,7 @@ class SubscriptionManager: ObservableObject {
     @Published var isRestoring: Bool = false
     @Published var isCheckingStatus: Bool = true
     @Published var introEligibility: [String: IntroEligibility] = [:]
+    @Published var standaloneSubscriptionProducts: [StoreProduct] = []
     @Published var bonusAccessUntil: Date?
     @Published var bonusMonths: Int = 0
     
@@ -24,7 +25,16 @@ class SubscriptionManager: ObservableObject {
 
     var currentSubscriptionPackages: [Package] {
         guard let currentOffering else { return [] }
-        return filteredPackages(currentOffering.availablePackages)
+        return SubscriptionPackageCatalog.filteredPackages(currentOffering.availablePackages)
+    }
+
+    var currentSubscriptionPlans: [SubscriptionPurchasePlan] {
+        let packagePlans = currentSubscriptionPackages.map { SubscriptionPurchasePlan(package: $0) }
+        let packageProductIds = Set(packagePlans.map(\.storeProduct.productIdentifier))
+        let standalonePlans = standaloneSubscriptionProducts
+            .filter { !packageProductIds.contains($0.productIdentifier) }
+            .map { SubscriptionPurchasePlan(product: $0) }
+        return SubscriptionPackageCatalog.sortedPlans(packagePlans + standalonePlans)
     }
     
     enum RestoreStatus: Equatable {
@@ -83,9 +93,7 @@ class SubscriptionManager: ObservableObject {
                 } else if let offerings = offerings {
                     self.currentOffering = offerings.current
                     print("Offerings fetched: \(offerings.current?.identifier ?? "None")")
-                    
-                    let products = self.currentSubscriptionPackages.map(\.storeProduct)
-                    self.checkIntroEligibility(for: products)
+                    self.fetchStandaloneProductsIfNeeded(for: offerings.current)
                 }
             }
         }
@@ -126,6 +134,62 @@ class SubscriptionManager: ObservableObject {
                 } else {
                     completion(false)
                 }
+            }
+        }
+    }
+
+    func purchase(plan: SubscriptionPurchasePlan, completion: @escaping (Bool) -> Void = { _ in }) {
+        if let package = plan.package {
+            purchase(package: package, completion: completion)
+        } else {
+            purchase(product: plan.storeProduct, completion: completion)
+        }
+    }
+
+    private func purchase(product: StoreProduct, completion: @escaping (Bool) -> Void = { _ in }) {
+        guard canUseRevenueCat else {
+            isLoading = false
+            completion(false)
+            return
+        }
+        self.isLoading = true
+        Purchases.shared.purchase(product: product) { [weak self] (transaction, customerInfo, error, userCancelled) in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.isLoading = false
+
+                if let error = error {
+                    if !userCancelled {
+                        self.errorMessage = error.localizedDescription
+                    }
+                    completion(false)
+                } else if let customerInfo = customerInfo {
+                    self.updateProStatus(from: customerInfo)
+                    completion(true)
+                } else {
+                    completion(false)
+                }
+            }
+        }
+    }
+
+    func purchaseStandaloneProduct(productIdentifier: String, completion: @escaping (Bool) -> Void = { _ in }) {
+        guard canUseRevenueCat else {
+            isLoading = false
+            completion(false)
+            return
+        }
+        self.isLoading = true
+        Purchases.shared.getProducts([productIdentifier]) { [weak self] products in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                guard let product = products.first(where: { $0.productIdentifier == productIdentifier }) else {
+                    self.isLoading = false
+                    self.errorMessage = "Weekly plan is not available yet."
+                    completion(false)
+                    return
+                }
+                self.purchase(product: product, completion: completion)
             }
         }
     }
@@ -223,6 +287,7 @@ class SubscriptionManager: ObservableObject {
             self.isRestoring = false
             self.isLoading = false
             self.isCheckingStatus = false
+            self.standaloneSubscriptionProducts = []
             self.bonusAccessUntil = nil
             self.bonusMonths = 0
         }
@@ -276,26 +341,101 @@ class SubscriptionManager: ObservableObject {
         self.isProAccessActive = hasRevenueCat || hasBonus
     }
 
-    private func filteredPackages(_ packages: [Package]) -> [Package] {
+    private func fetchStandaloneProductsIfNeeded(for offering: Offering?) {
+        let offeringProducts = offering.map { SubscriptionPackageCatalog.filteredPackages($0.availablePackages).map(\.storeProduct) } ?? []
+        let hasWeeklyPackage = offeringProducts.contains { $0.subscriptionPeriod?.unit == .week }
+        guard !hasWeeklyPackage else {
+            standaloneSubscriptionProducts = []
+            checkIntroEligibility(for: offeringProducts)
+            return
+        }
+
+        let existingProductIds = Set(offeringProducts.map(\.productIdentifier))
+        let candidates = SubscriptionPackageCatalog.standaloneWeeklyProductIdentifiers.filter { !existingProductIds.contains($0) }
+        guard !candidates.isEmpty else {
+            standaloneSubscriptionProducts = []
+            checkIntroEligibility(for: offeringProducts)
+            return
+        }
+
+        Purchases.shared.getProducts(candidates) { [weak self] products in
+            guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.standaloneSubscriptionProducts = SubscriptionPackageCatalog.filteredProducts(products)
+                self.checkIntroEligibility(for: offeringProducts + self.standaloneSubscriptionProducts)
+            }
+        }
+    }
+}
+
+struct SubscriptionPurchasePlan: Identifiable {
+    let package: Package?
+    let storeProduct: StoreProduct
+
+    init(package: Package) {
+        self.package = package
+        self.storeProduct = package.storeProduct
+    }
+
+    init(product: StoreProduct) {
+        self.package = nil
+        self.storeProduct = product
+    }
+
+    var id: String {
+        storeProduct.productIdentifier
+    }
+}
+
+enum SubscriptionPackageCatalog {
+    static let standaloneWeeklyProductIdentifiers = [
+        "com.ezcar24.business.weekly"
+    ]
+
+    static func filteredPackages(_ packages: [Package]) -> [Package] {
         packages
             .filter {
                 guard $0.storeProduct.productType != .nonConsumable,
                       let period = $0.storeProduct.subscriptionPeriod else { return false }
-                return period.unit == .month || period.unit == .year
+                return period.unit == .week || period.unit == .month || period.unit == .year
             }
             .sorted { lhs, rhs in
                 sortOrder(for: lhs) < sortOrder(for: rhs)
             }
     }
 
-    private func sortOrder(for package: Package) -> Int {
-        guard let period = package.storeProduct.subscriptionPeriod else { return 99 }
+    static func filteredProducts(_ products: [StoreProduct]) -> [StoreProduct] {
+        products
+            .filter {
+                guard $0.productType != .nonConsumable,
+                      let period = $0.subscriptionPeriod else { return false }
+                return period.unit == .week || period.unit == .month || period.unit == .year
+            }
+            .sorted { lhs, rhs in
+                sortOrder(for: lhs) < sortOrder(for: rhs)
+            }
+    }
+
+    static func sortedPlans(_ plans: [SubscriptionPurchasePlan]) -> [SubscriptionPurchasePlan] {
+        plans.sorted { lhs, rhs in
+            sortOrder(for: lhs.storeProduct) < sortOrder(for: rhs.storeProduct)
+        }
+    }
+
+    private static func sortOrder(for package: Package) -> Int {
+        sortOrder(for: package.storeProduct)
+    }
+
+    private static func sortOrder(for product: StoreProduct) -> Int {
+        guard let period = product.subscriptionPeriod else { return 99 }
 
         switch period.unit {
+        case .week:
+            return 0
         case .month:
-            return period.value == 1 ? 1 : 2
+            return period.value == 1 ? 1 : 3
         case .year:
-            return 3
+            return 2
         default:
             return 99
         }

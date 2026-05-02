@@ -34,6 +34,13 @@ final class RemoteConfigService: ObservableObject {
     
     private var client: SupabaseClient?
     private let bundleId = Bundle.main.bundleIdentifier ?? "com.ezcar24.business"
+    private var canRequireAppUpdate: Bool {
+        #if targetEnvironment(simulator)
+        return false
+        #else
+        return true
+        #endif
+    }
     
     private init() {}
     
@@ -124,6 +131,11 @@ final class RemoteConfigService: ObservableObject {
                     latestVersion = latest
                 }
             }
+        }
+
+        if requiresUpdate, !canRequireAppUpdate {
+            print("ℹ️ [RemoteConfig] Update requirement skipped on simulator. Current: \(currentVersion), Latest: \(latestVersion ?? "unknown")")
+            requiresUpdate = false
         }
 
         self.isUpdateRequired = requiresUpdate

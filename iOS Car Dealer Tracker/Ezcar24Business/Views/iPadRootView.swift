@@ -11,12 +11,14 @@ import CoreData
 struct iPadRootView: View {
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var sessionStore: SessionStore
+    @EnvironmentObject private var appSessionState: AppSessionState
     @EnvironmentObject private var regionSettings: RegionSettingsManager
     @ObservedObject private var permissionService = PermissionService.shared
     
     @State private var selectedTab: ContentView.Tab? = .dashboard
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
     @State private var showProfileSheet = false
+    @State private var showGuestAccountPrompt = false
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
@@ -48,6 +50,10 @@ struct iPadRootView: View {
         .fullScreenCover(isPresented: $showProfileSheet) {
             AccountView()
         }
+        .guestAccountPrompt(isPresented: $showGuestAccountPrompt) {
+            appSessionState.exitGuestModeForLogin()
+            appSessionState.mode = .signUp
+        }
         .onReceive(NotificationCenter.default.publisher(for: .dashboardDidRequestAccount)) { _ in
             showProfileSheet = true
         }
@@ -68,66 +74,80 @@ struct iPadRootView: View {
             }
             return false
         }()
+        let isGuestPreview = appSessionState.isGuestMode && !shouldGatePermissions
 
-        switch tab {
-        case .dashboard:
-            DashboardView()
-                .id(tab) // Force recreate if needed, though usually not for dashboard
-        case .expenses:
-            if shouldGatePermissions {
-               if permissionService.can(.viewExpenses) {
-                   DealerExpenseDashboardView(showNavigation: false)
-               } else {
-                   RestrictedAccessView(title: "expenses".localizedString)
-               }
-           } else {
-               DealerExpenseDashboardView(showNavigation: false)
-           }
-        case .vehicles:
-            if shouldGatePermissions {
-                if permissionService.can(.viewInventory) {
-                    VehicleListView()
-                } else {
-                    RestrictedAccessView(title: "vehicles".localizedString)
-                }
-            } else {
-                VehicleListView()
-            }
-        case .parts:
-            if regionSettings.isPartsEnabled {
+        if isGuestPreview {
+            GuestFeaturePreviewView(
+                feature: GuestPreviewFeature(tab: tab),
+                bottomPadding: 32,
+                onRequireAccount: requestGuestAccount
+            )
+        } else {
+            switch tab {
+            case .dashboard:
+                DashboardView()
+                    .id(tab)
+            case .expenses:
                 if shouldGatePermissions {
-                    if permissionService.can(.viewPartsInventory) {
-                        PartsDashboardView()
+                    if permissionService.can(.viewExpenses) {
+                        DealerExpenseDashboardView(showNavigation: false)
                     } else {
-                        RestrictedAccessView(title: "parts_tab_title".localizedString)
+                        RestrictedAccessView(title: "expenses".localizedString)
                     }
                 } else {
-                    PartsDashboardView()
+                    DealerExpenseDashboardView(showNavigation: false)
                 }
-            } else {
-                EmptyView()
-            }
-        case .sales:
-            if shouldGatePermissions {
-             if permissionService.can(.createSale) || permissionService.can(.viewFinancials) {
-                 SalesListView()
-             } else {
-                 RestrictedAccessView(title: "sales".localizedString)
-             }
-            } else {
-             SalesListView()
-            }
-        case .clients:
-            if shouldGatePermissions {
-             if permissionService.can(.viewLeads) {
-                 ClientListView(showNavigation: false)
-             } else {
-                 RestrictedAccessView(title: "clients".localizedString)
-             }
-            } else {
-             ClientListView(showNavigation: false)
+            case .vehicles:
+                if shouldGatePermissions {
+                    if permissionService.can(.viewInventory) {
+                        VehicleListView()
+                    } else {
+                        RestrictedAccessView(title: "vehicles".localizedString)
+                    }
+                } else {
+                    VehicleListView()
+                }
+            case .parts:
+                if regionSettings.isPartsEnabled {
+                    if shouldGatePermissions {
+                        if permissionService.can(.viewPartsInventory) {
+                            PartsDashboardView()
+                        } else {
+                            RestrictedAccessView(title: "parts_tab_title".localizedString)
+                        }
+                    } else {
+                        PartsDashboardView()
+                    }
+                } else {
+                    EmptyView()
+                }
+            case .sales:
+                if shouldGatePermissions {
+                    if permissionService.can(.createSale) || permissionService.can(.viewFinancials) {
+                        SalesListView()
+                    } else {
+                        RestrictedAccessView(title: "sales".localizedString)
+                    }
+                } else {
+                    SalesListView()
+                }
+            case .clients:
+                if shouldGatePermissions {
+                    if permissionService.can(.viewLeads) {
+                        ClientListView(showNavigation: false)
+                    } else {
+                        RestrictedAccessView(title: "clients".localizedString)
+                    }
+                } else {
+                    ClientListView(showNavigation: false)
+                }
             }
         }
+    }
+
+    private func requestGuestAccount() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        showGuestAccountPrompt = true
     }
 }
 
