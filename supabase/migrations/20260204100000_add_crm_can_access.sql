@@ -3,9 +3,6 @@
 -- This function checks if the current authenticated user can access a dealer
 -- ============================================================================
 
--- Drop any existing version first to ensure clean creation
-DROP FUNCTION IF EXISTS public.crm_can_access(uuid);
-
 CREATE OR REPLACE FUNCTION public.crm_can_access(p_dealer_id uuid)
 RETURNS boolean
 LANGUAGE plpgsql
