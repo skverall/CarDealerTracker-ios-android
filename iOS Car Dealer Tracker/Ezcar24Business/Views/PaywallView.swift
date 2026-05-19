@@ -643,7 +643,7 @@ struct PaywallView: View {
 
     private var heroSubtitle: String {
         isProManagement
-            ? "Your dealership tools are unlocked.\nKeep growing with Ezcar24 Business."
+            ? "Your dealership tools are unlocked.\nKeep growing with Car Dealer Tracker."
             : "Everything you need to grow\nyour dealership business."
     }
 
@@ -694,7 +694,7 @@ struct PaywallView: View {
                 .fill(Color.white.opacity(0.12))
                 .frame(height: 1)
 
-            Text(title)
+            Text(title.localizedString)
                 .font(.system(size: layout.sectionTitleFontSize, weight: .heavy))
                 .foregroundStyle(.white.opacity(0.58))
                 .tracking(layout.sectionTitleTracking)
@@ -930,7 +930,7 @@ struct PaywallFeatureChip: View {
                 .font(.system(size: layout.featureIconSize, weight: .bold))
                 .foregroundStyle(Color(hex: "A855F7"))
 
-            Text(feature.shortTitle)
+            Text(feature.shortTitle.localizedString)
                 .font(.system(size: layout.featureFontSize, weight: .bold))
                 .foregroundStyle(.white.opacity(0.8))
                 .lineLimit(1)

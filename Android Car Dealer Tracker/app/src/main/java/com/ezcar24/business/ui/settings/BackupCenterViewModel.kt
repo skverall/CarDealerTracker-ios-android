@@ -34,6 +34,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import com.ezcar24.business.util.localizedUiString
 
 data class BackupCenterUiState(
     val isProcessing: Boolean = false,
@@ -231,16 +232,16 @@ class BackupCenterViewModel @Inject constructor(
         }
 
         var y = 50f
-        canvas.drawText("Car Dealer Tracker", 40f, y, bodyPaint)
+        canvas.drawText(context.localizedUiString("Car Dealer Tracker"), 40f, y, bodyPaint)
         y += 20f
-        canvas.drawText("Executive Summary", 40f, y, titlePaint)
+        canvas.drawText(context.localizedUiString("Executive Summary"), 40f, y, titlePaint)
         y += 30f
 
         val rangeText = "Period: ${data.rangeLabel}"
         canvas.drawText(rangeText, 40f, y, bodyPaint)
         y += 24f
 
-        canvas.drawText("Financial Overview", 40f, y, sectionPaint)
+        canvas.drawText(context.localizedUiString("Financial Overview"), 40f, y, sectionPaint)
         y += 20f
         drawKeyValue(canvas, "Total Sales", data.totalSales, 40f, y, bodyPaint)
         y += 18f
@@ -253,7 +254,7 @@ class BackupCenterViewModel @Inject constructor(
         drawKeyValue(canvas, "Inventory Count", data.inventoryCount.toString(), 40f, y, bodyPaint)
         y += 28f
 
-        canvas.drawText("Top Sold Vehicles", 40f, y, sectionPaint)
+        canvas.drawText(context.localizedUiString("Top Sold Vehicles"), 40f, y, sectionPaint)
         y += 20f
         data.topSoldVehicles.take(5).forEach { line ->
             canvas.drawText(line, 40f, y, bodyPaint)
@@ -392,7 +393,7 @@ class BackupCenterViewModel @Inject constructor(
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
             put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Ezcar24")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/Car Dealer Tracker")
         }
         val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return null
         resolver.openOutputStream(uri)?.use { stream ->

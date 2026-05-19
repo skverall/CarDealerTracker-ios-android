@@ -43,6 +43,7 @@ import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @Composable
 fun InteractionItem(
@@ -124,7 +125,7 @@ fun InteractionItem(
                                 ) {
                                     Icon(
                                         Icons.Default.DeleteOutline,
-                                        contentDescription = "Delete interaction",
+                                        contentDescription = localizedUiString("Delete interaction"),
                                         tint = Color.Gray,
                                         modifier = Modifier.size(18.dp)
                                     )

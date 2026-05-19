@@ -612,6 +612,8 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				ru,
+				ja,
 				Base,
 			);
 			mainGroup = A0FFFFFC;

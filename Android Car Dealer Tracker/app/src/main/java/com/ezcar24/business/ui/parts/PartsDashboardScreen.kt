@@ -53,6 +53,7 @@ import java.util.Date
 import java.util.Locale
 import java.util.UUID
 import kotlinx.coroutines.launch
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,12 +101,12 @@ fun PartsDashboardScreen(
                 )
                 TabRow(selectedTabIndex = selectedTab) {
                     Tab(
-                        text = { Text("Inventory") },
+                        text = { Text(localizedUiString("Inventory")) },
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 }
                     )
                     Tab(
-                        text = { Text("Sales") },
+                        text = { Text(localizedUiString("Sales")) },
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 }
                     )
@@ -124,7 +125,7 @@ fun PartsDashboardScreen(
                 containerColor = EzcarNavy,
                 contentColor = Color.White
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add")
+                Icon(Icons.Default.Add, contentDescription = localizedUiString("Add"))
             }
         }
     ) { padding ->
@@ -266,19 +267,19 @@ private fun PartsInventoryContent(
             colors = CardDefaults.cardColors(containerColor = EzcarBackgroundLight)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("Inventory Overview", fontWeight = FontWeight.Bold)
+                Text(localizedUiString("Inventory Overview"), fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
-                        Text("Total Value", style = MaterialTheme.typography.labelMedium)
+                        Text(localizedUiString("Total Value"), style = MaterialTheme.typography.labelMedium)
                         Text(formatCurrency(totalValue), fontWeight = FontWeight.Bold)
                     }
                     Column {
-                        Text("Parts", style = MaterialTheme.typography.labelMedium)
+                        Text(localizedUiString("Parts"), style = MaterialTheme.typography.labelMedium)
                         Text(state.parts.size.toString(), fontWeight = FontWeight.Bold)
                     }
                     Column {
-                        Text("Low Stock", style = MaterialTheme.typography.labelMedium)
+                        Text(localizedUiString("Low Stock"), style = MaterialTheme.typography.labelMedium)
                         Text(lowStockCount.toString(), fontWeight = FontWeight.Bold, color = EzcarBlueBright)
                     }
                 }
@@ -326,7 +327,7 @@ private fun PartsInventoryContent(
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Receive Stock")
+            Text(localizedUiString("Receive Stock"))
         }
     }
 }
@@ -368,7 +369,7 @@ private fun PartRow(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("On Hand: ${item.quantityOnHand.stripTrailingZeros().toPlainString()}")
+                Text(localizedUiString("On Hand: %s", item.quantityOnHand.stripTrailingZeros().toPlainString()))
                 Text(formatCurrency(item.inventoryValue))
             }
         }
@@ -398,7 +399,7 @@ private fun PartSaleRow(
             Spacer(modifier = Modifier.height(6.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(item.saleDate))
-                TextButton(onClick = onDelete) { Text("Delete") }
+                TextButton(onClick = onDelete) { Text(localizedUiString("Delete")) }
             }
         }
     }
@@ -421,7 +422,7 @@ private fun CategoryFilter(
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text("All Categories") }, onClick = {
+            DropdownMenuItem(text = { Text(localizedUiString("All Categories")) }, onClick = {
                 onSelected(null)
                 expanded = false
             })
@@ -479,16 +480,16 @@ private fun AddPartDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Part") },
+        title = { Text(localizedUiString("Add Part")) },
         text = {
             Column {
-                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
-                OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text("Code") })
-                OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text("Category") })
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") })
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(localizedUiString("Name")) })
+                OutlinedTextField(value = code, onValueChange = { code = it }, label = { Text(localizedUiString("Code")) })
+                OutlinedTextField(value = category, onValueChange = { category = it }, label = { Text(localizedUiString("Category")) })
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(localizedUiString("Notes")) })
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Initial Stock")
+                    Text(localizedUiString("Initial Stock"))
                     Spacer(modifier = Modifier.width(12.dp))
                     Box(
                         modifier = Modifier
@@ -504,16 +505,16 @@ private fun AddPartDialog(
                     OutlinedTextField(
                         value = quantity,
                         onValueChange = { quantity = it },
-                        label = { Text("Quantity") },
+                        label = { Text(localizedUiString("Quantity")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
                     OutlinedTextField(
                         value = unitCost,
                         onValueChange = { unitCost = it },
-                        label = { Text("Unit Cost") },
+                        label = { Text(localizedUiString("Unit Cost")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                     )
-                    OutlinedTextField(value = batchLabel, onValueChange = { batchLabel = it }, label = { Text("Batch Label") })
+                    OutlinedTextField(value = batchLabel, onValueChange = { batchLabel = it }, label = { Text(localizedUiString("Batch Label")) })
                     AccountDropdown(
                         accounts = accounts,
                         selectedAccountId = selectedAccountId,
@@ -536,11 +537,11 @@ private fun AddPartDialog(
                     selectedAccountId
                 )
             }) {
-                Text("Save")
+                Text(localizedUiString("Save"))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel")) }
         }
     )
 }
@@ -574,24 +575,24 @@ private fun ReceiveStockDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Receive Stock") },
+        title = { Text(localizedUiString("Receive Stock")) },
         text = {
             Column {
                 PartDropdown(parts = parts, selectedPartId = selectedPartId, onSelected = { selectedPartId = it })
                 OutlinedTextField(
                     value = quantity,
                     onValueChange = { quantity = it },
-                    label = { Text("Quantity") },
+                    label = { Text(localizedUiString("Quantity")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(
                     value = unitCost,
                     onValueChange = { unitCost = it },
-                    label = { Text("Unit Cost") },
+                    label = { Text(localizedUiString("Unit Cost")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
-                OutlinedTextField(value = batchLabel, onValueChange = { batchLabel = it }, label = { Text("Batch Label") })
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") })
+                OutlinedTextField(value = batchLabel, onValueChange = { batchLabel = it }, label = { Text(localizedUiString("Batch Label")) })
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(localizedUiString("Notes")) })
                 Text(
                     text = "Purchase Date: ${SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(purchaseDate)}",
                     modifier = Modifier
@@ -618,10 +619,10 @@ private fun ReceiveStockDialog(
                     selectedAccountId
                 )
             }) {
-                Text("Save")
+                Text(localizedUiString("Save"))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel")) } }
     )
 
     if (showDatePicker) {
@@ -666,7 +667,7 @@ private fun AddPartSaleDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Sale") },
+        title = { Text(localizedUiString("Add Sale")) },
         text = {
             Column {
                 Text(
@@ -685,20 +686,20 @@ private fun AddPartSaleDialog(
                     selectedClientId = selectedClientId,
                     onSelected = { selectedClientId = it }
                 )
-                OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text("Buyer Name") })
-                OutlinedTextField(value = buyerPhone, onValueChange = { buyerPhone = it }, label = { Text("Buyer Phone") })
-                OutlinedTextField(value = paymentMethod, onValueChange = { paymentMethod = it }, label = { Text("Payment Method") })
-                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text("Notes") })
+                OutlinedTextField(value = buyerName, onValueChange = { buyerName = it }, label = { Text(localizedUiString("Buyer Name")) })
+                OutlinedTextField(value = buyerPhone, onValueChange = { buyerPhone = it }, label = { Text(localizedUiString("Buyer Phone")) })
+                OutlinedTextField(value = paymentMethod, onValueChange = { paymentMethod = it }, label = { Text(localizedUiString("Payment Method")) })
+                OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(localizedUiString("Notes")) })
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("Line Items", fontWeight = FontWeight.Bold)
+                Text(localizedUiString("Line Items"), fontWeight = FontWeight.Bold)
                 lineItems.forEach { line ->
-                    val partName = parts.firstOrNull { it.id == line.partId }?.name ?: "Part"
-                    Text("${partName}: ${line.quantity} x ${line.unitPrice}")
+                    val partName = parts.firstOrNull { it.id == line.partId }?.name ?: localizedUiString("Part")
+                    Text(localizedUiString("%s: %s x %s", partName, line.quantity, line.unitPrice))
                 }
                 TextButton(onClick = { showLineDialog = true }) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Add Line Item")
+                    Text(localizedUiString("Add Line Item"))
                 }
             }
         },
@@ -716,11 +717,11 @@ private fun AddPartSaleDialog(
                     selectedClientId
                 )
             }) {
-                Text("Save")
+                Text(localizedUiString("Save"))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel")) }
         }
     )
 
@@ -762,20 +763,20 @@ private fun AddLineItemDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Line Item") },
+        title = { Text(localizedUiString("Add Line Item")) },
         text = {
             Column {
                 PartDropdown(parts = parts, selectedPartId = selectedPartId, onSelected = { selectedPartId = it })
                 OutlinedTextField(
                     value = quantity,
                     onValueChange = { quantity = it },
-                    label = { Text("Quantity") },
+                    label = { Text(localizedUiString("Quantity")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
                 OutlinedTextField(
                     value = unitPrice,
                     onValueChange = { unitPrice = it },
-                    label = { Text("Unit Price") },
+                    label = { Text(localizedUiString("Unit Price")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
                 )
             }
@@ -785,10 +786,10 @@ private fun AddLineItemDialog(
                 val partId = selectedPartId ?: return@TextButton
                 onSave(partId, quantity.toBigDecimalOrZero(), unitPrice.toBigDecimalOrZero())
             }) {
-                Text("Add")
+                Text(localizedUiString("Add"))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel")) } }
     )
 }
 
@@ -828,7 +829,7 @@ private fun AccountDropdown(
     onSelected: (UUID?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedName = accounts.firstOrNull { it.id == selectedAccountId }?.accountType ?: "Select Account"
+    val selectedName = accounts.firstOrNull { it.id == selectedAccountId }?.accountType ?: localizedUiString("Select Account")
     Box(modifier = Modifier.padding(top = 8.dp)) {
         Text(
             text = selectedName,
@@ -869,7 +870,7 @@ private fun ClientDropdown(
                 .padding(12.dp)
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            DropdownMenuItem(text = { Text("None") }, onClick = {
+            DropdownMenuItem(text = { Text(localizedUiString("None")) }, onClick = {
                 onSelected(null)
                 expanded = false
             })
@@ -900,11 +901,11 @@ private fun SimpleDatePickerDialog(
                     }
                 }
             ) {
-                Text("OK")
+                Text(localizedUiString("OK"))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel")) }
         }
     ) {
         androidx.compose.material3.DatePicker(state = datePickerState)

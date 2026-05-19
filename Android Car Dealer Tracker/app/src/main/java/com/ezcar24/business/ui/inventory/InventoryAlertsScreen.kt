@@ -33,6 +33,8 @@ import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarWarning
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.ezcar24.business.util.localizedInventoryAlertMessage
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -60,13 +62,13 @@ fun InventoryAlertsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     if (uiState.unreadCount > 0) {
                         TextButton(onClick = { viewModel.markAllAsRead() }) {
-                            Text("Mark All Read")
+                            Text(localizedUiString("Mark All Read"))
                         }
                     }
                 },
@@ -172,7 +174,7 @@ private fun AlertFilterChips(
                     onSeveritySelected(null)
                     onTypeSelected(null)
                 },
-                label = { Text("All") }
+                label = { Text(localizedUiString("All")) }
             )
             
             FilterChip(
@@ -180,7 +182,7 @@ private fun AlertFilterChips(
                 onClick = { onSeveritySelected("high") },
                 label = { 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Critical")
+                        Text(localizedUiString("Critical"))
                         if (criticalCount > 0) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Badge(
@@ -202,7 +204,7 @@ private fun AlertFilterChips(
                 onClick = { onSeveritySelected("medium") },
                 label = { 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Warning")
+                        Text(localizedUiString("Warning"))
                         if (warningCount > 0) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Badge(
@@ -224,7 +226,7 @@ private fun AlertFilterChips(
                 onClick = { onSeveritySelected("low") },
                 label = { 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Info")
+                        Text(localizedUiString("Info"))
                         if (infoCount > 0) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Badge(
@@ -416,7 +418,7 @@ private fun AlertListItem(
                 }
                 
                 Text(
-                    text = alert.message,
+                    text = localizedInventoryAlertMessage(alert.message),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.DarkGray,
                     maxLines = 2
@@ -432,7 +434,7 @@ private fun AlertListItem(
             IconButton(onClick = onDismiss) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss",
+                    contentDescription = localizedUiString("Dismiss"),
                     tint = Color.Gray,
                     modifier = Modifier.size(20.dp)
                 )

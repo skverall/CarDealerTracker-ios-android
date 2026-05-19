@@ -32,6 +32,7 @@ import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -80,7 +81,7 @@ fun ExpenseScreen(
                 containerColor = EzcarNavy,
                 contentColor = Color.White
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Expense")
+                Icon(Icons.Default.Add, contentDescription = localizedUiString("Add Expense"))
             }
         }
     ) { padding ->
@@ -182,7 +183,7 @@ fun ExpenseHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Expenses",
+                localizedUiString("Expenses"),
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -247,7 +248,7 @@ fun ExpenseFilters(
                 )
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("All Vehicles") },
+                        text = { Text(localizedUiString("All Vehicles")) },
                         onClick = {
                             onVehicleSelect(null)
                             expanded = false
@@ -293,7 +294,7 @@ fun ExpenseFilters(
                 )
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("All Employees") },
+                        text = { Text(localizedUiString("All Employees")) },
                         onClick = {
                             onUserSelect(null)
                             expanded = false
@@ -373,28 +374,28 @@ fun ExpenseFilters(
                 )
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
-                        text = { Text("All Types") },
+                        text = { Text(localizedUiString("All Types")) },
                         onClick = {
                             onExpenseTypeSelect(null)
                             expanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Holding Cost") },
+                        text = { Text(localizedUiString("Holding Cost")) },
                         onClick = {
                             onExpenseTypeSelect(ExpenseCategoryType.HOLDING_COST)
                             expanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Improvement") },
+                        text = { Text(localizedUiString("Improvement")) },
                         onClick = {
                             onExpenseTypeSelect(ExpenseCategoryType.IMPROVEMENT)
                             expanded = false
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Operational") },
+                        text = { Text(localizedUiString("Operational")) },
                         onClick = {
                             onExpenseTypeSelect(ExpenseCategoryType.OPERATIONAL)
                             expanded = false

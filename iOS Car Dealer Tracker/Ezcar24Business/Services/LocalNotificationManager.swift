@@ -207,9 +207,9 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         guard let id = reminder.id, let dueDate = reminder.dueDate else { return }
         let identifier = NotificationIdentifier.clientReminder(id: id)
         let content = UNMutableNotificationContent()
-        let clientName = reminder.client?.name ?? "Client"
-        content.title = "Client Reminder"
-        content.body = "\(clientName) • \(reminder.title ?? "Follow up")"
+        let clientName = reminder.client?.name ?? "client".localizedStringFallback
+        content.title = "client_reminder".localizedStringFallback
+        content.body = "\(clientName) • \(reminder.title ?? "follow_up".localizedStringFallback)"
         content.sound = .default
 
         let trigger = UNCalendarNotificationTrigger(
@@ -226,9 +226,9 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         guard let id = debt.id, let dueDate = debt.dueDate else { return }
         let identifier = NotificationIdentifier.debtDue(id: id)
         let content = UNMutableNotificationContent()
-        let name = debt.counterpartyName ?? "Counterparty"
+        let name = debt.counterpartyName ?? "counterparty".localizedStringFallback
         let amount = debt.outstandingAmount.asCurrencyFallback()
-        content.title = debt.directionEnum == .owedToMe ? "Debt Collection Due" : "Debt Payment Due"
+        content.title = debt.directionEnum == .owedToMe ? "debt_collection_due".localizedStringFallback : "debt_payment_due".localizedStringFallback
         content.body = "\(name) • \(amount)"
         content.sound = .default
 

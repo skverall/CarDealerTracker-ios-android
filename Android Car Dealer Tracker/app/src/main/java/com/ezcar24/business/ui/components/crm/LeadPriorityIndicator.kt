@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarWarning
+import com.ezcar24.business.util.localizedUiString
 
 @Composable
 fun LeadPriorityIndicator(
@@ -88,7 +89,7 @@ fun LeadPrioritySelector(
             ) {
                 Icon(
                     imageVector = if (isFilled) Icons.Filled.Star else Icons.Outlined.Star,
-                    contentDescription = "Priority $starIndex",
+                    contentDescription = localizedUiString("Priority %d", starIndex),
                     tint = if (isFilled) {
                         when {
                             starIndex >= 4 -> Color(0xFFE53935)

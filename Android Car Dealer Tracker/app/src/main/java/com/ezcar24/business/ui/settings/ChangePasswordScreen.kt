@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.ezcar24.business.util.localizedUiString
 
 data class ChangePasswordUiState(
     val newPassword: String = "",
@@ -133,10 +134,10 @@ fun ChangePasswordScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Change Password") },
+                title = { Text(localizedUiString("Change Password")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -161,7 +162,7 @@ fun ChangePasswordScreen(
             OutlinedTextField(
                 value = uiState.newPassword,
                 onValueChange = viewModel::onNewPasswordChange,
-                label = { Text("New Password") },
+                label = { Text(localizedUiString("New Password")) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
@@ -170,7 +171,7 @@ fun ChangePasswordScreen(
             OutlinedTextField(
                 value = uiState.confirmPassword,
                 onValueChange = viewModel::onConfirmPasswordChange,
-                label = { Text("Confirm Password") },
+                label = { Text(localizedUiString("Confirm Password")) },
                 visualTransformation = PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 singleLine = true,
@@ -185,7 +186,7 @@ fun ChangePasswordScreen(
                 if (uiState.isLoading) {
                     CircularProgressIndicator(strokeWidth = 2.dp)
                 } else {
-                    Text("Update Password")
+                    Text(localizedUiString("Update Password"))
                 }
             }
         }

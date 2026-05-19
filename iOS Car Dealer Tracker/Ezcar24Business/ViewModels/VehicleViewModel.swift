@@ -490,7 +490,7 @@ extension Vehicle {
             return vinValue
         }
 
-        return "Vehicle"
+        return "vehicle".localizedStringFallback
     }
 
     var inventoryOrVINLabel: String? {

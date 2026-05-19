@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +47,7 @@ fun PasswordResetScreen(
                         viewModel.cancelPasswordReset()
                         onComplete()
                     }) {
-                        Text("Cancel")
+                        Text(localizedUiString("Cancel"))
                     }
                 }
             )
@@ -92,8 +93,8 @@ fun PasswordResetScreen(
             OutlinedTextField(
                 value = uiState.newPassword,
                 onValueChange = viewModel::onNewPasswordChange,
-                label = { Text("New Password") },
-                placeholder = { Text("At least 6 characters") },
+                label = { Text(localizedUiString("New Password")) },
+                placeholder = { Text(localizedUiString("At least 6 characters")) },
                 leadingIcon = {
                     Icon(
                         Icons.Default.Lock,
@@ -126,8 +127,8 @@ fun PasswordResetScreen(
             OutlinedTextField(
                 value = uiState.confirmPassword,
                 onValueChange = viewModel::onConfirmPasswordChange,
-                label = { Text("Confirm Password") },
-                placeholder = { Text("Re-enter password") },
+                label = { Text(localizedUiString("Confirm Password")) },
+                placeholder = { Text(localizedUiString("Re-enter password")) },
                 leadingIcon = {
                     Icon(
                         Icons.Default.Lock,

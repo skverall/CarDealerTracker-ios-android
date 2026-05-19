@@ -23,7 +23,7 @@ struct iPadRootView: View {
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(selectedTab: $selectedTab)
-                .navigationTitle("Ezcar24")
+                .navigationTitle("Car Dealer Tracker")
                 .navigationSplitViewColumnWidth(min: 250, ideal: 300)
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {

@@ -30,6 +30,7 @@ import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
 import java.util.Locale
 import com.ezcar24.business.ui.finance.DebtsContent
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -164,7 +165,7 @@ fun SalesTopBar(
                  TextField(
                      value = searchText,
                      onValueChange = onSearchTextChange,
-                     placeholder = { Text("Search...") },
+                     placeholder = { Text(localizedUiString("Search...")) },
                      colors = TextFieldDefaults.colors(
                          focusedContainerColor = Color.Transparent,
                          unfocusedContainerColor = Color.Transparent,
@@ -177,7 +178,7 @@ fun SalesTopBar(
             },
             actions = {
                  IconButton(onClick = onCloseSearch) {
-                     Icon(Icons.Default.Close, contentDescription = "Close", tint = EzcarNavy)
+                     Icon(Icons.Default.Close, contentDescription = localizedUiString("Close"), tint = EzcarNavy)
                  }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -185,8 +186,7 @@ fun SalesTopBar(
     } else {
         TopAppBar(
             title = {
-                Text(
-                    title,
+                Text(localizedUiString(title),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
                     color = EzcarNavy
@@ -194,10 +194,10 @@ fun SalesTopBar(
             },
             actions = {
                 IconButton(onClick = onSearchClick) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = EzcarNavy)
+                    Icon(Icons.Default.Search, contentDescription = localizedUiString("Search"), tint = EzcarNavy)
                 }
                 IconButton(onClick = onAddClick) {
-                    Icon(Icons.Default.AddCircle, contentDescription = "Add", tint = EzcarNavy)
+                    Icon(Icons.Default.AddCircle, contentDescription = localizedUiString("Add"), tint = EzcarNavy)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -221,12 +221,12 @@ fun SalesTabs(selectedTab: Int, onTabSelected: (Int) -> Unit) {
         Tab(
             selected = selectedTab == 0,
             onClick = { onTabSelected(0) },
-            text = { Text("Sales") }
+            text = { Text(localizedUiString("Sales")) }
         )
         Tab(
             selected = selectedTab == 1,
             onClick = { onTabSelected(1) },
-            text = { Text("Debts") }
+            text = { Text(localizedUiString("Debts")) }
         )
     }
 }
@@ -279,7 +279,7 @@ fun SaleCard(item: SaleItem, onDelete: () -> Unit) {
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = Color.White)
             }
         },
         content = {
@@ -365,7 +365,7 @@ fun FinancialColumn(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = title,
+            text = localizedUiString(title),
             style = MaterialTheme.typography.labelSmall,
             color = Color.Gray,
             fontWeight = FontWeight.Bold

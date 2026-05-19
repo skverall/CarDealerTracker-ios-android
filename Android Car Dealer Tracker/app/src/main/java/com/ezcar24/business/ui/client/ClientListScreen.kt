@@ -33,6 +33,7 @@ import com.ezcar24.business.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class, ExperimentalMaterialApi::class)
 @Composable
@@ -136,7 +137,7 @@ fun ClientTopBar(onFilterClick: () -> Unit, onAddClick: () -> Unit) {
             IconButton(onClick = onFilterClick) {
                 Icon(
                     imageVector = Icons.Default.FilterList,
-                    contentDescription = "Filter",
+                    contentDescription = localizedUiString("Filter"),
                     tint = EzcarNavy
                 )
             }
@@ -150,7 +151,7 @@ fun ClientTopBar(onFilterClick: () -> Unit, onAddClick: () -> Unit) {
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
-                contentDescription = "Add Client",
+                contentDescription = localizedUiString("Add Client"),
                 tint = Color.White
             )
         }
@@ -162,7 +163,7 @@ fun SearchBar(searchText: String, onSearchChange: (String) -> Unit) {
     TextField(
         value = searchText,
         onValueChange = onSearchChange,
-        placeholder = { Text("Search by name, phone...", color = Color.Gray) },
+        placeholder = { Text(localizedUiString("Search by name, phone..."), color = Color.Gray) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = Color.Gray) },
         modifier = Modifier
             .fillMaxWidth()
@@ -459,7 +460,7 @@ fun ClientRow(
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Call", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(localizedUiString("Call"), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
                     
                     // WhatsApp Button
@@ -479,7 +480,7 @@ fun ClientRow(
                             modifier = Modifier.size(12.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("WhatsApp", fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                        Text(localizedUiString("WhatsApp"), fontSize = 12.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -508,7 +509,7 @@ fun EmptyClientState() {
             style = MaterialTheme.typography.titleMedium,
             color = Color.Gray
         )
-        Text("Tap + to add a new client", style = MaterialTheme.typography.bodyMedium, color = Color.LightGray)
+        Text(localizedUiString("Tap + to add a new client"), style = MaterialTheme.typography.bodyMedium, color = Color.LightGray)
     }
 }
 

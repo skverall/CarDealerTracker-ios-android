@@ -75,6 +75,7 @@ import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.util.PermissionOption
 import com.ezcar24.business.util.TeamPermissionCatalog
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 private val TeamRoles = TeamPermissionCatalog.roles
 
@@ -112,7 +113,7 @@ fun TeamMembersScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = EzcarNavy)
+                        Icon(Icons.Default.ArrowBack, contentDescription = localizedUiString("Back"), tint = EzcarNavy)
                     }
                 },
                 actions = {
@@ -129,7 +130,7 @@ fun TeamMembersScreen(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.People,
-                                contentDescription = "Refresh",
+                                contentDescription = localizedUiString("Refresh"),
                                 tint = EzcarNavy
                             )
                         }
@@ -146,7 +147,7 @@ fun TeamMembersScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Invite")
+                Text(localizedUiString("Invite"))
             }
         }
     ) { padding ->
@@ -183,7 +184,7 @@ fun TeamMembersScreen(
                     uiState.message?.let { message ->
                         item {
                             TeamStatusCard(
-                                text = message,
+                                text = localizedUiString(message),
                                 color = EzcarGreen,
                                 onDismiss = viewModel::clearMessages
                             )
@@ -295,7 +296,7 @@ private fun TeamStatusCard(
                 modifier = Modifier.weight(1f)
             )
             TextButton(onClick = onDismiss) {
-                Text("Dismiss", color = color)
+                Text(localizedUiString("Dismiss"), color = color)
             }
         }
     }
@@ -477,7 +478,7 @@ private fun TeamMemberCard(
                         onClick = onChangeRole,
                         enabled = !isSaving
                     ) {
-                        Text("Change Role")
+                        Text(localizedUiString("Change Role"))
                     }
                     TextButton(
                         onClick = onRemove,
@@ -489,7 +490,7 @@ private fun TeamMemberCard(
                             tint = EzcarDanger
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Remove", color = EzcarDanger)
+                        Text(localizedUiString("Remove"), color = EzcarDanger)
                     }
                 }
             }
@@ -532,13 +533,13 @@ private fun InviteMemberDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Invite Team Member") },
+        title = { Text(localizedUiString("Invite Team Member")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email") },
+                    label = { Text(localizedUiString("Email")) },
                     singleLine = true,
                     leadingIcon = {
                         Icon(
@@ -622,7 +623,7 @@ private fun InviteMemberDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancel")
+                Text(localizedUiString("Cancel"))
             }
         }
     )
@@ -642,7 +643,7 @@ private fun MemberRoleDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Update Access") },
+        title = { Text(localizedUiString("Update Access")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -698,12 +699,12 @@ private fun MemberRoleDialog(
                         TeamPermissionCatalog.resolvedPermissions(permissions, role) != TeamPermissionCatalog.resolvedPermissions(member.permissions, member.role)
                     )
             ) {
-                Text("Save")
+                Text(localizedUiString("Save"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancel")
+                Text(localizedUiString("Cancel"))
             }
         }
     )
@@ -734,12 +735,12 @@ private fun DeleteMemberDialog(
                 enabled = !isLoading,
                 colors = ButtonDefaults.buttonColors(containerColor = EzcarDanger)
             ) {
-                Text("Remove")
+                Text(localizedUiString("Remove"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancel")
+                Text(localizedUiString("Cancel"))
             }
         }
     )
@@ -761,7 +762,7 @@ private fun PermissionMatrix(
                 modifier = Modifier.weight(1f)
             )
             TextButton(onClick = onReset) {
-                Text("Reset")
+                Text(localizedUiString("Reset"))
             }
         }
         TeamPermissionCatalog.permissions.forEach { option ->
@@ -833,7 +834,7 @@ private fun InviteResultDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Invite Ready") },
+        title = { Text(localizedUiString("Invite Ready")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 inviteResult.message?.let {
@@ -864,7 +865,7 @@ private fun InviteResultDialog(
         },
         confirmButton = {
             Button(onClick = onDismiss) {
-                Text("Done")
+                Text(localizedUiString("Done"))
             }
         },
         dismissButton = {}
@@ -920,5 +921,5 @@ private fun permissionIcon(key: String) = when (key) {
 private fun copyTeamValue(context: Context, value: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText("team_value", value))
-    Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, context.localizedUiString("Copied to clipboard"), Toast.LENGTH_SHORT).show()
 }

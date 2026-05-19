@@ -124,6 +124,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     case english = "en"
     case russian = "ru"
     case arabic = "ar"
+    case japanese = "ja"
     case korean = "ko"
     
     var id: String { rawValue }
@@ -134,6 +135,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
         case .english: return "English"
         case .russian: return "Русский"
         case .arabic: return "العربية"
+        case .japanese: return "日本語"
         case .korean: return "한국어"
         }
     }
@@ -261,7 +263,7 @@ final class RegionSettingsManager: ObservableObject {
         currencyFormatter = NumberFormatter()
         currencyFormatter.numberStyle = .currency
         currencyFormatter.currencyCode = selectedRegion.currencyCode
-        currencyFormatter.currencySymbol = selectedRegion.currencySymbol + " "
+        currencyFormatter.currencySymbol = selectedRegion == .japan ? selectedRegion.currencySymbol : selectedRegion.currencySymbol + " "
         currencyFormatter.maximumFractionDigits = selectedRegion.currencyDecimals
         currencyFormatter.minimumFractionDigits = selectedRegion.currencyDecimals
         currencyFormatter.locale = selectedRegion.locale
@@ -270,7 +272,7 @@ final class RegionSettingsManager: ObservableObject {
         compactCurrencyFormatter = NumberFormatter()
         compactCurrencyFormatter.numberStyle = .currency
         compactCurrencyFormatter.currencyCode = selectedRegion.currencyCode
-        compactCurrencyFormatter.currencySymbol = selectedRegion.currencySymbol + " "
+        compactCurrencyFormatter.currencySymbol = selectedRegion == .japan ? selectedRegion.currencySymbol : selectedRegion.currencySymbol + " "
         compactCurrencyFormatter.maximumFractionDigits = 0
         compactCurrencyFormatter.minimumFractionDigits = 0
         compactCurrencyFormatter.locale = selectedRegion.locale

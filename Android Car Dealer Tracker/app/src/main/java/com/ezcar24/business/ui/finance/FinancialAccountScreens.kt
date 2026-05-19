@@ -30,6 +30,7 @@ import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -74,15 +75,15 @@ fun FinancialAccountListScreen(
         containerColor = EzcarBackground, // Light gray background
         topBar = {
             TopAppBar(
-                title = { Text("Financial Accounts", fontWeight = FontWeight.Bold) },
+                title = { Text(localizedUiString("Financial Accounts"), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add", tint = EzcarBlueBright)
+                        Icon(Icons.Default.Add, contentDescription = localizedUiString("Add"), tint = EzcarBlueBright)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -189,7 +190,7 @@ fun AccountItem(
                 )
                 if (account.accountType.lowercase() != "cash") { 
                      IconButton(onClick = onDelete) {
-                         Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.Gray.copy(alpha=0.5f), modifier = Modifier.size(20.dp))
+                         Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = Color.Gray.copy(alpha=0.5f), modifier = Modifier.size(20.dp))
                      }
                 }
             }
@@ -227,7 +228,7 @@ fun FinancialAccountDetailScreen(
                 title = { Text(account.accountType, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -279,7 +280,7 @@ fun FinancialAccountDetailScreen(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Deposit")
+                    Text(localizedUiString("Deposit"))
                 }
                 Button(
                     onClick = { showTransactionDialog = "withdrawal" },
@@ -288,7 +289,7 @@ fun FinancialAccountDetailScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                      // Icon minus?
-                    Text("Withdraw")
+                    Text(localizedUiString("Withdraw"))
                 }
             }
 
@@ -306,7 +307,7 @@ fun FinancialAccountDetailScreen(
                 if (transactions.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("No transactions yet", color = Color.Gray)
+                            Text(localizedUiString("No transactions yet"), color = Color.Gray)
                         }
                     }
                 }
@@ -384,7 +385,7 @@ fun TransactionDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount (${regionState.selectedRegion.currencyCode})") },
+                    label = { Text(localizedUiString("Amount (%s)", regionState.selectedRegion.currencyCode)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -392,7 +393,7 @@ fun TransactionDialog(
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
-                    label = { Text("Note (Optional)") },
+                    label = { Text(localizedUiString("Note (Optional)")) },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -400,7 +401,7 @@ fun TransactionDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel", color = Color.Gray) }
+                    TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel"), color = Color.Gray) }
                     Button(
                         onClick = {
                             val decimal = amount.toBigDecimalOrNull() ?: BigDecimal.ZERO
@@ -411,7 +412,7 @@ fun TransactionDialog(
                             containerColor = if (type == "deposit") EzcarGreen else EzcarDanger
                         )
                     ) {
-                        Text("Confirm")
+                        Text(localizedUiString("Confirm"))
                     }
                 }
             }
@@ -441,7 +442,7 @@ fun AccountDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = if (account == null) "Add Account" else "Edit Account",
+                    text = if (account == null) localizedUiString("Add Account") else localizedUiString("Edit Account"),
                     style = MaterialTheme.typography.titleLarge,
                     color = Color.Black,
                     fontWeight = FontWeight.Bold
@@ -450,14 +451,14 @@ fun AccountDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Account Name") },
+                    label = { Text(localizedUiString("Account Name")) },
                     singleLine = true
                 )
 
                 OutlinedTextField(
                     value = balance,
                     onValueChange = { balance = it },
-                    label = { Text("Balance (${regionState.selectedRegion.currencyCode})") },
+                    label = { Text(localizedUiString("Balance (%s)", regionState.selectedRegion.currencyCode)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true
                 )
@@ -467,7 +468,7 @@ fun AccountDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = Color.Gray)
+                        Text(localizedUiString("Cancel"), color = Color.Gray)
                     }
                     Button(
                         onClick = {
@@ -477,7 +478,7 @@ fun AccountDialog(
                         enabled = name.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright)
                     ) {
-                        Text("Save")
+                        Text(localizedUiString("Save"))
                     }
                 }
             }

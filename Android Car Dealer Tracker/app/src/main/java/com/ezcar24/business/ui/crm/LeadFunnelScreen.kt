@@ -75,6 +75,7 @@ import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.NumberFormat
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -98,18 +99,18 @@ fun LeadFunnelScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Lead Funnel") },
+                title = { Text(localizedUiString("Lead Funnel")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = localizedUiString("Refresh"))
                     }
                     IconButton(onClick = { showFilters = !showFilters }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                        Icon(Icons.Default.FilterList, contentDescription = localizedUiString("Filter"))
                     }
                 }
             )
@@ -188,7 +189,7 @@ fun LeadFunnelScreen(
                                 TextButton(
                                     onClick = { viewModel.onStageSelected(null) }
                                 ) {
-                                    Text("Clear")
+                                    Text(localizedUiString("Clear"))
                                 }
                             }
                             

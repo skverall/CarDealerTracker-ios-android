@@ -30,6 +30,7 @@ import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarNavy
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -60,12 +61,12 @@ fun InventoryAnalyticsScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     IconButton(onClick = { showFilterSheet = true }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                        Icon(Icons.Default.FilterList, contentDescription = localizedUiString("Filter"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -326,27 +327,27 @@ private fun FilterBottomSheet(
                 FilterChip(
                     selected = selectedAgingBucket == null,
                     onClick = { onAgingBucketSelected(null) },
-                    label = { Text("All") }
+                    label = { Text(localizedUiString("All")) }
                 )
                 FilterChip(
                     selected = selectedAgingBucket == "0-30",
                     onClick = { onAgingBucketSelected("0-30") },
-                    label = { Text("0-30 days") }
+                    label = { Text(localizedUiString("0-30 days")) }
                 )
                 FilterChip(
                     selected = selectedAgingBucket == "31-60",
                     onClick = { onAgingBucketSelected("31-60") },
-                    label = { Text("31-60 days") }
+                    label = { Text(localizedUiString("31-60 days")) }
                 )
                 FilterChip(
                     selected = selectedAgingBucket == "61-90",
                     onClick = { onAgingBucketSelected("61-90") },
-                    label = { Text("61-90 days") }
+                    label = { Text(localizedUiString("61-90 days")) }
                 )
                 FilterChip(
                     selected = selectedAgingBucket == "90+",
                     onClick = { onAgingBucketSelected("90+") },
-                    label = { Text("90+ days") }
+                    label = { Text(localizedUiString("90+ days")) }
                 )
             }
             
@@ -368,22 +369,22 @@ private fun FilterBottomSheet(
                 FilterChip(
                     selected = selectedStatus == null,
                     onClick = { onStatusSelected(null) },
-                    label = { Text("All") }
+                    label = { Text(localizedUiString("All")) }
                 )
                 FilterChip(
                     selected = selectedStatus == "owned",
                     onClick = { onStatusSelected("owned") },
-                    label = { Text("Owned") }
+                    label = { Text(localizedUiString("Owned")) }
                 )
                 FilterChip(
                     selected = selectedStatus == "on_sale",
                     onClick = { onStatusSelected("on_sale") },
-                    label = { Text("On Sale") }
+                    label = { Text(localizedUiString("On Sale")) }
                 )
                 FilterChip(
                     selected = selectedStatus == "in_transit",
                     onClick = { onStatusSelected("in_transit") },
-                    label = { Text("In Transit") }
+                    label = { Text(localizedUiString("In Transit")) }
                 )
             }
             
@@ -448,7 +449,7 @@ private fun FilterBottomSheet(
                 onClick = onDismiss,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Done")
+                Text(localizedUiString("Done"))
             }
             
             Spacer(modifier = Modifier.height(32.dp))

@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.ezcar24.business.util.localizedUiString
 
 enum class DateFilter(val label: String) {
     ALL("All"),
@@ -316,7 +317,7 @@ class ExpenseViewModel @Inject constructor(
         viewModelScope.launch {
             val data = cloudSyncManager.downloadExpenseReceipt(path)
             if (data == null) {
-                Toast.makeText(context, "Could not open receipt", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.localizedUiString("Could not open receipt"), Toast.LENGTH_SHORT).show()
                 return@launch
             }
 
@@ -326,7 +327,7 @@ class ExpenseViewModel @Inject constructor(
                 bytes = data
             )
             if (!opened) {
-                Toast.makeText(context, "Could not open receipt", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.localizedUiString("Could not open receipt"), Toast.LENGTH_SHORT).show()
             }
         }
     }

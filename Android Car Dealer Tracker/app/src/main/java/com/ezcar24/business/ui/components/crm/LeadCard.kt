@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.LeadStage
 import com.ezcar24.business.ui.theme.EzcarBlueBright
+import com.ezcar24.business.util.localizedUiString
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
 
@@ -127,7 +128,7 @@ fun LeadCard(
                 // Menu
                 Box {
                     IconButton(onClick = { showMenu = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "More options")
+                        Icon(Icons.Default.MoreVert, contentDescription = localizedUiString("More options"))
                     }
                     
                     DropdownMenu(
@@ -137,7 +138,7 @@ fun LeadCard(
                         LeadStage.values().forEach { stage ->
                             if (stage != client.leadStage) {
                                 DropdownMenuItem(
-                                    text = { Text("Move to ${getStageDisplayName(stage)}") },
+                                    text = { Text(localizedUiString("Move to %s", getStageDisplayName(stage))) },
                                     onClick = {
                                         onChangeStage?.invoke(stage)
                                         showMenu = false
@@ -200,7 +201,7 @@ fun LeadCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Email,
-                                contentDescription = "Email",
+                                contentDescription = localizedUiString("Email"),
                                 tint = EzcarBlueBright,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -217,7 +218,7 @@ fun LeadCard(
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Message,
-                                contentDescription = "Message",
+                                contentDescription = localizedUiString("Message"),
                                 tint = Color(0xFF4CAF50),
                                 modifier = Modifier.size(18.dp)
                             )
@@ -234,7 +235,7 @@ fun LeadCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Call,
-                                contentDescription = "Call",
+                                contentDescription = localizedUiString("Call"),
                                 tint = EzcarBlueBright,
                                 modifier = Modifier.size(18.dp)
                             )

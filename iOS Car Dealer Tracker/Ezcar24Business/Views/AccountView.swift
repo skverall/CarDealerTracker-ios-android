@@ -955,12 +955,12 @@ struct AccountView: View {
 
     private func shareDealerInvite() async {
         guard case .signedIn = sessionStore.status else {
-            await MainActor.run { inviteAlertMessage = "Please sign in to generate an invite link." }
+            await MainActor.run { inviteAlertMessage = "referral_invite_requires_sign_in".localizedString }
             return
         }
         guard let dealerId = await sessionStore.resolveDealerIdForReferral() else {
             await MainActor.run {
-                inviteAlertMessage = "Unable to determine your organization. Please try again."
+                inviteAlertMessage = "referral_invite_missing_organization".localizedString
             }
             return
         }
@@ -972,17 +972,17 @@ struct AccountView: View {
         }
         guard let code else {
             await MainActor.run {
-                inviteAlertMessage = "Unable to generate an invite link. Please try again."
+                inviteAlertMessage = "referral_invite_generation_failed".localizedString
             }
             return
         }
 
         let link = "https://ezcar24.com/?ref=\(code)"
-        let message = "Join EZCar24 Business using my invite code \(code). Subscribe and we both get an extra month free."
+        let message = String(format: "referral_invite_share_message".localizedString, code)
         var items: [Any] = [message]
         if let url = URL(string: link) {
             let icon = UIImage(systemName: "car.fill")
-            let source = ShareLinkItemSource(url: url, title: "EZCar24 Business Invite", icon: icon)
+            let source = ShareLinkItemSource(url: url, title: "referral_invite_share_title".localizedString, icon: icon)
             items.append(source)
         }
         await MainActor.run {

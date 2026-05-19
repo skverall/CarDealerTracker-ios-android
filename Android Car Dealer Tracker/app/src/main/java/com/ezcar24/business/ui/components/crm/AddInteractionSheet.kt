@@ -70,6 +70,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -140,7 +141,7 @@ fun AddInteractionSheet(
                     fontWeight = FontWeight.Bold
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Default.Close, contentDescription = "Close")
+                    Icon(Icons.Default.Close, contentDescription = localizedUiString("Close"))
                 }
             }
 
@@ -188,8 +189,8 @@ fun AddInteractionSheet(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Title") },
-                placeholder = { Text("Brief summary of the interaction") },
+                label = { Text(localizedUiString("Title")) },
+                placeholder = { Text(localizedUiString("Brief summary of the interaction")) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -200,8 +201,8 @@ fun AddInteractionSheet(
             OutlinedTextField(
                 value = detail,
                 onValueChange = { detail = it },
-                label = { Text("Notes") },
-                placeholder = { Text("Detailed notes about the interaction...") },
+                label = { Text(localizedUiString("Notes")) },
+                placeholder = { Text(localizedUiString("Detailed notes about the interaction...")) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(100.dp),
@@ -283,7 +284,7 @@ fun AddInteractionSheet(
                             value = it
                         }
                     },
-                    label = { Text("Deal Value (${regionState.selectedRegion.currencyCode})") },
+                    label = { Text(localizedUiString("Deal Value (%s)", regionState.selectedRegion.currencyCode)) },
                     leadingIcon = { Text(regionState.selectedRegion.currencySymbol) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
@@ -326,7 +327,7 @@ fun AddInteractionSheet(
                         durationMinutes = it
                     }
                 },
-                label = { Text("Duration (minutes)") },
+                label = { Text(localizedUiString("Duration (minutes)")) },
                 leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth(),
@@ -361,7 +362,7 @@ fun AddInteractionSheet(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Cancel")
+                    Text(localizedUiString("Cancel"))
                 }
                 
                 Button(
@@ -382,7 +383,7 @@ fun AddInteractionSheet(
                     colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Save Interaction")
+                    Text(localizedUiString("Save Interaction"))
                 }
             }
         }

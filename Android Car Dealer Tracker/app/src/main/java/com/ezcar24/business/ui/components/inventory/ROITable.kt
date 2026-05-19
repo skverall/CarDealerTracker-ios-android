@@ -25,6 +25,7 @@ import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.ui.theme.EzcarWarning
 import java.math.BigDecimal
+import com.ezcar24.business.util.localizedUiString
 
 enum class ROISortColumn {
     VEHICLE, ROI, PROFIT, DAYS, TOTAL_COST
@@ -274,7 +275,7 @@ fun TopPerformerCard(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black

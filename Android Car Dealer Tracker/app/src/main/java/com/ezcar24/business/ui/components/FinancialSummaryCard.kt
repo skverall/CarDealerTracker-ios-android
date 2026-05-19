@@ -19,6 +19,7 @@ import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.data.local.ExpenseCategoryType
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
+import com.ezcar24.business.util.localizedUiString
 
 data class FinancialSummaryData(
     val purchasePrice: BigDecimal,
@@ -239,7 +240,7 @@ fun RecommendedPricingCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit",
+                                contentDescription = localizedUiString("Edit"),
                                 tint = EzcarNavy,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -330,7 +331,7 @@ private fun EditAskingPriceDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Update Asking Price") },
+        title = { Text(localizedUiString("Update Asking Price")) },
         text = {
             Column {
                 Text(
@@ -342,7 +343,7 @@ private fun EditAskingPriceDialog(
                 OutlinedTextField(
                     value = priceText,
                     onValueChange = { priceText = it },
-                    label = { Text("Asking Price") },
+                    label = { Text(localizedUiString("Asking Price")) },
                     prefix = { Text(currencyCode) },
                     singleLine = true
                 )
@@ -354,12 +355,12 @@ private fun EditAskingPriceDialog(
                     priceText.toBigDecimalOrNull()?.let { onConfirm(it) }
                 }
             ) {
-                Text("Save")
+                Text(localizedUiString("Save"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(localizedUiString("Cancel"))
             }
         }
     )

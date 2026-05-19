@@ -64,6 +64,7 @@ import com.ezcar24.business.BuildConfig
 import com.ezcar24.business.R
 import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.billing.SubscriptionOffer
+import com.ezcar24.business.util.localizedUiString
 
 @Composable
 fun PaywallScreen(
@@ -141,7 +142,7 @@ fun PaywallScreen(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = localizedUiString("Close"),
                             tint = Color.White
                         )
                     }
@@ -233,7 +234,7 @@ private fun PaywallHero() {
             PremiumBadge()
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Upgrade to Pro",
+                text = localizedUiString("Upgrade to Pro"),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = Color.White,
@@ -242,7 +243,7 @@ private fun PaywallHero() {
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Everything you need to grow your dealership business.",
+                text = localizedUiString("Everything you need to grow your dealership business."),
                 style = MaterialTheme.typography.bodyLarge,
                 color = Color.White.copy(alpha = 0.72f),
                 textAlign = TextAlign.Center,
@@ -276,7 +277,7 @@ private fun PremiumBadge() {
                 modifier = Modifier.size(16.dp)
             )
             Text(
-                text = "Unlock Full Potential",
+                text = localizedUiString("Unlock Full Potential"),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFFC084FC)
@@ -321,14 +322,14 @@ private fun FeatureStrip() {
                         modifier = Modifier.size(16.dp)
                     )
                     Text(
-                        text = title,
+                        text = localizedUiString(title),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 1
                     )
                     Text(
-                        text = subtitle,
+                        text = localizedUiString(subtitle),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.White.copy(alpha = 0.58f),
                         maxLines = 1,
@@ -356,7 +357,7 @@ private fun SectionTitle(title: String) {
                 .background(Color.White.copy(alpha = 0.12f))
         )
         Text(
-            text = title,
+            text = localizedUiString(title),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.ExtraBold,
             color = Color.White.copy(alpha = 0.58f),
@@ -387,14 +388,14 @@ private fun EmptyPlansState(onRetry: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Unable to load plans",
+                text = localizedUiString("Unable to load plans"),
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = Color.White.copy(alpha = 0.78f)
             )
             TextButton(onClick = onRetry) {
                 Text(
-                    text = "Retry",
+                    text = localizedUiString("Retry"),
                     color = Color(0xFFC084FC),
                     fontWeight = FontWeight.Bold
                 )
@@ -465,7 +466,7 @@ private fun PlanCard(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = planName(offer),
+                        text = localizedUiString(planName(offer)),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
@@ -478,7 +479,7 @@ private fun PlanCard(
                     }
                 }
                 Text(
-                    text = billingLine(offer),
+                    text = localizedUiString(billingLine(offer)),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.58f),
                     maxLines = 1
@@ -503,7 +504,7 @@ private fun PlanBadge(text: String) {
         color = Color(0xFFA855F7)
     ) {
         Text(
-            text = text,
+            text = localizedUiString(text),
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.ExtraBold,
@@ -573,7 +574,7 @@ private fun PaywallBottomBar(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Cancel anytime. No hidden fees.",
+                text = localizedUiString("Cancel anytime. No hidden fees."),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.68f),
                 maxLines = 1
@@ -608,7 +609,7 @@ private fun PaywallBottomBar(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (isLoading) "Processing..." else ctaText(selectedOffer),
+                    text = if (isLoading) localizedUiString("Processing...") else localizedUiString(ctaText(selectedOffer)),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold
                 )
@@ -617,7 +618,7 @@ private fun PaywallBottomBar(
 
         TextButton(onClick = onRestore) {
             Text(
-                text = "Restore Purchases",
+                text = localizedUiString("Restore Purchases"),
                 color = Color(0xFFC084FC),
                 fontWeight = FontWeight.Medium
             )
@@ -652,14 +653,14 @@ private fun SuccessState(onDismiss: () -> Unit) {
         }
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "You're all set!",
+            text = localizedUiString("You're all set!"),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold,
             color = Color.White
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Your Pro subscription is active. Enjoy full access.",
+            text = localizedUiString("Your Pro subscription is active. Enjoy full access."),
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
@@ -669,7 +670,7 @@ private fun SuccessState(onDismiss: () -> Unit) {
             onClick = onDismiss,
             shape = RoundedCornerShape(18.dp)
         ) {
-            Text("Continue")
+            Text(localizedUiString("Continue"))
         }
     }
 }

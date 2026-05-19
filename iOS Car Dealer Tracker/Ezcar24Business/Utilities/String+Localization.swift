@@ -31,4 +31,15 @@ extension String {
     var localizedKey: LocalizedStringKey {
         return LocalizedStringKey(self.localizedString)
     }
+
+    var localizedStringFallback: String {
+        let language = UserDefaults.standard.string(forKey: "app_selected_language") ?? AppLanguage.english.rawValue
+
+        guard let path = Bundle.main.path(forResource: language, ofType: "lproj"),
+              let bundle = Bundle(path: path) else {
+            return NSLocalizedString(self, comment: "")
+        }
+
+        return NSLocalizedString(self, tableName: nil, bundle: bundle, value: self, comment: "")
+    }
 }

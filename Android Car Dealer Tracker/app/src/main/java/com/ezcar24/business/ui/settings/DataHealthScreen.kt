@@ -43,6 +43,7 @@ import com.ezcar24.business.data.sync.SyncQueueSummaryItem
 import com.ezcar24.business.ui.theme.EzcarBackground
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,15 +62,15 @@ fun DataHealthScreen(
         containerColor = EzcarBackground,
         topBar = {
             TopAppBar(
-                title = { Text("Data Health") },
+                title = { Text(localizedUiString("Data Health")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.runDiagnostics() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = localizedUiString("Refresh"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = EzcarBackground)
@@ -111,11 +112,11 @@ fun DataHealthScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Summary", fontWeight = FontWeight.Bold)
+                            Text(localizedUiString("Summary"), fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("Last Sync: ${report.lastSyncAt?.let { formatter.format(it) } ?: "Never"}")
-                            Text("Queue: ${report.offlineQueueCount}")
-                            Text("Syncing: ${if (report.isSyncing) "Yes" else "No"}")
+                            Text(localizedUiString("Last Sync: %s", report.lastSyncAt?.let { formatter.format(it) } ?: localizedUiString("Never")))
+                            Text(localizedUiString("Queue: %d", report.offlineQueueCount))
+                            Text(localizedUiString("Syncing: %s", localizedUiString(if (report.isSyncing) "Yes" else "No")))
                         }
                     }
                 }
@@ -127,7 +128,7 @@ fun DataHealthScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Text("Offline Queue", fontWeight = FontWeight.Bold)
+                                Text(localizedUiString("Offline Queue"), fontWeight = FontWeight.Bold)
                                 Spacer(modifier = Modifier.height(8.dp))
                                 QueueSummaryList(report.offlineQueueSummary)
                             }
@@ -141,7 +142,7 @@ fun DataHealthScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Entity Counts", fontWeight = FontWeight.Bold)
+                            Text(localizedUiString("Entity Counts"), fontWeight = FontWeight.Bold)
                             Spacer(modifier = Modifier.height(8.dp))
                             EntityCountsList(report.entityCounts)
                         }
@@ -157,7 +158,7 @@ private fun QueueSummaryList(items: List<SyncQueueSummaryItem>) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         items.forEach { item ->
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("${item.entity.displayName} • ${item.operation.displayName}")
+                Text(localizedUiString("%s • %s", localizedUiString(item.entity.displayName), localizedUiString(item.operation.displayName)))
                 Text(item.count.toString())
             }
         }

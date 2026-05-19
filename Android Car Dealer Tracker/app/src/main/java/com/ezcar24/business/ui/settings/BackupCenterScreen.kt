@@ -49,6 +49,7 @@ import com.ezcar24.business.ui.theme.EzcarBackground
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -72,7 +73,7 @@ fun BackupCenterScreen(
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
-        context.startActivity(Intent.createChooser(intent, "Share File"))
+        context.startActivity(Intent.createChooser(intent, context.localizedUiString("Share File")))
         viewModel.clearShareUri()
     }
 
@@ -80,10 +81,10 @@ fun BackupCenterScreen(
         containerColor = EzcarBackground,
         topBar = {
             TopAppBar(
-                title = { Text("Backup & Export") },
+                title = { Text(localizedUiString("Backup & Export")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = EzcarBackground)
@@ -103,7 +104,7 @@ fun BackupCenterScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Quick Exports", fontWeight = FontWeight.Bold)
+                        Text(localizedUiString("Quick Exports"), fontWeight = FontWeight.Bold)
                         ExportButton(
                             title = "Export expenses CSV",
                             icon = Icons.Default.Receipt,
@@ -132,7 +133,7 @@ fun BackupCenterScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Custom Range Report", fontWeight = FontWeight.Bold)
+                        Text(localizedUiString("Custom Range Report"), fontWeight = FontWeight.Bold)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -162,7 +163,7 @@ fun BackupCenterScreen(
                                 .padding(top = 12.dp)
                                 .height(44.dp)
                         ) {
-                            Text("Generate PDF Report")
+                            Text(localizedUiString("Generate PDF Report"))
                         }
                     }
                 }
@@ -171,7 +172,7 @@ fun BackupCenterScreen(
             if (uiState.message != null) {
                 item {
                     Text(
-                        text = uiState.message ?: "",
+                        text = localizedUiString(uiState.message ?: ""),
                         color = Color.Red,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -184,7 +185,7 @@ fun BackupCenterScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text("Full Backup & Archive", fontWeight = FontWeight.Bold)
+                        Text(localizedUiString("Full Backup & Archive"), fontWeight = FontWeight.Bold)
                         Button(
                             onClick = {
                                 val normalizedStart = if (startDate.after(endDate)) endDate else startDate
@@ -197,7 +198,7 @@ fun BackupCenterScreen(
                                 .padding(top = 12.dp)
                                 .height(44.dp)
                         ) {
-                            Text("Build JSON Archive")
+                            Text(localizedUiString("Build JSON Archive"))
                         }
                     }
                 }
@@ -242,7 +243,7 @@ private fun ExportButton(
         enabled = !isLoading
     ) {
         Icon(icon, contentDescription = null)
-        Text(title, modifier = Modifier.padding(start = 8.dp))
+        Text(localizedUiString(title), modifier = Modifier.padding(start = 8.dp))
     }
 }
 
@@ -279,11 +280,11 @@ private fun SimpleDatePickerDialog(
                     state.selectedDateMillis?.let { onDateSelected(Date(it)) }
                 }
             ) {
-                Text("OK")
+                Text(localizedUiString("OK"))
             }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel")) }
         }
     ) {
         DatePicker(state = state)

@@ -342,7 +342,7 @@ struct DataHealthView: View {
     @MainActor
     private func runDiagnostics() async {
         guard case .signedIn(let user) = sessionStore.status else {
-            errorMessage = "Sign in to run diagnostics."
+            errorMessage = "diagnostics_sign_in_required".localizedString
             return
         }
         errorMessage = nil
@@ -355,7 +355,7 @@ struct DataHealthView: View {
     @MainActor
     private func runFullRefresh() async {
         guard case .signedIn(let user) = sessionStore.status else {
-            errorMessage = "Sign in to run diagnostics."
+            errorMessage = "diagnostics_sign_in_required".localizedString
             return
         }
         errorMessage = nil
