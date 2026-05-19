@@ -13,6 +13,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.ezcar24.business.util.localizedUiString
 
 @Singleton
 class NotificationHelper @Inject constructor(
@@ -72,7 +73,7 @@ class NotificationHelper @Inject constructor(
 
         val notification = NotificationCompat.Builder(context, CHANNEL_CLIENT_REMINDERS)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("Client Reminder")
+            .setContentTitle(context.localizedUiString("Client Reminder"))
             .setContentText("$clientName • $reminderTitle")
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)

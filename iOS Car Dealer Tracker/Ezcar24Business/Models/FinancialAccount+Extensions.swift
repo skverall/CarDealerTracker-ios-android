@@ -18,6 +18,15 @@ enum FinancialAccountKind: String, CaseIterable, Identifiable {
         }
     }
 
+    var localizedTitle: String {
+        switch self {
+        case .cash: return "cash".localizedStringFallback
+        case .bank: return "bank".localizedStringFallback
+        case .creditCard: return "credit_card".localizedStringFallback
+        case .other: return "other".localizedStringFallback
+        }
+    }
+
     static let separator = " - "
 
     static func fromPrefix(_ value: String) -> FinancialAccountKind {
@@ -75,13 +84,13 @@ extension FinancialAccount {
             if parsed.kind == .other {
                 return name
             }
-            return "\(parsed.kind.title)\(FinancialAccountKind.separator)\(name)"
+            return "\(parsed.kind.localizedTitle)\(FinancialAccountKind.separator)\(name)"
         }
         if parsed.kind == .other {
             let raw = accountType?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return raw.isEmpty ? "Account" : raw
+            return raw.isEmpty ? "account".localizedStringFallback : raw
         }
-        return parsed.kind.title
+        return parsed.kind.localizedTitle
     }
 
     var shortTitle: String {
@@ -91,15 +100,15 @@ extension FinancialAccount {
         }
         if parsed.kind == .other {
             let raw = accountType?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            return raw.isEmpty ? "Account" : raw
+            return raw.isEmpty ? "account".localizedStringFallback : raw
         }
-        return parsed.kind.title
+        return parsed.kind.localizedTitle
     }
 
     var subtitleTitle: String? {
         let parsed = FinancialAccountKind.parse(accountType)
         if let name = parsed.name, !name.isEmpty, parsed.kind != .other {
-            return parsed.kind.title
+            return parsed.kind.localizedTitle
         }
         return nil
     }

@@ -48,6 +48,7 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import com.ezcar24.business.util.localizedUiString
 
 
 
@@ -157,7 +158,7 @@ fun ClientDetailScreen(
                             }
                         }
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
@@ -165,7 +166,7 @@ fun ClientDetailScreen(
                         CircularProgressIndicator(modifier = Modifier.size(24.dp))
                     } else if (!isEditing && !isNewClient) {
                         TextButton(onClick = { isEditing = true }) {
-                            Text("Edit")
+                            Text(localizedUiString("Edit"))
                         }
                     } else {
                         Button(
@@ -187,7 +188,7 @@ fun ClientDetailScreen(
                             },
                             enabled = name.isNotBlank()
                         ) {
-                            Text("Save")
+                            Text(localizedUiString("Save"))
                         }
                     }
                 }
@@ -221,7 +222,7 @@ fun ClientDetailScreen(
                             modifier = Modifier.weight(1f)
                         )
                         TextButton(onClick = viewModel::clearErrorMessage) {
-                            Text("Dismiss")
+                            Text(localizedUiString("Dismiss"))
                         }
                     }
                 }
@@ -253,7 +254,7 @@ fun ClientDetailScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Client Name") },
+                label = { Text(localizedUiString("Client Name")) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
@@ -267,10 +268,10 @@ fun ClientDetailScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Text("LEAD INFORMATION", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(localizedUiString("LEAD INFORMATION"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     
                     // Lead Stage Selector
-                    Text("Lead Stage", style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray)
+                    Text(localizedUiString("Lead Stage"), style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray)
                     LeadStageSelector(
                         selectedStage = leadStage,
                         onStageSelected = { leadStage = it },
@@ -278,7 +279,7 @@ fun ClientDetailScreen(
                     )
                     
                     // Lead Source Selector
-                    Text("Lead Source", style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray)
+                    Text(localizedUiString("Lead Source"), style = MaterialTheme.typography.bodyMedium, color = Color.DarkGray)
                     LeadSourceSelector(
                         selectedSource = leadSource,
                         onSourceSelected = { leadSource = it },
@@ -300,7 +301,7 @@ fun ClientDetailScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Lead Score", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text(localizedUiString("Lead Score"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = "$leadScore/100",
@@ -316,7 +317,7 @@ fun ClientDetailScreen(
                             modifier = Modifier.weight(1f)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Interactions", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                Text(localizedUiString("Interactions"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
                                     text = uiState.interactions.size.toString(),
@@ -336,7 +337,7 @@ fun ClientDetailScreen(
                                 estimatedValue = it
                             }
                         },
-                        label = { Text("Estimated Value (${regionState.selectedRegion.currencyCode})") },
+                        label = { Text(localizedUiString("Estimated Value (%s)", regionState.selectedRegion.currencyCode)) },
                         leadingIcon = { 
                             Text(
                                 regionState.selectedRegion.currencySymbol,
@@ -355,12 +356,12 @@ fun ClientDetailScreen(
             // Contact Section
             Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("CONTACT INFO", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(localizedUiString("CONTACT INFO"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     
                     OutlinedTextField(
                         value = phone,
                         onValueChange = { phone = it },
-                        label = { Text("Phone Number") },
+                        label = { Text(localizedUiString("Phone Number")) },
                         leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
@@ -369,7 +370,7 @@ fun ClientDetailScreen(
                     OutlinedTextField(
                         value = email,
                         onValueChange = { email = it },
-                        label = { Text("Email Address") },
+                        label = { Text(localizedUiString("Email Address")) },
                         leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
@@ -387,7 +388,7 @@ fun ClientDetailScreen(
                                 ) {
                                     Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Call")
+                                    Text(localizedUiString("Call"))
                                 }
                                 FilledTonalButton(
                                     onClick = { openWhatsApp(context, phone) },
@@ -395,7 +396,7 @@ fun ClientDetailScreen(
                                 ) {
                                     Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("WhatsApp")
+                                    Text(localizedUiString("WhatsApp"))
                                 }
                             }
 
@@ -406,7 +407,7 @@ fun ClientDetailScreen(
                                 ) {
                                     Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(18.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Email")
+                                    Text(localizedUiString("Email"))
                                 }
                             }
                         }
@@ -419,7 +420,7 @@ fun ClientDetailScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text("VEHICLE INTEREST", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(localizedUiString("VEHICLE INTEREST"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
 
                     Box(modifier = Modifier.fillMaxWidth()) {
                         OutlinedButton(
@@ -447,7 +448,7 @@ fun ClientDetailScreen(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             DropdownMenuItem(
-                                text = { Text("No vehicle selected") },
+                                text = { Text(localizedUiString("No vehicle selected")) },
                                 onClick = {
                                     selectedVehicleId = null
                                     showVehicleMenu = false
@@ -467,7 +468,7 @@ fun ClientDetailScreen(
 
                     if (uiState.vehicles.isEmpty()) {
                         Text(
-                            "No inventory available yet",
+                            localizedUiString("No inventory available yet"),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray
                         )
@@ -517,11 +518,11 @@ fun ClientDetailScreen(
                     OutlinedTextField(
                         value = requestDetails,
                         onValueChange = { requestDetails = it },
-                        label = { Text("Request Details") },
+                        label = { Text(localizedUiString("Request Details")) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(120.dp),
-                        placeholder = { Text("What is this client looking for?") }
+                        placeholder = { Text(localizedUiString("What is this client looking for?")) }
                     )
                 }
             }
@@ -529,13 +530,13 @@ fun ClientDetailScreen(
             // Notes Section
             Card(colors = CardDefaults.cardColors(containerColor = Color.White)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("NOTES", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(localizedUiString("NOTES"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = notes,
                         onValueChange = { notes = it },
                         modifier = Modifier.fillMaxWidth().height(120.dp),
-                        placeholder = { Text("Add notes here...") }
+                        placeholder = { Text(localizedUiString("Add notes here...")) }
                     )
                 }
             }
@@ -547,21 +548,21 @@ fun ClientDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("REMINDERS", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(localizedUiString("REMINDERS"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     TextButton(onClick = { showReminderDialog = true }, enabled = canManageFollowUps) {
-                        Text("Add", color = EzcarBlueBright)
+                        Text(localizedUiString("Add"), color = EzcarBlueBright)
                     }
                 }
 
                 if (!canManageFollowUps) {
                     Text(
-                        "Save client to add reminders",
+                        localizedUiString("Save client to add reminders"),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 } else if (uiState.reminders.isEmpty()) {
-                    Text("No reminders set", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
+                    Text(localizedUiString("No reminders set"), style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
                 } else {
                     uiState.reminders.forEach { reminder ->
                         ReminderItem(
@@ -580,21 +581,21 @@ fun ClientDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("INTERACTIONS", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(localizedUiString("INTERACTIONS"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     TextButton(onClick = { showInteractionSheet = true }, enabled = canManageFollowUps) {
-                        Text("Add Interaction", color = EzcarBlueBright)
+                        Text(localizedUiString("Add Interaction"), color = EzcarBlueBright)
                     }
                 }
 
                 if (!canManageFollowUps) {
                     Text(
-                        "Save client to log interactions",
+                        localizedUiString("Save client to log interactions"),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         modifier = Modifier.padding(start = 4.dp)
                     )
                 } else if (uiState.interactions.isEmpty()) {
-                    Text("No interactions recorded", style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
+                    Text(localizedUiString("No interactions recorded"), style = MaterialTheme.typography.bodySmall, color = Color.Gray, modifier = Modifier.padding(start = 4.dp))
                 } else {
                     uiState.interactions.forEach { interaction ->
                         InteractionItem(
@@ -638,8 +639,8 @@ fun ClientDetailScreen(
         interactionPendingDelete?.let { interaction ->
             AlertDialog(
                 onDismissRequest = { interactionPendingDelete = null },
-                title = { Text("Delete interaction") },
-                text = { Text("This interaction will be removed from the client timeline.") },
+                title = { Text(localizedUiString("Delete interaction")) },
+                text = { Text(localizedUiString("This interaction will be removed from the client timeline.")) },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -648,12 +649,12 @@ fun ClientDetailScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Text("Delete")
+                        Text(localizedUiString("Delete"))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { interactionPendingDelete = null }) {
-                        Text("Cancel")
+                        Text(localizedUiString("Cancel"))
                     }
                 }
             )
@@ -662,8 +663,8 @@ fun ClientDetailScreen(
         reminderPendingDelete?.let { reminder ->
             AlertDialog(
                 onDismissRequest = { reminderPendingDelete = null },
-                title = { Text("Delete reminder") },
-                text = { Text("This reminder and its notification will be removed.") },
+                title = { Text(localizedUiString("Delete reminder")) },
+                text = { Text(localizedUiString("This reminder and its notification will be removed.")) },
                 confirmButton = {
                     Button(
                         onClick = {
@@ -672,12 +673,12 @@ fun ClientDetailScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Text("Delete")
+                        Text(localizedUiString("Delete"))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { reminderPendingDelete = null }) {
-                        Text("Cancel")
+                        Text(localizedUiString("Cancel"))
                     }
                 }
             )
@@ -754,7 +755,7 @@ private fun ClientReadOnlyContent(
                 modifier = Modifier.weight(1f)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Lead Score", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(localizedUiString("Lead Score"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "$leadScore/100",
@@ -770,7 +771,7 @@ private fun ClientReadOnlyContent(
                 modifier = Modifier.weight(1f)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Estimated Value", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                    Text(localizedUiString("Estimated Value"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = regionSettingsManager.formatCurrency(client.estimatedValue),
@@ -810,7 +811,7 @@ private fun ClientReadOnlyContent(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Next Reminder", style = MaterialTheme.typography.labelSmall, color = EzcarOrange)
+                    Text(localizedUiString("Next Reminder"), style = MaterialTheme.typography.labelSmall, color = EzcarOrange)
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = reminder.title,
@@ -871,7 +872,7 @@ private fun ClientReadOnlyContent(
 
     ClientReadOnlyCard(title = "Deal History") {
         if (interactions.isEmpty()) {
-            Text("No interactions recorded", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(localizedUiString("No interactions recorded"), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 interactions.forEach { interaction ->
@@ -883,7 +884,7 @@ private fun ClientReadOnlyContent(
 
     ClientReadOnlyCard(title = "Reminders") {
         if (reminders.isEmpty()) {
-            Text("No reminders set", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            Text(localizedUiString("No reminders set"), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 reminders.forEach { reminder ->
@@ -952,7 +953,7 @@ private fun ClientContactActions(
             ) {
                 Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Call")
+                Text(localizedUiString("Call"))
             }
             FilledTonalButton(
                 onClick = { onWhatsApp(cleanPhone) },
@@ -960,7 +961,7 @@ private fun ClientContactActions(
             ) {
                 Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("WhatsApp")
+                Text(localizedUiString("WhatsApp"))
             }
             FilledTonalButton(
                 onClick = { onSms(cleanPhone) },
@@ -968,7 +969,7 @@ private fun ClientContactActions(
             ) {
                 Icon(Icons.Default.Sms, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("SMS")
+                Text(localizedUiString("SMS"))
             }
         }
     }
@@ -981,7 +982,7 @@ private fun ClientContactActions(
         ) {
             Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Email")
+            Text(localizedUiString("Email"))
         }
     }
 }
@@ -1099,7 +1100,7 @@ fun ReminderItem(reminder: ClientReminder, onToggle: () -> Unit, onDelete: () ->
                 )
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete reminder", tint = Color.Gray)
+                Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete reminder"), tint = Color.Gray)
             }
         }
     }
@@ -1142,7 +1143,7 @@ fun LegacyAddInteractionDialog(onDismiss: () -> Unit, onSave: (String, String) -
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
             Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Add Interaction", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(localizedUiString("Add Interaction"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 
                 // Type Selector
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -1158,13 +1159,13 @@ fun LegacyAddInteractionDialog(onDismiss: () -> Unit, onSave: (String, String) -
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notes") },
+                    label = { Text(localizedUiString("Notes")) },
                     modifier = Modifier.fillMaxWidth().height(100.dp)
                 )
                 
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Button(onClick = { onSave(type, notes) }, colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright)) { Text("Save") }
+                    TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel")) }
+                    Button(onClick = { onSave(type, notes) }, colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright)) { Text(localizedUiString("Save")) }
                 }
             }
         }
@@ -1191,19 +1192,19 @@ fun AddReminderDialog(onDismiss: () -> Unit, onSave: (String, String, Date) -> U
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Card(shape = RoundedCornerShape(16.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
             Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text("Add Reminder", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(localizedUiString("Add Reminder"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 
                 OutlinedTextField(
                     value = title,
                     onValueChange = { title = it },
-                    label = { Text("Reminder Title") },
+                    label = { Text(localizedUiString("Reminder Title")) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notes") },
+                    label = { Text(localizedUiString("Notes")) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp)
@@ -1237,18 +1238,18 @@ fun AddReminderDialog(onDismiss: () -> Unit, onSave: (String, String, Date) -> U
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Due: ${SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(dueDate)}")
+                    Text(localizedUiString("Due: %s", SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(dueDate)))
                 }
                 
                 Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
+                    TextButton(onClick = onDismiss) { Text(localizedUiString("Cancel")) }
                     Button(
                         onClick = {
                             onSave(title, notes, dueDate)
                         },
                         enabled = title.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright)
-                    ) { Text("Save") }
+                    ) { Text(localizedUiString("Save")) }
                 }
             }
         }

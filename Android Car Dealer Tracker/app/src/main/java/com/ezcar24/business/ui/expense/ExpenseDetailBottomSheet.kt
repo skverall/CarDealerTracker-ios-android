@@ -56,6 +56,7 @@ import com.ezcar24.business.util.expenseDisplayDateTime
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,10 +84,10 @@ fun ExpenseDetailBottomSheet(
             if (draft != null) {
                 onReplaceReceipt(currentExpense, draft) { updatedExpense ->
                     currentExpense = updatedExpense
-                    Toast.makeText(context, "Receipt updated", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.localizedUiString("Receipt updated"), Toast.LENGTH_SHORT).show()
                 }
             } else {
-                Toast.makeText(context, "Could not attach receipt", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.localizedUiString("Could not attach receipt"), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -96,7 +97,7 @@ fun ExpenseDetailBottomSheet(
         if (bitmap != null) {
             onReplaceReceipt(currentExpense, bitmap.toExpenseReceipt()) { updatedExpense ->
                 currentExpense = updatedExpense
-                Toast.makeText(context, "Receipt updated", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.localizedUiString("Receipt updated"), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -140,7 +141,7 @@ fun ExpenseDetailBottomSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close"
+                        contentDescription = localizedUiString("Close")
                     )
                 }
             }
@@ -152,7 +153,7 @@ fun ExpenseDetailBottomSheet(
                 item {
                     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
                         Text(
-                            text = title,
+                            text = localizedUiString(title),
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -218,7 +219,7 @@ fun ExpenseDetailBottomSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp)
                             ) {
-                                Text("View Receipt")
+                                Text(localizedUiString("View Receipt"))
                             }
                         }
                     }
@@ -255,7 +256,7 @@ fun ExpenseDetailBottomSheet(
                             onValueChange = { commentDraft = it },
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = {
-                                Text("Add a note (what was this expense for?)")
+                                Text(localizedUiString("Add a note (what was this expense for?)"))
                             },
                             minLines = 4,
                             maxLines = 6,
@@ -309,7 +310,7 @@ fun ExpenseDetailBottomSheet(
                         showReceiptActionsSheet = false
                         onRemoveReceipt(currentExpense) { updatedExpense ->
                             currentExpense = updatedExpense
-                            Toast.makeText(context, "Receipt removed", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, context.localizedUiString("Receipt removed"), Toast.LENGTH_SHORT).show()
                         }
                     }
                 )

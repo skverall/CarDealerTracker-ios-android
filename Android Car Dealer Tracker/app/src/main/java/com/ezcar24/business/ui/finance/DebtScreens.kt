@@ -34,6 +34,7 @@ import java.util.Locale
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.ui.unit.sp
 import java.util.UUID
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,15 +76,15 @@ fun DebtListScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Debts", fontWeight = FontWeight.Bold) },
+                title = { Text(localizedUiString("Debts"), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     IconButton(onClick = { showAddDialog = true }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add", tint = EzcarBlueBright)
+                        Icon(Icons.Default.Add, contentDescription = localizedUiString("Add"), tint = EzcarBlueBright)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -297,7 +298,7 @@ fun DebtItem(
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = onDelete) {
-                    Text("Delete", color = Color.Gray)
+                    Text(localizedUiString("Delete"), color = Color.Gray)
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(
@@ -306,7 +307,7 @@ fun DebtItem(
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text("Record Payment")
+                    Text(localizedUiString("Record Payment"))
                 }
             }
         }
@@ -369,7 +370,7 @@ fun DebtDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
+                    label = { Text(localizedUiString("Name")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -377,7 +378,7 @@ fun DebtDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Amount (${regionState.selectedRegion.currencyCode})") },
+                    label = { Text(localizedUiString("Amount (%s)", regionState.selectedRegion.currencyCode)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -386,7 +387,7 @@ fun DebtDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Notes (Optional)") },
+                    label = { Text(localizedUiString("Notes (Optional)")) },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -395,7 +396,7 @@ fun DebtDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = Color.Gray)
+                        Text(localizedUiString("Cancel"), color = Color.Gray)
                     }
                     Button(
                         onClick = {
@@ -405,7 +406,7 @@ fun DebtDialog(
                         enabled = name.isNotBlank() && amount.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright)
                     ) {
-                        Text("Save")
+                        Text(localizedUiString("Save"))
                     }
                 }
             }
@@ -430,12 +431,12 @@ fun DebtDetailScreen(
                 title = { Text(debt.counterpartyName, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Delete", tint = EzcarDanger)
+                        Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = EzcarDanger)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
@@ -521,7 +522,7 @@ fun DebtDetailScreen(
                  if (payments.isEmpty()) {
                     item {
                         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                            Text("No payment history", color = Color.Gray)
+                            Text(localizedUiString("No payment history"), color = Color.Gray)
                         }
                     }
                 }
@@ -619,8 +620,8 @@ fun PaymentDialog(
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
-                    label = { Text("Payment Amount (${regionState.selectedRegion.currencyCode})") },
-                    placeholder = { Text("Max: ${regionSettingsManager.formatCurrency(debt.amount)}") },
+                    label = { Text(localizedUiString("Payment Amount (%s)", regionState.selectedRegion.currencyCode)) },
+                    placeholder = { Text(localizedUiString("Max: %s", regionSettingsManager.formatCurrency(debt.amount))) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -634,7 +635,7 @@ fun PaymentDialog(
                 ) {
                     val selectedAccount = accounts.find { it.id == selectedAccountId }
                     OutlinedTextField(
-                        value = selectedAccount?.accountType ?: "Select Account",
+                        value = selectedAccount?.accountType ?: localizedUiString("Select Account"),
                         onValueChange = {},
                         readOnly = true,
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -647,7 +648,7 @@ fun PaymentDialog(
                     ) {
                         accounts.forEach { account ->
                             DropdownMenuItem(
-                                text = { Text("${account.accountType} (${regionSettingsManager.formatCurrency(account.balance)})") },
+                                text = { Text(localizedUiString("%s (%s)", account.accountType, regionSettingsManager.formatCurrency(account.balance))) },
                                 onClick = {
                                     selectedAccountId = account.id
                                     expanded = false
@@ -662,7 +663,7 @@ fun PaymentDialog(
                     horizontalArrangement = Arrangement.End
                 ) {
                     TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = Color.Gray)
+                        Text(localizedUiString("Cancel"), color = Color.Gray)
                     }
                     Button(
                         onClick = {
@@ -674,7 +675,7 @@ fun PaymentDialog(
                         enabled = amount.isNotBlank() && selectedAccountId != null,
                         colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright)
                     ) {
-                        Text("Confirm")
+                        Text(localizedUiString("Confirm"))
                     }
                 }
             }

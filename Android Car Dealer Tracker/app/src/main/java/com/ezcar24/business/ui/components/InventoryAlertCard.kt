@@ -21,6 +21,7 @@ import com.ezcar24.business.ui.theme.EzcarWarning
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.data.local.InventoryAlert
 import com.ezcar24.business.data.local.InventoryAlertType
+import com.ezcar24.business.util.localizedInventoryAlertMessage
 
 @Composable
 fun InventoryAlertCard(
@@ -72,7 +73,7 @@ fun InventoryAlertCard(
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = alert.message,
+                text = localizedInventoryAlertMessage(alert.message),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )

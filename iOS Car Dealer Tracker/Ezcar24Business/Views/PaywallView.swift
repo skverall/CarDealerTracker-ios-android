@@ -483,7 +483,7 @@ struct PaywallView: View {
                 .fill(Color.white.opacity(0.12))
                 .frame(height: 1)
 
-            Text(title)
+            Text(title.localizedString)
                 .font(.system(size: layout.sectionTitleFontSize, weight: .heavy))
                 .foregroundStyle(.white.opacity(0.58))
                 .tracking(layout.sectionTitleTracking)
@@ -712,7 +712,7 @@ struct PaywallFeatureChip: View {
                 .font(.system(size: layout.featureIconSize, weight: .bold))
                 .foregroundStyle(Color(hex: "A855F7"))
 
-            Text(feature.shortTitle)
+            Text(feature.shortTitle.localizedString)
                 .font(.system(size: layout.featureFontSize, weight: .bold))
                 .foregroundStyle(.white.opacity(0.8))
                 .lineLimit(1)

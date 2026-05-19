@@ -299,19 +299,19 @@ class InventoryAnalyticsViewModel: ObservableObject {
     
     var healthStatusTitle: String {
         switch healthScore {
-        case 90...100: return "Excellent Health"
-        case 75..<90: return "Good Health"
-        case 60..<75: return "Fair Health"
-        default: return "Needs Attention"
+        case 90...100: return "inventory_health_excellent".localizedStringFallback
+        case 75..<90: return "inventory_health_good".localizedStringFallback
+        case 60..<75: return "inventory_health_fair".localizedStringFallback
+        default: return "inventory_health_needs_attention".localizedStringFallback
         }
     }
     
     var healthStatusMessage: String {
         switch healthScore {
-        case 90...100: return "Your inventory efficiency is top tier."
-        case 75..<90: return "Inventory flow is healthy."
-        case 60..<75: return "Consider discounting older units."
-        default: return "High holding costs detected."
+        case 90...100: return "inventory_health_excellent_message".localizedStringFallback
+        case 75..<90: return "inventory_health_good_message".localizedStringFallback
+        case 60..<75: return "inventory_health_fair_message".localizedStringFallback
+        default: return "inventory_health_needs_attention_message".localizedStringFallback
         }
     }
     
@@ -325,9 +325,9 @@ class InventoryAnalyticsViewModel: ObservableObject {
     }
     
     func getTurnoverStatus() -> (String, ColorTheme.Key) {
-        if averageDaysInInventory < 30 { return ("Fast", .success) }
-        if averageDaysInInventory < 60 { return ("Normal", .warning) }
-        return ("Slow", .danger)
+        if averageDaysInInventory < 30 { return ("fast".localizedStringFallback, .success) }
+        if averageDaysInInventory < 60 { return ("normal".localizedStringFallback, .warning) }
+        return ("slow".localizedStringFallback, .danger)
     }
 }
 

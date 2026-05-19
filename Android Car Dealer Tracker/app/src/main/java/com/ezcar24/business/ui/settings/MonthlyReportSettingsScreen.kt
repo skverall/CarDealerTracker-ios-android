@@ -81,6 +81,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.ezcar24.business.util.localizedUiString
 
 data class MonthlyReportSettingsUiState(
     val organizationId: UUID? = null,
@@ -443,7 +444,7 @@ fun MonthlyReportSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = localizedUiString("Back"),
                             tint = EzcarNavy
                         )
                     }
@@ -462,7 +463,7 @@ fun MonthlyReportSettingsScreen(
                         } else {
                             Icon(
                                 imageVector = Icons.Default.Email,
-                                contentDescription = "Refresh",
+                                contentDescription = localizedUiString("Refresh"),
                                 tint = EzcarNavy
                             )
                         }
@@ -482,7 +483,7 @@ fun MonthlyReportSettingsScreen(
             uiState.errorMessage?.let { message ->
                 item {
                     MonthlyReportStatusCard(
-                        text = message,
+                        text = localizedUiString(message),
                         color = Color(0xFFC95A52),
                         onDismiss = viewModel::clearMessages
                     )
@@ -492,7 +493,7 @@ fun MonthlyReportSettingsScreen(
             uiState.infoMessage?.let { message ->
                 item {
                     MonthlyReportStatusCard(
-                        text = message,
+                        text = localizedUiString(message),
                         color = EzcarGreen,
                         onDismiss = viewModel::clearMessages
                     )
@@ -807,7 +808,7 @@ private fun MonthlyReportMetricCard(
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -876,12 +877,12 @@ private fun MonthlyReportActionButton(
             Spacer(modifier = Modifier.size(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = title,
+                    text = localizedUiString(title),
                     fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = subtitle,
+                    text = localizedUiString(subtitle),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -921,7 +922,7 @@ private fun MonthlyReportDetailRow(title: String, value: String) {
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -962,7 +963,7 @@ private fun MonthlyReportStatusCard(
                 onClick = onDismiss,
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
             ) {
-                Text("Dismiss")
+                Text(localizedUiString("Dismiss"))
             }
         }
     }

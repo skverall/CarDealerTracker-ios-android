@@ -43,6 +43,7 @@ import com.ezcar24.business.util.AppLanguage
 import com.ezcar24.business.util.AppRegion
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,7 +69,7 @@ fun RegionLanguageSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = localizedUiString("Back")
                         )
                     }
                 },
@@ -76,7 +77,7 @@ fun RegionLanguageSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Done",
+                            contentDescription = localizedUiString("Done"),
                             tint = EzcarGreen
                         )
                     }
@@ -199,12 +200,12 @@ private fun RegionOptionRow(
         Spacer(modifier = Modifier.size(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = subtitle,
+                text = localizedUiString(subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

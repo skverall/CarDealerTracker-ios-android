@@ -29,9 +29,9 @@ final class DebtViewModel: ObservableObject {
 
         var title: String {
             switch self {
-            case .open: return "Open"
-            case .paid: return "Paid"
-            case .all: return "All"
+            case .open: return "open".localizedStringFallback
+            case .paid: return "paid".localizedStringFallback
+            case .all: return "all".localizedStringFallback
             }
         }
     }
@@ -218,7 +218,7 @@ struct DebtItem: Identifiable {
     init(debt: Debt) {
         self.id = debt.objectID
         self.debt = debt
-        self.name = debt.counterpartyName ?? "Unknown"
+        self.name = debt.counterpartyName ?? "unknown".localizedStringFallback
         self.phone = debt.counterpartyPhone ?? ""
         self.direction = debt.directionEnum
         self.totalAmount = debt.totalAmountDecimal

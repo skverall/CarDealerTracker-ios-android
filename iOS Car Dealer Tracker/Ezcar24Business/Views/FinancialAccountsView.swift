@@ -22,7 +22,7 @@ struct FinancialAccountsView: View {
     
     private var navigationTitle: String {
         if let kind = filterKind {
-            return kind.title
+            return kind.localizedTitle
         }
         return "financial_accounts".localizedString
     }
@@ -97,7 +97,7 @@ struct FinancialAccountsView: View {
                 Button {
                     showAddAccount = true
                 } label: {
-                    Text(filterKind == nil ? "Add Custom Account" : "Add \(filterKind?.title ?? "Account")")
+                    Text(addAccountButtonTitle)
                         .font(.headline)
                         .foregroundColor(ColorTheme.primary)
                         .padding()
@@ -114,16 +114,23 @@ struct FinancialAccountsView: View {
     
     private var emptyStateTitle: String {
         if let kind = filterKind {
-            return "No \(kind.title) Found"
+            return String(format: "no_account_kind_found".localizedString, kind.localizedTitle)
         }
-        return "No Accounts Found"
+        return "no_accounts_found".localizedString
     }
     
     private var emptyStateSubtitle: String {
         if let kind = filterKind {
-            return "Tap the + button to add a \(kind.title.lowercased())."
+            return String(format: "tap_add_account_kind".localizedString, kind.localizedTitle.lowercased())
         }
-        return "Create accounts to track cash, banks, and cards separately."
+        return "create_accounts_to_track".localizedString
+    }
+
+    private var addAccountButtonTitle: String {
+        if let filterKind {
+            return String(format: "add_account_kind".localizedString, filterKind.localizedTitle)
+        }
+        return "add_custom_account".localizedString
     }
 
     private var accountsSections: some View {
@@ -133,7 +140,7 @@ struct FinancialAccountsView: View {
                     accountRow(account)
                 }
             } header: {
-                Text(group.kind.title)
+                Text(group.kind.localizedTitle)
             } footer: {
                 Text("Tap an account to view transactions.")
             }

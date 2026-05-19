@@ -25,6 +25,7 @@ import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.*
 import java.math.BigDecimal
 import java.util.Date
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,7 +59,7 @@ fun AddSaleScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                "New Sale",
+                localizedUiString("New Sale"),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = EzcarNavy
@@ -75,11 +76,11 @@ fun AddSaleScreen(
                 ) {
                     Icon(Icons.Default.DirectionsCar, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Select Vehicle from Inventory")
+                    Text(localizedUiString("Select Vehicle from Inventory"))
                 }
                 
                 // Show list of available vehicles immediately if none selected?
-                Text("Available Vehicles:", style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 16.dp))
+                Text(localizedUiString("Available Vehicles:"), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 16.dp))
                 LazyColumn(modifier = Modifier.height(200.dp)) {
                     items(uiState.availableVehicles.size) { i ->
                         val v = uiState.availableVehicles[i]
@@ -94,7 +95,7 @@ fun AddSaleScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text("${v.year} ${v.make} ${v.model}", fontWeight = FontWeight.Bold)
-                                Text("VIN: ${v.vin}", style = MaterialTheme.typography.labelSmall)
+                                Text(localizedUiString("VIN: %s", v.vin), style = MaterialTheme.typography.labelSmall)
                             }
                         }
                         HorizontalDivider()
@@ -111,12 +112,12 @@ fun AddSaleScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("SELECTED VEHICLE", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                            Text(localizedUiString("SELECTED VEHICLE"), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                             Text("${selectedVehicle?.make} ${selectedVehicle?.model}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         IconButton(onClick = { selectedVehicle = null }) {
-                            Icon(Icons.Default.Close, contentDescription = "Change")
+                            Icon(Icons.Default.Close, contentDescription = localizedUiString("Change"))
                         }
                     }
                 }
@@ -127,7 +128,7 @@ fun AddSaleScreen(
                 OutlinedTextField(
                     value = amountStr,
                     onValueChange = { amountStr = it },
-                    label = { Text("Sale Price (${regionState.selectedRegion.currencyCode})") },
+                    label = { Text(localizedUiString("Sale Price (%s)", regionState.selectedRegion.currencyCode)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -138,7 +139,7 @@ fun AddSaleScreen(
                 OutlinedTextField(
                     value = buyerName,
                     onValueChange = { buyerName = it },
-                    label = { Text("Buyer Name") },
+                    label = { Text(localizedUiString("Buyer Name")) },
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -147,7 +148,7 @@ fun AddSaleScreen(
                 OutlinedTextField(
                     value = buyerPhone,
                     onValueChange = { buyerPhone = it },
-                    label = { Text("Buyer Phone") },
+                    label = { Text(localizedUiString("Buyer Phone")) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -174,7 +175,7 @@ fun AddSaleScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Complete Sale", fontWeight = FontWeight.Bold)
+                    Text(localizedUiString("Complete Sale"), fontWeight = FontWeight.Bold)
                 }
             }
         }

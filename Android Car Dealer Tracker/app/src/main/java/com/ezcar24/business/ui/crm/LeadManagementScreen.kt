@@ -81,6 +81,7 @@ import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -105,19 +106,19 @@ fun LeadManagementScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Lead Management") },
+                title = { Text(localizedUiString("Lead Management")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                        Icon(Icons.Default.Refresh, contentDescription = localizedUiString("Refresh"))
                     }
                     Box {
                         IconButton(onClick = { showSortMenu = true }) {
-                            Icon(Icons.Default.Sort, contentDescription = "Sort")
+                            Icon(Icons.Default.Sort, contentDescription = localizedUiString("Sort"))
                         }
                         DropdownMenu(
                             expanded = showSortMenu,
@@ -135,7 +136,7 @@ fun LeadManagementScreen(
                         }
                     }
                     IconButton(onClick = { showFilters = !showFilters }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                        Icon(Icons.Default.FilterList, contentDescription = localizedUiString("Filter"))
                     }
                 }
             )
@@ -145,7 +146,7 @@ fun LeadManagementScreen(
                 onClick = onAddLead,
                 containerColor = EzcarBlueBright
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Lead", tint = Color.White)
+                Icon(Icons.Default.Add, contentDescription = localizedUiString("Add Lead"), tint = Color.White)
             }
         }
     ) { padding ->
@@ -165,7 +166,7 @@ fun LeadManagementScreen(
                     OutlinedTextField(
                         value = uiState.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChange(it) },
-                        placeholder = { Text("Search leads...") },
+                        placeholder = { Text(localizedUiString("Search leads...")) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
@@ -238,7 +239,7 @@ fun LeadManagementScreen(
                         )
                         if (uiState.selectedStage != null || uiState.selectedSource != null || uiState.searchQuery.isNotBlank()) {
                             TextButton(onClick = { viewModel.clearFilters() }) {
-                                Text("Clear filters")
+                                Text(localizedUiString("Clear filters"))
                             }
                         }
                     }
@@ -263,7 +264,7 @@ fun LeadManagementScreen(
                                 )
                                 if (uiState.searchQuery.isNotBlank() || uiState.selectedStage != null || uiState.selectedSource != null) {
                                     TextButton(onClick = { viewModel.clearFilters() }) {
-                                        Text("Clear filters to see all leads")
+                                        Text(localizedUiString("Clear filters to see all leads"))
                                     }
                                 }
                             }
@@ -317,13 +318,13 @@ private fun LeadManagementBanner(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = message,
+                text = localizedUiString(message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = if (isError) Color(0xFFB42318) else Color(0xFF067647),
                 modifier = Modifier.weight(1f)
             )
             TextButton(onClick = onDismiss) {
-                Text("Dismiss")
+                Text(localizedUiString("Dismiss"))
             }
         }
     }
@@ -472,7 +473,7 @@ private fun FilterSection(
                     fontWeight = FontWeight.SemiBold
                 )
                 TextButton(onClick = onClearFilters) {
-                    Text("Clear all")
+                    Text(localizedUiString("Clear all"))
                 }
             }
             
@@ -494,7 +495,7 @@ private fun FilterSection(
                 FilterChip(
                     selected = selectedStage == null,
                     onClick = { onStageSelected(null) },
-                    label = { Text("All") }
+                    label = { Text(localizedUiString("All")) }
                 )
                 LeadStage.values().forEach { stage ->
                     FilterChip(

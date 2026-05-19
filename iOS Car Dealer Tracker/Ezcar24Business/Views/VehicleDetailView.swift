@@ -1783,7 +1783,7 @@ struct VehicleDetailView: View {
                 #endif
                 withAnimation {
                     isSaving = false
-                    saveError = "Sale price is required for sold vehicles."
+                    saveError = "sale_price_required_for_sold_vehicles".localizedString
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
                     withAnimation { saveError = nil }
@@ -1871,7 +1871,7 @@ struct VehicleDetailView: View {
             #endif
             withAnimation {
                 isSaving = false
-                saveError = "Save failed"
+                saveError = "save_failed".localizedString
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
                 withAnimation { saveError = nil }
@@ -1929,7 +1929,7 @@ struct VehicleDetailView: View {
                 }
             } catch {
                 isPreparingShare = false
-                saveError = "PDF export failed"
+                saveError = "pdf_export_failed".localizedString
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
                     withAnimation { saveError = nil }
                 }

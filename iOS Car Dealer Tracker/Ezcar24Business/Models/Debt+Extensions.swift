@@ -17,8 +17,8 @@ enum DebtDirection: String, CaseIterable, Identifiable {
 
     var badgeTitle: String {
         switch self {
-        case .owedToMe: return "Receivable"
-        case .iOwe: return "Payable"
+        case .owedToMe: return "receivable".localizedStringFallback
+        case .iOwe: return "payable".localizedStringFallback
         }
     }
 

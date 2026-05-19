@@ -48,7 +48,7 @@ enum DealDeskSettingsSeedOperation {
         throw lastError ?? NSError(
             domain: "DealDeskSettingsSeedOperation",
             code: 1,
-            userInfo: [NSLocalizedDescriptionKey: "Failed to seed Deal Desk settings."]
+            userInfo: [NSLocalizedDescriptionKey: "deal_desk_seed_failed".localizedStringFallback]
         )
     }
 }
@@ -360,7 +360,7 @@ final class SessionStore: ObservableObject {
             }
 
             status = .signedOut
-            errorMessage = "Please confirm your email via the link sent before signing in."
+            errorMessage = "auth_confirm_email_before_sign_in".localizedStringFallback
         } catch {
             errorMessage = localized(error)
             throw error
@@ -524,7 +524,7 @@ final class SessionStore: ObservableObject {
                 throw NSError(
                     domain: "Auth",
                     code: 500,
-                    userInfo: [NSLocalizedDescriptionKey: "Account deletion did not complete."]
+                    userInfo: [NSLocalizedDescriptionKey: "account_deletion_incomplete".localizedStringFallback]
                 )
             }
             try? await client.auth.signOut()
@@ -711,7 +711,7 @@ final class SessionStore: ObservableObject {
         cachePendingTeamInviteCode(normalized)
 
         guard case .signedIn = status else {
-            showInviteToast(message: "Invite code saved. Sign in to apply.", isError: false)
+            showInviteToast(message: "invite_code_saved_sign_in".localizedStringFallback, isError: false)
             return true
         }
 
@@ -901,7 +901,7 @@ final class SessionStore: ObservableObject {
         case .signedIn:
             _ = await acceptInvite(token: token)
         default:
-            errorMessage = "Invitation link saved. Sign in to accept."
+            errorMessage = "invitation_link_saved_sign_in".localizedStringFallback
         }
 
         return true
@@ -915,7 +915,7 @@ final class SessionStore: ObservableObject {
         case .signedIn:
             _ = await claimPendingReferralIfPossible()
         default:
-            showInviteToast(message: "Referral code saved. Sign in to claim.", isError: false)
+            showInviteToast(message: "referral_code_saved_sign_in".localizedStringFallback, isError: false)
         }
 
         return true
@@ -978,7 +978,7 @@ final class SessionStore: ObservableObject {
                 .invoke("accept_invite", options: FunctionInvokeOptions(body: ["token": token]))
             clearPendingInviteToken()
             await loadOrganizations()
-            showInviteToast(message: "Invitation accepted. Use the switcher to change organizations.", isError: false)
+            showInviteToast(message: "invitation_accepted_switcher".localizedStringFallback, isError: false)
             return true
         } catch {
             let resolved = functionErrorMessage(from: error)
@@ -1005,7 +1005,7 @@ final class SessionStore: ObservableObject {
                 .invoke("accept_invite", options: FunctionInvokeOptions(body: ["invite_code": normalized]))
             clearPendingTeamInviteCode()
             await loadOrganizations()
-            showInviteToast(message: "Invite code accepted. Use the switcher to change organizations.", isError: false)
+            showInviteToast(message: "invite_code_accepted_switcher".localizedStringFallback, isError: false)
             return true
         } catch {
             let resolved = functionErrorMessage(from: error)
@@ -1032,9 +1032,9 @@ final class SessionStore: ObservableObject {
                 .value
             if result {
                 clearPendingReferralCode()
-                showInviteToast(message: "Referral applied. Thanks for joining.", isError: false)
+                showInviteToast(message: "referral_applied".localizedStringFallback, isError: false)
             } else {
-                showInviteToast(message: "Referral already used.", isError: true)
+                showInviteToast(message: "referral_already_used".localizedStringFallback, isError: true)
             }
             return result
         } catch {

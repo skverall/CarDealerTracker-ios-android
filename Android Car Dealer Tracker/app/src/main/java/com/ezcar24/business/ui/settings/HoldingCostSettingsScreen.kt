@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.ui.theme.*
 import java.math.RoundingMode
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,7 +49,7 @@ fun HoldingCostSettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Holding Cost Settings",
+                        localizedUiString("Holding Cost Settings"),
                         fontWeight = FontWeight.Bold,
                         color = EzcarNavy
                     )
@@ -57,7 +58,7 @@ fun HoldingCostSettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.Default.ArrowBack,
-                            contentDescription = "Back",
+                            contentDescription = localizedUiString("Back"),
                             tint = EzcarNavy
                         )
                     }
@@ -91,12 +92,12 @@ fun HoldingCostSettingsScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            "Calculate holding costs",
+                            localizedUiString("Calculate holding costs"),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            "Track daily cost of keeping vehicles in inventory",
+                            localizedUiString("Track daily cost of keeping vehicles in inventory"),
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.Gray
                         )
@@ -121,7 +122,7 @@ fun HoldingCostSettingsScreen(
             ) {
                 Column {
                     Text(
-                        "Annual percentage rate for holding cost calculation",
+                        localizedUiString("Annual percentage rate for holding cost calculation"),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -130,7 +131,7 @@ fun HoldingCostSettingsScreen(
                     OutlinedTextField(
                         value = uiState.annualRatePercent,
                         onValueChange = { viewModel.updateAnnualRate(it) },
-                        label = { Text("Annual Rate (%)") },
+                        label = { Text(localizedUiString("Annual Rate (%)")) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         enabled = uiState.isEnabled,
@@ -141,7 +142,7 @@ fun HoldingCostSettingsScreen(
                         ),
                         trailingIcon = {
                             Text(
-                                "%",
+                                localizedUiString("%"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.Gray,
                                 modifier = Modifier.padding(end = 12.dp)
@@ -159,19 +160,19 @@ fun HoldingCostSettingsScreen(
                         ) {
                             SuggestionChip(
                                 onClick = { viewModel.updateAnnualRate("10.00") },
-                                label = { Text("10%") }
+                                label = { Text(localizedUiString("10%")) }
                             )
                             SuggestionChip(
                                 onClick = { viewModel.updateAnnualRate("15.00") },
-                                label = { Text("15%") }
+                                label = { Text(localizedUiString("15%")) }
                             )
                             SuggestionChip(
                                 onClick = { viewModel.updateAnnualRate("20.00") },
-                                label = { Text("20%") }
+                                label = { Text(localizedUiString("20%")) }
                             )
                             SuggestionChip(
                                 onClick = { viewModel.updateAnnualRate("25.00") },
-                                label = { Text("25%") }
+                                label = { Text(localizedUiString("25%")) }
                             )
                         }
                     }
@@ -185,7 +186,7 @@ fun HoldingCostSettingsScreen(
             ) {
                 Column {
                     Text(
-                        "Automatically calculated from annual rate",
+                        localizedUiString("Automatically calculated from annual rate"),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         modifier = Modifier.padding(bottom = 8.dp)
@@ -209,7 +210,7 @@ fun HoldingCostSettingsScreen(
                     )
 
                     Text(
-                        "Formula: Annual Rate ÷ 365 days",
+                        localizedUiString("Formula: Annual Rate ÷ 365 days"),
                         style = MaterialTheme.typography.bodySmall,
                         color = Color.Gray,
                         modifier = Modifier.padding(top = 8.dp)
@@ -252,7 +253,7 @@ fun HoldingCostSettingsScreen(
                         IconButton(onClick = { viewModel.dismissError() }) {
                             Icon(
                                 Icons.Default.Close,
-                                contentDescription = "Dismiss",
+                                contentDescription = localizedUiString("Dismiss"),
                                 tint = EzcarDanger
                             )
                         }
@@ -283,7 +284,7 @@ fun HoldingCostSettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            "Settings saved successfully",
+                            localizedUiString("Settings saved successfully"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = EzcarSuccess,
                             fontWeight = FontWeight.Medium
@@ -306,7 +307,7 @@ fun HoldingCostSettingsScreen(
                         contentColor = EzcarNavy
                     )
                 ) {
-                    Text("Cancel")
+                    Text(localizedUiString("Cancel"))
                 }
 
                 Button(
@@ -325,7 +326,7 @@ fun HoldingCostSettingsScreen(
                             color = Color.White
                         )
                     } else {
-                        Text("Save Settings")
+                        Text(localizedUiString("Save Settings"))
                     }
                 }
             }
@@ -356,14 +357,14 @@ private fun InfoCard() {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    "About Holding Costs",
+                    localizedUiString("About Holding Costs"),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = EzcarNavy
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    "Holding costs represent the daily expense of keeping a vehicle in your inventory. " +
+                    localizedUiString("Holding costs represent the daily expense of keeping a vehicle in your inventory. ") +
                     "This includes capital costs, insurance, storage, and depreciation.",
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
@@ -408,8 +409,7 @@ private fun SettingsCard(
                     )
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    title,
+                Text(localizedUiString(title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = EzcarNavy
@@ -434,7 +434,7 @@ private fun ExplanationCard() {
                 .padding(16.dp)
         ) {
             Text(
-                "How It Works",
+                localizedUiString("How It Works"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = EzcarNavy,
@@ -470,8 +470,7 @@ private fun ExplanationCard() {
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text(
-                            title,
+                        Text(localizedUiString(title),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = Color.Black

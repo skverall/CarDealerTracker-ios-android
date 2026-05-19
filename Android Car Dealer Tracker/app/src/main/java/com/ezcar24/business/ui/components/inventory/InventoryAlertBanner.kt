@@ -21,6 +21,8 @@ import com.ezcar24.business.data.local.InventoryAlertType
 import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarWarning
+import com.ezcar24.business.util.localizedInventoryAlertMessage
+import com.ezcar24.business.util.localizedUiString
 
 @Composable
 fun InventoryAlertBanner(
@@ -110,7 +112,7 @@ fun InventoryAlertBanner(
         IconButton(onClick = onDismiss) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Dismiss",
+                contentDescription = localizedUiString("Dismiss"),
                 tint = Color.Gray
             )
         }
@@ -190,7 +192,7 @@ fun InventoryAlertItem(
             }
             
             Text(
-                text = alert.message,
+                text = localizedInventoryAlertMessage(alert.message),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
                 maxLines = 2
@@ -200,7 +202,7 @@ fun InventoryAlertItem(
         IconButton(onClick = onDismiss) {
             Icon(
                 imageVector = Icons.Default.Close,
-                contentDescription = "Dismiss",
+                contentDescription = localizedUiString("Dismiss"),
                 tint = Color.Gray,
                 modifier = Modifier.size(18.dp)
             )

@@ -47,6 +47,7 @@ import com.ezcar24.business.ui.theme.EzcarOrange
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +88,7 @@ fun PartDetailBottomSheet(
                 IconButton(onClick = onDismiss) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Close"
+                        contentDescription = localizedUiString("Close")
                     )
                 }
             }
@@ -221,7 +222,7 @@ fun PartDetailBottomSheet(
                 ) {
                     Icon(Icons.Default.Inventory2, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Receive Stock", modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp))
+                    Text(localizedUiString("Receive Stock"), modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp))
                 }
                 Button(
                     onClick = onAddSale,
@@ -234,7 +235,7 @@ fun PartDetailBottomSheet(
                 ) {
                     Icon(Icons.Default.Sell, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("New Sale", modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp))
+                    Text(localizedUiString("New Sale"), modifier = Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp))
                 }
             }
         }
@@ -255,7 +256,7 @@ private fun PartMetricCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.labelLarge,
                 color = Color.Gray
             )
@@ -295,7 +296,7 @@ private fun PartBatchRow(
                     tint = EzcarBlueBright
                 )
                 Text(
-                    text = title,
+                    text = localizedUiString(title),
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium
                 )

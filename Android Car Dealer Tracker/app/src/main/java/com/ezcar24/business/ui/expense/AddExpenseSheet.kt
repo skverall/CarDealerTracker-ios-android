@@ -56,6 +56,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,7 +103,7 @@ fun AddExpenseSheet(
             if (draft != null) {
                 receiptDraft = draft
             } else {
-                android.widget.Toast.makeText(context, "Could not attach receipt", android.widget.Toast.LENGTH_SHORT).show()
+                android.widget.Toast.makeText(context, context.localizedUiString("Could not attach receipt"), android.widget.Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -164,7 +165,7 @@ fun AddExpenseSheet(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = localizedUiString("Close"),
                             tint = Color.Black,
                             modifier = Modifier.size(24.dp)
                         )
@@ -185,7 +186,7 @@ fun AddExpenseSheet(
                         ) {
                             Icon(
                                 Icons.Default.MoreHoriz,
-                                contentDescription = "Menu",
+                                contentDescription = localizedUiString("Menu"),
                                 tint = EzcarNavy,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -197,7 +198,7 @@ fun AddExpenseSheet(
                         ) {
                             if (templates.isNotEmpty()) {
                                 DropdownMenuItem(
-                                    text = { Text("Use Template") },
+                                    text = { Text(localizedUiString("Use Template")) },
                                     leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
                                     onClick = {
                                         showMoreMenu = false
@@ -206,7 +207,7 @@ fun AddExpenseSheet(
                                 )
                             }
                             DropdownMenuItem(
-                                text = { Text("Save as Template") },
+                                text = { Text(localizedUiString("Save as Template")) },
                                 leadingIcon = { Icon(Icons.Default.BookmarkBorder, contentDescription = null) },
                                 onClick = {
                                     templateName = description.trim().takeIf { it.isNotEmpty() } ?: "Template"
@@ -229,7 +230,7 @@ fun AddExpenseSheet(
                             modifier = Modifier.padding(bottom = 24.dp)
                         ) {
                             Text(
-                                "AMOUNT",
+                                localizedUiString("AMOUNT"),
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Gray,
@@ -313,7 +314,7 @@ fun AddExpenseSheet(
                                     FilterChip(
                                         selected = isSelected,
                                         onClick = { expenseType = type },
-                                        label = { Text(title) },
+                                        label = { Text(localizedUiString(title)) },
                                         leadingIcon = {
                                             Icon(
                                                 imageVector = icon,
@@ -356,7 +357,7 @@ fun AddExpenseSheet(
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Box(modifier = Modifier.weight(1f)) {
                                     if (description.isEmpty()) {
-                                        Text("What is this for?", color = Color.Gray)
+                                        Text(localizedUiString("What is this for?"), color = Color.Gray)
                                     }
                                     TextField(
                                         value = description,
@@ -407,7 +408,7 @@ fun AddExpenseSheet(
                             ) {
                                 Icon(Icons.Default.CalendarToday, contentDescription = null, tint = Color.Gray)
                                 Spacer(modifier = Modifier.width(16.dp))
-                                Text("Date", style = MaterialTheme.typography.bodyLarge)
+                                Text(localizedUiString("Date"), style = MaterialTheme.typography.bodyLarge)
                                 Spacer(modifier = Modifier.weight(1f))
                                 Text(
                                     SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(date),
@@ -428,8 +429,8 @@ fun AddExpenseSheet(
                         ) {
                             if (category == "vehicle") {
                                 ContextSelectorButton(
-                                    title = "Vehicle",
-                                    value = selectedVehicle?.let { "${it.year} ${it.make} ${it.model}" } ?: "Select Vehicle",
+                                    title = localizedUiString("Vehicle"),
+                                    value = selectedVehicle?.let { "${it.year} ${it.make} ${it.model}" } ?: localizedUiString("Select Vehicle"),
                                     icon = Icons.Default.DirectionsCar,
                                     isActive = selectedVehicle != null,
                                     onClick = { showVehicleSheet = true }
@@ -437,16 +438,16 @@ fun AddExpenseSheet(
                             }
 
                             ContextSelectorButton(
-                                title = "Paid By",
-                                value = selectedUser?.name ?: "Select User",
+                                title = localizedUiString("Paid By"),
+                                value = selectedUser?.name ?: localizedUiString("Select User"),
                                 icon = Icons.Default.Person,
                                 isActive = selectedUser != null,
                                 onClick = { showUserSheet = true }
                             )
 
                             ContextSelectorButton(
-                                title = "Account",
-                                value = selectedAccount?.accountType?.replaceFirstChar { it.titlecase() } ?: "Select Account",
+                                title = localizedUiString("Account"),
+                                value = selectedAccount?.accountType?.replaceFirstChar { it.titlecase() } ?: localizedUiString("Select Account"),
                                 icon = Icons.Default.CreditCard,
                                 isActive = selectedAccount != null,
                                 onClick = { showAccountSheet = true }
@@ -496,7 +497,7 @@ fun AddExpenseSheet(
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Text(
-                        "Save Expense",
+                        localizedUiString("Save Expense"),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
@@ -557,7 +558,7 @@ fun AddExpenseSheet(
                         showUserSheet = false
                     },
                     onAddClick = {
-                        android.widget.Toast.makeText(context, "Add User feature coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, context.localizedUiString("Add User feature coming soon"), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -566,7 +567,7 @@ fun AddExpenseSheet(
         if (showAccountSheet) {
             ModalBottomSheet(onDismissRequest = { showAccountSheet = false }, containerColor = Color.White) {
                 SelectionListSheet(
-                    title = "Select Account",
+                    title = localizedUiString("Select Account"),
                     items = accounts,
                     itemContent = { account -> 
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -593,7 +594,7 @@ fun AddExpenseSheet(
                         showAccountSheet = false
                     },
                     onAddClick = {
-                        android.widget.Toast.makeText(context, "Add Account feature coming soon", android.widget.Toast.LENGTH_SHORT).show()
+                        android.widget.Toast.makeText(context, context.localizedUiString("Add Account feature coming soon"), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -645,13 +646,13 @@ fun AddExpenseSheet(
         if (showSaveTemplateDialog) {
             AlertDialog(
                 onDismissRequest = { showSaveTemplateDialog = false },
-                title = { Text("Save Template") },
+                title = { Text(localizedUiString("Save Template")) },
                 text = {
                     Column {
                         OutlinedTextField(
                             value = templateName,
                             onValueChange = { templateName = it },
-                            label = { Text("Template Name") },
+                            label = { Text(localizedUiString("Template Name")) },
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.height(8.dp))
@@ -677,18 +678,18 @@ fun AddExpenseSheet(
                             showSaveTemplateDialog = false
                             android.widget.Toast.makeText(
                                 context,
-                                "Template saved",
+                                context.localizedUiString("Template saved"),
                                 android.widget.Toast.LENGTH_SHORT
                             ).show()
                         },
                         enabled = templateName.trim().isNotEmpty()
                     ) {
-                        Text("Save")
+                        Text(localizedUiString("Save"))
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showSaveTemplateDialog = false }) {
-                        Text("Cancel")
+                        Text(localizedUiString("Cancel"))
                     }
                 }
             )
@@ -721,8 +722,7 @@ fun CategoryItem(title: String, icon: ImageVector, isSelected: Boolean, onClick:
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            title,
+        Text(localizedUiString(title),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
             color = if (isSelected) EzcarNavy else Color.Gray
@@ -764,7 +764,7 @@ fun ContextSelectorButton(
         Spacer(modifier = Modifier.width(16.dp))
 
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+            Text(localizedUiString(title), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
             Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1)
         }
 
@@ -787,14 +787,13 @@ fun <T> SelectionListSheet(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                title,
+            Text(localizedUiString(title),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
             if (onAddClick != null) {
                 IconButton(onClick = onAddClick) {
-                    Icon(Icons.Default.Add, contentDescription = "Add", tint = EzcarNavy)
+                    Icon(Icons.Default.Add, contentDescription = localizedUiString("Add"), tint = EzcarNavy)
                 }
             }
         }
@@ -808,7 +807,7 @@ fun <T> SelectionListSheet(
                         .padding(horizontal = 20.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("None", color = Color.Gray)
+                    Text(localizedUiString("None"), color = Color.Gray)
                 }
                 Divider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
             }
@@ -849,7 +848,7 @@ fun TemplateSelectionSheet(
                 fontWeight = FontWeight.Bold
             )
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(localizedUiString("Close"))
             }
         }
 
@@ -886,7 +885,7 @@ fun TemplateSelectionSheet(
                         if (subtitle.isNotBlank()) {
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = subtitle,
+                                text = localizedUiString(subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color.Gray
                             )
@@ -931,7 +930,7 @@ fun ReceiptActionSheet(
                 }
             }
             TextButton(onClick = onDismiss) {
-                Text("Close")
+                Text(localizedUiString("Close"))
             }
         }
 
@@ -977,7 +976,7 @@ private fun ReceiptActionRow(
         )
         Spacer(modifier = Modifier.width(16.dp))
         Text(
-            text = title,
+            text = localizedUiString(title),
             style = MaterialTheme.typography.bodyLarge,
             color = titleColor
         )

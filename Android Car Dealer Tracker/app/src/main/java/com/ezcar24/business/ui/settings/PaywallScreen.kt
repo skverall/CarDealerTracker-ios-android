@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.billing.SubscriptionOffer
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -77,7 +78,7 @@ fun PaywallScreen(
                 title = { },
                 navigationIcon = {
                     TextButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
+                        Icon(Icons.Default.Close, contentDescription = localizedUiString("Close"))
                     }
                 }
             )
@@ -207,12 +208,12 @@ private fun FeatureGrid() {
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = title,
+                                    text = localizedUiString(title),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
-                                    text = subtitle,
+                                    text = localizedUiString(subtitle),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -356,7 +357,7 @@ private fun SubscribeButton(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp)
     ) {
-        Text("Restore Purchases")
+        Text(localizedUiString("Restore Purchases"))
     }
 }
 
@@ -400,7 +401,7 @@ private fun SuccessState(onDismiss: () -> Unit) {
         )
         Spacer(modifier = Modifier.height(32.dp))
         Button(onClick = onDismiss, shape = RoundedCornerShape(12.dp)) {
-            Text("Continue")
+            Text(localizedUiString("Continue"))
         }
     }
 }

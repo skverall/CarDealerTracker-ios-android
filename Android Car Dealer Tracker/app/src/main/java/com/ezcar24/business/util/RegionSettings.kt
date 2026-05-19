@@ -54,6 +54,7 @@ enum class AppLanguage(
     ENGLISH("en", "English", false),
     RUSSIAN("ru", "Русский", false),
     ARABIC("ar", "العربية", true),
+    JAPANESE("ja", "日本語", false),
     KOREAN("ko", "한국어", false)
 }
 
@@ -161,7 +162,7 @@ class RegionSettingsManager @Inject constructor(
         return (NumberFormat.getCurrencyInstance(region.locale) as DecimalFormat).apply {
             currency = Currency.getInstance(region.currencyCode)
             decimalFormatSymbols = decimalFormatSymbols.apply {
-                currencySymbol = "${region.currencySymbol} "
+                currencySymbol = if (region == AppRegion.JAPAN) region.currencySymbol else "${region.currencySymbol} "
             }
             maximumFractionDigits = fractionDigits
             minimumFractionDigits = fractionDigits

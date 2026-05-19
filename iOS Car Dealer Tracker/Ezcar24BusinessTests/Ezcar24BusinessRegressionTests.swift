@@ -44,6 +44,29 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         )
     }
 
+    func testJapaneseRegionUsesJPYFormattingAndLanguageOption() {
+        let manager = RegionSettingsManager.shared
+        let originalRegion = manager.selectedRegion
+        let originalLanguage = manager.selectedLanguage
+        defer {
+            manager.selectedRegion = originalRegion
+            manager.selectedLanguage = originalLanguage
+        }
+
+        manager.selectedRegion = .japan
+        manager.selectedLanguage = .japanese
+
+        let formatted = manager.formatCurrency(Decimal(1_234_567))
+
+        XCTAssertEqual(AppRegion.japan.currencyCode, "JPY")
+        XCTAssertEqual(AppRegion.japan.currencyDecimals, 0)
+        XCTAssertEqual(AppRegion.japan.localeIdentifier, "ja_JP")
+        XCTAssertTrue(AppLanguage.allCases.contains(.japanese))
+        XCTAssertTrue(formatted.contains("¥"))
+        XCTAssertFalse(formatted.contains("¥ "))
+        XCTAssertFalse(formatted.contains(".00"))
+    }
+
     func testEmailReminderBannerHidesForISO8601ConfirmationString() {
         XCTAssertFalse(
             SessionStore.shouldShowEmailReminderBanner(

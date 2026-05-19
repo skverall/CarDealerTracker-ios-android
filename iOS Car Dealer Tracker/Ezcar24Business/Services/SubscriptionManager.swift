@@ -185,7 +185,7 @@ class SubscriptionManager: ObservableObject {
             DispatchQueue.main.async {
                 guard let product = products.first(where: { $0.productIdentifier == productIdentifier }) else {
                     self.isLoading = false
-                    self.errorMessage = "Weekly plan is not available yet."
+                    self.errorMessage = "subscription_weekly_unavailable".localizedStringFallback
                     completion(false)
                     return
                 }

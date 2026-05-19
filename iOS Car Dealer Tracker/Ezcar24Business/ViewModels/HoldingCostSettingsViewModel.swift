@@ -70,7 +70,7 @@ class HoldingCostSettingsViewModel: ObservableObject {
             
             calculateDailyRate()
         } catch {
-            saveError = "Failed to load settings"
+            saveError = "holding_cost_load_failed".localizedString
             createDefaultSettings()
         }
         
@@ -117,7 +117,7 @@ class HoldingCostSettingsViewModel: ObservableObject {
                 presentSaveSuccess()
             }
         } catch {
-            saveError = "Failed to save settings"
+            saveError = "holding_cost_save_failed".localizedString
         }
         
         isLoading = false
@@ -172,7 +172,7 @@ class HoldingCostSettingsViewModel: ObservableObject {
     
     private func validateSettings() -> Bool {
         guard annualRatePercent >= 0 && annualRatePercent <= 100 else {
-            saveError = "Annual rate must be between 0% and 100%"
+            saveError = "annual_rate_range_error".localizedString
             return false
         }
         

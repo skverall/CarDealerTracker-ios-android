@@ -113,11 +113,26 @@ struct AddExpenseView: View {
         ("marketing", "marketing".localizedString, "megaphone.fill")
     ]
     
-    let quickAddOptions = [
-        "petrol".localizedString,
-        "insurance".localizedString,
-        "plate_number".localizedString
-    ]
+    var quickAddOptions: [String] {
+        if regionSettings.selectedRegion == .japan {
+            return [
+                "auction_fee".localizedString,
+                "Inspection / Shaken".localizedString,
+                "repair".localizedString,
+                "guest_preview_row_transport".localizedString,
+                "parking".localizedString,
+                "warranty".localizedString,
+                "insurance".localizedString,
+                "Plate / Registration".localizedString
+            ]
+        }
+
+        return [
+            "petrol".localizedString,
+            "insurance".localizedString,
+            "plate_number".localizedString
+        ]
+    }
 
     var isFormValid: Bool {
         let trimmedAmount = draft.amount.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -54,7 +54,7 @@ extension Decimal {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.currencyCode = region.currencyCode
-        formatter.currencySymbol = region.currencySymbol + " "
+        formatter.currencySymbol = region == .japan ? region.currencySymbol : region.currencySymbol + " "
         formatter.maximumFractionDigits = region.currencyDecimals
         formatter.minimumFractionDigits = region.currencyDecimals
         formatter.locale = region.locale

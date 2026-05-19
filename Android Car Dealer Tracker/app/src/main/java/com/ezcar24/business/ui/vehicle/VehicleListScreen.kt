@@ -59,6 +59,7 @@ import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -115,7 +116,7 @@ fun VehicleListScreen(
                             ),
                             modifier = Modifier.size(42.dp)
                         ) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Vehicle")
+                            Icon(Icons.Default.Add, contentDescription = localizedUiString("Add Vehicle"))
                         }
                     }
                 }
@@ -220,13 +221,13 @@ fun VehicleListScreen(
                     TextField(
                         value = uiState.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = { Text("Search Make, Model, VIN...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        placeholder = { Text(localizedUiString("Search Make, Model, VIN..."), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                         trailingIcon = {
                             Box {
                                 var showSortMenu by remember { mutableStateOf(false) }
                                 IconButton(onClick = { showSortMenu = true }) {
-                                    Icon(Icons.Default.Sort, contentDescription = "Sort", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Icon(Icons.Default.Sort, contentDescription = localizedUiString("Sort"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                                 DropdownMenu(
                                     expanded = showSortMenu,
@@ -234,47 +235,47 @@ fun VehicleListScreen(
                                 ) {
                                     val currentSort = uiState.sortOrder
                                     DropdownMenuItem(
-                                        text = { Text("Newest Added") },
+                                        text = { Text(localizedUiString("Newest Added")) },
                                         onClick = { viewModel.setSortOrder("newest"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "newest") Icon(Icons.Default.Check, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Oldest Added") },
+                                        text = { Text(localizedUiString("Oldest Added")) },
                                         onClick = { viewModel.setSortOrder("oldest"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "oldest") Icon(Icons.Default.Check, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Price: Low to High") },
+                                        text = { Text(localizedUiString("Price: Low to High")) },
                                         onClick = { viewModel.setSortOrder("price_asc"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "price_asc") Icon(Icons.Default.Check, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Price: High to Low") },
+                                        text = { Text(localizedUiString("Price: High to Low")) },
                                         onClick = { viewModel.setSortOrder("price_desc"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "price_desc") Icon(Icons.Default.Check, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Year: Newest") },
+                                        text = { Text(localizedUiString("Year: Newest")) },
                                         onClick = { viewModel.setSortOrder("year_desc"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "year_desc") Icon(Icons.Default.Check, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Days: Low to High") },
+                                        text = { Text(localizedUiString("Days: Low to High")) },
                                         onClick = { viewModel.setSortOrder("days_asc"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "days_asc") Icon(Icons.Default.Check, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Days: High to Low") },
+                                        text = { Text(localizedUiString("Days: High to Low")) },
                                         onClick = { viewModel.setSortOrder("days_desc"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "days_desc") Icon(Icons.Default.Check, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("ROI: Low to High") },
+                                        text = { Text(localizedUiString("ROI: Low to High")) },
                                         onClick = { viewModel.setSortOrder("roi_asc"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "roi_asc") Icon(Icons.Default.Check, null) }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("ROI: High to Low") },
+                                        text = { Text(localizedUiString("ROI: High to Low")) },
                                         onClick = { viewModel.setSortOrder("roi_desc"); showSortMenu = false },
                                         leadingIcon = { if(currentSort == "roi_desc") Icon(Icons.Default.Check, null) }
                                     )
@@ -299,7 +300,7 @@ fun VehicleListScreen(
                 // 4. Vehicle List
                 if (uiState.filteredVehicles.isEmpty() && !uiState.isLoading) {
                     Box(modifier = Modifier.fillMaxSize().weight(1f), contentAlignment = Alignment.Center) {
-                        Text("No vehicles found", color = Color.Gray)
+                        Text(localizedUiString("No vehicles found"), color = Color.Gray)
                     }
                 } else {
                     LazyColumn(
@@ -342,10 +343,10 @@ fun VehicleListScreen(
                                         contentAlignment = if (direction == SwipeToDismissBoxValue.EndToStart) Alignment.CenterEnd else Alignment.CenterStart
                                     ) {
                                         if (direction == SwipeToDismissBoxValue.EndToStart) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = Color.White)
+                                            Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = Color.White)
                                         } else if (direction == SwipeToDismissBoxValue.StartToEnd) {
                                             if (item.vehicle.status != "sold") {
-                                                Icon(Icons.Default.CheckCircle, contentDescription = "Mark Sold", tint = Color.White)
+                                                Icon(Icons.Default.CheckCircle, contentDescription = localizedUiString("Mark Sold"), tint = Color.White)
                                             }
                                         }
                                     }
@@ -514,7 +515,7 @@ private fun QuickSaleSheet(
                 )
                 PickerField(
                     label = "Deposit To",
-                    value = selectedAccount?.accountType ?: "Select Account",
+                    value = selectedAccount?.accountType ?: localizedUiString("Select Account"),
                     onClick = { showAccountPicker = true }
                 )
             }
@@ -581,7 +582,7 @@ private fun QuickSaleSheet(
 
             errorMessage?.let { message ->
                 Text(
-                    text = message,
+                    text = localizedUiString(message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = EzcarDanger
                 )
@@ -661,7 +662,7 @@ private fun QuickSaleSheet(
     if (showAccountPicker) {
         AlertDialog(
             onDismissRequest = { showAccountPicker = false },
-            title = { Text("Select Account") },
+            title = { Text(localizedUiString("Select Account")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     accounts.forEach { account ->
@@ -702,7 +703,7 @@ private fun QuickSaleSheet(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showAccountPicker = false }) {
-                    Text("Cancel")
+                    Text(localizedUiString("Cancel"))
                 }
             }
         )
@@ -799,7 +800,7 @@ fun StatusCard(
         }
         Column {
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.labelSmall,
                 color = if (isActive) color else MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -840,7 +841,7 @@ fun StatusChip(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(text = count.toString(), style = MaterialTheme.typography.titleMedium, color = Color.Black, fontWeight = FontWeight.Bold)
-            Text(text = label, style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text = localizedUiString(label), style = MaterialTheme.typography.labelSmall, color = Color.Gray, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -888,13 +889,13 @@ fun VehicleItem(
                     if (imageUrl != null) {
                         coil.compose.SubcomposeAsyncImage(
                             model = imageUrl,
-                            contentDescription = "Vehicle",
+                            contentDescription = localizedUiString("Vehicle"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                             error = {
                                 Icon(
                                     imageVector = Icons.Default.DirectionsCar,
-                                    contentDescription = "Car",
+                                    contentDescription = localizedUiString("Car"),
                                     tint = Color.Gray,
                                     modifier = Modifier.size(32.dp)
                                 )
@@ -909,7 +910,7 @@ fun VehicleItem(
                     } else {
                         Icon(
                             imageVector = Icons.Default.DirectionsCar,
-                            contentDescription = "Car",
+                            contentDescription = localizedUiString("Car"),
                             tint = Color.Gray,
                             modifier = Modifier.size(32.dp)
                         )
@@ -959,7 +960,7 @@ fun VehicleItem(
                                 }
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                                     Icon(Icons.Default.Build, null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("${item.expenseCount} exp", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(localizedUiString("%d exp", item.expenseCount), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         }
@@ -1102,7 +1103,7 @@ fun MetricData(
     isWarning: Boolean = false
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = label, style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontSize = 10.sp)
+        Text(text = localizedUiString(label), style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontSize = 10.sp)
         Text(
             text = value, 
             style = MaterialTheme.typography.bodyMedium, 

@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.ezcar24.business.util.localizedUiString
 
 private data class GuideSection(
     val title: String,
@@ -70,10 +71,10 @@ fun UserGuideScreen(onBack: () -> Unit) {
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("User Guide") },
+                title = { Text(localizedUiString("User Guide")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Default.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(

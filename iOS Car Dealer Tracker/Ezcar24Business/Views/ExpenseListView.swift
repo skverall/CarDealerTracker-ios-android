@@ -415,10 +415,11 @@ struct ExpenseListView: View {
 
     private func categoryDisplayName(_ category: String) -> String {
         switch category.lowercased() {
-        case "vehicle": return "Vehicle"
-        case "personal": return "Personal"
-        case "employee": return "Employee"
-        case "office": return "Bills"
+        case "vehicle": return "vehicle".localizedString
+        case "personal": return "personal".localizedString
+        case "employee": return "employee".localizedString
+        case "office": return "bills".localizedString
+        case "marketing": return "marketing".localizedString
         default: return category.capitalized
         }
     }
@@ -955,11 +956,15 @@ struct CategoryBadge: View {
     var categoryText: String {
         switch category.lowercased() {
         case "vehicle":
-            return "Vehicle"
+            return "vehicle".localizedString
         case "personal":
-            return "Personal"
+            return "personal".localizedString
         case "employee":
-            return "Employee"
+            return "employee".localizedString
+        case "office":
+            return "bills".localizedString
+        case "marketing":
+            return "marketing".localizedString
         default:
             return category.capitalized
         }
@@ -1185,7 +1190,7 @@ struct DealerExpenseDashboardView: View {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 18) {
-                        Text("EZCAR24")
+                        Text("Car Dealer Tracker")
                             .font(.system(size: 18, weight: .heavy, design: .rounded))
                             .italic()
                             .foregroundColor(.white.opacity(0.9))
@@ -1568,7 +1573,7 @@ struct DealerExpenseDashboardView: View {
     private func primaryText(for expense: Expense) -> String {
         let desc = (expense.expenseDescription ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if !desc.isEmpty { return desc }
-        return expense.category?.capitalized ?? "Expense"
+        return expense.category?.capitalized ?? "expense_fallback".localizedString
     }
 
     private func subtitleText(for expense: Expense) -> String {

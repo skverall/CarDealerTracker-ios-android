@@ -32,6 +32,7 @@ import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 data class StatusOption(val value: String, val label: String)
 
@@ -159,7 +160,7 @@ fun VehicleAddEditScreen(
                 title = { Text(if (isEditing) "Edit Vehicle" else "Add Vehicle") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.Close, contentDescription = "Cancel")
+                        Icon(Icons.Default.Close, contentDescription = localizedUiString("Cancel"))
                     }
                 },
                 actions = {
@@ -217,7 +218,7 @@ fun VehicleAddEditScreen(
                             )
                         } else {
                             Text(
-                                "Save", 
+                                localizedUiString("Save"),
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (isFormValid) EzcarGreen else Color.Gray
                             )
@@ -264,7 +265,7 @@ fun VehicleAddEditScreen(
                     // Show selected image
                     androidx.compose.foundation.Image(
                         painter = coil.compose.rememberAsyncImagePainter(selectedImageUris.first()),
-                        contentDescription = "Vehicle Photo",
+                        contentDescription = localizedUiString("Vehicle Photo"),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = androidx.compose.ui.layout.ContentScale.Crop
                     )
@@ -277,7 +278,7 @@ fun VehicleAddEditScreen(
                     ) {
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = "Change Photo",
+                            contentDescription = localizedUiString("Change Photo"),
                             tint = Color.White,
                             modifier = Modifier
                                 .size(48.dp)
@@ -289,7 +290,7 @@ fun VehicleAddEditScreen(
                      // Show existing image from Supabase
                      coil.compose.SubcomposeAsyncImage(
                          model = existingImageUrl,
-                         contentDescription = "Vehicle Photo",
+                         contentDescription = localizedUiString("Vehicle Photo"),
                          modifier = Modifier.fillMaxSize(),
                          contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                          loading = {
@@ -307,7 +308,7 @@ fun VehicleAddEditScreen(
                     ) {
                         Icon(
                             Icons.Default.Edit,
-                            contentDescription = "Change Photo",
+                            contentDescription = localizedUiString("Change Photo"),
                             tint = Color.White,
                             modifier = Modifier
                                 .size(48.dp)
@@ -325,7 +326,7 @@ fun VehicleAddEditScreen(
                             tint = Color.Gray
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Tap to add photo", color = Color.Gray)
+                        Text(localizedUiString("Tap to add photo"), color = Color.Gray)
                     }
                 }
             }
@@ -355,7 +356,7 @@ fun VehicleAddEditScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Set first photo as cover")
+                    Text(localizedUiString("Set first photo as cover"))
                     Switch(checked = replaceCoverOnUpload, onCheckedChange = { replaceCoverOnUpload = it })
                 }
             }
@@ -431,7 +432,7 @@ fun VehicleAddEditScreen(
                 // Account Picker
                 PickerField(
                     label = "Paid From",
-                    value = selectedAccount?.accountType ?: "Select Account",
+                    value = selectedAccount?.accountType ?: localizedUiString("Select Account"),
                     onClick = { showAccountPicker = true }
                 )
 
@@ -446,7 +447,7 @@ fun VehicleAddEditScreen(
 
                 // Status Picker
                 Text(
-                    "Status",
+                    localizedUiString("Status"),
                     style = MaterialTheme.typography.labelMedium,
                     color = Color.Gray
                 )
@@ -508,7 +509,7 @@ fun VehicleAddEditScreen(
                     )
 
                     Text(
-                        "Payment Method",
+                        localizedUiString("Payment Method"),
                         style = MaterialTheme.typography.labelSmall,
                         color = Color.Gray
                     )
@@ -534,7 +535,7 @@ fun VehicleAddEditScreen(
                     HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                     PickerField(
                         label = "Deposit To",
-                        value = selectedAccount?.accountType ?: "Select Account",
+                        value = selectedAccount?.accountType ?: localizedUiString("Select Account"),
                         onClick = { showAccountPicker = true }
                     )
                 }
@@ -542,7 +543,7 @@ fun VehicleAddEditScreen(
 
             saveError?.let { message ->
                 Text(
-                    text = message,
+                    text = localizedUiString(message),
                     style = MaterialTheme.typography.bodyMedium,
                     color = EzcarDanger
                 )
@@ -556,7 +557,7 @@ fun VehicleAddEditScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(100.dp),
-                    placeholder = { Text("Additional notes...") },
+                    placeholder = { Text(localizedUiString("Additional notes...")) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedContainerColor = Color.White,
                         unfocusedContainerColor = Color.White,
@@ -590,7 +591,7 @@ fun VehicleAddEditScreen(
     if (showAccountPicker) {
         AlertDialog(
             onDismissRequest = { showAccountPicker = false },
-            title = { Text("Select Account") },
+            title = { Text(localizedUiString("Select Account")) },
             text = {
                 Column {
                     accounts.forEach { account ->
@@ -616,7 +617,7 @@ fun VehicleAddEditScreen(
             confirmButton = {},
             dismissButton = {
                 TextButton(onClick = { showAccountPicker = false }) {
-                    Text("Cancel")
+                    Text(localizedUiString("Cancel"))
                 }
             }
         )
@@ -648,7 +649,7 @@ fun FormSection(
                 modifier = Modifier.size(20.dp)
             )
             Text(
-                title,
+                localizedUiString(title),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.SemiBold
             )
@@ -752,12 +753,12 @@ fun DatePickerDialog(
                     }
                 }
             ) {
-                Text("OK")
+                Text(localizedUiString("OK"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(localizedUiString("Cancel"))
             }
         }
     ) {

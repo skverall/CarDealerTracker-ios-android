@@ -70,6 +70,7 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlinx.coroutines.launch
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,16 +117,16 @@ fun VehicleDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Vehicle Details") },
+                title = { Text(localizedUiString("Vehicle Details")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 actions = {
                     if (vehicle != null) {
                         TextButton(onClick = { onEdit(vehicle.id.toString()) }) {
-                            Text("Edit", color = EzcarGreen, fontWeight = FontWeight.SemiBold)
+                            Text(localizedUiString("Edit"), color = EzcarGreen, fontWeight = FontWeight.SemiBold)
                         }
                         IconButton(onClick = {
                             shareScope.launch {
@@ -149,7 +150,7 @@ fun VehicleDetailScreen(
                                 context.startActivity(shareIntent)
                             }
                         }) {
-                            Icon(Icons.Default.Share, contentDescription = "Share", tint = EzcarGreen)
+                            Icon(Icons.Default.Share, contentDescription = localizedUiString("Share"), tint = EzcarGreen)
                         }
                     }
                 },
@@ -164,7 +165,7 @@ fun VehicleDetailScreen(
             }
         } else if (vehicle == null) {
             Box(Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
-                Text("Vehicle not found", style = MaterialTheme.typography.bodyLarge)
+                Text(localizedUiString("Vehicle not found"), style = MaterialTheme.typography.bodyLarge)
             }
         } else {
             Column(
@@ -260,7 +261,7 @@ fun VehicleDetailScreen(
                 ) {
                     Icon(Icons.Default.Delete, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Delete Vehicle")
+                    Text(localizedUiString("Delete Vehicle"))
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -271,8 +272,8 @@ fun VehicleDetailScreen(
     if (showDeleteDialog && vehicle != null) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete Vehicle?") },
-            text = { Text("This action cannot be undone.") },
+            title = { Text(localizedUiString("Delete Vehicle?")) },
+            text = { Text(localizedUiString("This action cannot be undone.")) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -281,12 +282,12 @@ fun VehicleDetailScreen(
                         onBack()
                     }
                 ) {
-                    Text("Delete", color = Color.Red)
+                    Text(localizedUiString("Delete"), color = Color.Red)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
+                    Text(localizedUiString("Cancel"))
                 }
             }
         )
@@ -415,7 +416,7 @@ private fun VehiclePhotoSection(
             if (primaryUrl != null) {
                 SubcomposeAsyncImage(
                     model = primaryUrl,
-                    contentDescription = "Vehicle Photo",
+                    contentDescription = localizedUiString("Vehicle Photo"),
                     modifier = Modifier.fillMaxSize(),
                     contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                     error = {
@@ -430,7 +431,7 @@ private fun VehiclePhotoSection(
                                     tint = Color.Gray
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
-                                Text("No photo available", color = Color.Gray)
+                                Text(localizedUiString("No photo available"), color = Color.Gray)
                             }
                         }
                     },
@@ -446,7 +447,7 @@ private fun VehiclePhotoSection(
                             .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(10.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp)
                     ) {
-                        Text("Cover", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text(localizedUiString("Cover"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             } else {
@@ -458,7 +459,7 @@ private fun VehiclePhotoSection(
                         tint = Color.Gray
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Tap Edit to add photo", color = Color.Gray)
+                    Text(localizedUiString("Tap Edit to add photo"), color = Color.Gray)
                 }
             }
         }
@@ -473,7 +474,7 @@ private fun VehiclePhotoSection(
                 photoItems.forEachIndexed { index, item ->
                     SubcomposeAsyncImage(
                         model = item.url,
-                        contentDescription = "Vehicle Photo",
+                        contentDescription = localizedUiString("Vehicle Photo"),
                         modifier = Modifier
                             .size(width = 120.dp, height = 80.dp)
                             .clip(RoundedCornerShape(10.dp))
@@ -508,7 +509,7 @@ private fun PhotoActionRow(
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Add Photos")
+            Text(localizedUiString("Add Photos"))
         }
         OutlinedButton(
             onClick = onManagePhotos,
@@ -517,7 +518,7 @@ private fun PhotoActionRow(
         ) {
             Icon(Icons.Default.GridOn, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Manage")
+            Text(localizedUiString("Manage"))
         }
     }
 }
@@ -545,9 +546,9 @@ private fun PhotoUploadSheet(
         containerColor = Color.White
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Upload Photos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(localizedUiString("Upload Photos"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             if (uris.isEmpty()) {
-                Text("No photos selected", color = Color.Gray)
+                Text(localizedUiString("No photos selected"), color = Color.Gray)
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
@@ -578,13 +579,13 @@ private fun PhotoUploadSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Set first photo as cover")
+                Text(localizedUiString("Set first photo as cover"))
                 Switch(checked = replaceCover, onCheckedChange = onReplaceCoverChange)
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f), enabled = !isUploading) {
-                    Text("Cancel")
+                    Text(localizedUiString("Cancel"))
                 }
                 Button(
                     onClick = onUpload,
@@ -596,7 +597,7 @@ private fun PhotoUploadSheet(
                         CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    Text("Upload")
+                    Text(localizedUiString("Upload"))
                 }
             }
         }
@@ -627,7 +628,7 @@ private fun PhotoManagerSheet(
         containerColor = Color.White
     ) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Photo Gallery", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            Text(localizedUiString("Photo Gallery"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -724,7 +725,7 @@ private fun PhotoManagerSheet(
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) {
-                    Text("Close")
+                    Text(localizedUiString("Close"))
                 }
                 Button(
                     onClick = { onSaveOrder(workingPhotos) },
@@ -732,7 +733,7 @@ private fun PhotoManagerSheet(
                     enabled = workingPhotos.isNotEmpty(),
                     colors = ButtonDefaults.buttonColors(containerColor = EzcarGreen)
                 ) {
-                    Text("Save Order")
+                    Text(localizedUiString("Save Order"))
                 }
             }
         }
@@ -954,7 +955,7 @@ private fun PhotoViewerActions(
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             if (item.isCover) {
                 DropdownMenuItem(
-                    text = { Text("Remove cover") },
+                    text = { Text(localizedUiString("Remove cover")) },
                     onClick = {
                         expanded = false
                         onRemoveCover()
@@ -962,14 +963,14 @@ private fun PhotoViewerActions(
                 )
             } else if (item.photo != null) {
                 DropdownMenuItem(
-                    text = { Text("Set as cover") },
+                    text = { Text(localizedUiString("Set as cover")) },
                     onClick = {
                         expanded = false
                         onSetCover(item.photo)
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text("Delete photo") },
+                    text = { Text(localizedUiString("Delete photo")) },
                     onClick = {
                         expanded = false
                         onDelete(item.photo)
@@ -1030,14 +1031,14 @@ private fun PhotoGridItem(
         }
         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
             DropdownMenuItem(
-                text = { Text("Set as cover") },
+                text = { Text(localizedUiString("Set as cover")) },
                 onClick = {
                     menuExpanded = false
                     onSetCover()
                 }
             )
             DropdownMenuItem(
-                text = { Text("Delete photo") },
+                text = { Text(localizedUiString("Delete photo")) },
                 onClick = {
                     menuExpanded = false
                     onDelete()
@@ -1105,14 +1106,14 @@ private fun VehicleHeaderCard(
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFE5E5EA))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("VIN:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                Text(localizedUiString("VIN:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                 Text(vehicle.vin, fontWeight = FontWeight.Medium)
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Purchase Date:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                Text(localizedUiString("Purchase Date:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                 Text(
                     SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(vehicle.purchaseDate),
                     fontWeight = FontWeight.Medium
@@ -1122,7 +1123,7 @@ private fun VehicleHeaderCard(
             if (vehicle.mileage > 0) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Mileage:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                    Text(localizedUiString("Mileage:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                     Text(
                         regionSettingsManager.formatMileage(vehicle.mileage),
                         fontWeight = FontWeight.Medium
@@ -1133,7 +1134,7 @@ private fun VehicleHeaderCard(
             detailState.inventoryStats?.let { stats ->
                 Spacer(modifier = Modifier.height(4.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Days in Inventory:", color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                    Text(localizedUiString("Days in Inventory:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                     Text(
                         "${stats.daysInInventory} days (${stats.agingBucket})",
                         fontWeight = FontWeight.Medium,
@@ -1149,7 +1150,7 @@ private fun VehicleHeaderCard(
 
             if (!vehicle.notes.isNullOrBlank()) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFE5E5EA))
-                Text("Notes", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                Text(localizedUiString("Notes"), style = MaterialTheme.typography.labelMedium, color = Color.Gray)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(vehicle.notes, style = MaterialTheme.typography.bodyMedium)
             }
@@ -1193,7 +1194,7 @@ private fun ExpensesSection(
 
             if (expenses.isEmpty()) {
                 Text(
-                    "No expenses recorded for this vehicle",
+                    localizedUiString("No expenses recorded for this vehicle"),
                     color = Color.Gray,
                     style = MaterialTheme.typography.bodyMedium
                 )

@@ -9,8 +9,8 @@ enum AccountTransactionType: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .deposit: return "Deposit"
-        case .withdrawal: return "Withdrawal"
+        case .deposit: return "deposit".localizedStringFallback
+        case .withdrawal: return "withdrawal".localizedStringFallback
         }
     }
 

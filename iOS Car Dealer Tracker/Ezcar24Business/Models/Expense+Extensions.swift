@@ -11,10 +11,10 @@ extension Expense {
 
     var categoryTitle: String {
         switch category ?? "" {
-        case "vehicle": return "Vehicle"
-        case "personal": return "Personal"
-        case "employee": return "Employee"
-        default: return "Other"
+        case "vehicle": return "vehicle".localizedStringFallback
+        case "personal": return "personal".localizedStringFallback
+        case "employee": return "employee".localizedStringFallback
+        default: return "other".localizedStringFallback
         }
     }
 
@@ -36,7 +36,7 @@ extension Expense {
         let make = vehicle?.make ?? ""
         let model = vehicle?.model ?? ""
         let title = [make, model].filter { !$0.isEmpty }.joined(separator: " ")
-        return title.isEmpty ? "Any Vehicle" : title
+        return title.isEmpty ? "any_vehicle".localizedStringFallback : title
     }
 
     var vehicleSubtitle: String {
@@ -56,7 +56,7 @@ extension Expense {
                 return components.joined(separator: " • ")
             }
         }
-        return "No vehicle linked"
+        return "no_vehicle_linked".localizedStringFallback
     }
 
     var timeString: String {

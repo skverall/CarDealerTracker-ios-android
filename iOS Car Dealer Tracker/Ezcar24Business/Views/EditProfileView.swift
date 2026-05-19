@@ -157,7 +157,7 @@ struct EditProfileView: View {
         let emailChanged = normalizedEmail != currentEmail
 
         guard !emailChanged || isValidEmail(normalizedEmail) else {
-            errorMessage = "Enter a valid email address."
+            errorMessage = "edit_profile_invalid_email".localizedString
             return
         }
 
@@ -232,7 +232,7 @@ struct EditProfileView: View {
                 }
             } catch {
                 if requestedEmailChange {
-                    errorMessage = "Email change was requested, but the rest of the profile could not be saved. Reopen the profile and verify the details."
+                    errorMessage = "edit_profile_email_change_partial_failure".localizedString
                 } else {
                     errorMessage = error.localizedDescription
                 }

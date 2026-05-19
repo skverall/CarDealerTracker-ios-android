@@ -1,3 +1,433 @@
 <resources>
     <string name="app_name">Car Dealer Tracker</string>
+    <string name="l10n_0_30_days_79c8f34c8d" formatted="false">0-30 days</string>
+    <string name="l10n_10_1df30ffd07" formatted="false">10%</string>
+    <string name="l10n_15_2b01c5b342" formatted="false">15%</string>
+    <string name="l10n_20_ea7ba4661a" formatted="false">20%</string>
+    <string name="l10n_25_5e1164e36f" formatted="false">25%</string>
+    <string name="l10n_31_60_days_9ba963c672" formatted="false">31-60 days</string>
+    <string name="l10n_61_90_days_d441b757a6" formatted="false">61-90 days</string>
+    <string name="l10n_90_days_025be66f3a" formatted="false">90+ days</string>
+    <string name="l10n_about_holding_costs_3d2034fe33" formatted="false">About Holding Costs</string>
+    <string name="l10n_account_name_db3b79e181" formatted="false">Account Name</string>
+    <string name="l10n_add_61cc55aa04" formatted="false">Add</string>
+    <string name="l10n_add_a_note_what_was_this_expense_for_c08bd5a3bf" formatted="false">Add a note (what was this expense for?)</string>
+    <string name="l10n_add_expense_f53d122b20" formatted="false">Add Expense</string>
+    <string name="l10n_add_interaction_5e56ca5d10" formatted="false">Add Interaction</string>
+    <string name="l10n_add_line_item_dc45f5a83e" formatted="false">Add Line Item</string>
+    <string name="l10n_add_notes_here_e22fea650a" formatted="false">Add notes here...</string>
+    <string name="l10n_add_part_83760b6974" formatted="false">Add Part</string>
+    <string name="l10n_add_photos_be917560d1" formatted="false">Add Photos</string>
+    <string name="l10n_add_reminder_9d1c0460dd" formatted="false">Add Reminder</string>
+    <string name="l10n_add_sale_b337755e1f" formatted="false">Add Sale</string>
+    <string name="l10n_additional_notes_d2291b5d1a" formatted="false">Additional notes...</string>
+    <string name="l10n_all_6a72085653" formatted="false">All</string>
+    <string name="l10n_all_categories_1fd266c217" formatted="false">All Categories</string>
+    <string name="l10n_all_employees_127ec08a02" formatted="false">All Employees</string>
+    <string name="l10n_all_types_eb672cb3ba" formatted="false">All Types</string>
+    <string name="l10n_all_vehicles_dd9eb32418" formatted="false">All Vehicles</string>
+    <string name="l10n_amount_abd20c69e9" formatted="false">AMOUNT</string>
+    <string name="l10n_annual_percentage_rate_for_holding_cost_ca_a7c28951ee" formatted="false">Annual percentage rate for holding cost calculation</string>
+    <string name="l10n_annual_rate_81552973a1" formatted="false">Annual Rate (%)</string>
+    <string name="l10n_asking_price_b892b74008" formatted="false">Asking Price</string>
+    <string name="l10n_at_least_6_characters_d5af567482" formatted="false">At least 6 characters</string>
+    <string name="l10n_automatically_calculated_from_annual_rate_6ff256bfdb" formatted="false">Automatically calculated from annual rate</string>
+    <string name="l10n_available_vehicles_480bae92bc" formatted="false">Available Vehicles:</string>
+    <string name="l10n_backup_export_d8c6bdd3ee" formatted="false">Backup &amp; Export</string>
+    <string name="l10n_batch_label_fbb29dce48" formatted="false">Batch Label</string>
+    <string name="l10n_brief_summary_of_the_interaction_e8e6ea860a" formatted="false">Brief summary of the interaction</string>
+    <string name="l10n_build_json_archive_02746b36ea" formatted="false">Build JSON Archive</string>
+    <string name="l10n_business_name_a8e3901b09" formatted="false">Business name</string>
+    <string name="l10n_buyer_name_2b4f2a6012" formatted="false">Buyer Name</string>
+    <string name="l10n_buyer_phone_7c5502c5b3" formatted="false">Buyer Phone</string>
+    <string name="l10n_calculate_holding_costs_ed57a45e72" formatted="false">Calculate holding costs</string>
+    <string name="l10n_call_291a0a58df" formatted="false">Call</string>
+    <string name="l10n_cancel_77dfd2135f" formatted="false">Cancel</string>
+    <string name="l10n_car_dealer_tracker_7c5908a418" formatted="false">Car Dealer Tracker</string>
+    <string name="l10n_category_a3c686e711" formatted="false">Category</string>
+    <string name="l10n_change_password_49289db43e" formatted="false">Change Password</string>
+    <string name="l10n_change_role_7b55cbe933" formatted="false">Change Role</string>
+    <string name="l10n_clear_719ea396ad" formatted="false">Clear</string>
+    <string name="l10n_clear_all_c043160a89" formatted="false">Clear all</string>
+    <string name="l10n_clear_filters_412226715c" formatted="false">Clear filters</string>
+    <string name="l10n_clear_filters_to_see_all_leads_adc98b15db" formatted="false">Clear filters to see all leads</string>
+    <string name="l10n_client_name_130c62f72d" formatted="false">Client Name</string>
+    <string name="l10n_client_reminder_9373ed22b0" formatted="false">Client Reminder</string>
+    <string name="l10n_close_bbfa773e5a" formatted="false">Close</string>
+    <string name="l10n_code_adac69379a" formatted="false">Code</string>
+    <string name="l10n_complete_sale_ebdd278082" formatted="false">Complete Sale</string>
+    <string name="l10n_confirm_04a212215e" formatted="false">Confirm</string>
+    <string name="l10n_confirm_password_c2d404cb7b" formatted="false">Confirm Password</string>
+    <string name="l10n_contact_info_3ec80d39d2" formatted="false">CONTACT INFO</string>
+    <string name="l10n_continue_2e02623966" formatted="false">Continue</string>
+    <string name="l10n_cover_8b656a5dd9" formatted="false">Cover</string>
+    <string name="l10n_create_business_b992caf4a9" formatted="false">Create Business</string>
+    <string name="l10n_critical_04b7b26c8c" formatted="false">Critical</string>
+    <string name="l10n_custom_range_report_46cf03bd77" formatted="false">Custom Range Report</string>
+    <string name="l10n_data_health_bc65a39db5" formatted="false">Data Health</string>
+    <string name="l10n_date_eb9a4bc1c0" formatted="false">Date</string>
+    <string name="l10n_days_high_to_low_e01ed449bc" formatted="false">Days: High to Low</string>
+    <string name="l10n_days_in_inventory_75eebd53e7" formatted="false">Days in Inventory:</string>
+    <string name="l10n_days_low_to_high_f66275dbea" formatted="false">Days: Low to High</string>
+    <string name="l10n_debts_787aab25f6" formatted="false">Debts</string>
+    <string name="l10n_delete_f6fdbe48dc" formatted="false">Delete</string>
+    <string name="l10n_delete_interaction_72592ef009" formatted="false">Delete interaction</string>
+    <string name="l10n_delete_photo_fc700472e1" formatted="false">Delete photo</string>
+    <string name="l10n_delete_reminder_18cf079683" formatted="false">Delete reminder</string>
+    <string name="l10n_delete_vehicle_2d8f468e29" formatted="false">Delete Vehicle?</string>
+    <string name="l10n_delete_vehicle_35f19fe601" formatted="false">Delete Vehicle</string>
+    <string name="l10n_deposit_e7b0b317a6" formatted="false">Deposit</string>
+    <string name="l10n_detailed_notes_about_the_interaction_76cd9c1921" formatted="false">Detailed notes about the interaction...</string>
+    <string name="l10n_dismiss_70afe9eff3" formatted="false">Dismiss</string>
+    <string name="l10n_done_e9b450d14b" formatted="false">Done</string>
+    <string name="l10n_duration_minutes_10c3d1ca4b" formatted="false">Duration (minutes)</string>
+    <string name="l10n_edit_5301648dcf" formatted="false">Edit</string>
+    <string name="l10n_email_84add5b295" formatted="false">Email</string>
+    <string name="l10n_email_address_09ba557fd1" formatted="false">Email Address</string>
+    <string name="l10n_entity_counts_7cd051ce3f" formatted="false">Entity Counts</string>
+    <string name="l10n_estimated_value_c0da7cb3ed" formatted="false">Estimated Value</string>
+    <string name="l10n_executive_summary_3abcc2cf04" formatted="false">Executive Summary</string>
+    <string name="l10n_expenses_8d437dbf95" formatted="false">Expenses</string>
+    <string name="l10n_financial_accounts_728ed9e9ca" formatted="false">Financial Accounts</string>
+    <string name="l10n_financial_overview_bd34d08878" formatted="false">Financial Overview</string>
+    <string name="l10n_formula_annual_rate_365_days_c6985dd15d" formatted="false">Formula: Annual Rate ÷ 365 days</string>
+    <string name="l10n_full_backup_archive_6d63cfb1eb" formatted="false">Full Backup &amp; Archive</string>
+    <string name="l10n_generate_pdf_report_71a2691414" formatted="false">Generate PDF Report</string>
+    <string name="l10n_holding_cost_072a0eb5df" formatted="false">Holding Cost</string>
+    <string name="l10n_holding_cost_settings_56d4285d35" formatted="false">Holding Cost Settings</string>
+    <string name="l10n_holding_costs_represent_the_daily_expense__f638001ece" formatted="false">Holding costs represent the daily expense of keeping a vehicle in your inventory. </string>
+    <string name="l10n_how_it_works_8cecc82d72" formatted="false">How It Works</string>
+    <string name="l10n_improvement_06a5958742" formatted="false">Improvement</string>
+    <string name="l10n_in_transit_046e5cee81" formatted="false">In Transit</string>
+    <string name="l10n_info_4b631f6984" formatted="false">Info</string>
+    <string name="l10n_initial_stock_246f037a63" formatted="false">Initial Stock</string>
+    <string name="l10n_interactions_0b3583ecaa" formatted="false">Interactions</string>
+    <string name="l10n_interactions_3e9b25e52c" formatted="false">INTERACTIONS</string>
+    <string name="l10n_inventory_300d29fd5f" formatted="false">Inventory</string>
+    <string name="l10n_inventory_overview_6c60ff1858" formatted="false">Inventory Overview</string>
+    <string name="l10n_invite_b136609f06" formatted="false">Invite</string>
+    <string name="l10n_invite_code_e91cf27d1a" formatted="false">Invite code</string>
+    <string name="l10n_invite_ready_d63d9ab8e9" formatted="false">Invite Ready</string>
+    <string name="l10n_invite_team_member_ba9a4750b3" formatted="false">Invite Team Member</string>
+    <string name="l10n_join_e0d73143de" formatted="false">Join</string>
+    <string name="l10n_join_team_by_code_de2c46a824" formatted="false">Join Team by Code</string>
+    <string name="l10n_lead_funnel_1a4f54a31c" formatted="false">Lead Funnel</string>
+    <string name="l10n_lead_information_f5caed15cb" formatted="false">LEAD INFORMATION</string>
+    <string name="l10n_lead_management_a32661e4fa" formatted="false">Lead Management</string>
+    <string name="l10n_lead_score_570b129882" formatted="false">Lead Score</string>
+    <string name="l10n_lead_source_272a3bc17b" formatted="false">Lead Source</string>
+    <string name="l10n_lead_stage_3835cf63f8" formatted="false">Lead Stage</string>
+    <string name="l10n_line_items_7cea20a1a0" formatted="false">Line Items</string>
+    <string name="l10n_low_stock_023d1181eb" formatted="false">Low Stock</string>
+    <string name="l10n_manage_bf58d17e56" formatted="false">Manage</string>
+    <string name="l10n_mark_all_read_e5f6134329" formatted="false">Mark All Read</string>
+    <string name="l10n_mileage_83d293bb51" formatted="false">Mileage:</string>
+    <string name="l10n_name_709a23220f" formatted="false">Name</string>
+    <string name="l10n_new_password_4894cb39ee" formatted="false">New Password</string>
+    <string name="l10n_new_sale_66d89d8f55" formatted="false">New Sale</string>
+    <string name="l10n_newest_added_04df647871" formatted="false">Newest Added</string>
+    <string name="l10n_next_reminder_5f4f731670" formatted="false">Next Reminder</string>
+    <string name="l10n_no_expenses_recorded_for_this_vehicle_c072fec1dd" formatted="false">No expenses recorded for this vehicle</string>
+    <string name="l10n_no_interactions_recorded_fcfb0c9bc0" formatted="false">No interactions recorded</string>
+    <string name="l10n_no_inventory_available_yet_5380356e1d" formatted="false">No inventory available yet</string>
+    <string name="l10n_no_organizations_yet_e932e617af" formatted="false">No organizations yet</string>
+    <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">No payment history</string>
+    <string name="l10n_no_photo_available_26ee476cf8" formatted="false">No photo available</string>
+    <string name="l10n_no_photos_selected_dde0dad3af" formatted="false">No photos selected</string>
+    <string name="l10n_no_reminders_set_deaccb44c3" formatted="false">No reminders set</string>
+    <string name="l10n_no_transactions_yet_494bb679a0" formatted="false">No transactions yet</string>
+    <string name="l10n_no_vehicle_selected_ba526a43b4" formatted="false">No vehicle selected</string>
+    <string name="l10n_no_vehicles_found_c578cfdbd5" formatted="false">No vehicles found</string>
+    <string name="l10n_none_6eef664840" formatted="false">None</string>
+    <string name="l10n_note_optional_df9d34ca45" formatted="false">Note (Optional)</string>
+    <string name="l10n_notes_70440046a3" formatted="false">Notes</string>
+    <string name="l10n_notes_e69fc18a69" formatted="false">NOTES</string>
+    <string name="l10n_notes_optional_2fd5716446" formatted="false">Notes (Optional)</string>
+    <string name="l10n_offline_queue_51301f4d01" formatted="false">Offline Queue</string>
+    <string name="l10n_ok_9ce3bd4224" formatted="false">OK</string>
+    <string name="l10n_oldest_added_4864f09810" formatted="false">Oldest Added</string>
+    <string name="l10n_on_sale_684df04fff" formatted="false">On Sale</string>
+    <string name="l10n_operational_8459f93535" formatted="false">Operational</string>
+    <string name="l10n_owned_b62ff5ccd1" formatted="false">Owned</string>
+    <string name="l10n_parts_e374280917" formatted="false">Parts</string>
+    <string name="l10n_payment_method_f383f6a23c" formatted="false">Payment Method</string>
+    <string name="l10n_phone_number_ab25d61bb1" formatted="false">Phone Number</string>
+    <string name="l10n_photo_gallery_44ef3f997a" formatted="false">Photo Gallery</string>
+    <string name="l10n_price_high_to_low_c60097c36d" formatted="false">Price: High to Low</string>
+    <string name="l10n_price_low_to_high_ed3d3af1bd" formatted="false">Price: Low to High</string>
+    <string name="l10n_purchase_date_44c49c39bc" formatted="false">Purchase Date:</string>
+    <string name="l10n_quantity_44f6af6945" formatted="false">Quantity</string>
+    <string name="l10n_quick_exports_d46b411b0f" formatted="false">Quick Exports</string>
+    <string name="l10n_re_enter_password_aefce7f750" formatted="false">Re-enter password</string>
+    <string name="l10n_receive_stock_7f38105bfd" formatted="false">Receive Stock</string>
+    <string name="l10n_record_payment_6577ced3c0" formatted="false">Record Payment</string>
+    <string name="l10n_reminder_title_e0a0d76c7c" formatted="false">Reminder Title</string>
+    <string name="l10n_reminders_414594a618" formatted="false">REMINDERS</string>
+    <string name="l10n_remove_cover_7a5eef5219" formatted="false">Remove cover</string>
+    <string name="l10n_remove_e963907dac" formatted="false">Remove</string>
+    <string name="l10n_request_details_5a4c5cf8bc" formatted="false">Request Details</string>
+    <string name="l10n_reset_44c57abd88" formatted="false">Reset</string>
+    <string name="l10n_restore_purchases_2d5574135f" formatted="false">Restore Purchases</string>
+    <string name="l10n_roi_high_to_low_829d8222f7" formatted="false">ROI: High to Low</string>
+    <string name="l10n_roi_low_to_high_0f09644eb4" formatted="false">ROI: Low to High</string>
+    <string name="l10n_sales_d0edfb6e8c" formatted="false">Sales</string>
+    <string name="l10n_save_as_template_18ea0c6cf8" formatted="false">Save as Template</string>
+    <string name="l10n_save_client_to_add_reminders_9973b72e07" formatted="false">Save client to add reminders</string>
+    <string name="l10n_save_client_to_log_interactions_c757eff3fd" formatted="false">Save client to log interactions</string>
+    <string name="l10n_save_efc007a393" formatted="false">Save</string>
+    <string name="l10n_save_expense_b89a5c0890" formatted="false">Save Expense</string>
+    <string name="l10n_save_interaction_71551456df" formatted="false">Save Interaction</string>
+    <string name="l10n_save_order_bc2ed7f4c6" formatted="false">Save Order</string>
+    <string name="l10n_save_settings_0022a3e10c" formatted="false">Save Settings</string>
+    <string name="l10n_save_template_2d7eec43dc" formatted="false">Save Template</string>
+    <string name="l10n_search_6d7a30a931" formatted="false">Search...</string>
+    <string name="l10n_search_bce0641417" formatted="false">Search</string>
+    <string name="l10n_search_by_name_phone_10fa0a8ccb" formatted="false">Search by name, phone...</string>
+    <string name="l10n_search_leads_6406ab34a2" formatted="false">Search leads...</string>
+    <string name="l10n_search_make_model_vin_dfaf1206da" formatted="false">Search Make, Model, VIN...</string>
+    <string name="l10n_search_vehicles_clients_expenses_d2a6e2e3ca" formatted="false">Search vehicles, clients, expenses</string>
+    <string name="l10n_see_all_8196e42428" formatted="false">See All</string>
+    <string name="l10n_select_account_3a2f7de683" formatted="false">Select Account</string>
+    <string name="l10n_select_vehicle_from_inventory_eac779c320" formatted="false">Select Vehicle from Inventory</string>
+    <string name="l10n_selected_vehicle_541c389a97" formatted="false">SELECTED VEHICLE</string>
+    <string name="l10n_set_as_cover_d928f2a600" formatted="false">Set as cover</string>
+    <string name="l10n_set_first_photo_as_cover_d614268a69" formatted="false">Set first photo as cover</string>
+    <string name="l10n_settings_saved_successfully_8b014ac160" formatted="false">Settings saved successfully</string>
+    <string name="l10n_sms_9e10d4517d" formatted="false">SMS</string>
+    <string name="l10n_status_bae7d5be70" formatted="false">Status</string>
+    <string name="l10n_summary_12b71c3e0f" formatted="false">Summary</string>
+    <string name="l10n_tap_edit_to_add_photo_c6a1bff634" formatted="false">Tap Edit to add photo</string>
+    <string name="l10n_tap_to_add_a_new_client_c724b04224" formatted="false">Tap + to add a new client</string>
+    <string name="l10n_tap_to_add_photo_c86051a233" formatted="false">Tap to add photo</string>
+    <string name="l10n_template_name_48c5544ff8" formatted="false">Template Name</string>
+    <string name="l10n_text_4345cb1fa2" formatted="false">%</string>
+    <string name="l10n_this_action_cannot_be_undone_951f495b34" formatted="false">This action cannot be undone.</string>
+    <string name="l10n_this_interaction_will_be_removed_from_the__515f9c32f7" formatted="false">This interaction will be removed from the client timeline.</string>
+    <string name="l10n_this_reminder_and_its_notification_will_be_eb9d1ed05d" formatted="false">This reminder and its notification will be removed.</string>
+    <string name="l10n_title_768e0c1c69" formatted="false">Title</string>
+    <string name="l10n_top_sold_vehicles_75b5535b97" formatted="false">Top Sold Vehicles</string>
+    <string name="l10n_total_value_4949c4c8f4" formatted="false">Total Value</string>
+    <string name="l10n_track_daily_cost_of_keeping_vehicles_in_in_7fcc384e23" formatted="false">Track daily cost of keeping vehicles in inventory</string>
+    <string name="l10n_unit_cost_0105252023" formatted="false">Unit Cost</string>
+    <string name="l10n_unit_price_1eea68d093" formatted="false">Unit Price</string>
+    <string name="l10n_update_access_b5cb6f9c8f" formatted="false">Update Access</string>
+    <string name="l10n_update_asking_price_95bce5bf83" formatted="false">Update Asking Price</string>
+    <string name="l10n_update_password_61dcf34e70" formatted="false">Update Password</string>
+    <string name="l10n_upload_8bdf057f91" formatted="false">Upload</string>
+    <string name="l10n_upload_photos_f561065970" formatted="false">Upload Photos</string>
+    <string name="l10n_use_template_2379761496" formatted="false">Use Template</string>
+    <string name="l10n_user_guide_bec249e659" formatted="false">User Guide</string>
+    <string name="l10n_vehicle_details_ef6dde72ac" formatted="false">Vehicle Details</string>
+    <string name="l10n_vehicle_interest_ba912fc45c" formatted="false">VEHICLE INTEREST</string>
+    <string name="l10n_vehicle_not_found_6e96578c6e" formatted="false">Vehicle not found</string>
+    <string name="l10n_view_receipt_94c8c4b5ab" formatted="false">View Receipt</string>
+    <string name="l10n_vin_f4d631a147" formatted="false">VIN:</string>
+    <string name="l10n_warning_e9c4556335" formatted="false">Warning</string>
+    <string name="l10n_what_is_this_client_looking_for_5026141573" formatted="false">What is this client looking for?</string>
+    <string name="l10n_what_is_this_for_5c24adade1" formatted="false">What is this for?</string>
+    <string name="l10n_whatsapp_b336fc5587" formatted="false">WhatsApp</string>
+    <string name="l10n_withdraw_47e5641946" formatted="false">Withdraw</string>
+    <string name="l10n_year_newest_f5b725e08b" formatted="false">Year: Newest</string>
+    <string name="l10n_add_account_568c7279d9" formatted="false">Add Account</string>
+    <string name="l10n_amount_s_ec8b61efc7">Amount (%s)</string>
+    <string name="l10n_balance_s_75b5f54c82">Balance (%s)</string>
+    <string name="l10n_change_64fbd995d3" formatted="false">Change</string>
+    <string name="l10n_d_exp_e293e81168">%d exp</string>
+    <string name="l10n_deal_value_s_0dbb3f7861">Deal Value (%s)</string>
+    <string name="l10n_due_s_be08cc1da0">Due: %s</string>
+    <string name="l10n_edit_account_a7bbd29ef8" formatted="false">Edit Account</string>
+    <string name="l10n_estimated_value_s_2695067f49">Estimated Value (%s)</string>
+    <string name="l10n_last_sync_s_3823d3f26b">Last Sync: %s</string>
+    <string name="l10n_max_s_c462e78d25">Max: %s</string>
+    <string name="l10n_move_to_s_219f3bcc39">Move to %s</string>
+    <string name="l10n_never_80c3052d33" formatted="false">Never</string>
+    <string name="l10n_no_816c52fd2b" formatted="false">No</string>
+    <string name="l10n_on_hand_s_b4e94bd7fb">On Hand: %s</string>
+    <string name="l10n_part_88be9d62d7" formatted="false">Part</string>
+    <string name="l10n_payment_amount_s_4b4a7ded49">Payment Amount (%s)</string>
+    <string name="l10n_queue_d_dad2e299dd">Queue: %d</string>
+    <string name="l10n_s_s_d5e99a8a81">%1$s (%2$s)</string>
+    <string name="l10n_s_s_x_s_0f834ca715">%1$s: %2$s x %3$s</string>
+    <string name="l10n_sale_price_s_cef9b3cb38">Sale Price (%s)</string>
+    <string name="l10n_syncing_s_a95262f700">Syncing: %s</string>
+    <string name="l10n_vin_s_fbdc3936ba">VIN: %s</string>
+    <string name="l10n_yes_5397e0583f" formatted="false">Yes</string>
+    <string name="l10n_account_85dfa32c97" formatted="false">Account</string>
+    <string name="l10n_account_transactions_11823944ea" formatted="false">Account Transactions</string>
+    <string name="l10n_accounts_36bae31694" formatted="false">Accounts</string>
+    <string name="l10n_add_user_feature_coming_soon_5ed892a941" formatted="false">Add User feature coming soon</string>
+    <string name="l10n_client_interactions_6b224458e6" formatted="false">Client Interactions</string>
+    <string name="l10n_clients_28e22fe3dd" formatted="false">Clients</string>
+    <string name="l10n_debt_payments_c2265e641f" formatted="false">Debt Payments</string>
+    <string name="l10n_expense_templates_f352328486" formatted="false">Expense Templates</string>
+    <string name="l10n_paid_by_2e06e8e0d2" formatted="false">Paid By</string>
+    <string name="l10n_part_batches_e6bca6edb1" formatted="false">Part Batches</string>
+    <string name="l10n_part_sale_line_items_913154a288" formatted="false">Part Sale Line Items</string>
+    <string name="l10n_part_sales_14413b3d65" formatted="false">Part Sales</string>
+    <string name="l10n_s_s_089331a24a">%1$s • %2$s</string>
+    <string name="l10n_select_user_c875cbd5b1" formatted="false">Select User</string>
+    <string name="l10n_select_vehicle_fea7a520f3" formatted="false">Select Vehicle</string>
+    <string name="l10n_upsert_e66a0fdf4e" formatted="false">Upsert</string>
+    <string name="l10n_users_57f2b181d0" formatted="false">Users</string>
+    <string name="l10n_vehicle_9bb28c0dd3" formatted="false">Vehicle</string>
+    <string name="l10n_vehicles_60261ed275" formatted="false">Vehicles</string>
+    <string name="l10n_add_account_feature_coming_soon_69f93d7502" formatted="false">Add Account feature coming soon</string>
+    <string name="l10n_add_client_d2bacebb97" formatted="false">Add Client</string>
+    <string name="l10n_add_lead_6a1df4c114" formatted="false">Add Lead</string>
+    <string name="l10n_add_vehicle_c1f3a9f514" formatted="false">Add Vehicle</string>
+    <string name="l10n_back_b52b36b726" formatted="false">Back</string>
+    <string name="l10n_car_bc47a3dce0" formatted="false">Car</string>
+    <string name="l10n_change_photo_6080b454e5" formatted="false">Change Photo</string>
+    <string name="l10n_copied_to_clipboard_0e73834873" formatted="false">Copied to clipboard</string>
+    <string name="l10n_copy_code_6c10692719" formatted="false">Copy code</string>
+    <string name="l10n_could_not_attach_receipt_002c812c35" formatted="false">Could not attach receipt</string>
+    <string name="l10n_could_not_open_receipt_3a52256bcf" formatted="false">Could not open receipt</string>
+    <string name="l10n_filter_d7decf1aa2" formatted="false">Filter</string>
+    <string name="l10n_invite_code_copied_53ba04fe05" formatted="false">Invite code copied</string>
+    <string name="l10n_mark_sold_f9ed53bb35" formatted="false">Mark Sold</string>
+    <string name="l10n_menu_57f5f5efbc" formatted="false">Menu</string>
+    <string name="l10n_message_68f4145fee" formatted="false">Message</string>
+    <string name="l10n_more_options_86c0a35ec8" formatted="false">More options</string>
+    <string name="l10n_open_receipt_29074b8045" formatted="false">Open receipt</string>
+    <string name="l10n_profile_ff4fc0276e" formatted="false">Profile</string>
+    <string name="l10n_receipt_removed_d5c1b3de12" formatted="false">Receipt removed</string>
+    <string name="l10n_receipt_updated_91e7da08ee" formatted="false">Receipt updated</string>
+    <string name="l10n_refresh_56e3badc4e" formatted="false">Refresh</string>
+    <string name="l10n_share_09ca55ca52" formatted="false">Share</string>
+    <string name="l10n_share_file_f405dcfb52" formatted="false">Share File</string>
+    <string name="l10n_share_invite_dbcc1e50dc" formatted="false">Share invite</string>
+    <string name="l10n_sort_adc4e96a47" formatted="false">Sort</string>
+    <string name="l10n_sync_905f63092f" formatted="false">Sync</string>
+    <string name="l10n_template_saved_aa1dc3dd61" formatted="false">Template saved</string>
+    <string name="l10n_vehicle_photo_fd45ffbd9b" formatted="false">Vehicle Photo</string>
+    <string name="l10n_view_analytics_03b4fa3532" formatted="false">View Analytics</string>
+    <string name="l10n_view_funnel_4e0fb19942" formatted="false">View Funnel</string>
+    <string name="l10n_join_car_dealer_tracker_using_my_invite_co_688ef50dfa">Join Car Dealer Tracker using my invite code %1$s. Subscribe and we both get an extra month free.
+%2$s</string>
+    <string name="l10n_priority_d_25ab148977">Priority %d</string>
+    <string name="l10n_active_member_08604aa2d6" formatted="false">Active member</string>
+    <string name="l10n_active_subscription_ca7dbfa9fb" formatted="false">Active subscription</string>
+    <string name="l10n_add_deposit_09a9471993" formatted="false">Add Deposit</string>
+    <string name="l10n_align_inventory_carrying_cost_with_ios_ana_bc068ebc37" formatted="false">Align inventory carrying cost with iOS analytics</string>
+    <string name="l10n_all_good_4441c53766" formatted="false">All Good</string>
+    <string name="l10n_annual_rate_a438a59151" formatted="false">Annual Rate</string>
+    <string name="l10n_attach_receipt_0bfc326bcd" formatted="false">Attach receipt</string>
+    <string name="l10n_bank_9e89988cc3" formatted="false">Bank</string>
+    <string name="l10n_buyer_details_dba47552c8" formatted="false">Buyer Details</string>
+    <string name="l10n_cash_758ec54e43" formatted="false">Cash</string>
+    <string name="l10n_cash_bank_and_account_movement_5c935878ac" formatted="false">Cash, bank and account movement</string>
+    <string name="l10n_choose_file_54a2a8411d" formatted="false">Choose File</string>
+    <string name="l10n_clean_up_duplicates_7fc0497c55" formatted="false">Clean Up Duplicates</string>
+    <string name="l10n_client_follow_ups_debts_and_inventory_remi_8d8f44f8a4" formatted="false">Client follow-ups, debts and inventory reminders</string>
+    <string name="l10n_contact_developer_846bcff57b" formatted="false">Contact Developer</string>
+    <string name="l10n_contact_info_e873f4db37" formatted="false">Contact Info</string>
+    <string name="l10n_cost_75fde9afb2" formatted="false">COST</string>
+    <string name="l10n_create_part_sale_eeef3a4213" formatted="false">Create Part Sale</string>
+    <string name="l10n_create_sale_ee71e2b920" formatted="false">Create Sale</string>
+    <string name="l10n_create_your_account_4046b58182" formatted="false">Create your account</string>
+    <string name="l10n_crm_summary_394916621f" formatted="false">CRM Summary</string>
+    <string name="l10n_currency_region_c9a9ff05aa" formatted="false">Currency / Region</string>
+    <string name="l10n_daily_rate_fe3d54900d" formatted="false">Daily Rate</string>
+    <string name="l10n_dashboard_d87f47b47e" formatted="false">Dashboard</string>
+    <string name="l10n_deal_history_144ed39d2f" formatted="false">Deal History</string>
+    <string name="l10n_dealer_pro_c1e6ec9ef0" formatted="false">Dealer Pro</string>
+    <string name="l10n_delete_account_data_252712421d" formatted="false">Delete Account &amp; Data</string>
+    <string name="l10n_delete_records_20ec0fc73b" formatted="false">Delete Records</string>
+    <string name="l10n_duplicates_sync_state_and_diagnostics_80e028bf24" formatted="false">Duplicates, sync state and diagnostics</string>
+    <string name="l10n_edit_debt_b321534344" formatted="false">Edit Debt</string>
+    <string name="l10n_email_reports_593bdc0539" formatted="false">Email Reports</string>
+    <string name="l10n_email_support_for_sync_or_account_issues_aaeecf78ff" formatted="false">Email support for sync or account issues</string>
+    <string name="l10n_enable_holding_cost_calculation_8c6e77a841" formatted="false">Enable Holding Cost Calculation</string>
+    <string name="l10n_enable_parts_tracking_module_84b8e24907" formatted="false">Enable parts tracking module</string>
+    <string name="l10n_export_clients_csv_8c21a892e1" formatted="false">Export clients CSV</string>
+    <string name="l10n_export_expenses_csv_ef83c6d4b7" formatted="false">Export expenses CSV</string>
+    <string name="l10n_export_vehicles_csv_69dee19215" formatted="false">Export vehicles CSV</string>
+    <string name="l10n_free_plan_46bba20f3f" formatted="false">Free Plan</string>
+    <string name="l10n_general_9239ee2cda" formatted="false">General</string>
+    <string name="l10n_in_garage_6e98e8be38" formatted="false">In Garage</string>
+    <string name="l10n_inventory_parts_48753b6a28" formatted="false">Inventory &amp; Parts</string>
+    <string name="l10n_inventory_value_d96f52b847" formatted="false">Inventory Value</string>
+    <string name="l10n_language_89b86ab0e6" formatted="false">Language</string>
+    <string name="l10n_legal_902c91d94e" formatted="false">Legal</string>
+    <string name="l10n_load_the_finance_snapshot_used_for_deliver_7133b84064" formatted="false">Load the finance snapshot used for delivery</string>
+    <string name="l10n_manage_parts_inventory_b3976d6b7d" formatted="false">Manage Parts Inventory</string>
+    <string name="l10n_manage_team_6008d643e7" formatted="false">Manage Team</string>
+    <string name="l10n_management_63cecca67b" formatted="false">Management</string>
+    <string name="l10n_merge_duplicate_vehicles_clients_users_and_21d32c6631" formatted="false">Merge duplicate vehicles, clients, users and accounts</string>
+    <string name="l10n_monthly_finance_snapshot_preview_and_test__c2b4e0c277" formatted="false">Monthly finance snapshot, preview and test delivery</string>
+    <string name="l10n_need_attention_90_days_968bd64859" formatted="false">Need attention (90+ days)</string>
+    <string name="l10n_net_profit_8bebc63cc9" formatted="false">Net Profit</string>
+    <string name="l10n_net_profit_dce52ef31f" formatted="false">NET PROFIT</string>
+    <string name="l10n_new_debt_acf70a9a2b" formatted="false">New Debt</string>
+    <string name="l10n_no_burning_inventory_6dd14714f6" formatted="false">No burning inventory</string>
+    <string name="l10n_no_vehicle_linked_1207f8a434" formatted="false">No vehicle linked</string>
+    <string name="l10n_not_selected_183079f3bd" formatted="false">Not selected</string>
+    <string name="l10n_on_hand_41733d8e55" formatted="false">On Hand</string>
+    <string name="l10n_owes_you_855addac0e" formatted="false">OWES YOU</string>
+    <string name="l10n_pending_invite_4c0cead4ed" formatted="false">Pending invite</string>
+    <string name="l10n_preview_f1fbb2b43d" formatted="false">Preview</string>
+    <string name="l10n_preview_previous_month_0f655d06b2" formatted="false">Preview previous month</string>
+    <string name="l10n_privacy_policy_9db108ba6b" formatted="false">Privacy Policy</string>
+    <string name="l10n_purchase_status_2a8751d8fd" formatted="false">Purchase &amp; Status</string>
+    <string name="l10n_receipt_f6ce3b6fcf" formatted="false">Receipt</string>
+    <string name="l10n_region_language_61abc4a8c8" formatted="false">Region &amp; Language</string>
+    <string name="l10n_reminders_ae8c393938" formatted="false">Reminders</string>
+    <string name="l10n_reminders_deadlines_00a3464088" formatted="false">Reminders &amp; Deadlines</string>
+    <string name="l10n_remove_receipt_7ad9820882" formatted="false">Remove Receipt</string>
+    <string name="l10n_request_permanent_removal_of_your_account__715c8b1c9a" formatted="false">Request permanent removal of your account and all data</string>
+    <string name="l10n_revenue_9ee5830936" formatted="false">REVENUE</string>
+    <string name="l10n_sale_details_be513b66e1" formatted="false">Sale Details</string>
+    <string name="l10n_security_f25ce1b8a3" formatted="false">Security</string>
+    <string name="l10n_send_test_email_fc552c754d" formatted="false">Send test email</string>
+    <string name="l10n_sign_in_f8492cc1de" formatted="false">Sign In</string>
+    <string name="l10n_sign_up_2ba4023df4" formatted="false">Sign Up</string>
+    <string name="l10n_snapshots_export_and_recovery_826b7d89cd" formatted="false">Snapshots, export, and recovery</string>
+    <string name="l10n_sold_e6560d9c29" formatted="false">Sold</string>
+    <string name="l10n_start_free_trial_22c637aa3f" formatted="false">Start Free Trial</string>
+    <string name="l10n_subscribe_now_378b0c5691" formatted="false">Subscribe Now</string>
+    <string name="l10n_support_f32d5a3b17" formatted="false">Support</string>
+    <string name="l10n_sync_now_c9113495d0" formatted="false">Sync Now</string>
+    <string name="l10n_take_photo_e9765b270b" formatted="false">Take Photo</string>
+    <string name="l10n_tap_to_upgrade_to_pro_0fe329c732" formatted="false">Tap to upgrade to Pro</string>
+    <string name="l10n_team_members_a12f4a2ed5" formatted="false">Team Members</string>
+    <string name="l10n_terms_of_use_97738411d6" formatted="false">Terms of Use</string>
+    <string name="l10n_total_assets_5d9f9af9e7" formatted="false">Total Assets</string>
+    <string name="l10n_total_b25928c699" formatted="false">Total</string>
+    <string name="l10n_total_revenue_f3a8370f38" formatted="false">Total Revenue</string>
+    <string name="l10n_trigger_the_backend_delivery_flow_802ee82819" formatted="false">Trigger the backend delivery flow</string>
+    <string name="l10n_update_your_login_credentials_d6cfe5b236" formatted="false">Update your login credentials</string>
+    <string name="l10n_vehicle_interest_077f79a86a" formatted="false">Vehicle Interest</string>
+    <string name="l10n_view_expenses_a38d3ee633" formatted="false">View Expenses</string>
+    <string name="l10n_view_financials_3d9ca33d4b" formatted="false">View Financials</string>
+    <string name="l10n_view_inventory_d834980d77" formatted="false">View Inventory</string>
+    <string name="l10n_view_leads_bae2691c69" formatted="false">View Leads</string>
+    <string name="l10n_view_part_cost_26b100383a" formatted="false">View Part Cost</string>
+    <string name="l10n_view_part_profit_7161f621f7" formatted="false">View Part Profit</string>
+    <string name="l10n_view_parts_inventory_ad3ca8694c" formatted="false">View Parts Inventory</string>
+    <string name="l10n_view_vehicle_cost_2eea1fd8dd" formatted="false">View Vehicle Cost</string>
+    <string name="l10n_view_vehicle_profit_80f9d39e15" formatted="false">View Vehicle Profit</string>
+    <string name="l10n_welcome_back_1c9089485a" formatted="false">Welcome Back</string>
+    <string name="l10n_withdraw_funds_3e29e33238" formatted="false">Withdraw Funds</string>
+    <string name="l10n_you_owe_aeb436abf8" formatted="false">YOU OWE</string>
+    <string name="l10n_access_updated_51fe14626d" formatted="false">Access updated.</string>
+    <string name="l10n_archive_export_failed_d6b43c3fa9" formatted="false">Archive export failed</string>
+    <string name="l10n_based_on_aging_and_market_conditions_consi_7876b380bd" formatted="false">Based on aging and market conditions, consider a price reduction to accelerate sale.</string>
+    <string name="l10n_export_failed_d6c17e9bd7" formatted="false">Export failed</string>
+    <string name="l10n_holding_cost_is_s_of_total_cost_consider_f_1657f0d2c7">Holding cost is %s%% of total cost. Consider faster turnover.</string>
+    <string name="l10n_holding_costs_are_s_of_vehicle_cost_consid_dd6b8bdb30">Holding costs are %s%% of vehicle cost. Consider faster turnover.</string>
+    <string name="l10n_invite_accepted_use_the_business_switcher__48c892716f" formatted="false">Invite accepted. Use the business switcher to change organizations.</string>
+    <string name="l10n_invite_code_is_required_d56d4da09f" formatted="false">Invite code is required.</string>
+    <string name="l10n_invite_code_saved_sign_in_to_apply_0358d383fb" formatted="false">Invite code saved. Sign in to apply.</string>
+    <string name="l10n_invite_removed_6c02654e1f" formatted="false">Invite removed.</string>
+    <string name="l10n_member_removed_f948dba5bc" formatted="false">Member removed.</string>
+    <string name="l10n_password_reset_email_sent_check_your_inbox_de927be614" formatted="false">Password reset email sent! Check your inbox.</string>
+    <string name="l10n_password_updated_successfully_please_sign__8c88ae9b78" formatted="false">Password updated successfully. Please sign in with your new password.</string>
+    <string name="l10n_please_sign_in_to_accept_the_invitation_8500a13e70" formatted="false">Please sign in to accept the invitation.</string>
+    <string name="l10n_projected_roi_is_s_consider_cost_reduction_8685e99daf">Projected ROI is %s%%. Consider cost reduction or price increase.</string>
+    <string name="l10n_report_export_failed_4df279729b" formatted="false">Report export failed</string>
+    <string name="l10n_roi_is_s_consider_reviewing_pricing_strate_d69c12723b">ROI is %s%%. Consider reviewing pricing strategy.</string>
+    <string name="l10n_vehicle_has_been_in_inventory_for_d_days_c_f0713f2dae">Vehicle has been in inventory for %d days. Consider aggressive pricing.</string>
+    <string name="l10n_vehicle_has_been_in_inventory_for_d_days_m_ee11aeb93c">Vehicle has been in inventory for %d days. Monitor closely.</string>
+    <string name="l10n_vehicle_has_been_in_inventory_for_d_days_r_66c29937e3">Vehicle has been in inventory for %d days. Review pricing strategy.</string>
+    <string name="l10n_vehicle_has_healthy_margin_consider_a_smal_ea30eb4520" formatted="false">Vehicle has healthy margin. Consider a small price reduction to accelerate sale.</string>
 </resources>

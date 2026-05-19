@@ -103,6 +103,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -185,7 +186,7 @@ fun SettingsScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.Default.Close,
-                            contentDescription = "Close",
+                            contentDescription = localizedUiString("Close"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -694,7 +695,7 @@ private fun AccountHeaderCard(
                     }
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("Create Business") },
+                        text = { Text(localizedUiString("Create Business")) },
                         onClick = {
                             showMenu = false
                             onCreateBusiness()
@@ -858,7 +859,7 @@ private fun ReferralCard(
                     IconButton(onClick = onCopyCode) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Copy code",
+                            contentDescription = localizedUiString("Copy code"),
                             tint = EzcarNavy
                         )
                     }
@@ -896,7 +897,7 @@ private fun ReferralCard(
                     modifier = Modifier.weight(1f)
                 )
                 TextButton(onClick = onJoinTeam) {
-                    Text("Join Team by Code")
+                    Text(localizedUiString("Join Team by Code"))
                 }
             }
         }
@@ -910,7 +911,7 @@ fun SettingsSection(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = title.uppercase(Locale.getDefault()),
+            text = localizedUiString(title).uppercase(Locale.getDefault()),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 12.dp)
@@ -960,14 +961,14 @@ fun SettingsRow(
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
             if (subtitle != null) {
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = subtitle,
+                    text = localizedUiString(subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1016,12 +1017,12 @@ private fun NotificationRow(
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = "Reminders & Deadlines",
+                text = localizedUiString("Reminders & Deadlines"),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = "Client follow-ups, debts and inventory reminders",
+                text = localizedUiString("Client follow-ups, debts and inventory reminders"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1068,12 +1069,12 @@ fun SwitchRow(
         Spacer(modifier = Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = subtitle,
+                text = localizedUiString(subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1108,12 +1109,12 @@ private fun CreateBusinessDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create Business") },
+        title = { Text(localizedUiString("Create Business")) },
         text = {
             OutlinedTextField(
                 value = businessName,
                 onValueChange = { businessName = it },
-                label = { Text("Business name") },
+                label = { Text(localizedUiString("Business name")) },
                 enabled = !isSaving,
                 singleLine = true
             )
@@ -1128,7 +1129,7 @@ private fun CreateBusinessDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isSaving) {
-                Text("Cancel")
+                Text(localizedUiString("Cancel"))
             }
         }
     )
@@ -1143,7 +1144,7 @@ private fun JoinTeamByCodeDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Join Team by Code") },
+        title = { Text(localizedUiString("Join Team by Code")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
@@ -1153,7 +1154,7 @@ private fun JoinTeamByCodeDialog(
                 OutlinedTextField(
                     value = inviteCode,
                     onValueChange = { inviteCode = it.uppercase(Locale.getDefault()) },
-                    label = { Text("Invite code") },
+                    label = { Text(localizedUiString("Invite code")) },
                     singleLine = true
                 )
             }
@@ -1163,12 +1164,12 @@ private fun JoinTeamByCodeDialog(
                 onClick = { onJoin(inviteCode) },
                 enabled = inviteCode.trim().isNotEmpty()
             ) {
-                Text("Join")
+                Text(localizedUiString("Join"))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(localizedUiString("Cancel"))
             }
         }
     )
@@ -1176,18 +1177,22 @@ private fun JoinTeamByCodeDialog(
 
 private fun shareDealerInvite(context: Context, referralCode: String) {
     val inviteUrl = "https://ezcar24.com/?ref=$referralCode"
-    val message = "Join EZCar24 Business using my invite code $referralCode. Subscribe and we both get an extra month free.\n$inviteUrl"
+    val message = context.localizedUiString(
+        "Join Car Dealer Tracker using my invite code %s. Subscribe and we both get an extra month free.\n%s",
+        referralCode,
+        inviteUrl
+    )
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, message)
     }
-    context.startActivity(Intent.createChooser(intent, "Share invite"))
+    context.startActivity(Intent.createChooser(intent, context.localizedUiString("Share invite")))
 }
 
 private fun copyToClipboard(context: Context, label: String, value: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
     clipboard.setPrimaryClip(ClipData.newPlainText(label, value))
-    Toast.makeText(context, "Invite code copied", Toast.LENGTH_SHORT).show()
+    Toast.makeText(context, context.localizedUiString("Invite code copied"), Toast.LENGTH_SHORT).show()
 }
 
 private fun formatDate(date: Date): String {

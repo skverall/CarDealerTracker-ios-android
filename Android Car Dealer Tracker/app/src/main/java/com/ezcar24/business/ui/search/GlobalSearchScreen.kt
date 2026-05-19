@@ -46,6 +46,7 @@ import com.ezcar24.business.util.expenseDisplayDateTime
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Locale
+import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,10 +76,10 @@ fun GlobalSearchScreen(
         containerColor = EzcarBackground,
         topBar = {
             TopAppBar(
-                title = { Text("Search") },
+                title = { Text(localizedUiString("Search")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = EzcarBackground)
@@ -94,7 +95,7 @@ fun GlobalSearchScreen(
                 value = uiState.query,
                 onValueChange = viewModel::onQueryChanged,
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                placeholder = { Text("Search vehicles, clients, expenses") },
+                placeholder = { Text(localizedUiString("Search vehicles, clients, expenses")) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
@@ -167,7 +168,7 @@ fun GlobalSearchScreen(
 @Composable
 private fun SectionHeader(title: String) {
     Text(
-        text = title,
+        text = localizedUiString(title),
         style = MaterialTheme.typography.titleSmall,
         fontWeight = FontWeight.Bold,
         modifier = Modifier.padding(vertical = 8.dp)
@@ -204,7 +205,7 @@ private fun ClientSearchRow(client: Client, onClick: () -> Unit) {
             Text(client.name, fontWeight = FontWeight.Bold)
             val subtitle = listOfNotNull(client.phone, client.email).joinToString(" • ")
             if (subtitle.isNotBlank()) {
-                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text(localizedUiString(subtitle), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             }
         }
         TextButtonInline(text = "Open", onClick = onClick)

@@ -114,9 +114,9 @@ struct AddFinancialAccountView: View {
 
             VStack(spacing: 0) {
                 Picker("Account Type", selection: $kind) {
-                    Text(FinancialAccountKind.cash.title).tag(FinancialAccountKind.cash)
-                    Text(FinancialAccountKind.bank.title).tag(FinancialAccountKind.bank)
-                    Text(FinancialAccountKind.creditCard.title).tag(FinancialAccountKind.creditCard)
+                    Text(FinancialAccountKind.cash.localizedTitle).tag(FinancialAccountKind.cash)
+                    Text(FinancialAccountKind.bank.localizedTitle).tag(FinancialAccountKind.bank)
+                    Text(FinancialAccountKind.creditCard.localizedTitle).tag(FinancialAccountKind.creditCard)
                 }
                 .pickerStyle(.segmented)
                 .padding(16)

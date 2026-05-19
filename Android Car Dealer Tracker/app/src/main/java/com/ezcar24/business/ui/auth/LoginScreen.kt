@@ -75,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.ui.theme.EzcarSuccess
+import com.ezcar24.business.util.localizedUiString
 
 @Composable
 fun LoginScreen(
@@ -504,7 +505,7 @@ private fun AuthStatusChip(title: String) {
         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
     ) {
         Text(
-            text = title,
+            text = localizedUiString(title),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.SemiBold,
@@ -525,7 +526,7 @@ private fun AuthMessageBanner(
         color = backgroundColor
     ) {
         Text(
-            text = message,
+            text = localizedUiString(message),
             modifier = Modifier.padding(14.dp),
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
@@ -591,7 +592,7 @@ private fun PrimaryAuthButton(
                 )
             } else {
                 Text(
-                    text = title,
+                    text = localizedUiString(title),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

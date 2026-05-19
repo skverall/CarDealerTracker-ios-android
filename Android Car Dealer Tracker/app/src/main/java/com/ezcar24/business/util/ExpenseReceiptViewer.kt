@@ -38,7 +38,7 @@ fun openExpenseReceipt(context: Context, fileName: String, bytes: ByteArray): Bo
             .putExtra(Intent.EXTRA_STREAM, uri)
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(Intent.createChooser(shareIntent, "Open receipt").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        context.startActivity(Intent.createChooser(shareIntent, context.localizedUiString("Open receipt")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         true
     }
 }

@@ -215,7 +215,7 @@ struct ExpenseDetailSheet: View {
             }
         } catch {
             viewContext.rollback()
-            saveError = "Failed to save"
+            saveError = "failed_to_save".localizedString
             print("Failed to save expense comment: \(error)")
         }
 

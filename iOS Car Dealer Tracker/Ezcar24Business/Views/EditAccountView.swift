@@ -47,7 +47,7 @@ struct EditAccountView: View {
                 Section("Account Details") {
                     Picker("Account Type", selection: $editedKind) {
                         ForEach(FinancialAccountKind.allCases) { kind in
-                            Text(kind.title).tag(kind)
+                            Text(kind.localizedTitle).tag(kind)
                         }
                     }
                     

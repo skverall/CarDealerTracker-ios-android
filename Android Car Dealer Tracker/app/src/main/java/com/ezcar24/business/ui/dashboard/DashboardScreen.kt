@@ -69,6 +69,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.text.style.TextOverflow
+import com.ezcar24.business.util.localizedUiString
 
 // Time range enum matching iOS DashboardTimeRange
 @OptIn(ExperimentalMaterialApi::class)
@@ -372,7 +373,7 @@ fun DashboardTopBar(
                         .size(44.dp)
                         .background(MaterialTheme.colorScheme.surface, CircleShape)
                 ) {
-                    Icon(Icons.Default.Search, contentDescription = "Search", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Default.Search, contentDescription = localizedUiString("Search"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
                 IconButton(
@@ -381,7 +382,7 @@ fun DashboardTopBar(
                         .size(44.dp)
                         .background(MaterialTheme.colorScheme.surface, CircleShape)
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = "Profile", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(Icons.Default.Person, contentDescription = localizedUiString("Profile"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 
                 IconButton(
@@ -390,7 +391,7 @@ fun DashboardTopBar(
                         .size(44.dp)
                         .background(EzcarNavy, CircleShape)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add", tint = Color.White)
+                    Icon(Icons.Default.Add, contentDescription = localizedUiString("Add"), tint = Color.White)
                 }
             }
         }
@@ -464,7 +465,7 @@ private fun DashboardOrganizationSwitcher(
         ) {
             if (organizations.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text("No organizations yet") },
+                    text = { Text(localizedUiString("No organizations yet")) },
                     onClick = {},
                     enabled = false
                 )
@@ -501,7 +502,7 @@ private fun DashboardOrganizationSwitcher(
             HorizontalDivider()
 
             DropdownMenuItem(
-                text = { Text("Create Business") },
+                text = { Text(localizedUiString("Create Business")) },
                 onClick = {
                     showMenu = false
                     onCreateBusiness()
@@ -551,7 +552,7 @@ private fun DashboardMessageBanner(
             )
             Spacer(modifier = Modifier.width(10.dp))
             Text(
-                text = message,
+                text = localizedUiString(message),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.weight(1f)
@@ -562,7 +563,7 @@ private fun DashboardMessageBanner(
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss",
+                    contentDescription = localizedUiString("Dismiss"),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -580,12 +581,12 @@ private fun DashboardCreateBusinessDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Create Business") },
+        title = { Text(localizedUiString("Create Business")) },
         text = {
             OutlinedTextField(
                 value = businessName,
                 onValueChange = { businessName = it },
-                label = { Text("Business name") },
+                label = { Text(localizedUiString("Business name")) },
                 enabled = !isSaving,
                 singleLine = true
             )
@@ -600,7 +601,7 @@ private fun DashboardCreateBusinessDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isSaving) {
-                Text("Cancel")
+                Text(localizedUiString("Cancel"))
             }
         }
     )
@@ -807,7 +808,7 @@ fun FinancialCard(
         // Value & Title
         Column {
             Text(
-                text = title,
+                text = localizedUiString(title),
                 style = MaterialTheme.typography.labelSmall,
                 color = titleColor,
                 maxLines = 1
@@ -985,7 +986,7 @@ fun EmptyTodayCard(onAddExpense: () -> Unit) {
                 onClick = onAddExpense,
                 colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy)
             ) {
-                Text("Add Expense")
+                Text(localizedUiString("Add Expense"))
             }
         }
     }
@@ -1410,7 +1411,7 @@ fun RecentExpensesSection(
                 onClick = onSeeAll,
                 colors = ButtonDefaults.textButtonColors(contentColor = EzcarBlueBright)
             ) {
-                Text("See All")
+                Text(localizedUiString("See All"))
             }
         }
         
@@ -1572,7 +1573,7 @@ fun SyncStatusCard(
         ) {
             Icon(
                 imageVector = Icons.Default.MonitorHeart,
-                contentDescription = "Data Health",
+                contentDescription = localizedUiString("Data Health"),
                 tint = if (queueCount > 0) EzcarOrange else EzcarBlueBright,
                 modifier = Modifier
                     .size(16.dp)
@@ -1581,7 +1582,7 @@ fun SyncStatusCard(
 
             Icon(
                 imageVector = Icons.Default.Refresh,
-                contentDescription = "Sync",
+                contentDescription = localizedUiString("Sync"),
                 tint = EzcarBlueBright,
                 modifier = Modifier
                     .size(16.dp)
@@ -1629,7 +1630,7 @@ fun CRMSummaryCard(
                 )
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                    contentDescription = "View Funnel",
+                    contentDescription = localizedUiString("View Funnel"),
                     tint = EzcarGreen,
                     modifier = Modifier.size(24.dp)
                 )
@@ -1741,7 +1742,7 @@ fun InventorySummaryCard(
                 
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
-                    contentDescription = "View Analytics",
+                    contentDescription = localizedUiString("View Analytics"),
                     tint = Color.Gray
                 )
             }

@@ -142,12 +142,12 @@ enum DealDeskTemplateCatalog {
             businessRegionCode: businessRegionCode,
             defaultTemplateCode: businessRegionCode.defaultTemplateCode,
             templateVersion: 1,
-            taxOverrides: defaultTaxLines(for: businessRegionCode.defaultTemplateCode),
-            feeOverrides: defaultFeeLines(for: businessRegionCode.defaultTemplateCode)
+            taxOverrides: defaultTaxLines(for: businessRegionCode.defaultTemplateCode, appRegion: AppRegion.storedRegion()),
+            feeOverrides: defaultFeeLines(for: businessRegionCode.defaultTemplateCode, appRegion: AppRegion.storedRegion())
         )
     }
 
-    static func defaultTaxLines(for templateCode: DealDeskTemplateCode) -> [DealDeskLine] {
+    static func defaultTaxLines(for templateCode: DealDeskTemplateCode, appRegion: AppRegion? = nil) -> [DealDeskLine] {
         switch templateCode {
         case .usa:
             return [
@@ -161,13 +161,18 @@ enum DealDeskTemplateCatalog {
                 DealDeskLine(lineCode: "qst", title: "QST", calculationType: .percentOfSalePrice, value: 0)
             ]
         case .generic:
+            if appRegion == .japan {
+                return [
+                    DealDeskLine(lineCode: "consumption_tax", title: "Consumption Tax (10%)", calculationType: .percentOfSalePrice, value: 10)
+                ]
+            }
             return [
                 DealDeskLine(lineCode: "tax", title: "VAT / Tax", calculationType: .percentOfSalePrice, value: 0)
             ]
         }
     }
 
-    static func defaultFeeLines(for templateCode: DealDeskTemplateCode) -> [DealDeskLine] {
+    static func defaultFeeLines(for templateCode: DealDeskTemplateCode, appRegion: AppRegion? = nil) -> [DealDeskLine] {
         switch templateCode {
         case .usa:
             return [
@@ -182,6 +187,12 @@ enum DealDeskTemplateCatalog {
                 DealDeskLine(lineCode: "licensing", title: "Licensing", calculationType: .fixedAmount, value: 0)
             ]
         case .generic:
+            if appRegion == .japan {
+                return [
+                    DealDeskLine(lineCode: "registration", title: "Plate / Registration", calculationType: .fixedAmount, value: 0),
+                    DealDeskLine(lineCode: "inspection_shaken", title: "Inspection / Shaken", calculationType: .fixedAmount, value: 0)
+                ]
+            }
             return [
                 DealDeskLine(lineCode: "fees", title: "Fees", calculationType: .fixedAmount, value: 0)
             ]

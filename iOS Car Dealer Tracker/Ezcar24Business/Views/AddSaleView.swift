@@ -1265,7 +1265,7 @@ private struct DealDeskSaleView: View {
                                     }
 
                                     if let setupGuidanceMessage {
-                                        Text(setupGuidanceMessage)
+                                        Text(setupGuidanceMessage.localizedString)
                                             .font(.subheadline)
                                             .foregroundColor(ColorTheme.secondaryText)
                                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1534,25 +1534,25 @@ struct DealDeskSettingsView: View {
             Section("Default template") {
                 Picker("Business Region", selection: $settings.businessRegionCode) {
                     ForEach(DealDeskBusinessRegionCode.allCases) { region in
-                        Text(region.displayName).tag(region)
+                        Text(region.displayName.localizedString).tag(region)
                     }
                 }
                 .disabled(!canEdit || isSaving)
                 .onChange(of: settings.businessRegionCode) { _, newValue in
                     settings.defaultTemplateCode = newValue.defaultTemplateCode
-                    taxLines = DealDeskTemplateCatalog.defaultTaxLines(for: newValue.defaultTemplateCode)
-                    feeLines = DealDeskTemplateCatalog.defaultFeeLines(for: newValue.defaultTemplateCode)
+                    taxLines = DealDeskTemplateCatalog.defaultTaxLines(for: newValue.defaultTemplateCode, appRegion: regionSettings.selectedRegion)
+                    feeLines = DealDeskTemplateCatalog.defaultFeeLines(for: newValue.defaultTemplateCode, appRegion: regionSettings.selectedRegion)
                 }
 
                 Picker("Template", selection: $settings.defaultTemplateCode) {
                     ForEach(DealDeskTemplateCode.allCases) { template in
-                        Text(template.displayName).tag(template)
+                        Text(template.displayName.localizedString).tag(template)
                     }
                 }
                 .disabled(!canEdit || isSaving)
                 .onChange(of: settings.defaultTemplateCode) { _, newValue in
-                    taxLines = DealDeskTemplateCatalog.defaultTaxLines(for: newValue)
-                    feeLines = DealDeskTemplateCatalog.defaultFeeLines(for: newValue)
+                    taxLines = DealDeskTemplateCatalog.defaultTaxLines(for: newValue, appRegion: regionSettings.selectedRegion)
+                    feeLines = DealDeskTemplateCatalog.defaultFeeLines(for: newValue, appRegion: regionSettings.selectedRegion)
                 }
 
                 if !canEdit {
@@ -1626,7 +1626,7 @@ struct DealDeskSettingsView: View {
     @MainActor
     private func loadSettings() async {
         guard let organizationId = sessionStore.activeOrganizationId ?? CloudSyncEnvironment.currentDealerId else {
-            errorMessage = "No active business selected."
+            errorMessage = "no_active_business_selected".localizedString
             isLoading = false
             return
         }
@@ -1643,7 +1643,7 @@ struct DealDeskSettingsView: View {
     @MainActor
     private func saveSettings() async {
         guard let organizationId = sessionStore.activeOrganizationId ?? CloudSyncEnvironment.currentDealerId else {
-            errorMessage = "No active business selected."
+            errorMessage = "no_active_business_selected".localizedString
             return
         }
 
@@ -1687,9 +1687,9 @@ private struct DealDeskEditableLineRow: View {
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(line.title)
+                Text(line.title.localizedString)
                     .foregroundColor(ColorTheme.primaryText)
-                Text(line.calculationType == .percentOfSalePrice ? "% of sale price" : "Fixed amount")
+                Text((line.calculationType == .percentOfSalePrice ? "% of sale price" : "Fixed amount").localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
             }

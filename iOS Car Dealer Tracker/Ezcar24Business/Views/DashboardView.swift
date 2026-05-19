@@ -368,7 +368,7 @@ private extension DashboardView {
     @MainActor
     private func runManualSync() async {
         guard case .signedIn(let user) = sessionStore.status else {
-            cloudSyncManager.showError("Sign in to sync.")
+            cloudSyncManager.showError("sign_in_to_sync".localizedString)
             return
         }
         await cloudSyncManager.fullSync(user: user)
@@ -1509,10 +1509,10 @@ extension Expense {
 
     var categoryTitle: String {
         switch category ?? "" {
-        case "vehicle": return "Vehicle"
-        case "personal": return "Personal"
-        case "employee": return "Employee"
-        default: return "Other"
+        case "vehicle": return "vehicle".localizedStringFallback
+        case "personal": return "personal".localizedStringFallback
+        case "employee": return "employee".localizedStringFallback
+        default: return "other".localizedStringFallback
         }
     }
 
@@ -1539,7 +1539,7 @@ extension Expense {
             return userName
         }
         
-        return "Any Vehicle"
+        return "any_vehicle".localizedStringFallback
     }
 
     var vehicleSubtitle: String {
@@ -1563,7 +1563,7 @@ extension Expense {
         if let userName = user?.name?.trimmingCharacters(in: .whitespacesAndNewlines), !userName.isEmpty {
             return userName
         }
-        return "No vehicle linked"
+        return "no_vehicle_linked".localizedStringFallback
     }
 
     var timeString: String {
