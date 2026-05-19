@@ -412,8 +412,14 @@ class ActiveClientReminderDao @Inject constructor(
 
     override suspend fun delete(entity: ClientReminder) = currentDatabase().clientReminderDao().delete(entity)
 
+    override suspend fun getById(id: UUID): ClientReminder? = currentDatabase().clientReminderDao().getById(id)
+
     override suspend fun getByClient(clientId: UUID): List<ClientReminder> {
         return currentDatabase().clientReminderDao().getByClient(clientId)
+    }
+
+    override suspend fun getAllIncludingDeleted(): List<ClientReminder> {
+        return currentDatabase().clientReminderDao().getAllIncludingDeleted()
     }
 
     override suspend fun deleteByClient(clientId: UUID) = currentDatabase().clientReminderDao().deleteByClient(clientId)

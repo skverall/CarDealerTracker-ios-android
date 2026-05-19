@@ -34,6 +34,7 @@ private enum DashboardPalette {
 
 struct DashboardView: View {
     @Environment(\.managedObjectContext) private var viewContext
+    @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var regionSettings: RegionSettingsManager
@@ -179,7 +180,7 @@ private extension DashboardView {
                         .frame(width: 36, height: 36)
                         .background(ColorTheme.cardBackground)
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                        .overlay(Circle().stroke(colorScheme == .dark ? Color.clear : Color.white, lineWidth: colorScheme == .dark ? 0 : 1.5))
                         .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
                 }
 
@@ -192,7 +193,7 @@ private extension DashboardView {
                         .frame(width: 36, height: 36)
                         .background(ColorTheme.cardBackground)
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                        .overlay(Circle().stroke(colorScheme == .dark ? Color.clear : Color.white, lineWidth: colorScheme == .dark ? 0 : 1.5))
                         .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
                 }
                 

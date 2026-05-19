@@ -8,11 +8,20 @@
 import SwiftUI
 import RevenueCat
 
+enum PaywallMode: String, Identifiable {
+    case upgrade
+    case manage
+
+    var id: String { rawValue }
+}
+
 struct PaywallView: View {
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var appSessionState: AppSessionState
     @Environment(\.dismiss) private var dismiss
+
+    let mode: PaywallMode
 
     @State private var animateContent = false
     @State private var selectedPlanId: String?
@@ -26,6 +35,10 @@ struct PaywallView: View {
         PaywallFeature(icon: "chart.bar.fill", title: "Analytics", shortTitle: "Analytics", subtitle: "Growth insights")
     ]
 
+    init(mode: PaywallMode = .upgrade) {
+        self.mode = mode
+    }
+
     private var isSignedIn: Bool {
         if case .signedIn = sessionStore.status { return true }
         return false
@@ -33,6 +46,10 @@ struct PaywallView: View {
 
     private var isGuest: Bool {
         appSessionState.isGuestMode && !isSignedIn
+    }
+
+    private var isProManagement: Bool {
+        mode == .manage && subscriptionManager.isProAccessActive
     }
 
     var body: some View {
@@ -46,9 +63,13 @@ struct PaywallView: View {
                     VStack(spacing: layout.contentSpacing) {
                         heroSection(layout: layout)
                         featuresSection(layout: layout)
-                        planSelectionSection(layout: layout)
+                        if isProManagement {
+                            proManagementSection(layout: layout)
+                        } else {
+                            planSelectionSection(layout: layout)
+                        }
 
-                        if isGuest && !layout.isTiny {
+                        if isGuest && !layout.isTiny && !isProManagement {
                             guestSyncPrompt(layout: layout)
                         }
                     }
@@ -59,9 +80,15 @@ struct PaywallView: View {
 
                     Spacer(minLength: 0)
 
-                    bottomBar(layout: layout)
-                        .opacity(animateContent ? 1 : 0)
-                        .offset(y: animateContent ? 0 : 34)
+                    Group {
+                        if isProManagement {
+                            proManagementBottomBar(layout: layout)
+                        } else {
+                            bottomBar(layout: layout)
+                        }
+                    }
+                    .opacity(animateContent ? 1 : 0)
+                    .offset(y: animateContent ? 0 : 34)
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
 
@@ -81,21 +108,27 @@ struct PaywallView: View {
                 animateContent = true
             }
 
-            if subscriptionManager.currentOffering == nil {
+            if !isProManagement && subscriptionManager.currentOffering == nil {
                 subscriptionManager.fetchOfferings()
             }
 
-            syncSelectedPlan()
+            if !isProManagement {
+                syncSelectedPlan()
+            }
         }
         .onChange(of: subscriptionManager.currentOffering) { _, newOffering in
             guard newOffering != nil else { return }
-            syncSelectedPlan()
+            if !isProManagement {
+                syncSelectedPlan()
+            }
         }
         .onReceive(subscriptionManager.$standaloneSubscriptionProducts) { _ in
-            syncSelectedPlan()
+            if !isProManagement {
+                syncSelectedPlan()
+            }
         }
         .onChange(of: subscriptionManager.isProAccessActive) { _, isPro in
-            if isPro && !isSuccessAnimating {
+            if mode == .upgrade && isPro && !isSuccessAnimating {
                 dismiss()
             }
         }
@@ -147,7 +180,7 @@ struct PaywallView: View {
                     HStack(spacing: 7) {
                         Image(systemName: "sparkles")
                             .font(.system(size: layout.badgeIconSize, weight: .bold))
-                        Text("Unlock Full Potential")
+                        Text(heroBadgeText)
                             .font(.system(size: layout.badgeFontSize, weight: .bold, design: .rounded))
                             .lineLimit(1)
                             .minimumScaleFactor(0.76)
@@ -173,9 +206,9 @@ struct PaywallView: View {
                     .shadow(color: Color(hex: "8B5CF6").opacity(0.3), radius: 16, y: 7)
 
                     HStack(spacing: 7) {
-                        Text("Upgrade to")
+                        Text(heroTitlePrefix)
                             .foregroundStyle(.white)
-                        Text("Pro")
+                        Text(heroTitleHighlight)
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [Color(hex: "F0ABFC"), Color(hex: "A855F7"), Color(hex: "7C3AED")],
@@ -188,7 +221,7 @@ struct PaywallView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.58)
 
-                    Text("Everything you need to grow\nyour dealership business.")
+                    Text(heroSubtitle)
                         .font(.system(size: layout.subtitleFontSize, weight: .medium))
                         .foregroundStyle(.white.opacity(0.72))
                         .multilineTextAlignment(.center)
@@ -215,6 +248,53 @@ struct PaywallView: View {
                     PaywallFeatureChip(feature: feature, layout: layout)
                 }
             }
+        }
+    }
+
+    private func proManagementSection(layout: PaywallLayout) -> some View {
+        VStack(spacing: layout.sectionTitleSpacing) {
+            paywallSectionTitle("YOUR PRO STATUS", layout: layout)
+
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(Color(hex: "22C55E").opacity(0.18))
+                        .frame(width: layout.proStatusIconBoxSize, height: layout.proStatusIconBoxSize)
+
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: layout.proStatusIconSize, weight: .bold))
+                        .foregroundStyle(Color(hex: "4ADE80"))
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(proStatusTitle)
+                        .font(.system(size: layout.proStatusTitleSize, weight: .heavy, design: .rounded))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.68)
+
+                    Text(proStatusSubtitle)
+                        .font(.system(size: layout.proStatusSubtitleSize, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.68))
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.72)
+                }
+
+                Spacer(minLength: 6)
+
+                Text(subscriptionManager.isTrial ? "Trial" : "Active")
+                    .font(.system(size: layout.proStatusBadgeSize, weight: .heavy))
+                    .foregroundStyle(Color(hex: "86EFAC"))
+                    .lineLimit(1)
+                    .padding(.horizontal, layout.proStatusBadgeHorizontalPadding)
+                    .padding(.vertical, 6)
+                    .background(Color(hex: "22C55E").opacity(0.15), in: Capsule())
+                    .overlay(Capsule().stroke(Color(hex: "22C55E").opacity(0.34), lineWidth: 1))
+            }
+            .padding(.horizontal, layout.proStatusHorizontalPadding)
+            .frame(maxWidth: .infinity)
+            .frame(height: layout.planCardHeight)
+            .background(PaywallGlassBackground(cornerRadius: layout.planCornerRadius))
         }
     }
 
@@ -371,6 +451,91 @@ struct PaywallView: View {
         )
     }
 
+    private func proManagementBottomBar(layout: PaywallLayout) -> some View {
+        VStack(spacing: layout.bottomSpacing) {
+            HStack(spacing: 8) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: layout.trustIconSize, weight: .semibold))
+                    .foregroundStyle(Color(hex: "FACC15"))
+                Text("All Pro tools are unlocked on this account.")
+                    .font(.system(size: layout.trustFontSize, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            Button {
+                dismiss()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: layout.ctaFontSize * 0.78, weight: .heavy))
+                    Text("Done")
+                        .font(.system(size: layout.ctaFontSize, weight: .heavy, design: .rounded))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: layout.ctaHeight)
+                .background(
+                    LinearGradient(
+                        colors: [Color(hex: "4A00E0"), Color(hex: "8E2DE2"), Color(hex: "A855F7")],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: layout.ctaCornerRadius, style: .continuous)
+                )
+                .shadow(color: Color(hex: "8E2DE2").opacity(0.42), radius: layout.ctaShadowRadius, y: 7)
+            }
+            .buttonStyle(.hapticScale)
+
+            if hasRevenueCatSubscription {
+                Button {
+                    subscriptionManager.showManageSubscriptions()
+                } label: {
+                    Text("Open Apple Subscription Settings")
+                        .font(.system(size: layout.restoreFontSize, weight: .medium))
+                        .foregroundStyle(Color(hex: "A855F7"))
+                        .frame(minHeight: 24)
+                }
+            }
+
+            Button {
+                subscriptionManager.restorePurchases()
+            } label: {
+                Text(subscriptionManager.isRestoring ? "Restoring..." : "Restore Purchases")
+                    .font(.system(size: layout.restoreFontSize, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.68))
+                    .frame(minHeight: 24)
+            }
+            .disabled(subscriptionManager.isRestoring)
+
+            if let restoreMessage {
+                Text(restoreMessage)
+                    .font(.caption2)
+                    .foregroundStyle(.white.opacity(0.58))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.horizontal, layout.horizontalPadding)
+        .padding(.top, layout.bottomTopPadding)
+        .padding(.bottom, layout.bottomPadding)
+        .background(
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [.black.opacity(0), .black.opacity(0.9), .black],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: layout.bottomFadeHeight)
+
+                Color.black
+            }
+            .ignoresSafeArea()
+        )
+    }
+
     private func trustSection(layout: PaywallLayout) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "shield.checkered")
@@ -462,6 +627,52 @@ struct PaywallView: View {
         if subscriptionManager.isLoading { return "Processing..." }
         guard let plan = selectedDisplayPlan else { return "Select a Plan" }
         return plan.isIntroEligible ? "Start 1 Week Free Trial" : "Continue"
+    }
+
+    private var heroBadgeText: String {
+        isProManagement ? "Pro Access Active" : "Unlock Full Potential"
+    }
+
+    private var heroTitlePrefix: String {
+        isProManagement ? "You're" : "Upgrade to"
+    }
+
+    private var heroTitleHighlight: String {
+        "Pro"
+    }
+
+    private var heroSubtitle: String {
+        isProManagement
+            ? "Your dealership tools are unlocked.\nKeep growing with Ezcar24 Business."
+            : "Everything you need to grow\nyour dealership business."
+    }
+
+    private var hasRevenueCatSubscription: Bool {
+        !(subscriptionManager.customerInfo?.entitlements.active.isEmpty ?? true)
+    }
+
+    private var proStatusTitle: String {
+        if subscriptionManager.isTrial {
+            return "Your Pro trial is active"
+        }
+
+        if let bonusUntil = subscriptionManager.bonusAccessUntil, bonusUntil > Date(), !hasRevenueCatSubscription {
+            return "Your Pro bonus is active"
+        }
+
+        return "You're a Pro user"
+    }
+
+    private var proStatusSubtitle: String {
+        if let expirationDate = subscriptionManager.expirationDate {
+            return "Active until \(expirationDate.formatted(date: .abbreviated, time: .omitted))"
+        }
+
+        if let bonusUntil = subscriptionManager.bonusAccessUntil, bonusUntil > Date() {
+            return "Bonus access until \(bonusUntil.formatted(date: .abbreviated, time: .omitted))"
+        }
+
+        return "Unlimited inventory, cloud sync, reports, and analytics are ready."
     }
 
     private var restoreMessage: String? {
@@ -679,6 +890,13 @@ struct PaywallLayout {
     var featureHeight: CGFloat { isUltraTiny ? 32 : (isTiny ? 38 : 44) }
     var featureIconSize: CGFloat { isUltraTiny ? 11 : (isTiny ? 13 : 15) }
     var featureFontSize: CGFloat { isUltraTiny ? 9 : (isTiny ? 10 : 11) }
+    var proStatusIconBoxSize: CGFloat { isUltraTiny ? 36 : (isTiny ? 42 : 48) }
+    var proStatusIconSize: CGFloat { isUltraTiny ? 17 : (isTiny ? 20 : 23) }
+    var proStatusTitleSize: CGFloat { isUltraTiny ? 15 : (isTiny ? 17 : 19) }
+    var proStatusSubtitleSize: CGFloat { isUltraTiny ? 11 : (isTiny ? 12 : 13) }
+    var proStatusBadgeSize: CGFloat { isUltraTiny ? 9 : (isTiny ? 10 : 11) }
+    var proStatusBadgeHorizontalPadding: CGFloat { isUltraTiny ? 7 : 9 }
+    var proStatusHorizontalPadding: CGFloat { isUltraTiny ? 10 : (isTiny ? 12 : 14) }
     var planCardSpacing: CGFloat { isUltraTiny ? 6 : (isTiny ? 7 : 10) }
     var planCardHeight: CGFloat { isUltraTiny ? 112 : (isTiny ? 132 : (isCompact ? 144 : 154)) }
     var scrollingPlanCardWidth: CGFloat { isUltraTiny ? 100 : (isTiny ? 112 : 124) }

@@ -1,5 +1,7 @@
 import java.util.Properties
 
+import org.gradle.api.GradleException
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,14 +9,43 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
-    alias(libs.plugins.google.services)
-    alias(libs.plugins.crashlytics)
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
+}
+
+fun String.asBuildConfigString(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
+
+val supabaseUrl = providers.gradleProperty("SUPABASE_URL")
+    .orElse(providers.environmentVariable("SUPABASE_URL"))
+    .getOrElse("https://haordpdxyyreliyzmire.supabase.co")
+
+val supabaseAnonKey = providers.gradleProperty("SUPABASE_ANON_KEY")
+    .orElse(providers.environmentVariable("SUPABASE_ANON_KEY"))
+    .getOrElse("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhhb3JkcGR4eXlyZWxpeXptaXJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNzIxNTAsImV4cCI6MjA3MDY0ODE1MH0.3cc_tkF4So5g0JbbPLEiKlZ_3JyaqW6u_cxV6rxKFQg")
+
+val playStorePackageName = "com.ezcar24.business"
+
+val hasGoogleServicesFile = listOf(
+    file("google-services.json"),
+    file("src/debug/google-services.json"),
+    file("src/release/google-services.json")
+).any { it.exists() }
+
+val requiresReleaseGoogleServices = gradle.startParameter.taskNames
+    .map { it.lowercase() }
+    .any { it == "build" || it == "assemble" || it.contains("release") }
+
+if (requiresReleaseGoogleServices && !hasGoogleServicesFile) {
+    throw GradleException("Missing google-services.json. Download it from Firebase Console and place it at Android Car Dealer Tracker/app/google-services.json before building release.")
+}
+
+if (hasGoogleServicesFile) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 android {
@@ -29,6 +60,11 @@ android {
         versionName = "2.1.12"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "SUPABASE_URL", supabaseUrl.asBuildConfigString())
+        buildConfigField("String", "SUPABASE_ANON_KEY", supabaseAnonKey.asBuildConfigString())
+        buildConfigField("String", "PLAY_STORE_PACKAGE_NAME", playStorePackageName.asBuildConfigString())
+        buildConfigField("boolean", "FIREBASE_ENABLED", hasGoogleServicesFile.toString())
     }
 
     signingConfigs {
@@ -44,9 +80,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            applicationIdSuffix = ".debug"
+            buildConfigField("boolean", "CHECK_PLAY_STORE_VERSION", "false")
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            buildConfigField("boolean", "CHECK_PLAY_STORE_VERSION", "true")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

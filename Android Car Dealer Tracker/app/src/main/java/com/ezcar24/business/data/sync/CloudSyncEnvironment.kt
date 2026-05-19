@@ -5,6 +5,7 @@ import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.ezcar24.business.BuildConfig
 
 object CloudSyncEnvironment {
     private val _currentDealerId = MutableStateFlow<UUID?>(null)
@@ -16,13 +17,10 @@ object CloudSyncEnvironment {
         }
 
     val currentDealerIdFlow: StateFlow<UUID?> = _currentDealerId.asStateFlow()
-    
-    const val SUPABASE_URL = "https://haordpdxyyreliyzmire.supabase.co"
+
+    val SUPABASE_URL: String = BuildConfig.SUPABASE_URL
     private const val BUCKET_NAME = "vehicle-images"
-    
-    /**
-     * Generate public URL for a vehicle image in Supabase Storage.
-     */
+
     fun vehicleImageUrl(vehicleId: UUID, dealerId: UUID? = currentDealerId): String? {
         val dealer = dealerId ?: return null
         val dealerPart = dealer.toString().lowercase(Locale.US)

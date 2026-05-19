@@ -277,6 +277,20 @@ data class RemoteClientInteraction(
 )
 
 @Serializable
+data class RemoteClientReminder(
+    val id: String,
+    @SerialName("dealer_id") val dealerId: String,
+    @SerialName("client_id") val clientId: String,
+    val title: String,
+    val notes: String? = null,
+    @SerialName("due_date") val dueDate: String,
+    @SerialName("is_completed") val isCompleted: Boolean = false,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("deleted_at") val deletedAt: String? = null
+)
+
+@Serializable
 data class RemoteVehicleInventoryStats(
     val id: String,
     @SerialName("dealer_id") val dealerId: String,
@@ -319,6 +333,7 @@ data class RemoteSnapshot(
     val clients: List<RemoteClient>,
     @SerialName("server_now") val serverNow: String? = null,
     @SerialName("client_interactions") val clientInteractions: List<RemoteClientInteraction> = emptyList(),
+    @SerialName("client_reminders") val clientReminders: List<RemoteClientReminder> = emptyList(),
     val parts: List<RemotePart> = emptyList(),
     @SerialName("part_batches") val partBatches: List<RemotePartBatch> = emptyList(),
     @SerialName("part_sales") val partSales: List<RemotePartSale> = emptyList(),

@@ -3,6 +3,11 @@ package com.ezcar24.business.data.repository
 import android.content.Context
 import android.net.Uri
 import android.util.Log
+import java.net.HttpURLConnection
+import java.net.URL
+import java.util.Locale
+import javax.inject.Inject
+import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
@@ -19,11 +24,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
-import java.net.HttpURLConnection
-import java.net.URL
-import java.util.Locale
-import javax.inject.Inject
-import javax.inject.Singleton
+import com.ezcar24.business.BuildConfig
 
 private const val AUTH_PREFS = "ezcar24_auth"
 private const val PENDING_INVITE_TOKEN = "pendingInviteToken"
@@ -35,7 +36,6 @@ private const val PENDING_REFERRAL_CODE_TIMESTAMP = "pendingReferralCodeTimestam
 private const val INVITE_TOKEN_MAX_AGE_MS = 26L * 60L * 60L * 1000L
 private const val TEAM_INVITE_MAX_AGE_MS = 7L * 24L * 60L * 60L * 1000L
 private const val REFERRAL_MAX_AGE_MS = 30L * 24L * 60L * 60L * 1000L
-private const val SUPABASE_URL = "https://haordpdxyyreliyzmire.supabase.co"
 private const val TAG = "AuthRepository"
 
 enum class SignUpResult {
@@ -264,7 +264,7 @@ class AuthRepository @Inject constructor(
             )
         }
 
-        val connection = (URL("$SUPABASE_URL/functions/v1/accept_invite").openConnection() as HttpURLConnection).apply {
+        val connection = (URL("${BuildConfig.SUPABASE_URL}/functions/v1/accept_invite").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             doInput = true
             doOutput = true

@@ -294,6 +294,7 @@ struct ContentView: View {
         }
         .sheet(isPresented: $showProfileSheet) {
             AccountView()
+                .preferredColorScheme(regionSettings.selectedTheme.colorScheme)
         }
         .guestAccountPrompt(isPresented: $showGuestAccountPrompt) {
             appSessionState.exitGuestModeForLogin()

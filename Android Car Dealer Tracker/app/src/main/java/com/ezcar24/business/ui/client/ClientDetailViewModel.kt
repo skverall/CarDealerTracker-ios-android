@@ -220,7 +220,7 @@ class ClientDetailViewModel @Inject constructor(
                 notes = notes?.takeIf { it.isNotBlank() }
             )
             try {
-                reminderDao.upsert(reminder)
+                cloudSyncManager.upsertClientReminder(reminder)
                 syncReminderState(client.id)
             } catch (e: Exception) {
                 Log.e(CLIENT_DETAIL_TAG, "addReminder failed", e)
@@ -240,7 +240,7 @@ class ClientDetailViewModel @Inject constructor(
         val client = _uiState.value.client ?: return
         viewModelScope.launch {
             try {
-                reminderDao.upsert(reminder.copy(isCompleted = !reminder.isCompleted))
+                cloudSyncManager.upsertClientReminder(reminder.copy(isCompleted = !reminder.isCompleted))
                 syncReminderState(client.id)
             } catch (e: Exception) {
                 Log.e(CLIENT_DETAIL_TAG, "toggleReminder failed", e)
@@ -260,7 +260,7 @@ class ClientDetailViewModel @Inject constructor(
         val client = _uiState.value.client ?: return
         viewModelScope.launch {
             try {
-                reminderDao.delete(reminder)
+                cloudSyncManager.deleteClientReminder(reminder)
                 syncReminderState(client.id)
             } catch (e: Exception) {
                 Log.e(CLIENT_DETAIL_TAG, "deleteReminder failed", e)

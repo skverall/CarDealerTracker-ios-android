@@ -1,9 +1,11 @@
 package com.ezcar24.business.ui.settings
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
+import android.app.Activity
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,9 +14,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,21 +28,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.WorkspacePremium
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,17 +47,24 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
+import com.ezcar24.business.BuildConfig
+import com.ezcar24.business.R
 import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.billing.SubscriptionOffer
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaywallScreen(
     subscriptionManager: SubscriptionManager,
@@ -64,62 +73,123 @@ fun PaywallScreen(
     val offerings by subscriptionManager.offerings.collectAsState()
     val isLoading by subscriptionManager.isLoading.collectAsState()
     val isProActive by subscriptionManager.isProAccessActive.collectAsState()
+    val showSuccessState = isProActive && !BuildConfig.DEBUG
     var selectedOffer by remember { mutableStateOf<SubscriptionOffer?>(null) }
+    val view = LocalView.current
+    val darkTheme = isSystemInDarkTheme()
+
+    LaunchedEffect(offerings) {
+        if (selectedOffer == null && offerings.isNotEmpty()) {
+            selectedOffer = offerings.firstOrNull { it.period == "yearly" } ?: offerings.first()
+        }
+    }
+
+    DisposableEffect(view, darkTheme) {
+        if (!view.isInEditMode) {
+            val window = (view.context as Activity).window
+            val controller = WindowCompat.getInsetsController(window, view)
+            window.statusBarColor = Color.Transparent.toArgb()
+            window.navigationBarColor = Color.Transparent.toArgb()
+            controller.isAppearanceLightStatusBars = false
+            controller.isAppearanceLightNavigationBars = false
+        }
+        onDispose {
+            if (!view.isInEditMode) {
+                val window = (view.context as Activity).window
+                val controller = WindowCompat.getInsetsController(window, view)
+                controller.isAppearanceLightStatusBars = !darkTheme
+                controller.isAppearanceLightNavigationBars = !darkTheme
+            }
+        }
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = Color.Black
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFF05030A),
+                            Color(0xFF12081F),
+                            Color.Black
+                        )
+                    )
+                )
         ) {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    TextButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close")
-                    }
-                }
-            )
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
             ) {
-                if (isProActive) {
-                    SuccessState(onDismiss = onDismiss)
-                } else {
-                    PremiumHeader()
-                    Spacer(modifier = Modifier.height(24.dp))
-                    FeatureGrid()
-                    Spacer(modifier = Modifier.height(24.dp))
-                    if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.padding(32.dp))
-                    } else {
-                        PlanSelection(
-                            offers = offerings,
-                            selectedOffer = selectedOffer,
-                            onSelect = { selectedOffer = it }
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    IconButton(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .size(48.dp)
+                            .background(Color.White.copy(alpha = 0.08f), CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.14f), CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close",
+                            tint = Color.White
                         )
                     }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    SubscribeButton(
+                }
+
+                if (showSuccessState) {
+                    SuccessState(onDismiss = onDismiss)
+                } else {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        PaywallHero()
+                        Spacer(modifier = Modifier.height(16.dp))
+                        FeatureStrip()
+                        Spacer(modifier = Modifier.height(18.dp))
+                        SectionTitle("CHOOSE YOUR PLAN")
+                        Spacer(modifier = Modifier.height(10.dp))
+                        if (isLoading && offerings.isEmpty()) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                modifier = Modifier.padding(28.dp)
+                            )
+                        } else if (offerings.isEmpty()) {
+                            EmptyPlansState(onRetry = subscriptionManager::queryProducts)
+                        } else {
+                            PlanSelection(
+                                offers = offerings,
+                                selectedOffer = selectedOffer,
+                                onSelect = { selectedOffer = it }
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(18.dp))
+                    }
+
+                    PaywallBottomBar(
                         selectedOffer = selectedOffer,
                         isLoading = isLoading,
-                        onSubscribe = {
+                        onSubscribe = { activity ->
                             selectedOffer?.let { offer ->
-                                subscriptionManager.launchBillingFlow(
-                                    it,
-                                    offer
-                                )
+                                subscriptionManager.launchBillingFlow(activity, offer)
                             }
                         },
-                        onRestore = { subscriptionManager.restorePurchases() }
+                        onRestore = subscriptionManager::restorePurchases
                     )
-                    Spacer(modifier = Modifier.height(32.dp))
                 }
             }
         }
@@ -127,99 +197,207 @@ fun PaywallScreen(
 }
 
 @Composable
-private fun PremiumHeader() {
+private fun PaywallHero() {
     Box(
         modifier = Modifier
-            .size(80.dp)
-            .shadow(12.dp, CircleShape)
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(
-                        Color(0xFFFFD700),
-                        Color(0xFFFFA500)
-                    )
-                ),
-                CircleShape
-            ),
-        contentAlignment = Alignment.Center
+            .fillMaxWidth()
+            .widthIn(max = 520.dp)
+            .height(288.dp)
+            .clip(RoundedCornerShape(28.dp))
     ) {
-        Icon(
-            imageVector = Icons.Default.WorkspacePremium,
+        Image(
+            painter = painterResource(id = R.drawable.paywall_neon_car),
             contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(44.dp)
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
         )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = 0.18f),
+                            Color.Black.copy(alpha = 0.18f),
+                            Color.Black.copy(alpha = 0.86f)
+                        )
+                    )
+                )
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            PremiumBadge()
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Upgrade to Pro",
+                style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Everything you need to grow your dealership business.",
+                style = MaterialTheme.typography.bodyLarge,
+                color = Color.White.copy(alpha = 0.72f),
+                textAlign = TextAlign.Center,
+                maxLines = 2
+            )
+        }
     }
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text(
-        text = "Upgrade to Pro",
-        style = MaterialTheme.typography.headlineMedium,
-        fontWeight = FontWeight.Bold
-    )
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    Text(
-        text = "Unlock the full power of your dealership",
-        style = MaterialTheme.typography.bodyLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-        textAlign = TextAlign.Center
-    )
 }
 
 @Composable
-private fun FeatureGrid() {
+private fun PremiumBadge() {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = Color.Black.copy(alpha = 0.46f),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            Brush.horizontalGradient(
+                listOf(Color(0xFFA855F7), Color(0xFF4F46E5))
+            )
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = null,
+                tint = Color(0xFFC084FC),
+                modifier = Modifier.size(16.dp)
+            )
+            Text(
+                text = "Unlock Full Potential",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFC084FC)
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeatureStrip() {
     val features = listOf(
-        "Unlimited Vehicles" to "No limits on inventory",
-        "Cloud Sync" to "Sync across all devices",
-        "PDF Reports" to "Professional monthly reports",
-        "Advanced Analytics" to "ROI, profit & inventory insights",
-        "Team Management" to "Invite & manage your team",
-        "Priority Support" to "Fast response on issues"
+        "Cars" to "Unlimited",
+        "Sync" to "All devices",
+        "PDF" to "Reports",
+        "Analytics" to "Insights"
     )
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        features.chunked(2).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 520.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        features.forEach { (title, subtitle) ->
+            Surface(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(58.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.08f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.14f))
             ) {
-                row.forEach { (title, subtitle) ->
-                    Card(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                Text(
-                                    text = subtitle,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
+                Column(
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = Color(0xFFA855F7),
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = subtitle,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.58f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionTitle(title: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 520.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(Color.White.copy(alpha = 0.12f))
+        )
+        Text(
+            text = title,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color.White.copy(alpha = 0.58f),
+            maxLines = 1
+        )
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(Color.White.copy(alpha = 0.12f))
+        )
+    }
+}
+
+@Composable
+private fun EmptyPlansState(onRetry: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 520.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.White.copy(alpha = 0.08f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.14f))
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(
+                text = "Unable to load plans",
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White.copy(alpha = 0.78f)
+            )
+            TextButton(onClick = onRetry) {
+                Text(
+                    text = "Retry",
+                    color = Color(0xFFC084FC),
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -231,149 +409,236 @@ private fun PlanSelection(
     selectedOffer: SubscriptionOffer?,
     onSelect: (SubscriptionOffer) -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 520.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         offers.forEach { offer ->
-            val isSelected = selectedOffer?.productDetails?.productId == offer.productDetails.productId
-            val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-
-            Card(
-                onClick = { onSelect(offer) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        width = if (isSelected) 2.dp else 1.dp,
-                        color = borderColor,
-                        shape = RoundedCornerShape(16.dp)
-                    ),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    } else {
-                        MaterialTheme.colorScheme.surface
-                    }
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = when (offer.period) {
-                                    "monthly" -> "Monthly"
-                                    "yearly" -> "Yearly"
-                                    else -> offer.period
-                                },
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            if (offer.hasFreeTrial) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(50),
-                                    color = Color(0xFF4CAF50).copy(alpha = 0.15f)
-                                ) {
-                                    Text(
-                                        text = "Free Trial",
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = Color(0xFF4CAF50)
-                                    )
-                                }
-                            }
-                        }
-                        if (offer.period == "yearly") {
-                            Text(
-                                text = "Best value",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.primary,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                    Text(
-                        text = offer.price,
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
+            PlanCard(
+                offer = offer,
+                selected = selectedOffer?.productDetails?.productId == offer.productDetails.productId,
+                onClick = { onSelect(offer) }
+            )
         }
     }
 }
 
 @Composable
-private fun SubscribeButton(
-    selectedOffer: SubscriptionOffer?,
-    isLoading: Boolean,
-    onSubscribe: (android.app.Activity) -> Unit,
-    onRestore: () -> Unit
+private fun PlanCard(
+    offer: SubscriptionOffer,
+    selected: Boolean,
+    onClick: () -> Unit
 ) {
-    val activity = androidx.compose.ui.platform.LocalContext.current as? android.app.Activity
+    val shape = RoundedCornerShape(22.dp)
 
-    Button(
-        onClick = { activity?.let { onSubscribe(it) } },
-        enabled = selectedOffer != null && !isLoading,
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MaterialTheme.colorScheme.primary,
-            disabledContainerColor = Color.Gray.copy(alpha = 0.5f)
+            .height(116.dp)
+            .clickable(onClick = onClick),
+        shape = shape,
+        color = if (selected) Color(0xFF1D1333).copy(alpha = 0.94f) else Color.White.copy(alpha = 0.08f),
+        border = androidx.compose.foundation.BorderStroke(
+            width = if (selected) 2.dp else 1.dp,
+            brush = if (selected) {
+                Brush.linearGradient(listOf(Color(0xFF60A5FA), Color(0xFFA855F7), Color(0xFFF0ABFC)))
+            } else {
+                Brush.linearGradient(listOf(Color.White.copy(alpha = 0.14f), Color.White.copy(alpha = 0.08f)))
+            }
         )
     ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                color = Color.White,
-                modifier = Modifier.size(24.dp)
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = planName(offer),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1
+                    )
+                    if (offer.period == "yearly") {
+                        PlanBadge("Best value")
+                    } else if (offer.hasFreeTrial) {
+                        PlanBadge("Trial")
+                    }
+                }
+                Text(
+                    text = billingLine(offer),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.58f),
+                    maxLines = 1
+                )
+                Text(
+                    text = offer.price.ifBlank { "..." },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 1
+                )
+            }
+            SelectionDot(selected = selected)
+        }
+    }
+}
+
+@Composable
+private fun PlanBadge(text: String) {
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = Color(0xFFA855F7)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = Color.White,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun SelectionDot(selected: Boolean) {
+    Box(
+        modifier = Modifier
+            .size(30.dp)
+            .background(
+                color = if (selected) Color(0xFFC084FC) else Color.Transparent,
+                shape = CircleShape
             )
-        } else {
+            .border(
+                width = 2.dp,
+                color = if (selected) Color(0xFFC084FC) else Color.White.copy(alpha = 0.42f),
+                shape = CircleShape
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        if (selected) {
             Icon(
-                imageVector = Icons.Default.Star,
+                imageVector = Icons.Default.Check,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = if (selectedOffer?.hasFreeTrial == true) "Start Free Trial" else "Subscribe Now",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                tint = Color.Black.copy(alpha = 0.7f),
+                modifier = Modifier.size(16.dp)
             )
         }
     }
+}
 
-    Spacer(modifier = Modifier.height(8.dp))
+@Composable
+private fun PaywallBottomBar(
+    selectedOffer: SubscriptionOffer?,
+    isLoading: Boolean,
+    onSubscribe: (Activity) -> Unit,
+    onRestore: () -> Unit
+) {
+    val activity = LocalContext.current as? Activity
 
-    OutlinedButton(
-        onClick = onRestore,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color.Black.copy(alpha = 0f), Color.Black.copy(alpha = 0.94f), Color.Black)
+                )
+            )
+            .padding(horizontal = 18.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("Restore Purchases")
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = Color(0xFFA855F7),
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Cancel anytime. No hidden fees.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.68f),
+                maxLines = 1
+            )
+        }
+
+        Button(
+            onClick = { activity?.let(onSubscribe) },
+            enabled = selectedOffer != null && !isLoading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 520.dp)
+                .height(58.dp),
+            shape = RoundedCornerShape(22.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                disabledContainerColor = Color.Transparent,
+                contentColor = Color.White,
+                disabledContentColor = Color.White.copy(alpha = 0.6f)
+            ),
+            contentPadding = ButtonDefaults.ContentPadding
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(Color(0xFF4A00E0), Color(0xFF8E2DE2), Color(0xFFA855F7))
+                        ),
+                        RoundedCornerShape(22.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isLoading) "Processing..." else ctaText(selectedOffer),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            }
+        }
+
+        TextButton(onClick = onRestore) {
+            Text(
+                text = "Restore Purchases",
+                color = Color(0xFFC084FC),
+                fontWeight = FontWeight.Medium
+            )
+        }
     }
 }
 
 @Composable
 private fun SuccessState(onDismiss: () -> Unit) {
     Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.padding(vertical = 48.dp)
+        verticalArrangement = Arrangement.Center
     ) {
         Box(
             modifier = Modifier
-                .size(100.dp)
-                .shadow(12.dp, CircleShape)
+                .size(96.dp)
                 .background(
-                    Brush.linearGradient(
-                        colors = listOf(Color(0xFF4CAF50), Color(0xFF2E7D32))
-                    ),
+                    Brush.linearGradient(listOf(Color(0xFF29AB63), Color(0xFF00D26A))),
                     CircleShape
                 ),
             contentAlignment = Alignment.Center
@@ -389,18 +654,46 @@ private fun SuccessState(onDismiss: () -> Unit) {
         Text(
             text = "You're all set!",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.ExtraBold,
+            color = Color.White
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Your Pro subscription is active. Enjoy full access.",
             style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = Color.White.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
         )
-        Spacer(modifier = Modifier.height(32.dp))
-        Button(onClick = onDismiss, shape = RoundedCornerShape(12.dp)) {
+        Spacer(modifier = Modifier.height(28.dp))
+        Button(
+            onClick = onDismiss,
+            shape = RoundedCornerShape(18.dp)
+        ) {
             Text("Continue")
         }
+    }
+}
+
+private fun planName(offer: SubscriptionOffer): String {
+    return when (offer.period) {
+        "monthly" -> "Monthly"
+        "yearly" -> "Yearly"
+        else -> offer.period.replaceFirstChar { it.uppercase() }
+    }
+}
+
+private fun billingLine(offer: SubscriptionOffer): String {
+    return when (offer.period) {
+        "monthly" -> "Billed monthly"
+        "yearly" -> "Billed yearly"
+        else -> "Billed automatically"
+    }
+}
+
+private fun ctaText(selectedOffer: SubscriptionOffer?): String {
+    return when {
+        selectedOffer == null -> "Select a Plan"
+        selectedOffer.hasFreeTrial -> "Start Free Trial"
+        else -> "Continue"
     }
 }

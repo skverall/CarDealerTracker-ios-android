@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.util.Log
+import com.ezcar24.business.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,14 +34,15 @@ class PlayStoreVersionChecker @Inject constructor(
     private val _isChecking = MutableStateFlow(false)
     val isChecking = _isChecking.asStateFlow()
 
-    private val packageName = context.packageName
+    private val installedPackageName = context.packageName
+    private val storePackageName = BuildConfig.PLAY_STORE_PACKAGE_NAME
 
     /**
      * Current app version from PackageManager
      */
     val currentVersion: String
         get() = try {
-            val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
+            val packageInfo = context.packageManager.getPackageInfo(installedPackageName, 0)
             packageInfo.versionName ?: "0.0.0"
         } catch (e: PackageManager.NameNotFoundException) {
             "0.0.0"
@@ -53,6 +55,12 @@ class PlayStoreVersionChecker @Inject constructor(
      * Google Play Core library's in-app updates.
      */
     suspend fun checkForUpdate() {
+        if (!BuildConfig.CHECK_PLAY_STORE_VERSION) {
+            _isUpdateRequired.value = false
+            _playStoreVersion.value = null
+            return
+        }
+
         _isChecking.value = true
         try {
             val storeVersion = fetchPlayStoreVersion()
@@ -75,7 +83,7 @@ class PlayStoreVersionChecker @Inject constructor(
      */
     private suspend fun fetchPlayStoreVersion(): String? = withContext(Dispatchers.IO) {
         try {
-            val url = URL("https://play.google.com/store/apps/details?id=$packageName&hl=en")
+            val url = URL("https://play.google.com/store/apps/details?id=$storePackageName&hl=en")
             val html = url.readText()
             
             // Look for pattern like: "Current Version</div><span class="...">[[\d.]+]]"
@@ -117,14 +125,14 @@ class PlayStoreVersionChecker @Inject constructor(
         try {
             // Try Play Store app first
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse("market://details?id=$packageName")
+                data = Uri.parse("market://details?id=$storePackageName")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
         } catch (e: Exception) {
             // Fallback to browser
             val intent = Intent(Intent.ACTION_VIEW).apply {
-                data = Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+                data = Uri.parse("https://play.google.com/store/apps/details?id=$storePackageName")
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)

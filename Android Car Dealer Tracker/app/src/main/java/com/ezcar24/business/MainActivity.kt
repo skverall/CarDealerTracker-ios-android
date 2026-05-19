@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
@@ -26,10 +27,12 @@ import com.ezcar24.business.data.repository.AuthDeepLinkResult
 import com.ezcar24.business.data.version.PlayStoreVersionChecker
 import com.ezcar24.business.ui.auth.LoginScreen
 import com.ezcar24.business.ui.auth.PasswordResetScreen
+import com.ezcar24.business.ui.settings.RegionSelectionScreen
 import com.ezcar24.business.ui.theme.CarDealerTrackerAndroidTheme
 import com.ezcar24.business.ui.main.MainScreen
 import com.ezcar24.business.ui.main.MainViewModel
 import com.ezcar24.business.ui.update.ForceUpdateScreen
+import com.ezcar24.business.util.rememberRegionSettingsManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +60,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             CarDealerTrackerAndroidTheme {
                 val isUpdateRequired by versionChecker.isUpdateRequired.collectAsState()
+                val regionSettingsManager = rememberRegionSettingsManager()
+                val regionState by regionSettingsManager.state.collectAsState()
 
                 // Check for updates on launch (matching iOS)
                 LaunchedEffect(Unit) {
@@ -66,6 +71,11 @@ class MainActivity : ComponentActivity() {
                 // Show force update screen if update is required
                 if (isUpdateRequired) {
                     ForceUpdateScreen(versionChecker = versionChecker)
+                } else if (!regionState.hasSelectedRegion) {
+                    RegionSelectionScreen(
+                        initialRegion = regionState.selectedRegion,
+                        onContinue = regionSettingsManager::updateRegion
+                    )
                 } else {
                     Surface(
                         modifier = Modifier.fillMaxSize(),
@@ -75,9 +85,11 @@ class MainActivity : ComponentActivity() {
                         val navController = rememberNavController()
                         val lifecycleOwner = LocalLifecycleOwner.current
 
-                        // Register ViewModel as lifecycle observer for foreground sync
-                        LaunchedEffect(viewModel) {
+                        DisposableEffect(viewModel, lifecycleOwner) {
                             lifecycleOwner.lifecycle.addObserver(viewModel)
+                            onDispose {
+                                lifecycleOwner.lifecycle.removeObserver(viewModel)
+                            }
                         }
 
                         val startDestination by viewModel.startDestination.collectAsState()

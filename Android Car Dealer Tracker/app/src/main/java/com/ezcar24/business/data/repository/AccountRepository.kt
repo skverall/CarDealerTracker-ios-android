@@ -2,15 +2,6 @@ package com.ezcar24.business.data.repository
 
 import android.content.Context
 import android.util.Log
-import com.ezcar24.business.data.images.ImageStore
-import com.ezcar24.business.data.local.ActiveDatabaseProvider
-import com.ezcar24.business.data.sync.CloudSyncEnvironment
-import com.ezcar24.business.data.sync.CloudSyncManager
-import com.ezcar24.business.util.TeamPermissionCatalog
-import dagger.hilt.android.qualifiers.ApplicationContext
-import io.github.jan.supabase.SupabaseClient
-import io.github.jan.supabase.auth.auth
-import io.github.jan.supabase.postgrest.postgrest
 import java.net.HttpURLConnection
 import java.net.URL
 import java.time.Instant
@@ -19,6 +10,10 @@ import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,10 +27,15 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import com.ezcar24.business.BuildConfig
+import com.ezcar24.business.data.images.ImageStore
+import com.ezcar24.business.data.local.ActiveDatabaseProvider
+import com.ezcar24.business.data.sync.CloudSyncEnvironment
+import com.ezcar24.business.data.sync.CloudSyncManager
+import com.ezcar24.business.util.TeamPermissionCatalog
 
 private const val ACCOUNT_PREFS = "ezcar24_account"
 private const val ACTIVE_ORGANIZATION_KEY_PREFIX = "activeOrganization"
-private const val SUPABASE_URL = "https://haordpdxyyreliyzmire.supabase.co"
 private const val ACCOUNT_TAG = "AccountRepository"
 
 data class OrganizationMembership(
@@ -255,7 +255,7 @@ class AccountRepository @Inject constructor(
             createAccount = createAccount,
             organizationId = organizationId.toString()
         )
-        val connection = (URL("$SUPABASE_URL/functions/v1/invite_member").openConnection() as HttpURLConnection).apply {
+        val connection = (URL("${BuildConfig.SUPABASE_URL}/functions/v1/invite_member").openConnection() as HttpURLConnection).apply {
             requestMethod = "POST"
             doInput = true
             doOutput = true

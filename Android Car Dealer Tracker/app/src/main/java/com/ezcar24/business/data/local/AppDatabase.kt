@@ -388,8 +388,14 @@ interface ClientInteractionDao : BaseDao<ClientInteraction> {
 
 @Dao
 interface ClientReminderDao : BaseDao<ClientReminder> {
+    @Query("SELECT * FROM client_reminders WHERE id = :id")
+    suspend fun getById(id: UUID): ClientReminder?
+
     @Query("SELECT * FROM client_reminders WHERE clientId = :clientId ORDER BY dueDate ASC")
     suspend fun getByClient(clientId: UUID): List<ClientReminder>
+
+    @Query("SELECT * FROM client_reminders")
+    suspend fun getAllIncludingDeleted(): List<ClientReminder>
 
     @Query("DELETE FROM client_reminders WHERE clientId = :clientId")
     suspend fun deleteByClient(clientId: UUID)

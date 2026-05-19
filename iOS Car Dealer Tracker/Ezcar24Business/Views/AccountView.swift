@@ -15,7 +15,7 @@ struct AccountView: View {
     @State private var isSyncing = false
     @State private var syncComplete = false
     @State private var showingLogin = false
-    @State private var showingPaywall = false
+    @State private var presentedPaywallMode: PaywallMode?
     @State private var showingDeleteAlert = false
     @State private var dedupState: DedupState = .idle
     @AppStorage(NotificationPreference.enabledKey) private var notificationsEnabled = false
@@ -88,8 +88,8 @@ struct AccountView: View {
                 }
             }
             .navigationTitle("account".localizedString)
-            .sheet(isPresented: $showingPaywall) {
-                PaywallView()
+            .sheet(item: $presentedPaywallMode) { mode in
+                PaywallView(mode: mode)
             }
             .sheet(item: $inviteSharePayload) { payload in
                 ShareSheet(items: payload.items)
@@ -167,6 +167,8 @@ struct AccountView: View {
                 Text(String(format: "mail_error_message".localizedString, "aydmaxx@gmail.com"))
             }
         }
+        .preferredColorScheme(regionSettings.selectedTheme.colorScheme)
+        .environment(\.colorScheme, regionSettings.selectedTheme.colorScheme)
     }
     
     private var generalSettingsSection: some View {
@@ -553,10 +555,10 @@ struct AccountView: View {
 
     private func openSubscriptionDestination() {
         if subscriptionManager.isProAccessActive {
-            subscriptionManager.showManageSubscriptions()
+            presentedPaywallMode = .manage
         } else {
             if case .signedIn = sessionStore.status {
-                showingPaywall = true
+                presentedPaywallMode = .upgrade
             } else {
                 appSessionState.exitGuestModeForLogin()
                 showingLogin = true

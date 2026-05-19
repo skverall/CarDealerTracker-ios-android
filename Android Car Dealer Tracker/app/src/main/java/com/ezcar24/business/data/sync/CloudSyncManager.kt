@@ -316,6 +316,8 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.ACCOUNT to db.financialAccountDao().countAll(),
             SyncEntityType.ACCOUNT_TRANSACTION to db.accountTransactionDao().getAllIncludingDeleted().count { it.deletedAt == null },
             SyncEntityType.TEMPLATE to db.expenseTemplateDao().getAllIncludingDeleted().count { it.deletedAt == null },
+            SyncEntityType.CLIENT_INTERACTION to db.clientInteractionDao().getAllIncludingDeleted().count { it.deletedAt == null },
+            SyncEntityType.CLIENT_REMINDER to db.clientReminderDao().getAllIncludingDeleted().size,
             SyncEntityType.PART to db.partDao().count(),
             SyncEntityType.PART_BATCH to db.partBatchDao().count(),
             SyncEntityType.PART_SALE to db.partSaleDao().count(),
@@ -337,6 +339,8 @@ class CloudSyncManager @Inject constructor(
                 SyncEntityType.ACCOUNT to snapshot.accounts.count { it.deletedAt == null },
                 SyncEntityType.ACCOUNT_TRANSACTION to snapshot.accountTransactions.count { it.deletedAt == null },
                 SyncEntityType.TEMPLATE to snapshot.templates.count { it.deletedAt == null },
+                SyncEntityType.CLIENT_INTERACTION to snapshot.clientInteractions.count { it.deletedAt == null },
+                SyncEntityType.CLIENT_REMINDER to snapshot.clientReminders.count { it.deletedAt == null },
                 SyncEntityType.PART to snapshot.parts.count { it.deletedAt == null },
                 SyncEntityType.PART_BATCH to snapshot.partBatches.count { it.deletedAt == null },
                 SyncEntityType.PART_SALE to snapshot.partSales.count { it.deletedAt == null },
@@ -418,6 +422,8 @@ class CloudSyncManager @Inject constructor(
             snapshot.accounts.isNotEmpty() ||
             snapshot.accountTransactions.isNotEmpty() ||
             snapshot.templates.isNotEmpty() ||
+            snapshot.clientInteractions.isNotEmpty() ||
+            snapshot.clientReminders.isNotEmpty() ||
             snapshot.parts.isNotEmpty() ||
             snapshot.partBatches.isNotEmpty() ||
             snapshot.partSales.isNotEmpty() ||
@@ -432,7 +438,7 @@ class CloudSyncManager @Inject constructor(
         return "counts vehicles=${snapshot.vehicles.size} expenses=${snapshot.expenses.size} sales=${snapshot.sales.size} " +
             "debts=${snapshot.debts.size} debtPayments=${snapshot.debtPayments.size} clients=${snapshot.clients.size} " +
             "users=${snapshot.users.size} accounts=${snapshot.accounts.size} accountTransactions=${snapshot.accountTransactions.size} " +
-            "templates=${snapshot.templates.size} parts=${snapshot.parts.size} partBatches=${snapshot.partBatches.size} " +
+            "templates=${snapshot.templates.size} clientInteractions=${snapshot.clientInteractions.size} clientReminders=${snapshot.clientReminders.size} parts=${snapshot.parts.size} partBatches=${snapshot.partBatches.size} " +
             "partSales=${snapshot.partSales.size} partSaleLineItems=${snapshot.partSaleLineItems.size}"
     }
 
@@ -448,6 +454,8 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.ACCOUNT to snapshot.accounts.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.ACCOUNT_TRANSACTION to snapshot.accountTransactions.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.TEMPLATE to snapshot.templates.mapNotNull { it.id.toUUID() }.toSet(),
+            SyncEntityType.CLIENT_INTERACTION to snapshot.clientInteractions.mapNotNull { it.id.toUUID() }.toSet(),
+            SyncEntityType.CLIENT_REMINDER to snapshot.clientReminders.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.PART to snapshot.parts.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.PART_BATCH to snapshot.partBatches.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.PART_SALE to snapshot.partSales.mapNotNull { it.id.toUUID() }.toSet(),
@@ -778,6 +786,7 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.PART_SALE_LINE_ITEM -> "sync_part_sale_line_items"
             SyncEntityType.HOLDING_COST_SETTINGS -> "sync_holding_cost_settings"
             SyncEntityType.CLIENT_INTERACTION -> "sync_client_interactions"
+            SyncEntityType.CLIENT_REMINDER -> "sync_client_reminders"
         }
     }
 
@@ -799,6 +808,7 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.PART_SALE_LINE_ITEM -> "delete_crm_part_sale_line_items"
             SyncEntityType.HOLDING_COST_SETTINGS -> "delete_crm_holding_cost_settings"
             SyncEntityType.CLIENT_INTERACTION -> "delete_crm_client_interactions"
+            SyncEntityType.CLIENT_REMINDER -> "delete_crm_client_reminders"
         }
     }
 
@@ -868,6 +878,10 @@ class CloudSyncManager @Inject constructor(
                 val remote = json.decodeFromString(RemoteClientInteraction.serializer(), payload)
                 client.postgrest.rpc("sync_client_interactions", payloadParams(listOf(remote)))
             }
+            SyncEntityType.CLIENT_REMINDER -> {
+                val remote = json.decodeFromString(RemoteClientReminder.serializer(), payload)
+                client.postgrest.rpc("sync_client_reminders", payloadParams(listOf(remote)))
+            }
         }
     }
 
@@ -894,6 +908,10 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.PART_SALE_LINE_ITEM -> db.partSaleLineItemDao().getById(id)?.let { deletePartSaleLineItem(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.HOLDING_COST_SETTINGS -> db.holdingCostSettingsDao().getById(id)?.let { db.holdingCostSettingsDao().delete(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.CLIENT_INTERACTION -> db.clientInteractionDao().getById(id)?.let { deleteClientInteraction(it) } ?: performDeleteRpc(entityType, id, dealerId)
+            SyncEntityType.CLIENT_REMINDER -> {
+                db.clientReminderDao().getById(id)?.let { db.clientReminderDao().delete(it) }
+                performDeleteRpc(entityType, id, dealerId)
+            }
         }
     }
 
@@ -980,6 +998,7 @@ class CloudSyncManager @Inject constructor(
                 SyncEntityType.PART_SALE_LINE_ITEM -> json.decodeFromString(RemotePartSaleLineItem.serializer(), payload).id.toUUID()
                 SyncEntityType.HOLDING_COST_SETTINGS -> json.decodeFromString(RemoteHoldingCostSettings.serializer(), payload).id.toUUID()
                 SyncEntityType.CLIENT_INTERACTION -> json.decodeFromString(RemoteClientInteraction.serializer(), payload).id.toUUID()
+                SyncEntityType.CLIENT_REMINDER -> json.decodeFromString(RemoteClientReminder.serializer(), payload).id.toUUID()
             }
         } catch (e: Exception) {
             null
@@ -1002,6 +1021,8 @@ class CloudSyncManager @Inject constructor(
         val accountIds = skippingIds[SyncEntityType.ACCOUNT] ?: emptySet()
         val accountTransactionIds = skippingIds[SyncEntityType.ACCOUNT_TRANSACTION] ?: emptySet()
         val templateIds = skippingIds[SyncEntityType.TEMPLATE] ?: emptySet()
+        val clientInteractionIds = skippingIds[SyncEntityType.CLIENT_INTERACTION] ?: emptySet()
+        val clientReminderIds = skippingIds[SyncEntityType.CLIENT_REMINDER] ?: emptySet()
         val partIds = skippingIds[SyncEntityType.PART] ?: emptySet()
         val partBatchIds = skippingIds[SyncEntityType.PART_BATCH] ?: emptySet()
         val partSaleIds = skippingIds[SyncEntityType.PART_SALE] ?: emptySet()
@@ -1033,6 +1054,22 @@ class CloudSyncManager @Inject constructor(
             if (id != null && clientIds.contains(id)) return@filter false
             val vId = c.vehicleId?.toUUID()
             if (vId != null && vehicleIds.contains(vId)) return@filter false
+            true
+        }
+
+        val filteredClientInteractions = snapshot.clientInteractions.filter { interaction ->
+            val id = interaction.id.toUUID()
+            if (id != null && clientInteractionIds.contains(id)) return@filter false
+            val clientId = interaction.clientId.toUUID()
+            if (clientId != null && clientIds.contains(clientId)) return@filter false
+            true
+        }
+
+        val filteredClientReminders = snapshot.clientReminders.filter { reminder ->
+            val id = reminder.id.toUUID()
+            if (id != null && clientReminderIds.contains(id)) return@filter false
+            val clientId = reminder.clientId.toUUID()
+            if (clientId != null && clientIds.contains(clientId)) return@filter false
             true
         }
 
@@ -1118,10 +1155,16 @@ class CloudSyncManager @Inject constructor(
             debts = filteredDebts,
             debtPayments = filteredDebtPayments,
             clients = filteredClients,
+            serverNow = snapshot.serverNow,
+            clientInteractions = filteredClientInteractions,
+            clientReminders = filteredClientReminders,
             parts = filteredParts,
             partBatches = filteredPartBatches,
             partSales = filteredPartSales,
-            partSaleLineItems = filteredPartSaleLineItems
+            partSaleLineItems = filteredPartSaleLineItems,
+            holdingCostSettings = snapshot.holdingCostSettings,
+            vehicleInventoryStats = snapshot.vehicleInventoryStats,
+            inventoryAlerts = snapshot.inventoryAlerts
         )
     }
 
@@ -1197,6 +1240,7 @@ class CloudSyncManager @Inject constructor(
             mergePartSaleLineItems(snapshot.partSaleLineItems)
             mergeHoldingCostSettings(snapshot.holdingCostSettings)
             mergeClientInteractions(snapshot.clientInteractions)
+            mergeClientReminders(snapshot.clientReminders)
 
             if (missingCleanup != null) {
                 applyMissingCleanup(missingCleanup)
@@ -1871,6 +1915,41 @@ class CloudSyncManager @Inject constructor(
         }
     }
 
+    private suspend fun mergeClientReminders(remoteReminders: List<RemoteClientReminder>) {
+        if (remoteReminders.isEmpty()) return
+        val existing = db.clientReminderDao().getAllIncludingDeleted().associateBy { it.id }
+        val clientIds = db.clientDao().getAllIncludingDeleted().map { it.id }.toSet()
+
+        for (remote in remoteReminders) {
+            val remoteId = remote.id.toUUID() ?: continue
+            val local = existing[remoteId]
+
+            if (remote.deletedAt != null) {
+                if (local != null) db.clientReminderDao().delete(local)
+                continue
+            }
+
+            val clientId = remote.clientId.toUUID()?.takeIf { it in clientIds } ?: continue
+            val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
+            if (local != null && local.createdAt >= remoteUpdated) continue
+
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: remoteUpdated
+            val dueDate = DateUtils.parseDateAndTime(remote.dueDate)
+                ?: DateUtils.parseRemoteDateOnly(remote.dueDate)
+                ?: remoteUpdated
+            val reminder = ClientReminder(
+                id = remoteId,
+                title = remote.title,
+                notes = remote.notes,
+                dueDate = dueDate,
+                isCompleted = remote.isCompleted,
+                createdAt = createdAt,
+                clientId = clientId
+            )
+            db.clientReminderDao().upsert(reminder)
+        }
+    }
+
     private suspend fun applyMissingCleanup(cleanup: MissingCleanupContext) {
         fun shouldDelete(id: UUID, updatedAt: Date?, createdAt: Date): Boolean {
             if (updatedAt != null && updatedAt > cleanup.syncStartedAt) return false
@@ -1946,6 +2025,26 @@ class CloudSyncManager @Inject constructor(
             if (!remoteIds.contains(client.id) && !protectedClients.contains(client.id)) {
                 if (shouldDelete(client.id, client.updatedAt, client.createdAt)) {
                     db.clientDao().delete(client)
+                }
+            }
+        }
+
+        val protectedClientInteractions = cleanup.protectedIds[SyncEntityType.CLIENT_INTERACTION].orEmpty()
+        db.clientInteractionDao().getAllIncludingDeleted().forEach { interaction ->
+            val remoteIds = cleanup.remoteIds[SyncEntityType.CLIENT_INTERACTION].orEmpty()
+            if (!remoteIds.contains(interaction.id) && !protectedClientInteractions.contains(interaction.id)) {
+                if (shouldDelete(interaction.id, interaction.updatedAt, interaction.createdAt)) {
+                    db.clientInteractionDao().delete(interaction)
+                }
+            }
+        }
+
+        val protectedClientReminders = cleanup.protectedIds[SyncEntityType.CLIENT_REMINDER].orEmpty()
+        db.clientReminderDao().getAllIncludingDeleted().forEach { reminder ->
+            val remoteIds = cleanup.remoteIds[SyncEntityType.CLIENT_REMINDER].orEmpty()
+            if (!remoteIds.contains(reminder.id) && !protectedClientReminders.contains(reminder.id)) {
+                if (shouldDelete(reminder.id, null, reminder.createdAt)) {
+                    db.clientReminderDao().delete(reminder)
                 }
             }
         }
@@ -2048,6 +2147,8 @@ class CloudSyncManager @Inject constructor(
             val vId = client.vehicleId
             vId == null || !skippingVehicleIds.contains(vId)
         }
+        val clientInteractions = db.clientInteractionDao().getAllIncludingDeleted()
+        val clientReminders = db.clientReminderDao().getAllIncludingDeleted()
         val templates = db.expenseTemplateDao().getAllIncludingDeleted()
         val parts = db.partDao().getAllIncludingDeleted()
         val partBatches = db.partBatchDao().getAllIncludingDeleted()
@@ -2081,6 +2182,8 @@ class CloudSyncManager @Inject constructor(
         val remoteDebts = debts.map { it.toRemote(dealerId.toString()) }
         val remoteDebtPayments = debtPayments.mapNotNull { it.toRemote(dealerId.toString()) }
         val remoteClients = clients.map { it.toRemote(dealerId.toString()) }
+        val remoteClientInteractions = clientInteractions.map { it.toRemote(dealerId.toString()) }
+        val remoteClientReminders = clientReminders.map { it.toRemote(dealerId.toString()) }
         val remoteTemplates = templates.map { it.toRemote(dealerId.toString()) }
         val remoteParts = parts.map { it.toRemote(dealerId.toString()) }
         val remotePartBatches = partBatches.map { it.toRemote(dealerId.toString()) }
@@ -2113,6 +2216,12 @@ class CloudSyncManager @Inject constructor(
         }
         if (remoteClients.isNotEmpty()) {
             client.postgrest.rpc("sync_clients", payloadParams(remoteClients))
+        }
+        if (remoteClientInteractions.isNotEmpty()) {
+            client.postgrest.rpc("sync_client_interactions", payloadParams(remoteClientInteractions))
+        }
+        if (remoteClientReminders.isNotEmpty()) {
+            client.postgrest.rpc("sync_client_reminders", payloadParams(remoteClientReminders))
         }
         if (remoteTemplates.isNotEmpty()) {
             client.postgrest.rpc("sync_templates", payloadParams(remoteTemplates))
@@ -2258,6 +2367,44 @@ class CloudSyncManager @Inject constructor(
                 error = e
             )
             enqueueUpsert(SyncEntityType.CLIENT_INTERACTION, remote, dealerId)
+        }
+    }
+
+    suspend fun upsertClientReminder(reminder: ClientReminder) {
+        db.clientReminderDao().upsert(reminder)
+        val dealerId = getCurrentDealerId()
+        val remote = reminder.toRemote(dealerId.toString(), updatedAt = Date())
+        try {
+            client.postgrest.rpc("sync_client_reminders", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_client_reminders",
+                dealerId = dealerId,
+                entityType = SyncEntityType.CLIENT_REMINDER,
+                payloadId = reminder.id,
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.CLIENT_REMINDER, remote, dealerId)
+        }
+    }
+
+    suspend fun deleteClientReminder(reminder: ClientReminder) {
+        db.clientReminderDao().delete(reminder)
+        val dealerId = getCurrentDealerId()
+        try {
+            performDeleteRpc(SyncEntityType.CLIENT_REMINDER, reminder.id, dealerId)
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "delete_crm_client_reminders",
+                dealerId = dealerId,
+                entityType = SyncEntityType.CLIENT_REMINDER,
+                payloadId = reminder.id,
+                extraContext = mapOf("operation" to "delete"),
+                error = e
+            )
+            enqueueDelete(SyncEntityType.CLIENT_REMINDER, reminder.id, dealerId)
         }
     }
 
@@ -3222,7 +3369,8 @@ enum class SyncEntityType(val rawValue: String, val displayName: String, val sor
     PART_SALE("partSale", "Part Sales", 12),
     PART_SALE_LINE_ITEM("partSaleLineItem", "Part Sale Line Items", 13),
     HOLDING_COST_SETTINGS("holdingCostSettings", "Holding Cost Settings", 14),
-    CLIENT_INTERACTION("clientInteraction", "Client Interactions", 15);
+    CLIENT_INTERACTION("clientInteraction", "Client Interactions", 15),
+    CLIENT_REMINDER("clientReminder", "Client Reminders", 16);
 
     companion object {
         fun fromRaw(value: String): SyncEntityType? {
@@ -3245,6 +3393,8 @@ enum class SyncEntityType(val rawValue: String, val displayName: String, val sor
                 "partSaleLineItem" -> PART_SALE_LINE_ITEM
                 "holdingCostSettings" -> HOLDING_COST_SETTINGS
                 "clientInteraction" -> CLIENT_INTERACTION
+                "client_reminder" -> CLIENT_REMINDER
+                "clientReminder" -> CLIENT_REMINDER
                 else -> null
             }
         }
@@ -3514,5 +3664,22 @@ fun ClientInteraction.toRemote(dealerId: String) = RemoteClientInteraction(
     isFollowUpRequired = isFollowUpRequired,
     createdAt = DateUtils.formatDateAndTime(createdAt),
     updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
+    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
+)
+
+fun ClientReminder.toRemote(
+    dealerId: String,
+    updatedAt: Date = createdAt,
+    deletedAt: Date? = null
+) = RemoteClientReminder(
+    id = id.toString(),
+    dealerId = dealerId,
+    clientId = clientId.toString(),
+    title = title,
+    notes = notes,
+    dueDate = DateUtils.formatDateAndTime(dueDate),
+    isCompleted = isCompleted,
+    createdAt = DateUtils.formatDateAndTime(createdAt),
+    updatedAt = DateUtils.formatDateAndTime(updatedAt),
     deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
 )

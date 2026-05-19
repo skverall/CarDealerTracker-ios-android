@@ -11,7 +11,9 @@ class Ezcar24Application : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
+        if (BuildConfig.FIREBASE_ENABLED) {
+            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
+        }
 
         EntryPointAccessors.fromApplication(
             this,
