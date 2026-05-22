@@ -50,6 +50,7 @@ struct AnalyticsHubView: View {
     @StateObject private var crmViewModel: CRMAnalyticsViewModel
 
     @State private var selectedRange: DashboardTimeRange = .month
+    @Namespace private var namespace
 
     init() {
         let context = PersistenceController.shared.container.viewContext
@@ -87,7 +88,7 @@ struct AnalyticsHubView: View {
 
     private var content: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 24) {
                 rangePicker
 
                 if canViewInventory {
@@ -149,7 +150,7 @@ struct AnalyticsHubView: View {
     }
 
     private var rangePicker: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             ForEach(DashboardTimeRange.allCases) { range in
                 Button {
                     withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
@@ -157,19 +158,31 @@ struct AnalyticsHubView: View {
                     }
                 } label: {
                     Text(range.displayLabel)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundColor(selectedRange == range ? .white : ColorTheme.secondaryText)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
                         .background(
-                            Capsule()
-                                .fill(selectedRange == range ? ColorTheme.primary : ColorTheme.secondaryBackground)
+                            ZStack {
+                                if selectedRange == range {
+                                    Capsule()
+                                        .fill(ColorTheme.primary)
+                                        .matchedGeometryEffect(id: "ActiveRangeTab", in: namespace)
+                                        .shadow(color: ColorTheme.primary.opacity(0.3), radius: 4, x: 0, y: 2)
+                                }
+                            }
                         )
-                        .foregroundColor(selectedRange == range ? .white : ColorTheme.primaryText)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, 4)
+        .padding(4)
+        .background(ColorTheme.cardBackground)
+        .cornerRadius(24)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24)
+                .stroke(ColorTheme.primary.opacity(0.08), lineWidth: 1)
+        )
     }
 
     private var inventoryCard: some View {
@@ -181,16 +194,16 @@ struct AnalyticsHubView: View {
         ) {
             VStack(alignment: .leading, spacing: 16) {
                 // Insight Header
-                HStack(spacing: 12) {
-                    InventoryHealthScoreCompact(score: inventoryViewModel.healthScore, size: 50)
+                HStack(spacing: 16) {
+                    InventoryHealthScoreCompact(score: inventoryViewModel.healthScore, size: 52)
                     
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text(inventoryViewModel.healthStatusTitle)
-                            .font(.subheadline.weight(.semibold))
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
                             .foregroundColor(ColorTheme.primaryText)
                         
                         Text(inventoryViewModel.healthStatusMessage)
-                            .font(.caption)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
                             .foregroundColor(ColorTheme.secondaryText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -205,7 +218,7 @@ struct AnalyticsHubView: View {
                         GridItem(.flexible(), alignment: .leading)
                     ],
                     alignment: .leading,
-                    spacing: 16
+                    spacing: 12
                 ) {
                     MetricLine(
                         title: "Turnover Speed",
@@ -275,36 +288,37 @@ struct AnalyticsHubView: View {
             icon: "person.2.fill",
             accent: ColorTheme.primary
         ) {
-            LazyVGrid(
-                columns: [
-                    GridItem(.flexible(), alignment: .leading),
-                    GridItem(.flexible(), alignment: .leading)
-                ],
-                alignment: .leading,
-                spacing: 12
-            ) {
-                MetricLine(
-                    title: "Total Inquiries",
-                    value: "\(crmViewModel.totalLeads)"
-                )
-                
-                MetricLine(
-                    title: "Conversion Rate",
-                    value: String(format: "%.1f%%", crmViewModel.conversionRate),
-                    statusColor: crmViewModel.conversionRate > 5.0 ? ColorTheme.success : nil
-                )
+            VStack(alignment: .leading, spacing: 16) {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.flexible(), alignment: .leading),
+                        GridItem(.flexible(), alignment: .leading),
+                        GridItem(.flexible(), alignment: .leading)
+                    ],
+                    spacing: 12
+                ) {
+                    MetricLine(
+                        title: "Total Inquiries",
+                        value: "\(crmViewModel.totalLeads)"
+                    )
+                    
+                    MetricLine(
+                        title: "Active Opps",
+                        value: "\(crmViewModel.activeLeads)"
+                    )
 
-                MetricLine(
-                    title: "Active Opportunities",
-                    value: "\(crmViewModel.activeLeads)"
-                )
-            }
-            .padding(.bottom, 8)
+                    MetricLine(
+                        title: "Conversion",
+                        value: String(format: "%.1f%%", crmViewModel.conversionRate),
+                        statusColor: crmViewModel.conversionRate > 5.0 ? ColorTheme.success : nil
+                    )
+                }
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(ClientStatus.allCases) { status in
-                    let count = crmViewModel.stageCounts[status, default: 0]
-                    StageChip(title: status.displayName, count: count, color: status.color)
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(ClientStatus.allCases) { status in
+                        let count = crmViewModel.stageCounts[status, default: 0]
+                        StageChip(title: status.displayName, count: count, color: status.color)
+                    }
                 }
             }
         }
@@ -336,20 +350,27 @@ private struct AnalyticsSectionCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .center, spacing: 12) {
                 Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(accent)
-                    .frame(width: 36, height: 36)
-                    .background(accent.opacity(0.12))
-                    .clipShape(Circle())
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        LinearGradient(
+                            colors: [accent, accent.opacity(0.75)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .shadow(color: accent.opacity(0.25), radius: 6, x: 0, y: 3)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.headline)
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
                         .foregroundColor(ColorTheme.primaryText)
 
                     if let subtitle {
                         Text(subtitle)
-                            .font(.caption)
+                            .font(.system(size: 12, weight: .regular, design: .rounded))
                             .foregroundColor(ColorTheme.secondaryText)
                     }
                 }
@@ -357,16 +378,14 @@ private struct AnalyticsSectionCard<Content: View>: View {
                 Spacer()
 
                 Image(systemName: "chevron.right")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(size: 14, weight: .bold))
                     .foregroundColor(ColorTheme.tertiaryText)
             }
 
             content
         }
-        .padding(16)
-        .background(ColorTheme.cardBackground)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
+        .padding(18)
+        .cardStyle()
     }
 }
 
@@ -376,15 +395,26 @@ private struct MetricLine: View {
     var statusColor: Color? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.caption)
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundColor(ColorTheme.secondaryText)
+                .lineLimit(1)
 
             Text(value)
-                .font(.body.weight(.semibold))
+                .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundColor(statusColor ?? ColorTheme.primaryText)
+                .lineLimit(1)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 10)
+        .background(ColorTheme.secondaryBackground)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ColorTheme.primary.opacity(0.04), lineWidth: 1)
+        )
     }
 }
 
@@ -396,14 +426,14 @@ private struct AnalyticsMetricRow: View {
     let isPositiveGood: Bool
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .center, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.caption)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundColor(ColorTheme.secondaryText)
 
                 Text(value)
-                    .font(.body.weight(.semibold))
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
                     .foregroundColor(ColorTheme.primaryText)
             }
 
@@ -413,16 +443,20 @@ private struct AnalyticsMetricRow: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     ComparisonBadge(percent: changePercent, isPositiveGood: isPositiveGood)
                     Text(comparisonLabel)
-                        .font(.caption2)
+                        .font(.system(size: 10, weight: .regular, design: .rounded))
                         .foregroundColor(ColorTheme.secondaryText)
                 }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
         .background(ColorTheme.secondaryBackground)
-        .cornerRadius(12)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(ColorTheme.primary.opacity(0.04), lineWidth: 1)
+        )
     }
 }
 
@@ -439,17 +473,21 @@ private struct ComparisonBadge: View {
 
     var body: some View {
         HStack(spacing: 4) {
-            Image(systemName: isPositive ? "arrow.up.right" : "arrow.down.right")
-                .font(.caption2)
+            Image(systemName: isPositive ? "arrow.up.forward" : "arrow.down.forward")
+                .font(.system(size: 10, weight: .bold))
 
             Text("\(abs(percent).formatted(.number.precision(.fractionLength(1))))%")
-                .font(.caption2.weight(.semibold))
+                .font(.system(size: 11, weight: .bold, design: .rounded))
         }
         .foregroundColor(color)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
         .background(color.opacity(0.12))
         .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(color.opacity(0.15), lineWidth: 1)
+        )
     }
 }
 
@@ -459,24 +497,35 @@ private struct StageChip: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             Circle()
                 .fill(color)
-                .frame(width: 6, height: 6)
+                .frame(width: 8, height: 8)
+                .shadow(color: color.opacity(0.4), radius: 2, x: 0, y: 1)
 
             Text(title)
-                .font(.caption2)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundColor(ColorTheme.primaryText)
 
+            Spacer(minLength: 4)
+
             Text("\(count)")
-                .font(.caption2.weight(.semibold))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundColor(color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 2)
+                .background(color.opacity(0.1))
+                .clipShape(Capsule())
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(ColorTheme.secondaryBackground)
-        .cornerRadius(10)
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(color.opacity(0.12), lineWidth: 1)
+        )
     }
 }
 
@@ -484,24 +533,27 @@ private struct AnalyticsRestrictedCard: View {
     let title: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
                 Image(systemName: "lock.fill")
-                    .font(.title3)
-                    .foregroundColor(ColorTheme.tertiaryText)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(ColorTheme.accent)
+                    .frame(width: 36, height: 36)
+                    .background(ColorTheme.accent.opacity(0.12))
+                    .clipShape(Circle())
 
                 Text("access_restricted".localizedString)
-                    .font(.headline)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(ColorTheme.primaryText)
             }
 
             Text(String(format: "permission_access_restricted_message".localizedString, title))
-                .font(.caption)
+                .font(.system(size: 13, weight: .regular, design: .rounded))
                 .foregroundColor(ColorTheme.secondaryText)
+                .lineLimit(2)
         }
-        .padding(16)
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ColorTheme.secondaryBackground)
-        .cornerRadius(16)
+        .cardStyle()
     }
 }

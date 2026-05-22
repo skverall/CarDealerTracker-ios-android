@@ -62,9 +62,20 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual(AppRegion.japan.currencyDecimals, 0)
         XCTAssertEqual(AppRegion.japan.localeIdentifier, "ja_JP")
         XCTAssertTrue(AppLanguage.allCases.contains(.japanese))
+        XCTAssertTrue(AppLanguage.selectableLanguages.contains(.japanese))
         XCTAssertTrue(formatted.contains("¥"))
         XCTAssertFalse(formatted.contains("¥ "))
         XCTAssertFalse(formatted.contains(".00"))
+
+        manager.selectedLanguage = .japanese
+        XCTAssertEqual("Continue".localizedString, "続ける")
+        XCTAssertEqual("Weekly".localizedString, "週額")
+        XCTAssertEqual("Billed yearly".localizedString, "毎年請求")
+
+        manager.selectedLanguage = .russian
+        XCTAssertEqual("Continue".localizedString, "Продолжить")
+        XCTAssertEqual("Yearly".localizedString, "Годовой")
+        XCTAssertEqual("Best value".localizedString, "Выгодно")
     }
 
     func testEmailReminderBannerHidesForISO8601ConfirmationString() {

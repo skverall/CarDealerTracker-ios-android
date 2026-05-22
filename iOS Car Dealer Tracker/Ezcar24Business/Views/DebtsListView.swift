@@ -51,7 +51,7 @@ struct DebtsListView: View {
     }
 }
 
-private struct DebtCard: View {
+struct DebtCard: View {
     let item: DebtItem
 
     private var remainingColor: Color {
@@ -78,13 +78,18 @@ private struct DebtCard: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.name)
-                        .font(.headline)
+                        .font(.system(.headline, design: .rounded))
+                        .fontWeight(.bold)
                         .foregroundColor(ColorTheme.primaryText)
 
                     if !item.phone.isEmpty {
-                        Text(item.phone)
-                            .font(.caption)
-                            .foregroundColor(ColorTheme.secondaryText)
+                        HStack(spacing: 4) {
+                            Image(systemName: "phone.fill")
+                                .font(.system(size: 10))
+                            Text(item.phone)
+                                .font(.system(.caption, design: .rounded))
+                        }
+                        .foregroundColor(ColorTheme.secondaryText)
                     }
 
                     if let dueText = dueDateText {
@@ -93,7 +98,7 @@ private struct DebtCard: View {
                                 .font(.caption2)
                                 .foregroundColor(item.isOverdue ? ColorTheme.danger : ColorTheme.secondaryText)
                             Text(item.isOverdue ? "Overdue • \(dueText)" : "Due \(dueText)")
-                                .font(.caption)
+                                .font(.system(.caption, design: .rounded))
                                 .foregroundColor(item.isOverdue ? ColorTheme.danger : ColorTheme.secondaryText)
                         }
                     }
@@ -105,21 +110,19 @@ private struct DebtCard: View {
             }
 
             Divider()
+                .opacity(0.5)
 
             HStack(spacing: 0) {
                 FinancialColumn(title: "Total", amount: item.totalAmount, color: ColorTheme.secondaryText)
-                Divider().frame(height: 40)
+                Divider().frame(height: 24)
                 FinancialColumn(title: "Paid", amount: item.paidAmount, color: ColorTheme.primaryText)
-                Divider().frame(height: 40)
+                Divider().frame(height: 24)
                 FinancialColumn(title: "Remaining", amount: item.outstandingAmount, color: remainingColor, isBold: true)
             }
             .padding(.vertical, 8)
-            .background(ColorTheme.secondaryBackground.opacity(0.5))
+            .background(ColorTheme.secondaryBackground.opacity(0.4))
         }
-        .padding(16)
-        .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .cardStyle()
     }
 }
 
@@ -139,7 +142,7 @@ private struct DebtTag: View {
     }
 }
 
-private struct EmptyDebtsView: View {
+struct EmptyDebtsView: View {
     var body: some View {
         VStack(spacing: 16) {
             Spacer()

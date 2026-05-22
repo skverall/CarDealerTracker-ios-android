@@ -282,7 +282,7 @@ struct PaywallView: View {
 
                 Spacer(minLength: 6)
 
-                Text(subscriptionManager.isTrial ? "Trial" : "Active")
+                Text((subscriptionManager.isTrial ? "Trial" : "Active").localizedString)
                     .font(.system(size: layout.proStatusBadgeSize, weight: .heavy))
                     .foregroundStyle(Color(hex: "86EFAC"))
                     .lineLimit(1)
@@ -317,11 +317,11 @@ struct PaywallView: View {
 
     private func emptyPlansState(layout: PaywallLayout) -> some View {
         VStack(spacing: 10) {
-            Text("Unable to load plans")
+            Text("Unable to load plans".localizedString)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white.opacity(0.78))
 
-            Button("Retry") {
+            Button("Retry".localizedString) {
                 subscriptionManager.fetchOfferings()
             }
             .font(.subheadline.weight(.bold))
@@ -376,10 +376,10 @@ struct PaywallView: View {
                 .background(Circle().fill(Color(hex: "6D28D9").opacity(0.22)))
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Purchase without an account")
+                Text("Purchase without an account".localizedString)
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white)
-                Text("Sign in only for sync or restore on other devices.")
+                Text("Sign in only for sync or restore on other devices.".localizedString)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.64))
                     .lineLimit(1)
@@ -392,7 +392,7 @@ struct PaywallView: View {
                 appSessionState.exitGuestModeForLogin()
                 dismiss()
             } label: {
-                Text("Sign In")
+                Text("Sign In".localizedString)
                     .font(.caption.weight(.bold))
                     .lineLimit(1)
                     .padding(.horizontal, 10)
@@ -416,7 +416,7 @@ struct PaywallView: View {
             Button {
                 subscriptionManager.restorePurchases()
             } label: {
-                Text(subscriptionManager.isRestoring ? "Restoring..." : "Restore Purchases")
+                Text((subscriptionManager.isRestoring ? "Restoring..." : "Restore Purchases").localizedString)
                     .font(.system(size: layout.restoreFontSize, weight: .medium))
                     .foregroundStyle(Color(hex: "A855F7"))
                     .frame(minHeight: 24)
@@ -457,7 +457,7 @@ struct PaywallView: View {
                 Image(systemName: "crown.fill")
                     .font(.system(size: layout.trustIconSize, weight: .semibold))
                     .foregroundStyle(Color(hex: "FACC15"))
-                Text("All Pro tools are unlocked on this account.")
+                Text("All Pro tools are unlocked on this account.".localizedString)
                     .font(.system(size: layout.trustFontSize, weight: .medium))
                     .foregroundStyle(.white.opacity(0.68))
                     .lineLimit(1)
@@ -470,7 +470,7 @@ struct PaywallView: View {
                 HStack(spacing: 10) {
                     Image(systemName: "checkmark")
                         .font(.system(size: layout.ctaFontSize * 0.78, weight: .heavy))
-                    Text("Done")
+                    Text("Done".localizedString)
                         .font(.system(size: layout.ctaFontSize, weight: .heavy, design: .rounded))
                         .lineLimit(1)
                 }
@@ -493,7 +493,7 @@ struct PaywallView: View {
                 Button {
                     subscriptionManager.showManageSubscriptions()
                 } label: {
-                    Text("Open Apple Subscription Settings")
+                    Text("Open Apple Subscription Settings".localizedString)
                         .font(.system(size: layout.restoreFontSize, weight: .medium))
                         .foregroundStyle(Color(hex: "A855F7"))
                         .frame(minHeight: 24)
@@ -503,7 +503,7 @@ struct PaywallView: View {
             Button {
                 subscriptionManager.restorePurchases()
             } label: {
-                Text(subscriptionManager.isRestoring ? "Restoring..." : "Restore Purchases")
+                Text((subscriptionManager.isRestoring ? "Restoring..." : "Restore Purchases").localizedString)
                     .font(.system(size: layout.restoreFontSize, weight: .medium))
                     .foregroundStyle(.white.opacity(0.68))
                     .frame(minHeight: 24)
@@ -541,7 +541,7 @@ struct PaywallView: View {
             Image(systemName: "shield.checkered")
                 .font(.system(size: layout.trustIconSize, weight: .semibold))
                 .foregroundStyle(Color(hex: "A855F7"))
-            Text("Cancel anytime. No hidden fees.")
+            Text("Cancel anytime. No hidden fees.".localizedString)
                 .font(.system(size: layout.trustFontSize, weight: .medium))
                 .foregroundStyle(.white.opacity(0.68))
                 .lineLimit(1)
@@ -596,10 +596,10 @@ struct PaywallView: View {
 
     private func legalLinksSection(layout: PaywallLayout) -> some View {
         HStack(spacing: 16) {
-            Link("Terms of Use", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+            Link("Terms of Use".localizedString, destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
             Text("|")
                 .foregroundStyle(.white.opacity(0.32))
-            Link("Privacy Policy", destination: URL(string: "https://www.ezcar24.com/en/privacy-policy")!)
+            Link("Privacy Policy".localizedString, destination: URL(string: "https://www.ezcar24.com/en/privacy-policy")!)
         }
         .font(.system(size: layout.legalFontSize, weight: .regular))
         .foregroundStyle(.white.opacity(0.56))
@@ -624,27 +624,27 @@ struct PaywallView: View {
     }
 
     private var ctaText: String {
-        if subscriptionManager.isLoading { return "Processing..." }
-        guard let plan = selectedDisplayPlan else { return "Select a Plan" }
-        return plan.isIntroEligible ? "Start 1 Week Free Trial" : "Continue"
+        if subscriptionManager.isLoading { return "Processing...".localizedString }
+        guard let plan = selectedDisplayPlan else { return "Select a Plan".localizedString }
+        return plan.isIntroEligible ? "Start 1 Week Free Trial".localizedString : "Continue".localizedString
     }
 
     private var heroBadgeText: String {
-        isProManagement ? "Pro Access Active" : "Unlock Full Potential"
+        (isProManagement ? "Pro Access Active" : "Unlock Full Potential").localizedString
     }
 
     private var heroTitlePrefix: String {
-        isProManagement ? "You're" : "Upgrade to"
+        (isProManagement ? "paywall_manage_title_prefix" : "paywall_upgrade_title_prefix").localizedString
     }
 
     private var heroTitleHighlight: String {
-        "Pro"
+        (isProManagement ? "paywall_manage_title_highlight" : "paywall_upgrade_title_highlight").localizedString
     }
 
     private var heroSubtitle: String {
         isProManagement
-            ? "Your dealership tools are unlocked.\nKeep growing with Car Dealer Tracker."
-            : "Everything you need to grow\nyour dealership business."
+            ? "Your dealership tools are unlocked.\nKeep growing with Car Dealer Tracker.".localizedString
+            : "Everything you need to grow\nyour dealership business.".localizedString
     }
 
     private var hasRevenueCatSubscription: Bool {
@@ -653,26 +653,26 @@ struct PaywallView: View {
 
     private var proStatusTitle: String {
         if subscriptionManager.isTrial {
-            return "Your Pro trial is active"
+            return "Your Pro trial is active".localizedString
         }
 
         if let bonusUntil = subscriptionManager.bonusAccessUntil, bonusUntil > Date(), !hasRevenueCatSubscription {
-            return "Your Pro bonus is active"
+            return "Your Pro bonus is active".localizedString
         }
 
-        return "You're a Pro user"
+        return "You're a Pro user".localizedString
     }
 
     private var proStatusSubtitle: String {
         if let expirationDate = subscriptionManager.expirationDate {
-            return "Active until \(expirationDate.formatted(date: .abbreviated, time: .omitted))"
+            return String(format: "Active until %@".localizedString, expirationDate.formatted(date: .abbreviated, time: .omitted))
         }
 
         if let bonusUntil = subscriptionManager.bonusAccessUntil, bonusUntil > Date() {
-            return "Bonus access until \(bonusUntil.formatted(date: .abbreviated, time: .omitted))"
+            return String(format: "Bonus access until %@".localizedString, bonusUntil.formatted(date: .abbreviated, time: .omitted))
         }
 
-        return "Unlimited inventory, cloud sync, reports, and analytics are ready."
+        return "Unlimited inventory, cloud sync, reports, and analytics are ready.".localizedString
     }
 
     private var restoreMessage: String? {
@@ -680,9 +680,9 @@ struct PaywallView: View {
         case .idle:
             return nil
         case .success:
-            return "Purchases restored."
+            return "Purchases restored.".localizedString
         case .noPurchases:
-            return "No active purchases found."
+            return "No active purchases found.".localizedString
         case .error(let message):
             return message
         }
@@ -782,10 +782,10 @@ struct PaywallView: View {
     private func fallbackWeeklyPlan(existingPlans: [PaywallDisplayPlan]) -> PaywallDisplayPlan {
         PaywallDisplayPlan(
             id: SubscriptionPackageCatalog.standaloneWeeklyProductIdentifiers[0],
-            title: "Weekly",
+            title: "Weekly".localizedString,
             priceText: fallbackWeeklyPriceText(existingPlans: existingPlans),
-            periodLabel: "/ week",
-            billingLine: "Billed weekly",
+            periodLabel: "paywall_period_week".localizedString,
+            billingLine: "Billed weekly".localizedString,
             periodUnit: .week,
             productIdentifier: SubscriptionPackageCatalog.standaloneWeeklyProductIdentifiers[0],
             purchasePlan: nil,
@@ -803,51 +803,51 @@ struct PaywallView: View {
     }
 
     private func planTitle(for period: SubscriptionPeriod?) -> String {
-        guard let period else { return "Plan" }
+        guard let period else { return "Plan".localizedString }
 
         switch period.unit {
         case .week:
-            return "Weekly"
+            return "Weekly".localizedString
         case .month:
-            return period.value == 3 ? "Quarterly" : "Monthly"
+            return (period.value == 3 ? "Quarterly" : "Monthly").localizedString
         case .year:
-            return "Yearly"
+            return "Yearly".localizedString
         default:
-            return "Plan"
+            return "Plan".localizedString
         }
     }
 
     private func periodLabel(for period: SubscriptionPeriod?) -> String {
-        guard let period else { return "/ period" }
+        guard let period else { return "paywall_period_generic".localizedString }
 
         switch period.unit {
         case .day:
-            return "/ day"
+            return "paywall_period_day".localizedString
         case .week:
-            return "/ week"
+            return "paywall_period_week".localizedString
         case .month:
-            return period.value == 3 ? "/ 3 months" : "/ month"
+            return (period.value == 3 ? "paywall_period_three_months" : "paywall_period_month").localizedString
         case .year:
-            return "/ year"
+            return "paywall_period_year".localizedString
         @unknown default:
-            return "/ period"
+            return "paywall_period_generic".localizedString
         }
     }
 
     private func billingLine(for period: SubscriptionPeriod?) -> String {
-        guard let period else { return "Billed automatically" }
+        guard let period else { return "Billed automatically".localizedString }
 
         switch period.unit {
         case .day:
-            return "Billed daily"
+            return "Billed daily".localizedString
         case .week:
-            return "Billed weekly"
+            return "Billed weekly".localizedString
         case .month:
-            return period.value == 3 ? "Billed quarterly" : "Billed monthly"
+            return (period.value == 3 ? "Billed quarterly" : "Billed monthly").localizedString
         case .year:
-            return "Billed yearly"
+            return "Billed yearly".localizedString
         @unknown default:
-            return "Billed automatically"
+            return "Billed automatically".localizedString
         }
     }
 }
@@ -1077,8 +1077,8 @@ struct PaywallPlanCard: View {
     }
 
     private var badgeText: String? {
-        if isBestValue { return isCompact ? "Best" : "Best value" }
-        if isIntroEligible { return "Trial" }
+        if isBestValue { return (isCompact ? "Best" : "Best value").localizedString }
+        if isIntroEligible { return "Trial".localizedString }
         return nil
     }
 

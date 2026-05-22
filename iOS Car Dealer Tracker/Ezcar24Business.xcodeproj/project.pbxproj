@@ -10,14 +10,12 @@
 		101CC6762EA6B9C0005FCB41 /* DataHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101CC6752EA6B9C0005FCB41 /* DataHealthView.swift */; };
 		101CC6782EA6C337005FCB41 /* ImageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101CC6772EA6C337005FCB41 /* ImageStore.swift */; };
 		10F075372ED4B66F00740D2D /* PasswordResetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10F075362ED4B66F00740D2D /* PasswordResetView.swift */; };
-			10FA8DD82ECF6BE000ECC6F9 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 10FA8DD72ECF6BE000ECC6F9 /* RevenueCat */; };
-			10FA8DDA2ECF6BE000ECC6F9 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 10FA8DD92ECF6BE000ECC6F9 /* RevenueCatUI */; };
-			10FA8DDF2ECF7ED400ECC6F9 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */; };
-			10FA8DE12ECF7F7D00ECC6F9 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */; };
-			10FA8DE32ECF800000ECC6F9 /* RevenueCatKeyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DE22ECF800000ECC6F9 /* RevenueCatKeyProvider.swift */; };
-			T1000001 /* Ezcar24BusinessRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1000000 /* Ezcar24BusinessRegressionTests.swift */; };
-			T1000003 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = T1000002 /* XCTest.framework */; };
-			A1000001 /* Ezcar24BusinessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000 /* Ezcar24BusinessApp.swift */; };
+		10FA8DD82ECF6BE000ECC6F9 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 10FA8DD72ECF6BE000ECC6F9 /* RevenueCat */; };
+		10FA8DDA2ECF6BE000ECC6F9 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 10FA8DD92ECF6BE000ECC6F9 /* RevenueCatUI */; };
+		10FA8DDF2ECF7ED400ECC6F9 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */; };
+		10FA8DE12ECF7F7D00ECC6F9 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */; };
+		10FA8DE32ECF800000ECC6F9 /* RevenueCatKeyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DE22ECF800000ECC6F9 /* RevenueCatKeyProvider.swift */; };
+		A1000001 /* Ezcar24BusinessApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000 /* Ezcar24BusinessApp.swift */; };
 		A1000003 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000002 /* ContentView.swift */; };
 		A1000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000004 /* Assets.xcassets */; };
 		A1000009 /* Ezcar24Business.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = A1000007 /* Ezcar24Business.xcdatamodeld */; };
@@ -121,36 +119,35 @@
 		G0000105 /* ImagePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = G0000005 /* ImagePicker.swift */; };
 		H0000101 /* RegionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000001 /* RegionSettings.swift */; };
 		H0000102 /* RegionSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = H0000002 /* RegionSelectionView.swift */; };
+		M1000001 /* AgingBucket.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000000 /* AgingBucket.swift */; };
+		M1000003 /* InventoryAlertType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000002 /* InventoryAlertType.swift */; };
+		M1000005 /* ExpenseCategoryType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000004 /* ExpenseCategoryType.swift */; };
 		MR1000000000000000000001 /* MonthlyReportSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = MR1000000000000000000011 /* MonthlyReportSupport.swift */; };
 		MR1000000000000000000002 /* MonthlyReportSnapshotBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = MR1000000000000000000012 /* MonthlyReportSnapshotBuilder.swift */; };
 		MR1000000000000000000003 /* MonthlyReportSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MR1000000000000000000013 /* MonthlyReportSettingsView.swift */; };
 		MR1000000000000000000004 /* MonthlyReportPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MR1000000000000000000014 /* MonthlyReportPreviewView.swift */; };
-		M1000001 /* AgingBucket.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000000 /* AgingBucket.swift */; };
-		M1000003 /* InventoryAlertType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000002 /* InventoryAlertType.swift */; };
-		M1000005 /* ExpenseCategoryType.swift in Sources */ = {isa = PBXBuildFile; fileRef = M1000004 /* ExpenseCategoryType.swift */; };
+		T1000001 /* Ezcar24BusinessRegressionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T1000000 /* Ezcar24BusinessRegressionTests.swift */; };
+		T1000003 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = T1000002 /* XCTest.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-			T1000030 /* PBXContainerItemProxy */ = {
-				isa = PBXContainerItemProxy;
-				containerPortal = A0FFFFF9 /* Project object */;
-				proxyType = 1;
-				remoteGlobalIDString = A0FFFFFE;
-				remoteInfo = Ezcar24Business;
-			};
+		T1000030 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A0FFFFF9 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A0FFFFFE;
+			remoteInfo = Ezcar24Business;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-			101CC6752EA6B9C0005FCB41 /* DataHealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataHealthView.swift; sourceTree = "<group>"; };
-			101CC6772EA6C337005FCB41 /* ImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStore.swift; sourceTree = "<group>"; };
-			10F075362ED4B66F00740D2D /* PasswordResetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordResetView.swift; sourceTree = "<group>"; };
-			10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
-			10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
-			10FA8DE22ECF800000ECC6F9 /* RevenueCatKeyProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatKeyProvider.swift; sourceTree = "<group>"; };
-			T1000000 /* Ezcar24BusinessRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ezcar24BusinessRegressionTests.swift; sourceTree = "<group>"; };
-			T1000002 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
-			T1000004 /* Ezcar24BusinessTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Ezcar24BusinessTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-			A0FFFFFF /* Ezcar24Business.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ezcar24Business.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		101CC6752EA6B9C0005FCB41 /* DataHealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataHealthView.swift; sourceTree = "<group>"; };
+		101CC6772EA6C337005FCB41 /* ImageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageStore.swift; sourceTree = "<group>"; };
+		10F075362ED4B66F00740D2D /* PasswordResetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasswordResetView.swift; sourceTree = "<group>"; };
+		10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
+		10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		10FA8DE22ECF800000ECC6F9 /* RevenueCatKeyProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatKeyProvider.swift; sourceTree = "<group>"; };
+		A0FFFFFF /* Ezcar24Business.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ezcar24Business.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000 /* Ezcar24BusinessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ezcar24BusinessApp.swift; sourceTree = "<group>"; };
 		A1000002 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A1000004 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -255,32 +252,35 @@
 		G0000005 /* ImagePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImagePicker.swift; sourceTree = "<group>"; };
 		H0000001 /* RegionSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSettings.swift; sourceTree = "<group>"; };
 		H0000002 /* RegionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegionSelectionView.swift; sourceTree = "<group>"; };
+		M1000000 /* AgingBucket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucket.swift; sourceTree = "<group>"; };
+		M1000002 /* InventoryAlertType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertType.swift; sourceTree = "<group>"; };
+		M1000004 /* ExpenseCategoryType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseCategoryType.swift; sourceTree = "<group>"; };
 		MR1000000000000000000011 /* MonthlyReportSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportSupport.swift; sourceTree = "<group>"; };
 		MR1000000000000000000012 /* MonthlyReportSnapshotBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportSnapshotBuilder.swift; sourceTree = "<group>"; };
 		MR1000000000000000000013 /* MonthlyReportSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportSettingsView.swift; sourceTree = "<group>"; };
 		MR1000000000000000000014 /* MonthlyReportPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthlyReportPreviewView.swift; sourceTree = "<group>"; };
-		M1000000 /* AgingBucket.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AgingBucket.swift; sourceTree = "<group>"; };
-		M1000002 /* InventoryAlertType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InventoryAlertType.swift; sourceTree = "<group>"; };
-		M1000004 /* ExpenseCategoryType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExpenseCategoryType.swift; sourceTree = "<group>"; };
+		T1000000 /* Ezcar24BusinessRegressionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ezcar24BusinessRegressionTests.swift; sourceTree = "<group>"; };
+		T1000002 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+		T1000004 /* Ezcar24BusinessTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Ezcar24BusinessTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-			T1000010 /* Frameworks */ = {
-				isa = PBXFrameworksBuildPhase;
-				buildActionMask = 2147483647;
-				files = (
-					T1000003 /* XCTest.framework in Frameworks */,
-				);
-				runOnlyForDeploymentPostprocessing = 0;
-			};
-			A0FFFFF0 /* Frameworks */ = {
-				isa = PBXFrameworksBuildPhase;
+		A0FFFFF0 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				10FA8DDA2ECF6BE000ECC6F9 /* RevenueCatUI in Frameworks */,
 				B2000106 /* Supabase in Frameworks */,
 				10FA8DD82ECF6BE000ECC6F9 /* RevenueCat in Frameworks */,
 				F1REBA5E0000000000000003 /* FirebaseAnalytics in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		T1000010 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				T1000003 /* XCTest.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -312,14 +312,6 @@
 				T1000004 /* Ezcar24BusinessTests.xctest */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		T1000020 /* Ezcar24BusinessTests */ = {
-			isa = PBXGroup;
-			children = (
-				T1000000 /* Ezcar24BusinessRegressionTests.swift */,
-			);
-			path = Ezcar24BusinessTests;
 			sourceTree = "<group>";
 		};
 		A1000026 /* Ezcar24Business */ = {
@@ -542,30 +534,19 @@
 			path = Enums;
 			sourceTree = "<group>";
 		};
+		T1000020 /* Ezcar24BusinessTests */ = {
+			isa = PBXGroup;
+			children = (
+				T1000000 /* Ezcar24BusinessRegressionTests.swift */,
+			);
+			path = Ezcar24BusinessTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-			T1000040 /* Ezcar24BusinessTests */ = {
-				isa = PBXNativeTarget;
-				buildConfigurationList = T1000050 /* Build configuration list for PBXNativeTarget "Ezcar24BusinessTests" */;
-				buildPhases = (
-					T1000011 /* Sources */,
-					T1000010 /* Frameworks */,
-				);
-				buildRules = (
-				);
-				dependencies = (
-					T1000031 /* PBXTargetDependency */,
-				);
-				name = Ezcar24BusinessTests;
-				packageProductDependencies = (
-				);
-				productName = Ezcar24BusinessTests;
-				productReference = T1000004 /* Ezcar24BusinessTests.xctest */;
-				productType = "com.apple.product-type.bundle.unit-test";
-			};
-			A0FFFFFE /* Ezcar24Business */ = {
-				isa = PBXNativeTarget;
+		A0FFFFFE /* Ezcar24Business */ = {
+			isa = PBXNativeTarget;
 			buildConfigurationList = A100002B /* Build configuration list for PBXNativeTarget "Ezcar24Business" */;
 			buildPhases = (
 				A0FFFFFA /* Sources */,
@@ -587,6 +568,25 @@
 			productReference = A0FFFFFF /* Ezcar24Business.app */;
 			productType = "com.apple.product-type.application";
 		};
+		T1000040 /* Ezcar24BusinessTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = T1000050 /* Build configuration list for PBXNativeTarget "Ezcar24BusinessTests" */;
+			buildPhases = (
+				T1000011 /* Sources */,
+				T1000010 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				T1000031 /* PBXTargetDependency */,
+			);
+			name = Ezcar24BusinessTests;
+			packageProductDependencies = (
+			);
+			productName = Ezcar24BusinessTests;
+			productReference = T1000004 /* Ezcar24BusinessTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -595,14 +595,14 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 2650;
 				TargetAttributes = {
+					A0FFFFFE = {
+						CreatedOnToolsVersion = 15.0;
+					};
 					T1000040 = {
 						CreatedOnToolsVersion = 15.0;
 						TestTargetID = A0FFFFFE;
-					};
-					A0FFFFFE = {
-						CreatedOnToolsVersion = 15.0;
 					};
 				};
 			};
@@ -623,13 +623,13 @@
 				F1REBA5E0000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			productRefGroup = A0FFFFFD /* Products */;
-				projectDirPath = "";
-				projectRoot = "";
-				targets = (
-					T1000040 /* Ezcar24BusinessTests */,
-					A0FFFFFE /* Ezcar24Business */,
-				);
-			};
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				T1000040 /* Ezcar24BusinessTests */,
+				A0FFFFFE /* Ezcar24Business */,
+			);
+		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
@@ -647,16 +647,8 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-			T1000011 /* Sources */ = {
-				isa = PBXSourcesBuildPhase;
-				buildActionMask = 2147483647;
-				files = (
-					T1000001 /* Ezcar24BusinessRegressionTests.swift in Sources */,
-				);
-				runOnlyForDeploymentPostprocessing = 0;
-			};
-			A0FFFFFA /* Sources */ = {
-				isa = PBXSourcesBuildPhase;
+		A0FFFFFA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				E20700012F1234567890ABCD /* LocalNotificationManager.swift in Sources */,
@@ -772,77 +764,32 @@
 				E3000013 /* AnalyticsHubView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
-			};
+		};
+		T1000011 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				T1000001 /* Ezcar24BusinessRegressionTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-			T1000031 /* PBXTargetDependency */ = {
-				isa = PBXTargetDependency;
-				target = A0FFFFFE /* Ezcar24Business */;
-				targetProxy = T1000030 /* PBXContainerItemProxy */;
-			};
+		T1000031 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A0FFFFFE /* Ezcar24Business */;
+			targetProxy = T1000030 /* PBXContainerItemProxy */;
+		};
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
-			T1000060 /* Debug */ = {
-				isa = XCBuildConfiguration;
-				buildSettings = {
-					BUNDLE_LOADER = "$(TEST_HOST)";
-					CODE_SIGNING_ALLOWED = NO;
-					CODE_SIGNING_REQUIRED = NO;
-					CODE_SIGN_STYLE = Automatic;
-					CURRENT_PROJECT_VERSION = 2.1.13;
-					DEVELOPMENT_TEAM = 2RCZ658ZDD;
-					GENERATE_INFOPLIST_FILE = YES;
-					INFOPLIST_KEY_CFBundlePackageType = BNDL;
-					IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-					LD_RUNPATH_SEARCH_PATHS = (
-						"$(inherited)",
-						"@executable_path/Frameworks",
-						"@loader_path/Frameworks",
-					);
-					PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.businessTests;
-					PRODUCT_NAME = "$(TARGET_NAME)";
-					SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-					SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
-					SWIFT_VERSION = 5.0;
-					TARGETED_DEVICE_FAMILY = "1,2";
-					TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ezcar24Business.app/Ezcar24Business";
-				};
-				name = Debug;
-			};
-			T1000061 /* Release */ = {
-				isa = XCBuildConfiguration;
-				buildSettings = {
-					BUNDLE_LOADER = "$(TEST_HOST)";
-					CODE_SIGNING_ALLOWED = NO;
-					CODE_SIGNING_REQUIRED = NO;
-					CODE_SIGN_STYLE = Automatic;
-					CURRENT_PROJECT_VERSION = 2.1.13;
-					DEVELOPMENT_TEAM = 2RCZ658ZDD;
-					GENERATE_INFOPLIST_FILE = YES;
-					INFOPLIST_KEY_CFBundlePackageType = BNDL;
-					IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-					LD_RUNPATH_SEARCH_PATHS = (
-						"$(inherited)",
-						"@executable_path/Frameworks",
-						"@loader_path/Frameworks",
-					);
-					PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.businessTests;
-					PRODUCT_NAME = "$(TARGET_NAME)";
-					SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-					SWIFT_COMPILATION_MODE = wholemodule;
-					SWIFT_VERSION = 5.0;
-					TARGETED_DEVICE_FAMILY = "1,2";
-					TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ezcar24Business.app/Ezcar24Business";
-				};
-				name = Release;
-			};
-			A100002D /* Debug */ = {
-				isa = XCBuildConfiguration;
+		A100002D /* Debug */ = {
+			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -908,6 +855,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -968,7 +916,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2.1.13;
+				CURRENT_PROJECT_VERSION = 2.1.14;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Ezcar24Business/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -981,7 +929,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.13;
+				MARKETING_VERSION = 2.1.14;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1000,7 +948,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2.1.13;
+				CURRENT_PROJECT_VERSION = 2.1.14;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Ezcar24Business/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -1013,7 +961,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.13;
+				MARKETING_VERSION = 2.1.14;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1025,20 +973,65 @@
 			};
 			name = Release;
 		};
+		T1000060 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2.1.14;
+				DEVELOPMENT_TEAM = 2RCZ658ZDD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundlePackageType = BNDL;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.businessTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ezcar24Business.app/Ezcar24Business";
+			};
+			name = Debug;
+		};
+		T1000061 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 2.1.14;
+				DEVELOPMENT_TEAM = 2RCZ658ZDD;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundlePackageType = BNDL;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.businessTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Ezcar24Business.app/Ezcar24Business";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-			T1000050 /* Build configuration list for PBXNativeTarget "Ezcar24BusinessTests" */ = {
-				isa = XCConfigurationList;
-				buildConfigurations = (
-					T1000060 /* Debug */,
-					T1000061 /* Release */,
-				);
-				defaultConfigurationIsVisible = 0;
-				defaultConfigurationName = Release;
-			};
-			A100002B /* Build configuration list for PBXNativeTarget "Ezcar24Business" */ = {
-				isa = XCConfigurationList;
+		A100002B /* Build configuration list for PBXNativeTarget "Ezcar24Business" */ = {
+			isa = XCConfigurationList;
 			buildConfigurations = (
 				A100002F /* Debug */,
 				A1000030 /* Release */,
@@ -1051,6 +1044,15 @@
 			buildConfigurations = (
 				A100002D /* Debug */,
 				A100002E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		T1000050 /* Build configuration list for PBXNativeTarget "Ezcar24BusinessTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				T1000060 /* Debug */,
+				T1000061 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -127,6 +127,10 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     case japanese = "ja"
     case korean = "ko"
     
+    static var selectableLanguages: [AppLanguage] {
+        [.english, .russian, .japanese]
+    }
+
     var id: String { rawValue }
     
     /// Display name in native language
@@ -140,9 +144,15 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
         }
     }
     
-    // Flag removed as requested, using just text or generic icons in UI if needed.
-    // Keeping this property for compatibility if needed elsewhere, but changing implementation?
-    // User specifically asked to remove flag emojis. I will remove the property to force compilation errors where it's used, to ensure I catch all usages.
+    var listIcon: String {
+        switch self {
+        case .english: return "🇬🇧"
+        case .russian: return "🇷🇺"
+        case .arabic: return "🇦🇪"
+        case .japanese: return "🇯🇵"
+        case .korean: return "🇰🇷"
+        }
+    }
     
     /// Whether this language uses RTL (Right-to-Left)
     var isRTL: Bool {

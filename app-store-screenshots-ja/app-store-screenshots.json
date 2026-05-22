@@ -1,0 +1,216 @@
+{
+  "appName": "Car Dealer Tracker",
+  "themeId": "clean-light",
+  "locales": [
+    "en"
+  ],
+  "locale": "en",
+  "device": "iphone",
+  "orientation": "portrait",
+  "appIcon": "/app-icon.png",
+  "slidesByDevice": {
+    "iphone": [
+      {
+        "id": "en-real-iphone-01-hero",
+        "layout": "hero",
+        "label": {
+          "en": "FOR CAR DEALERS"
+        },
+        "headline": {
+          "en": "Control Your\nCar Business"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/01.png"
+      },
+      {
+        "id": "en-real-iphone-02-dashboard",
+        "layout": "device-bottom",
+        "label": {
+          "en": "DASHBOARD"
+        },
+        "headline": {
+          "en": "See every number\nat a glance"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/02.png"
+      },
+      {
+        "id": "en-real-iphone-03-inventory",
+        "layout": "two-devices",
+        "label": {
+          "en": "INVENTORY"
+        },
+        "headline": {
+          "en": "Manage every car\nin one place"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/04.png",
+        "screenshotSecondary": "/screenshots/apple/iphone/{locale}/01.png"
+      },
+      {
+        "id": "en-real-iphone-04-expenses",
+        "layout": "device-top",
+        "label": {
+          "en": "EXPENSES"
+        },
+        "headline": {
+          "en": "Track every cost\nas it happens"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/03.png",
+        "inverted": true
+      },
+      {
+        "id": "en-real-iphone-05-sales",
+        "layout": "device-bottom",
+        "label": {
+          "en": "SALES"
+        },
+        "headline": {
+          "en": "Know profit\non every deal"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/06.png"
+      },
+      {
+        "id": "en-real-iphone-06-clients",
+        "layout": "two-devices",
+        "label": {
+          "en": "CLIENTS"
+        },
+        "headline": {
+          "en": "Never lose\na hot lead"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/07.png",
+        "screenshotSecondary": "/screenshots/apple/iphone/{locale}/06.png"
+      },
+      {
+        "id": "en-real-iphone-07-parts",
+        "layout": "device-top",
+        "label": {
+          "en": "PARTS"
+        },
+        "headline": {
+          "en": "Keep parts stock\nunder control"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/05.png",
+        "inverted": true
+      },
+      {
+        "id": "en-real-iphone-08-fast-entry",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FAST ENTRY"
+        },
+        "headline": {
+          "en": "Add expenses\nin seconds"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/08.png"
+      },
+      {
+        "id": "en-real-iphone-09-analytics",
+        "layout": "two-devices",
+        "label": {
+          "en": "ANALYTICS"
+        },
+        "headline": {
+          "en": "Turn data into\nsmarter moves"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/09.png",
+        "screenshotSecondary": "/screenshots/apple/iphone/{locale}/02.png"
+      }
+    ],
+    "android": [
+      {
+        "id": "android-01",
+        "layout": "hero",
+        "label": {
+          "en": "FOR CAR DEALERS",
+          "ja": "中古車販売店向け"
+        },
+        "headline": {
+          "en": "Run your dealership\nfrom one place.",
+          "ja": "在庫も利益も\nひと目で管理"
+        },
+        "screenshot": ""
+      }
+    ],
+    "ipad": [
+      {
+        "id": "ipad-01",
+        "layout": "hero",
+        "label": {
+          "en": "FOR SHOWROOMS",
+          "ja": "店舗管理"
+        },
+        "headline": {
+          "en": "A clear view\nof the whole lot.",
+          "ja": "店舗全体を\n大きく見える化"
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "ipad-02",
+        "layout": "device-bottom",
+        "label": {
+          "en": "DASHBOARD",
+          "ja": "ダッシュボード"
+        },
+        "headline": {
+          "en": "Check sales,\ncosts, and stock.",
+          "ja": "売上・経費・在庫を\nまとめて確認"
+        },
+        "screenshot": ""
+      },
+      {
+        "id": "ipad-03",
+        "layout": "device-top",
+        "label": {
+          "en": "REPORTS",
+          "ja": "レポート"
+        },
+        "headline": {
+          "en": "Monthly reports\nwithout the mess.",
+          "ja": "月次レポートを\nすぐに確認"
+        },
+        "screenshot": "",
+        "inverted": true
+      }
+    ],
+    "android-7": [
+      {
+        "id": "android-7-01",
+        "layout": "hero",
+        "label": {
+          "en": "CAR DEALER TRACKER"
+        },
+        "headline": {
+          "en": "Pocket-sized\npower.",
+          "ja": "店舗管理を\n手のひらに"
+        },
+        "screenshot": ""
+      }
+    ],
+    "android-10": [
+      {
+        "id": "android-10-01",
+        "layout": "hero",
+        "label": {
+          "en": "CAR DEALER TRACKER"
+        },
+        "headline": {
+          "en": "Made for\nthe big screen.",
+          "ja": "大きな画面で\n在庫を管理"
+        },
+        "screenshot": ""
+      }
+    ],
+    "feature-graphic": [
+      {
+        "id": "feature-graphic-01",
+        "layout": "feature-graphic",
+        "label": {},
+        "headline": {
+          "en": "Dealership control for inventory, sales, and profit.",
+          "ja": "在庫、売上、利益をひとつのアプリで管理。"
+        },
+        "screenshot": ""
+      }
+    ]
+  }
+}

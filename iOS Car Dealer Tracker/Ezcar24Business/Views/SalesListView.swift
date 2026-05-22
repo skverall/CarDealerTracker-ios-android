@@ -67,150 +67,202 @@ struct SalesListView: View {
         }
     }
     
+    private var searchField: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(ColorTheme.secondaryText)
+            
+            TextField(searchPlaceholder, text: activeSearchText)
+                .textInputAutocapitalization(.never)
+                .disableAutocorrection(true)
+                .font(.subheadline)
+                .foregroundColor(ColorTheme.primaryText)
+            
+            if !activeSearchText.wrappedValue.isEmpty {
+                Button {
+                    activeSearchText.wrappedValue = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(ColorTheme.secondaryText)
+                }
+            }
+        }
+        .padding(10)
+        .background(ColorTheme.cardBackground)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.02), radius: 6, x: 0, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ColorTheme.primary.opacity(0.1), lineWidth: 1)
+        )
+    }
+
     var content: some View {
         ZStack {
-                ColorTheme.background.ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    if showNavigation, canViewFinancials {
-                        Picker("Section", selection: $selectedSection) {
-                            ForEach(SalesSection.allCases) { section in
-                                Text(section.title).tag(section)
+            ColorTheme.background.ignoresSafeArea()
+            
+            List {
+                // Header section containing all controls to ensure scroll unity and pull-to-refresh flow
+                Section {
+                    VStack(spacing: 12) {
+                        if showNavigation, canViewFinancials {
+                            Picker("Section", selection: $selectedSection) {
+                                ForEach(SalesSection.allCases) { section in
+                                    Text(section.title).tag(section)
+                                }
                             }
+                            .pickerStyle(.segmented)
                         }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                    }
 
-                    // Search Bar
-                    HStack {
-                        HStack {
-                            Image(systemName: "magnifyingglass")
-                                .foregroundColor(ColorTheme.secondaryText)
-                            TextField(searchPlaceholder, text: activeSearchText)
-                                .foregroundColor(ColorTheme.primaryText)
-                        }
-                        .padding(10) // Reduced padding
-                        .background(ColorTheme.secondaryBackground)
-                        .cornerRadius(10) // Reduced radius
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8) // Reduced vertical padding
+                        searchField
 
-                    if activeSection == .debts {
-                        Picker("Debt Filter", selection: $debtViewModel.filter) {
-                            ForEach(DebtViewModel.DebtFilter.allCases) { filter in
-                                Text(filter.title).tag(filter)
+                        if activeSection == .debts {
+                            Picker("Debt Filter", selection: $debtViewModel.filter) {
+                                ForEach(DebtViewModel.DebtFilter.allCases) { filter in
+                                    Text(filter.title).tag(filter)
+                                }
                             }
+                            .pickerStyle(.segmented)
                         }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
-                    }
-                    
-                    if activeSection == .sales {
-                        // Type Filter
-                        Picker("Sales Filter", selection: $viewModel.filter) {
-                            Text("all_filter".localizedString).tag(SalesViewModel.SaleTypeFilter.all)
-                            Text("vehicles".localizedString).tag(SalesViewModel.SaleTypeFilter.vehicles)
-                            Text("parts_filter".localizedString).tag(SalesViewModel.SaleTypeFilter.parts)
-                        }
-                        .pickerStyle(.segmented)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 8)
                         
-                        SalesInsightsView(
-                            salesCount: viewModel.unifiedSales.count,
-                            netProfit: totalNetProfitVisible,
-                            totalReceivables: totalReceivables,
-                            showProfit: canShowProfitSummary
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.top, 4) // Reduced top padding
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                        if activeSection == .sales {
+                            Picker("Sales Filter", selection: $viewModel.filter) {
+                                Text("all_filter".localizedString).tag(SalesViewModel.SaleTypeFilter.all)
+                                Text("vehicles".localizedString).tag(SalesViewModel.SaleTypeFilter.vehicles)
+                                Text("parts_filter".localizedString).tag(SalesViewModel.SaleTypeFilter.parts)
+                            }
+                            .pickerStyle(.segmented)
+                            
+                            SalesInsightsView(
+                                salesCount: viewModel.unifiedSales.count,
+                                netProfit: totalNetProfitVisible,
+                                totalReceivables: totalReceivables,
+                                showProfit: canShowProfitSummary
+                            )
+                            .padding(.top, 4)
+                        }
                     }
-                    
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                }
+                
+                // Data Rows
+                Section {
                     switch activeSection {
                     case .sales:
                         if viewModel.unifiedSales.isEmpty {
                             EmptySalesView()
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
                         } else {
-                            List {
-                                ForEach(viewModel.unifiedSales) { item in
-                                    ZStack {
-                                        // Navigation Link only for vehicles to see details?
-                                        if case .vehicle(let sale) = item.type, let vehicle = sale.vehicle {
-                                            NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
-                                                EmptyView()
-                                            }
-                                            .opacity(0)
+                            ForEach(viewModel.unifiedSales) { item in
+                                ZStack {
+                                    if case .vehicle(let sale) = item.type, let vehicle = sale.vehicle {
+                                        NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
+                                            EmptyView()
                                         }
-
-                                        SaleCard(item: item)
+                                        .opacity(0)
                                     }
-                                    .listRowSeparator(.hidden)
-                                    .listRowBackground(Color.clear)
-                                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16)) // Reduced list row insets
+
+                                    SaleCard(item: item)
                                 }
-                                .onDelete(perform: deleteItems)
-                                .deleteDisabled(!canDeleteRecords)
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                             }
-                            .listStyle(.plain)
-                            .padding(.bottom, 90) // Ensure content clears tab bar
-                            .refreshable {
-                                if case .signedIn(let user) = sessionStore.status {
-                                    await cloudSyncManager.manualSync(user: user)
-                                    viewModel.fetchAll()
-                                }
-                            }
+                            .onDelete(perform: deleteItems)
+                            .deleteDisabled(!canDeleteRecords)
                         }
                     case .debts:
-                        DebtsListView(viewModel: debtViewModel)
+                        if debtViewModel.debtItems.isEmpty {
+                            EmptyDebtsView()
+                                .listRowInsets(EdgeInsets())
+                                .listRowBackground(Color.clear)
+                                .listRowSeparator(.hidden)
+                        } else {
+                            ForEach(debtViewModel.debtItems) { item in
+                                ZStack {
+                                    NavigationLink(destination: DebtDetailView(debt: item.debt, viewModel: debtViewModel)) {
+                                        EmptyView()
+                                    }
+                                    .opacity(0)
+
+                                    DebtCard(item: item)
+                                }
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                            }
+                            .onDelete(perform: deleteDebts)
+                            .deleteDisabled(!canDeleteRecords)
+                        }
                     }
                 }
             }
-            .navigationTitle(activeSection == .sales ? "sales_history".localizedString : "debts".localizedString)
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if showNavigation {
-                        switch activeSection {
-                        case .sales:
-                            if permissionService.can(.createSale) {
-                                Button {
-                                    showAddSaleSheet = true
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.title2)
-                                        .foregroundColor(ColorTheme.primary)
-                                }
-                            }
-                        case .debts:
+            .listStyle(.plain)
+            .padding(.bottom, 90)
+            .refreshable {
+                if case .signedIn(let user) = sessionStore.status {
+                    await cloudSyncManager.manualSync(user: user)
+                    viewModel.fetchAll()
+                    debtViewModel.fetchDebts()
+                }
+            }
+        }
+        .navigationTitle(activeSection == .sales ? "sales_history".localizedString : "debts".localizedString)
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if showNavigation {
+                    switch activeSection {
+                    case .sales:
+                        if permissionService.can(.createSale) {
                             Button {
-                                showAddDebtSheet = true
+                                showAddSaleSheet = true
                             } label: {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title2)
                                     .foregroundColor(ColorTheme.primary)
                             }
                         }
+                    case .debts:
+                        Button {
+                            showAddDebtSheet = true
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                                .foregroundColor(ColorTheme.primary)
+                        }
                     }
                 }
             }
-            .sheet(isPresented: $showAddSaleSheet) {
-                AddSaleView()
-            }
-            .sheet(isPresented: $showAddDebtSheet) {
-                AddDebtView()
-            }
         }
+        .sheet(isPresented: $showAddSaleSheet) {
+            AddSaleView()
+        }
+        .sheet(isPresented: $showAddDebtSheet) {
+            AddDebtView()
+        }
+    }
     
     private func deleteItems(at offsets: IndexSet) {
         guard canDeleteRecords else { return }
         for index in offsets {
             let item = viewModel.unifiedSales[index]
             viewModel.deleteItem(item)
+        }
+    }
+
+    private func deleteDebts(at offsets: IndexSet) {
+        guard canDeleteRecords else { return }
+        for index in offsets {
+            let debt = debtViewModel.debtItems[index].debt
+            debtViewModel.deleteDebt(debt)
         }
     }
 
@@ -353,77 +405,68 @@ struct SaleCard: View {
     }
     
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 12) {
             // Header
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        // Icon based on type
-                        Image(systemName: iconName)
-                            .font(.caption2) // Reduced font size
-                            .foregroundColor(ColorTheme.primary)
-                            .padding(4)
-                            .background(ColorTheme.primary.opacity(0.1))
-                            .clipShape(Circle())
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 8) {
+                        // Icon based on type with premium gradient background
+                        ZStack {
+                            Circle()
+                                .fill(LinearGradient(colors: [ColorTheme.primary, ColorTheme.secondary], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .frame(width: 28, height: 28)
+                            
+                            Image(systemName: iconName)
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.white)
+                        }
                         
                         Text(item.title)
-                            .font(.system(size: 15, weight: .bold)) // Reduced font size
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
                             .foregroundColor(ColorTheme.primaryText)
                     }
                     
                     if let subtitle = item.subtitle {
                         Text(subtitle)
-                            .font(.caption)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundColor(ColorTheme.secondaryText)
                             .lineLimit(1)
                     }
                     
-                    HStack(spacing: 4) {
+                    HStack(spacing: 6) {
                         Image(systemName: "person.fill")
-                            .font(.caption2)
+                            .font(.system(size: 10))
                         Text(item.buyerName)
-                            .font(.caption)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
                     }
-                    .foregroundColor(ColorTheme.secondaryText)
+                    .foregroundColor(ColorTheme.secondaryText.opacity(0.8))
                 }
                 
                 Spacer()
                 
                 Text(item.date, formatter: saleDateFormatter)
-                    .font(.caption2) // Reduced font size
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 2) // Reduced vertical padding
-                    .background(ColorTheme.background)
-                    .foregroundColor(ColorTheme.secondaryText)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(ColorTheme.primary.opacity(0.08))
+                    .foregroundColor(ColorTheme.primary)
                     .clipShape(Capsule())
             }
-            .padding(12) // Reduced padding
-            
-            Divider()
-                .background(ColorTheme.background)
             
             // Financials Grid
-            HStack(spacing: 0) {
-                ForEach(Array(metrics.enumerated()), id: \.element.id) { index, metric in
+            HStack(spacing: 8) {
+                ForEach(metrics) { metric in
                     FinancialColumn(
                         title: metric.title,
                         amount: metric.amount,
                         color: metric.color,
                         isBold: metric.isBold
                     )
-                    
-                    if index < metrics.count - 1 {
-                        Divider()
-                            .frame(height: 30) // Reduced height
-                    }
                 }
             }
-            .padding(.vertical, 8) // Reduced vertical padding
-            .background(ColorTheme.secondaryBackground.opacity(0.5))
         }
-        .background(ColorTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous)) // Reduced radius
-        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2) // Subtler shadow
+        .padding(14)
+        .cardStyle()
     }
     
     private var iconName: String {
@@ -447,39 +490,64 @@ struct FinancialColumn: View {
     var isBold: Bool = false
     
     var body: some View {
-        VStack(spacing: 2) { // Reduced spacing
+        VStack(spacing: 4) {
             Text(title.uppercased())
-                .font(.system(size: 9, weight: .bold)) // Reduced font
-                .foregroundColor(ColorTheme.secondaryText)
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .foregroundColor(ColorTheme.secondaryText.opacity(0.8))
             
             Text(amount.asCurrency())
-                .font(.system(size: 13, weight: isBold ? .bold : .medium)) // Reduced font
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
                 .foregroundColor(color)
         }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 6)
+        .background(isBold ? color.opacity(0.08) : ColorTheme.background.opacity(0.4))
+        .cornerRadius(10)
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(isBold ? color.opacity(0.15) : ColorTheme.primary.opacity(0.05), lineWidth: 1)
+        )
         .frame(maxWidth: .infinity)
     }
 }
 
 struct EmptySalesView: View {
     var body: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            Image(systemName: "dollarsign.circle")
-                .font(.system(size: 60))
-                .foregroundColor(ColorTheme.secondaryText.opacity(0.3))
+        VStack(spacing: 20) {
+            Spacer(minLength: 40)
             
-            Text("no_sales_yet".localizedString)
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(ColorTheme.primaryText)
+            ZStack {
+                Circle()
+                    .fill(ColorTheme.primary.opacity(0.06))
+                    .frame(width: 80, height: 80)
+                
+                Image(systemName: "dollarsign.circle")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundColor(ColorTheme.primary.opacity(0.6))
+            }
             
-            Text("record_first_sale".localizedString)
-                .font(.subheadline)
-                .foregroundColor(ColorTheme.secondaryText)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            Spacer()
+            VStack(spacing: 8) {
+                Text("no_sales_yet".localizedString)
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(ColorTheme.primaryText)
+                
+                Text("record_first_sale".localizedString)
+                    .font(.system(size: 14, design: .rounded))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+            
+            Spacer(minLength: 40)
         }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(ColorTheme.cardBackground)
+        .cornerRadius(20)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(ColorTheme.primary.opacity(0.06), lineWidth: 1)
+        )
     }
 }
 
@@ -497,32 +565,62 @@ struct SalesInsightsView: View {
     let showProfit: Bool
     
     var body: some View {
-        HStack(spacing: 8) { // Reduced spacing
-            // 1. Sales Count
-            CompactInsightCard(
-                title: "sold".localizedString.uppercased(),
-                value: "\(salesCount)",
-                color: ColorTheme.primaryText,
-                bgColor: ColorTheme.secondaryBackground
-            )
-            
-            // 2. Net Profit
-            if showProfit {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                // 1. Sales Count
                 CompactInsightCard(
-                    title: "net_profit".localizedString,
-                    value: netProfit.asCurrency(),
-                    color: ColorTheme.success,
-                    bgColor: ColorTheme.success.opacity(0.1)
+                    title: "sold".localizedString.uppercased(),
+                    value: "\(salesCount)",
+                    color: ColorTheme.primary,
+                    iconName: "car.fill",
+                    accentGradient: LinearGradient(colors: [ColorTheme.primary, ColorTheme.secondary], startPoint: .top, endPoint: .bottom)
+                )
+                
+                // 2. Receivables
+                CompactInsightCard(
+                    title: "receivables".localizedString.uppercased(),
+                    value: totalReceivables.asCurrency(),
+                    color: ColorTheme.accent,
+                    iconName: "clock.fill",
+                    accentGradient: LinearGradient(colors: [ColorTheme.accent, ColorTheme.accent.opacity(0.6)], startPoint: .top, endPoint: .bottom)
                 )
             }
             
-            // 3. Receivables
-            CompactInsightCard(
-                title: "receivables".localizedString,
-                value: totalReceivables.asCurrency(),
-                color: ColorTheme.accent,
-                bgColor: ColorTheme.accent.opacity(0.1)
-            )
+            if showProfit {
+                // 3. Grand Net Profit (Full Width)
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(ColorTheme.success.opacity(0.15))
+                            .frame(width: 44, height: 44)
+                        
+                        Image(systemName: "dollarsign.circle.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(ColorTheme.success)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("net_profit".localizedString.uppercased())
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundColor(ColorTheme.secondaryText.opacity(0.8))
+                        
+                        Text(netProfit.asCurrency())
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundColor(netProfit >= 0 ? ColorTheme.success : ColorTheme.danger)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(ColorTheme.cardBackground)
+                .cornerRadius(18)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18)
+                        .stroke(LinearGradient(colors: [ColorTheme.success.opacity(0.3), ColorTheme.success.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                )
+                .shadow(color: ColorTheme.success.opacity(0.06), radius: 8, x: 0, y: 4)
+            }
         }
     }
 }
@@ -531,26 +629,45 @@ fileprivate struct CompactInsightCard: View {
     let title: String
     let value: String
     let color: Color
-    let bgColor: Color
+    let iconName: String
+    let accentGradient: LinearGradient
     
     var body: some View {
-        VStack(spacing: 2) { // Reduced spacing
-            Text(title)
-                .font(.system(size: 9, weight: .bold)) // Reduced font size
-                .foregroundColor(ColorTheme.secondaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(accentGradient.opacity(0.15))
+                    .frame(width: 38, height: 38)
+                
+                Image(systemName: iconName)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(color)
+            }
             
-            Text(value)
-                .font(.system(size: 14, weight: .bold)) // Reduced font size
-                .foregroundColor(color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundColor(ColorTheme.secondaryText.opacity(0.8))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                
+                Text(value)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            
+            Spacer()
         }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8) // Reduced padding
-        .padding(.horizontal, 4)
-        .background(bgColor)
-        .cornerRadius(10) // Reduced radius
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .background(ColorTheme.cardBackground)
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(LinearGradient(colors: [color.opacity(0.3), color.opacity(0.05)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+        )
+        .shadow(color: color.opacity(0.05), radius: 6, x: 0, y: 3)
     }
 }

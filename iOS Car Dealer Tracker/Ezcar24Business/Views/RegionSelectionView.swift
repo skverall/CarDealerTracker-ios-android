@@ -247,24 +247,24 @@ struct RegionLanguageSettingsView: View {
                     .buttonStyle(.plain)
                 }
             } header: {
-                Text("select_currency".localizedString) // Changed
+                Text("select_currency".localizedString)
                     .textCase(nil)
             } footer: {
-                Text("This affects currency formatting and distance units")
+                Text("This affects currency formatting and distance units".localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
             }
             
             // Language Section
             Section {
-                ForEach(AppLanguage.allCases.filter { $0 == .english || $0 == .russian }) { language in
+                ForEach(AppLanguage.selectableLanguages) { language in
                     Button {
                         withAnimation {
                             regionSettings.selectedLanguage = language
                         }
                     } label: {
                         HStack(spacing: 16) {
-                            Text(language == .english ? "🇬🇧" : "🇷🇺") // Hardcoded flags for language only
+                            Text(language.listIcon)
                                 .font(.title2)
                             
                             Text(language.nativeName)
@@ -285,9 +285,9 @@ struct RegionLanguageSettingsView: View {
                 }
             } header: {
                 Text("app_language".localizedString)
-
                     .textCase(nil)
-                    Text("App will use system language if available, or fallback to English")
+            } footer: {
+                Text("App will use system language if available, or fallback to English".localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
             }
@@ -304,18 +304,18 @@ struct RegionLanguageSettingsView: View {
                 HStack {
                     Text("mileage".localizedString)
                     Spacer()
-                    Text(regionSettings.selectedRegion.usesKilometers ? "Kilometers" : "Miles")
+                    Text((regionSettings.selectedRegion.usesKilometers ? "Kilometers" : "Miles").localizedString)
                         .foregroundColor(ColorTheme.secondaryText)
                 }
                 
                 HStack {
-                    Text("Example")
+                    Text("Example".localizedString)
                     Spacer()
                     Text(regionSettings.formatCurrency(Decimal(12345.67)))
                         .foregroundColor(ColorTheme.secondaryText)
                 }
             } header: {
-                Text("Preview")
+                Text("Preview".localizedString)
                     .textCase(nil)
             }
         }

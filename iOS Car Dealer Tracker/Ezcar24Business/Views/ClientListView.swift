@@ -55,23 +55,7 @@ struct ClientListView: View {
         ZStack(alignment: .top) {
             ColorTheme.background.ignoresSafeArea()
             
-            VStack(spacing: 0) {
-                // Search & Filters Area
-                VStack(spacing: 0) {
-                    searchBar
-                    
-                    if showFilters {
-                        filtersBar
-                            .padding(.bottom, 8)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                    }
-                }
-                .background(ColorTheme.background)
-                .zIndex(1)
-                
-                // List Content
-                listContent
-            }
+            listContent
         }
         .navigationTitle("clients".localizedString)
         .toolbar {
@@ -134,24 +118,39 @@ struct ClientListView: View {
                 }
             }
         }
-        .padding(8)
+        .padding(10)
         .background(ColorTheme.cardBackground)
-        .cornerRadius(10)
-        .shadow(color: Color.black.opacity(0.03), radius: 4, x: 0, y: 2)
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.02), radius: 6, x: 0, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ColorTheme.primary.opacity(0.1), lineWidth: 1)
+        )
         .padding(.horizontal, 16)
-        .padding(.top, 4)
+        .padding(.top, 8)
         .padding(.bottom, 4)
     }
 
     private var listContent: some View {
         let clients = visibleClients(applyDateFilter: showFilters)
         
-        return Group {
-            if clients.isEmpty {
-                emptyStateView
-            } else {
-                ScrollView {
-                    LazyVStack(spacing: 8, pinnedViews: [.sectionHeaders]) {
+        return ScrollView {
+            VStack(spacing: 12) {
+                // Search & Filters inside the ScrollView so they pull down nicely
+                VStack(spacing: 0) {
+                    searchBar
+                    
+                    if showFilters {
+                        filtersBar
+                            .padding(.bottom, 8)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
+                }
+                
+                if clients.isEmpty {
+                    emptyStateContent
+                } else {
+                    LazyVStack(spacing: 12, pinnedViews: [.sectionHeaders]) {
                         if showFilters {
                             ForEach(groupedClientsByDate(clients), id: \.key) { bucket, bucketClients in
                                 Section(header: dateHeader(for: bucket, count: bucketClients.count)) {
@@ -174,91 +173,96 @@ struct ClientListView: View {
                         }
                     }
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 90) // Ensure content clears tab bar
-                    .padding(.top, 8)
-                }
-                .refreshable {
-                    await performSync()
                 }
             }
-        }
-    }
-    
-    private var emptyStateView: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                Spacer(minLength: 100)
-                
-                ZStack {
-                    Circle()
-                        .fill(ColorTheme.background)
-                        .frame(width: 100, height: 100)
-                        .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
-                    Image(systemName: "person.2.fill")
-                        .font(.system(size: 40))
-                        .foregroundColor(ColorTheme.tertiaryText)
-                }
-                
-                
-                VStack(spacing: 8) {
-                    Text("no_clients_found".localizedString)
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .foregroundColor(ColorTheme.secondaryText)
-                    Text("tap_plus_to_add_client".localizedString)
-                        .font(.subheadline)
-                        .foregroundColor(ColorTheme.tertiaryText)
-                }
-                
-                Spacer(minLength: 100)
-            }
-            .frame(maxWidth: .infinity, minHeight: UIScreen.main.bounds.height * 0.6)
+            .padding(.bottom, 90) // Clear custom floating tab bar
         }
         .refreshable {
             await performSync()
         }
     }
+    
+    private var emptyStateContent: some View {
+        VStack(spacing: 24) {
+            Spacer(minLength: 60)
+            
+            ZStack {
+                Circle()
+                    .fill(ColorTheme.cardBackground)
+                    .frame(width: 90, height: 90)
+                    .overlay(
+                        Circle()
+                            .stroke(LinearGradient(colors: [.white.opacity(0.4), .clear], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
+                    )
+                    .shadow(color: Color.black.opacity(0.03), radius: 10, x: 0, y: 6)
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 36))
+                    .foregroundColor(ColorTheme.tertiaryText)
+            }
+            
+            VStack(spacing: 8) {
+                Text("no_clients_found".localizedString)
+                    .font(.system(.title3, design: .rounded))
+                    .fontWeight(.semibold)
+                    .foregroundColor(ColorTheme.primaryText)
+                Text("tap_plus_to_add_client".localizedString)
+                    .font(.subheadline)
+                    .foregroundColor(ColorTheme.secondaryText)
+            }
+            
+            Spacer(minLength: 60)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+    }
 
     private func statusHeader(for status: ClientStatus, count: Int) -> some View {
         HStack {
-            Text(status.displayName)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(ColorTheme.primaryText)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(status.color)
+                    .frame(width: 6, height: 6)
+                
+                Text(status.displayName.uppercased())
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(ColorTheme.primaryText.opacity(0.8))
+                    .tracking(0.8)
+            }
             
             Spacer()
             
             Text("\(count)")
-                .font(.system(size: 10, weight: .bold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(ColorTheme.cardBackground)
-                .foregroundColor(ColorTheme.secondaryText)
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(status.color.opacity(0.12))
+                .foregroundColor(status.color)
                 .clipShape(Capsule())
-                .shadow(color: Color.black.opacity(0.03), radius: 2, x: 0, y: 1)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 4)
         .background(ColorTheme.background.opacity(0.95))
     }
 
     private func dateHeader(for bucket: String, count: Int) -> some View {
         HStack {
-            Text(bucket)
-                .font(.subheadline)
-                .fontWeight(.medium)
+            Text(bucket.uppercased())
+                .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundColor(ColorTheme.secondaryText)
+                .tracking(0.8)
             
             Spacer()
             
             Text("\(count)")
-                .font(.system(size: 10, weight: .bold))
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Color.secondary.opacity(0.1))
-                .foregroundColor(ColorTheme.secondaryText)
-                .clipShape(Circle())
+                .font(.system(size: 10, weight: .bold, design: .rounded))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(ColorTheme.primary.opacity(0.12))
+                .foregroundColor(ColorTheme.primary)
+                .clipShape(Capsule())
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 4)
         .background(ColorTheme.background.opacity(0.95))
     }
 
@@ -467,12 +471,19 @@ struct ClientRowView: View {
             // 1. Avatar (Left)
             ZStack {
                 Circle()
-                    .fill(ColorTheme.primary.opacity(0.1))
-                    .frame(width: 38, height: 38) // Reduced size
+                    .fill(
+                        LinearGradient(
+                            colors: [ColorTheme.primary, ColorTheme.secondary],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 40, height: 40)
+                    .shadow(color: ColorTheme.primary.opacity(0.15), radius: 4, x: 0, y: 2)
                 
                 Text(initials)
-                    .font(.system(size: 14, weight: .bold, design: .rounded)) // Reduced font
-                    .foregroundColor(ColorTheme.primary)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
             }
             
             // 2. Main Info (Middle)
@@ -480,30 +491,30 @@ struct ClientRowView: View {
                 // Name & Date Row
                 HStack(alignment: .firstTextBaseline) {
                     Text(client.name ?? "unknown_client".localizedString)
-                        .font(.system(size: 16, weight: .bold)) // Bolder name
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundColor(ColorTheme.primaryText)
                         .lineLimit(1)
                     
                     Spacer()
                     
                     Text(activityText)
-                        .font(.system(size: 11, weight: .medium)) // Slightly bolder
-                        .foregroundColor(ColorTheme.primaryText.opacity(0.6)) // Darker than tertiary
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(ColorTheme.primaryText.opacity(0.6))
                 }
                 
-                // Vehicle / Interest (The "Content" of the card)
-                // User wants this to be informative but clean.
+                // Vehicle / Interest
                 if !primaryInterestText.isEmpty {
                     HStack(spacing: 6) {
-                        Image(systemName: "text.alignleft") // Generic content icon, or car if vehicle
+                        Image(systemName: "car.fill")
                             .font(.caption2)
-                            .foregroundColor(ColorTheme.primary) // Highlighted icon
+                            .foregroundColor(ColorTheme.primary)
                         Text(primaryInterestText)
-                            .font(.system(size: 13, weight: .regular))
-                            .foregroundColor(ColorTheme.primaryText.opacity(0.9)) // Darker text
-                            .lineLimit(2) // Allow 2 lines for better context if needed
+                            .font(.system(size: 13, weight: .regular, design: .rounded))
+                            .foregroundColor(ColorTheme.primaryText.opacity(0.85))
+                            .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(.vertical, 2)
                 }
                 
                 // Footer: Status + Actions
@@ -522,67 +533,64 @@ struct ClientRowView: View {
                     // Actions
                     if hasPhone {
                         HStack(spacing: 12) {
-                            // Call Button - Made "Highlighted" as requested
+                            // Call Button - Solid Primary Gradient
                             Button {
                                 if let phone = client.phone { onCall?(phone) }
                             } label: {
                                 ZStack {
                                     Circle()
-                                        .fill(ColorTheme.primary) // Solid primary color
+                                        .fill(LinearGradient(colors: [ColorTheme.primary, ColorTheme.primary.opacity(0.85)], startPoint: .top, endPoint: .bottom))
                                         .frame(width: 32, height: 32)
-                                        .shadow(color: ColorTheme.primary.opacity(0.3), radius: 4, x: 0, y: 2)
+                                        .shadow(color: ColorTheme.primary.opacity(0.25), radius: 4, x: 0, y: 2)
                                     
                                     Image(systemName: "phone.fill")
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 13))
                                         .foregroundColor(.white)
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.hapticScale)
                             
-                            // WhatsApp - Explicit Green Icon
+                            // WhatsApp - Green Gradient
                             Button {
                                 if let phone = client.phone { onWhatsApp?(phone) }
                             } label: {
                                 ZStack {
                                     Circle()
-                                        .fill(Color.green) // Explicit WhatsApp Green
+                                        .fill(LinearGradient(colors: [Color(red: 0.11, green: 0.73, blue: 0.33), Color(red: 0.04, green: 0.58, blue: 0.23)], startPoint: .top, endPoint: .bottom))
                                         .frame(width: 32, height: 32)
-                                        .shadow(color: Color.green.opacity(0.3), radius: 4, x: 0, y: 2)
+                                        .shadow(color: Color(red: 0.04, green: 0.58, blue: 0.23).opacity(0.25), radius: 4, x: 0, y: 2)
                                     
-                                    Image(systemName: "message.circle.fill") // WhatsApp-style icon
-                                        .symbolVariant(.fill) // Ensure fill
-                                        .font(.system(size: 18)) // Slightly larger icon inside
+                                    Image(systemName: "message.circle.fill")
+                                        .font(.system(size: 18))
                                         .foregroundColor(.white)
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.hapticScale)
                             
-                            // SMS
+                            // SMS - Secondary Blue Gradient
                             Button {
                                 if let phone = client.phone { onSMS?(phone) }
                             } label: {
                                 ZStack {
                                     Circle()
-                                        .fill(ColorTheme.secondary)
+                                        .fill(LinearGradient(colors: [ColorTheme.secondary, ColorTheme.secondary.opacity(0.85)], startPoint: .top, endPoint: .bottom))
                                         .frame(width: 32, height: 32)
-                                        .shadow(color: ColorTheme.secondary.opacity(0.3), radius: 4, x: 0, y: 2)
+                                        .shadow(color: ColorTheme.secondary.opacity(0.25), radius: 4, x: 0, y: 2)
                                     
                                     Image(systemName: "bubble.left.and.bubble.right.fill")
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 13))
                                         .foregroundColor(.white)
                                 }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.hapticScale)
                         }
                     }
                 }
-                .padding(.top, 2) // Reduced padding
+                .padding(.top, 2)
             }
         }
-        .padding(10) // Reduced padding
-        .background(ColorTheme.cardBackground)
-        .cornerRadius(14) // Reduced radius
-        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .padding(12)
+        .cardStyle()
     }
     
     private var hasPhone: Bool {
