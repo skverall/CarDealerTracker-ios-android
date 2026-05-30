@@ -20,6 +20,7 @@ struct VehicleListView: View {
     
     @State private var showingAddVehicle = false
     @State private var showingPaywall = false
+    @State private var paywallVehicleCount = 0
     private let presetStatus: String?
     private let showNavigation: Bool
     @State private var presetApplied: Bool = false
@@ -119,7 +120,7 @@ struct VehicleListView: View {
                 AddVehicleView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView()
+                PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: 3)
             }
             .sheet(item: $editingVehicle) { v in
                 VehicleDetailView(vehicle: v, startEditing: true)
@@ -260,6 +261,8 @@ struct VehicleListView: View {
     
     private func handleUpgradeRequest() {
         if isSignedIn {
+            paywallVehicleCount = viewModel.vehicles.count
+            PaywallAnalytics.logVehicleLimitGate(vehicleCount: viewModel.vehicles.count, freeLimit: 3, entryPoint: "vehicle_list")
             showingPaywall = true
         } else {
             appSessionState.exitGuestModeForLogin()

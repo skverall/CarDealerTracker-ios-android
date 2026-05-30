@@ -5,8 +5,52 @@
 //  Premium RevenueCat paywall for Pro subscription.
 //
 
+import Foundation
 import SwiftUI
+import FirebaseAnalytics
+import FirebaseCore
 import RevenueCat
+
+enum PaywallSource: String {
+    case general
+    case vehicleLimit = "vehicle_limit"
+}
+
+struct PaywallContext {
+    let source: PaywallSource
+    let vehicleCount: Int?
+    let freeLimit: Int?
+
+    var analyticsParameters: [String: Any] {
+        var parameters: [String: Any] = [
+            "source": source.rawValue
+        ]
+        if let vehicleCount {
+            parameters["vehicle_count"] = vehicleCount
+        }
+        if let freeLimit {
+            parameters["free_limit"] = freeLimit
+        }
+        return parameters
+    }
+}
+
+enum PaywallAnalytics {
+    static func log(_ event: String, context: PaywallContext, extra: [String: Any] = [:]) {
+        guard FirebaseApp.app() != nil else { return }
+        var parameters = context.analyticsParameters
+        extra.forEach { parameters[$0.key] = $0.value }
+        Analytics.logEvent(event, parameters: parameters)
+    }
+
+    static func logVehicleLimitGate(vehicleCount: Int, freeLimit: Int, entryPoint: String) {
+        log(
+            "vehicle_limit_gate_shown",
+            context: PaywallContext(source: .vehicleLimit, vehicleCount: vehicleCount, freeLimit: freeLimit),
+            extra: ["entry_point": entryPoint]
+        )
+    }
+}
 
 enum PaywallMode: String, Identifiable {
     case upgrade
@@ -22,21 +66,26 @@ struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
 
     let mode: PaywallMode
+    let context: PaywallContext
 
     @State private var animateContent = false
     @State private var selectedPlanId: String?
     @State private var showConfetti = false
     @State private var isSuccessAnimating = false
+    @State private var didLogShown = false
+    @State private var didLogDismissed = false
+    @State private var didCompletePurchase = false
 
     private let features = [
-        PaywallFeature(icon: "car.fill", title: "Unlimited Cars", shortTitle: "Cars", subtitle: "Unlimited vehicles"),
+        PaywallFeature(icon: "infinity.circle.fill", title: "Unlimited Inventory", shortTitle: "paywall_feature_unlimited", subtitle: "No car limit"),
+        PaywallFeature(icon: "chart.line.uptrend.xyaxis", title: "Profit Per Vehicle", shortTitle: "paywall_feature_profit", subtitle: "Know each deal"),
         PaywallFeature(icon: "icloud.fill", title: "Cloud Sync", shortTitle: "Sync", subtitle: "All devices"),
-        PaywallFeature(icon: "doc.text.fill", title: "PDF Reports", shortTitle: "PDF", subtitle: "Pro invoices"),
-        PaywallFeature(icon: "chart.bar.fill", title: "Analytics", shortTitle: "Analytics", subtitle: "Growth insights")
+        PaywallFeature(icon: "doc.text.fill", title: "PDF Reports", shortTitle: "paywall_feature_reports", subtitle: "Shareable docs")
     ]
 
-    init(mode: PaywallMode = .upgrade) {
+    init(mode: PaywallMode = .upgrade, source: PaywallSource = .general, vehicleCount: Int? = nil, freeLimit: Int? = nil) {
         self.mode = mode
+        self.context = PaywallContext(source: source, vehicleCount: vehicleCount, freeLimit: freeLimit)
     }
 
     private var isSignedIn: Bool {
@@ -115,6 +164,8 @@ struct PaywallView: View {
             if !isProManagement {
                 syncSelectedPlan()
             }
+
+            logPaywallShownIfNeeded()
         }
         .onChange(of: subscriptionManager.currentOffering) { _, newOffering in
             guard newOffering != nil else { return }
@@ -131,6 +182,9 @@ struct PaywallView: View {
             if mode == .upgrade && isPro && !isSuccessAnimating {
                 dismiss()
             }
+        }
+        .onDisappear {
+            logPaywallDismissedIfNeeded(reason: "sheet_disappear")
         }
     }
 
@@ -311,6 +365,9 @@ struct PaywallView: View {
                 emptyPlansState(layout: layout)
             } else {
                 planCards(plans, layout: layout)
+                if let yearlySavingsText = plans.first(where: { $0.periodUnit == .year })?.savingsDetailText {
+                    annualSavingsBanner(yearlySavingsText, layout: layout)
+                }
             }
         }
     }
@@ -331,6 +388,30 @@ struct PaywallView: View {
         .frame(maxWidth: .infinity)
         .frame(height: layout.planCardHeight)
         .background(PaywallGlassBackground(cornerRadius: layout.planCornerRadius))
+    }
+
+    private func annualSavingsBanner(_ text: String, layout: PaywallLayout) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "tag.fill")
+                .font(.system(size: layout.savingsBannerIconSize, weight: .bold))
+                .foregroundStyle(Color(hex: "86EFAC"))
+
+            Text(text)
+                .font(.system(size: layout.savingsBannerFontSize, weight: .bold))
+                .foregroundStyle(.white.opacity(0.86))
+                .lineLimit(layout.isUltraTiny ? 1 : 2)
+                .minimumScaleFactor(0.72)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, layout.isCompact ? 10 : 12)
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: layout.savingsBannerHeight)
+        .background(Color(hex: "22C55E").opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(Color(hex: "86EFAC").opacity(0.22), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
@@ -358,6 +439,7 @@ struct PaywallView: View {
                             withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
                                 selectedPlanId = plan.id
                             }
+                            logPlanSelected(plan)
                         }
                     }
                 }
@@ -412,6 +494,15 @@ struct PaywallView: View {
             trustSection(layout: layout)
 
             ctaButton(layout: layout)
+
+            if let disclosure = selectedPlanDisclosure {
+                Text(disclosure)
+                    .font(.system(size: layout.disclosureFontSize, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.64))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.72)
+            }
 
             Button {
                 subscriptionManager.restorePurchases()
@@ -552,8 +643,11 @@ struct PaywallView: View {
     private func ctaButton(layout: PaywallLayout) -> some View {
         Button {
             guard let plan = selectedDisplayPlan else { return }
+            PaywallAnalytics.log("paywall_cta_tapped", context: context, extra: analyticsParameters(for: plan))
             purchase(plan: plan) { success in
                 if success {
+                    didCompletePurchase = true
+                    PaywallAnalytics.log("paywall_purchase_success", context: context, extra: analyticsParameters(for: plan))
                     isSuccessAnimating = true
                     withAnimation {
                         showConfetti = true
@@ -562,6 +656,8 @@ struct PaywallView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                         dismiss()
                     }
+                } else {
+                    PaywallAnalytics.log("paywall_purchase_not_completed", context: context, extra: analyticsParameters(for: plan))
                 }
             }
         } label: {
@@ -609,6 +705,7 @@ struct PaywallView: View {
 
     private func closeButton(layout: PaywallLayout) -> some View {
         Button {
+            logPaywallDismissedIfNeeded(reason: "close_button")
             dismiss()
         } label: {
             Image(systemName: "xmark")
@@ -626,25 +723,61 @@ struct PaywallView: View {
     private var ctaText: String {
         if subscriptionManager.isLoading { return "Processing...".localizedString }
         guard let plan = selectedDisplayPlan else { return "Select a Plan".localizedString }
-        return plan.isIntroEligible ? "Start 1 Week Free Trial".localizedString : "Continue".localizedString
+        return plan.isIntroEligible ? "paywall_trial_cta".localizedString : "Continue".localizedString
+    }
+
+    private var selectedPlanDisclosure: String? {
+        guard let plan = selectedDisplayPlan else { return nil }
+
+        if plan.isIntroEligible, plan.periodUnit == .year {
+            return String(format: "paywall_trial_disclosure_yearly".localizedString, plan.priceText)
+        }
+
+        if plan.periodUnit == .year {
+            return String(format: "paywall_renews_yearly".localizedString, plan.priceText)
+        }
+
+        return String(format: "paywall_renews_generic".localizedString, plan.priceText)
     }
 
     private var heroBadgeText: String {
-        (isProManagement ? "Pro Access Active" : "Unlock Full Potential").localizedString
+        if isProManagement {
+            return "Pro Access Active".localizedString
+        }
+        if context.source == .vehicleLimit {
+            return "paywall_vehicle_limit_badge".localizedString
+        }
+        return "Unlock Full Potential".localizedString
     }
 
     private var heroTitlePrefix: String {
-        (isProManagement ? "paywall_manage_title_prefix" : "paywall_upgrade_title_prefix").localizedString
+        if isProManagement {
+            return "paywall_manage_title_prefix".localizedString
+        }
+        if context.source == .vehicleLimit {
+            return "paywall_vehicle_limit_title_prefix".localizedString
+        }
+        return "paywall_upgrade_title_prefix".localizedString
     }
 
     private var heroTitleHighlight: String {
-        (isProManagement ? "paywall_manage_title_highlight" : "paywall_upgrade_title_highlight").localizedString
+        if isProManagement {
+            return "paywall_manage_title_highlight".localizedString
+        }
+        if context.source == .vehicleLimit {
+            return "paywall_vehicle_limit_title_highlight".localizedString
+        }
+        return "paywall_upgrade_title_highlight".localizedString
     }
 
     private var heroSubtitle: String {
-        isProManagement
-            ? "Your dealership tools are unlocked.\nKeep growing with Car Dealer Tracker.".localizedString
-            : "Everything you need to grow\nyour dealership business.".localizedString
+        if isProManagement {
+            return "Your dealership tools are unlocked.\nKeep growing with Car Dealer Tracker.".localizedString
+        }
+        if context.source == .vehicleLimit {
+            return "paywall_vehicle_limit_subtitle".localizedString
+        }
+        return "Everything you need to grow\nyour dealership business.".localizedString
     }
 
     private var hasRevenueCatSubscription: Bool {
@@ -719,17 +852,23 @@ struct PaywallView: View {
     }
 
     private func displayPlans() -> [PaywallDisplayPlan] {
-        let purchasePlans = availablePlans().map { plan in
-            PaywallDisplayPlan(
+        let plans = availablePlans()
+        let monthlyPlan = plans.first { $0.storeProduct.subscriptionPeriod?.unit == .month }
+        let purchasePlans = plans.map { plan in
+            let isYearlyIntroEligible = plan.storeProduct.subscriptionPeriod?.unit == .year && isIntroEligible(for: plan)
+            let savings = annualSavings(for: plan.storeProduct, comparedTo: monthlyPlan?.storeProduct)
+            return PaywallDisplayPlan(
                 id: plan.id,
                 title: planTitle(for: plan.storeProduct.subscriptionPeriod),
                 priceText: plan.storeProduct.localizedPriceString,
                 periodLabel: periodLabel(for: plan.storeProduct.subscriptionPeriod),
-                billingLine: billingLine(for: plan.storeProduct.subscriptionPeriod),
+                billingLine: isYearlyIntroEligible ? "paywall_trial_billing_yearly".localizedString : billingLine(for: plan.storeProduct.subscriptionPeriod),
+                savingsBadgeText: savings?.badgeText,
+                savingsDetailText: savings?.detailText,
                 periodUnit: plan.storeProduct.subscriptionPeriod?.unit,
                 productIdentifier: plan.storeProduct.productIdentifier,
                 purchasePlan: plan,
-                isIntroEligible: isIntroEligible(for: plan)
+                isIntroEligible: isYearlyIntroEligible
             )
         }
 
@@ -737,11 +876,32 @@ struct PaywallView: View {
             return []
         }
 
-        guard !purchasePlans.contains(where: { $0.periodUnit == .week }) else {
-            return purchasePlans
+        let sortedPlans = sortDisplayPlans(purchasePlans)
+
+        guard !sortedPlans.contains(where: { $0.periodUnit == .week }) else {
+            return sortedPlans
         }
 
-        return [fallbackWeeklyPlan(existingPlans: purchasePlans)] + purchasePlans
+        return sortDisplayPlans(sortedPlans + [fallbackWeeklyPlan(existingPlans: sortedPlans)])
+    }
+
+    private func sortDisplayPlans(_ plans: [PaywallDisplayPlan]) -> [PaywallDisplayPlan] {
+        plans.sorted { lhs, rhs in
+            displaySortOrder(for: lhs) < displaySortOrder(for: rhs)
+        }
+    }
+
+    private func displaySortOrder(for plan: PaywallDisplayPlan) -> Int {
+        switch plan.periodUnit {
+        case .year:
+            return 0
+        case .month:
+            return 1
+        case .week:
+            return 2
+        default:
+            return 9
+        }
     }
 
     private func syncSelectedPlan() {
@@ -779,6 +939,35 @@ struct PaywallView: View {
         return hasIntroOffer && eligibility?.status == .eligible
     }
 
+    private func annualSavings(for yearlyProduct: StoreProduct, comparedTo monthlyProduct: StoreProduct?) -> PaywallAnnualSavings? {
+        guard yearlyProduct.subscriptionPeriod?.unit == .year,
+              let monthlyProduct,
+              monthlyProduct.subscriptionPeriod?.unit == .month else { return nil }
+
+        let monthlyAnnualPrice = monthlyProduct.price * Decimal(12)
+        let yearlyPrice = yearlyProduct.price
+        guard monthlyAnnualPrice > yearlyPrice else { return nil }
+
+        let discount = monthlyAnnualPrice - yearlyPrice
+        let discountPercentDecimal = discount / monthlyAnnualPrice * Decimal(100)
+        let discountPercent = Int(floor(NSDecimalNumber(decimal: discountPercentDecimal).doubleValue))
+        guard discountPercent > 0 else { return nil }
+
+        let fullYearPriceText = formattedPrice(monthlyAnnualPrice, using: yearlyProduct.priceFormatter ?? monthlyProduct.priceFormatter)
+        return PaywallAnnualSavings(
+            badgeText: String(format: "paywall_yearly_savings_badge".localizedString, discountPercent),
+            detailText: String(format: "paywall_yearly_savings_detail".localizedString, discountPercent, yearlyProduct.localizedPriceString, fullYearPriceText)
+        )
+    }
+
+    private func formattedPrice(_ price: Decimal, using formatter: NumberFormatter?) -> String {
+        if let formatter = formatter?.copy() as? NumberFormatter,
+           let priceText = formatter.string(from: price as NSDecimalNumber) {
+            return priceText
+        }
+        return NSDecimalNumber(decimal: price).stringValue
+    }
+
     private func fallbackWeeklyPlan(existingPlans: [PaywallDisplayPlan]) -> PaywallDisplayPlan {
         PaywallDisplayPlan(
             id: SubscriptionPackageCatalog.standaloneWeeklyProductIdentifiers[0],
@@ -786,6 +975,8 @@ struct PaywallView: View {
             priceText: fallbackWeeklyPriceText(existingPlans: existingPlans),
             periodLabel: "paywall_period_week".localizedString,
             billingLine: "Billed weekly".localizedString,
+            savingsBadgeText: nil,
+            savingsDetailText: nil,
             periodUnit: .week,
             productIdentifier: SubscriptionPackageCatalog.standaloneWeeklyProductIdentifiers[0],
             purchasePlan: nil,
@@ -850,6 +1041,44 @@ struct PaywallView: View {
             return "Billed automatically".localizedString
         }
     }
+
+    private func logPaywallShownIfNeeded() {
+        guard !didLogShown else { return }
+        didLogShown = true
+        var parameters: [String: Any] = [
+            "mode": mode.rawValue
+        ]
+        if let selectedDisplayPlan {
+            analyticsParameters(for: selectedDisplayPlan).forEach { parameters[$0.key] = $0.value }
+        }
+        PaywallAnalytics.log("paywall_shown", context: context, extra: parameters)
+    }
+
+    private func logPaywallDismissedIfNeeded(reason: String) {
+        guard !didLogDismissed, !didCompletePurchase, !subscriptionManager.isProAccessActive else { return }
+        didLogDismissed = true
+        var parameters: [String: Any] = [
+            "reason": reason,
+            "mode": mode.rawValue
+        ]
+        if let selectedDisplayPlan {
+            analyticsParameters(for: selectedDisplayPlan).forEach { parameters[$0.key] = $0.value }
+        }
+        PaywallAnalytics.log("paywall_dismissed", context: context, extra: parameters)
+    }
+
+    private func logPlanSelected(_ plan: PaywallDisplayPlan) {
+        PaywallAnalytics.log("paywall_plan_selected", context: context, extra: analyticsParameters(for: plan))
+    }
+
+    private func analyticsParameters(for plan: PaywallDisplayPlan) -> [String: Any] {
+        [
+            "product_id": plan.productIdentifier,
+            "plan_period": plan.analyticsPeriod,
+            "is_yearly": plan.periodUnit == .year,
+            "is_intro_eligible": plan.isIntroEligible
+        ]
+    }
 }
 
 struct PaywallFeature {
@@ -901,6 +1130,9 @@ struct PaywallLayout {
     var planCardHeight: CGFloat { isUltraTiny ? 112 : (isTiny ? 132 : (isCompact ? 144 : 154)) }
     var scrollingPlanCardWidth: CGFloat { isUltraTiny ? 100 : (isTiny ? 112 : 124) }
     var planCornerRadius: CGFloat { isUltraTiny ? 16 : (isTiny ? 18 : 20) }
+    var savingsBannerHeight: CGFloat { isUltraTiny ? 28 : (isTiny ? 32 : 36) }
+    var savingsBannerFontSize: CGFloat { isUltraTiny ? 10 : (isTiny ? 11 : 12) }
+    var savingsBannerIconSize: CGFloat { isUltraTiny ? 10 : (isTiny ? 11 : 12) }
     var guestPromptHeight: CGFloat { 48 }
     var bottomSpacing: CGFloat { isUltraTiny ? 4 : (isTiny ? 7 : 9) }
     var bottomTopPadding: CGFloat { isUltraTiny ? 6 : (isTiny ? 8 : 10) }
@@ -912,6 +1144,7 @@ struct PaywallLayout {
     var ctaFontSize: CGFloat { isUltraTiny ? 17 : (isTiny ? 19 : 21) }
     var ctaCornerRadius: CGFloat { isUltraTiny ? 18 : (isTiny ? 20 : 23) }
     var ctaShadowRadius: CGFloat { isUltraTiny ? 10 : (isTiny ? 12 : 16) }
+    var disclosureFontSize: CGFloat { isUltraTiny ? 10 : (isTiny ? 11 : 12) }
     var restoreFontSize: CGFloat { isUltraTiny ? 12 : (isTiny ? 13 : 15) }
     var legalFontSize: CGFloat { isUltraTiny ? 10 : (isTiny ? 11 : 12) }
     var closeButtonSize: CGFloat { isUltraTiny ? 40 : (isTiny ? 46 : 52) }
@@ -948,10 +1181,32 @@ struct PaywallDisplayPlan: Identifiable {
     let priceText: String
     let periodLabel: String
     let billingLine: String
+    let savingsBadgeText: String?
+    let savingsDetailText: String?
     let periodUnit: SubscriptionPeriod.Unit?
     let productIdentifier: String
     let purchasePlan: SubscriptionPurchasePlan?
     let isIntroEligible: Bool
+
+    var analyticsPeriod: String {
+        switch periodUnit {
+        case .day:
+            return "day"
+        case .week:
+            return "week"
+        case .month:
+            return "month"
+        case .year:
+            return "year"
+        default:
+            return "unknown"
+        }
+    }
+}
+
+struct PaywallAnnualSavings {
+    let badgeText: String
+    let detailText: String
 }
 
 struct PaywallPlanCard: View {
@@ -1077,7 +1332,7 @@ struct PaywallPlanCard: View {
     }
 
     private var badgeText: String? {
-        if isBestValue { return (isCompact ? "Best" : "Best value").localizedString }
+        if isBestValue { return plan.savingsBadgeText ?? (isCompact ? "Best" : "Best value").localizedString }
         if isIntroEligible { return "Trial".localizedString }
         return nil
     }

@@ -31,6 +31,7 @@ struct AddVehicleView: View {
     @State private var saleDate = Date()
     
     @State private var showingPaywall = false
+    @State private var paywallVehicleCount = 0
 
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \FinancialAccount.accountType, ascending: true)],
@@ -166,7 +167,7 @@ struct AddVehicleView: View {
                 }
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView()
+                PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: 3)
             }
         }
         .onAppear {
@@ -307,6 +308,8 @@ struct AddVehicleView: View {
     
     private func handleUpgradeRequest() {
         if case .signedIn = sessionStore.status {
+            paywallVehicleCount = viewModel.vehicles.count
+            PaywallAnalytics.logVehicleLimitGate(vehicleCount: viewModel.vehicles.count, freeLimit: 3, entryPoint: "add_vehicle")
             showingPaywall = true
         } else {
             appSessionState.exitGuestModeForLogin()

@@ -1,0 +1,14 @@
+2026-05-30 22:30:41.969 xcodebuild[86601:7398545] [MT] IDEDistribution: -[IDEDistributionLogging _createLoggingBundleAtPath:]: Created bundle at path "/var/folders/4f/yx5z7zjd3sn03px4qms8c3dw0000gn/T/Ezcar24Business_2026-05-30_22-30-41.969.xcdistributionlogs".
+2026-05-30 22:31:01.131 xcodebuild[86601:7398545] Starting upload
+error: exportArchive The provided entity includes an attribute with a value that has already been used. The bundle version must be higher than the previously uploaded version: ‘4’. (ID: 383e65e9-4ee0-4e5c-9771-1ad30b8478fe).
+
+warning: exportArchive Upload Symbols Failed. The archive did not include a dSYM for the FirebaseAnalytics.framework with the UUIDs [B0471E78-B1B6-30EE-A184-B8B153BFDD6B]. Ensure that the archive's dSYM folder includes a DWARF file for FirebaseAnalytics.framework with the expected UUIDs.
+
+warning: exportArchive Upload Symbols Failed. The archive did not include a dSYM for the GoogleAdsOnDeviceConversion.framework with the UUIDs [577C3B7C-968D-3B1D-82F5-31B7F8399414]. Ensure that the archive's dSYM folder includes a DWARF file for GoogleAdsOnDeviceConversion.framework with the expected UUIDs.
+
+warning: exportArchive Upload Symbols Failed. The archive did not include a dSYM for the GoogleAppMeasurement.framework with the UUIDs [AAC06911-55D7-39F5-BE57-661DE597C854]. Ensure that the archive's dSYM folder includes a DWARF file for GoogleAppMeasurement.framework with the expected UUIDs.
+
+warning: exportArchive Upload Symbols Failed. The archive did not include a dSYM for the GoogleAppMeasurementIdentitySupport.framework with the UUIDs [193FD876-4998-3506-9384-D354D7B32675]. Ensure that the archive's dSYM folder includes a DWARF file for GoogleAppMeasurementIdentitySupport.framework with the expected UUIDs.
+
+** EXPORT FAILED **
+
