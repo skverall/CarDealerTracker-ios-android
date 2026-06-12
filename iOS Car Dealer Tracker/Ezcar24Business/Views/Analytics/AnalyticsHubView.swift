@@ -497,19 +497,21 @@ private struct AnalyticsPulseCard: View {
     let hasProAccess: Bool
     let action: () -> Void
 
+    private let hairline = Color.white.opacity(0.14)
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: 22) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("analytics_pulse_title".localizedString)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(ColorTheme.primaryText)
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundColor(.white)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
 
                     Text(String(format: "analytics_pulse_subtitle".localizedString, periodTitle))
                         .font(.system(size: 13))
-                        .foregroundColor(ColorTheme.secondaryText)
+                        .foregroundColor(.white.opacity(0.55))
                         .lineLimit(1)
                 }
 
@@ -518,21 +520,23 @@ private struct AnalyticsPulseCard: View {
                 AnalyticsPulseStatusBadge(status: status)
             }
 
-            HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .top, spacing: 14) {
                 PulseKeyMetric(title: "total_revenue".localizedString, value: revenue)
 
-                Divider()
-                    .frame(height: 36)
+                Rectangle()
+                    .fill(hairline)
+                    .frame(width: 1, height: 38)
 
                 PulseKeyMetric(title: "total_spend".localizedString, value: spend)
 
-                Divider()
-                    .frame(height: 36)
+                Rectangle()
+                    .fill(hairline)
+                    .frame(width: 1, height: 38)
 
                 PulseKeyMetric(
                     title: "net_profit".localizedString,
                     value: profit,
-                    valueColor: profit.hasPrefix("-") ? ColorTheme.danger : nil
+                    valueColor: profit.hasPrefix("-") ? Color(red: 1.0, green: 0.52, blue: 0.52) : nil
                 )
             }
 
@@ -544,17 +548,21 @@ private struct AnalyticsPulseCard: View {
                 )
 
                 if let agingCount {
-                    Divider()
+                    Rectangle()
+                        .fill(hairline.opacity(0.7))
+                        .frame(height: 1)
 
                     PulseDetailRow(
                         title: "analytics_aging_stock".localizedString,
                         value: String(format: "analytics_units_value".localizedString, Int64(agingCount)),
-                        valueColor: agingCount > 0 ? ColorTheme.danger : nil
+                        valueColor: agingCount > 0 ? Color(red: 1.0, green: 0.52, blue: 0.52) : nil
                     )
                 }
 
                 if let conversionRate {
-                    Divider()
+                    Rectangle()
+                        .fill(hairline.opacity(0.7))
+                        .frame(height: 1)
 
                     PulseDetailRow(
                         title: "analytics_conversion".localizedString,
@@ -566,15 +574,52 @@ private struct AnalyticsPulseCard: View {
             Button(action: action) {
                 Text(hasProAccess ? "analytics_ask_ai".localizedString : "ai_insights_unlock".localizedString)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(Color(red: 0.07, green: 0.16, blue: 0.34))
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(ColorTheme.primary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(.hapticScale)
         }
-        .padding(20)
+        .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardStyle()
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.11, green: 0.24, blue: 0.47),
+                                Color(red: 0.06, green: 0.13, blue: 0.30),
+                                Color(red: 0.04, green: 0.09, blue: 0.22)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.white.opacity(0.10), Color.clear],
+                            center: .topTrailing,
+                            startRadius: 0,
+                            endRadius: 320
+                        )
+                    )
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.22), Color.white.opacity(0.04)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: Color(red: 0.05, green: 0.11, blue: 0.26).opacity(0.35), radius: 18, x: 0, y: 10)
     }
 }
 
@@ -589,9 +634,15 @@ private struct AnalyticsPulseStatusBadge: View {
 
             Text(status.title)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(ColorTheme.secondaryText)
+                .foregroundColor(.white.opacity(0.78))
         }
-        .padding(.top, 5)
+        .padding(.horizontal, 11)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.08), in: Capsule())
+        .overlay(
+            Capsule()
+                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
+        )
     }
 }
 
@@ -601,18 +652,18 @@ private struct PulseKeyMetric: View {
     var valueColor: Color? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 5) {
             Text(title)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundColor(ColorTheme.secondaryText)
+                .foregroundColor(.white.opacity(0.55))
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
 
             Text(value)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
-                .foregroundColor(valueColor ?? ColorTheme.primaryText)
+                .font(.system(size: 19, weight: .semibold, design: .rounded))
+                .foregroundColor(valueColor ?? .white)
                 .lineLimit(1)
-                .minimumScaleFactor(0.65)
+                .minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -628,14 +679,14 @@ private struct PulseDetailRow: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 14))
-                    .foregroundColor(ColorTheme.primaryText)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
 
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
                         .font(.system(size: 12))
-                        .foregroundColor(ColorTheme.secondaryText)
+                        .foregroundColor(.white.opacity(0.5))
                         .lineLimit(2)
                 }
             }
@@ -643,11 +694,11 @@ private struct PulseDetailRow: View {
             Spacer(minLength: 12)
 
             Text(value)
-                .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundColor(valueColor ?? ColorTheme.primaryText)
+                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .foregroundColor(valueColor ?? .white)
                 .lineLimit(1)
         }
-        .padding(.vertical, 10)
+        .padding(.vertical, 11)
     }
 }
 
