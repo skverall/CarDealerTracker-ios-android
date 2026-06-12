@@ -11,3 +11,11 @@ supabase/supabase/
 keystore.properties
 local.properties
 google-services.json
+
+# Build artifacts
+iOS Car Dealer Tracker/build/
+Android Car Dealer Tracker/.gradle/
+Android Car Dealer Tracker/build/
+Android Car Dealer Tracker/app/build/
+node_modules/
+.next/
