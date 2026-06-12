@@ -1,0 +1,265 @@
+{
+  "schemaVersion": 2,
+  "appName": "Car Dealer Tracker",
+  "themeId": "dark-bold",
+  "connectedCanvas": true,
+  "locales": [
+    "ar"
+  ],
+  "locale": "ar",
+  "device": "iphone",
+  "orientation": "portrait",
+  "appIcon": "/app-icon.png",
+  "slidesByDevice": {
+    "iphone": [
+      {
+        "id": "ar-hero-dashboard",
+        "layout": "hero",
+        "label": {
+          "ar": "إدارة المعرض"
+        },
+        "headline": {
+          "ar": "كل أعمال المعرض\nفي شاشة واحدة"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/01.png",
+        "transforms": {
+          "device": {
+            "x": 192,
+            "y": 790,
+            "width": 936,
+            "height": 1906,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 90,
+            "y": 120,
+            "width": 1140,
+            "height": 610,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "ar-inventory",
+        "layout": "device-bottom",
+        "label": {
+          "ar": "المخزون"
+        },
+        "headline": {
+          "ar": "تابع السيارات\nبدقة ووضوح"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/02.png",
+        "transforms": {
+          "device": {
+            "x": 192,
+            "y": 835,
+            "width": 936,
+            "height": 1906,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 90,
+            "y": 150,
+            "width": 1140,
+            "height": 610,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "ar-profit-sales",
+        "layout": "device-top",
+        "label": {
+          "ar": "الأرباح"
+        },
+        "headline": {
+          "ar": "اعرف الربح\nمن كل صفقة"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/03.png",
+        "inverted": true,
+        "transforms": {
+          "device": {
+            "x": 204,
+            "y": 210,
+            "width": 912,
+            "height": 1857,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 90,
+            "y": 2080,
+            "width": 1140,
+            "height": 610,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "ar-expenses-list",
+        "layout": "device-bottom",
+        "label": {
+          "ar": "المصروفات"
+        },
+        "headline": {
+          "ar": "سيطر على\nكل مصروف"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/04.png",
+        "transforms": {
+          "device": {
+            "x": 204,
+            "y": 845,
+            "width": 912,
+            "height": 1857,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 90,
+            "y": 150,
+            "width": 1140,
+            "height": 610,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "ar-fast-entry",
+        "layout": "two-devices",
+        "label": {
+          "ar": "إدخال سريع"
+        },
+        "headline": {
+          "ar": "سجّل المصروف\nقبل أن تنساه"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/05.png",
+        "screenshotSecondary": "/screenshots/apple/iphone/{locale}/04.png",
+        "transforms": {
+          "device": {
+            "x": 60,
+            "y": 900,
+            "width": 835,
+            "height": 1702,
+            "rotation": -5,
+            "zIndex": 3
+          },
+          "deviceSecondary": {
+            "x": 555,
+            "y": 1020,
+            "width": 790,
+            "height": 1610,
+            "rotation": 7,
+            "zIndex": 2
+          },
+          "caption": {
+            "x": 90,
+            "y": 120,
+            "width": 1140,
+            "height": 640,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "ar-parts",
+        "layout": "device-top",
+        "label": {
+          "ar": "قطع الغيار"
+        },
+        "headline": {
+          "ar": "مخزون القطع\nتحت السيطرة"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/06.png",
+        "inverted": true,
+        "transforms": {
+          "device": {
+            "x": 204,
+            "y": 210,
+            "width": 912,
+            "height": 1857,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 90,
+            "y": 2080,
+            "width": 1140,
+            "height": 610,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "ar-clients",
+        "layout": "device-bottom",
+        "label": {
+          "ar": "العملاء"
+        },
+        "headline": {
+          "ar": "تابع العملاء\nوالمواعيد"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/07.png",
+        "transforms": {
+          "device": {
+            "x": 204,
+            "y": 845,
+            "width": 912,
+            "height": 1857,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 90,
+            "y": 150,
+            "width": 1140,
+            "height": 610,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "ar-insights",
+        "layout": "device-bottom",
+        "label": {
+          "ar": "القرارات"
+        },
+        "headline": {
+          "ar": "أرقام واضحة\nلقرارات أسرع"
+        },
+        "screenshot": "/screenshots/apple/iphone/{locale}/08.png",
+        "transforms": {
+          "device": {
+            "x": 204,
+            "y": 845,
+            "width": 912,
+            "height": 1857,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 90,
+            "y": 150,
+            "width": 1140,
+            "height": 610,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      }
+    ],
+    "android": [],
+    "ipad": [],
+    "android-7": [],
+    "android-10": [],
+    "feature-graphic": []
+  }
+}
