@@ -314,7 +314,7 @@ struct VehicleDetailView: View {
             } catch {
                 await MainActor.run {
                     isSavingPhotoOrder = false
-                    photoOrderErrorMessage = "Couldn't save photo order. Please try again."
+                    photoOrderErrorMessage = "Couldn't save photo order. Please try again.".localizedString
                 }
             }
         }
@@ -1994,7 +1994,7 @@ struct VehicleDetailView: View {
         vehiclePhotos = photos
 
         return VehicleShareDraft(
-            shareTitle: shareTitle.isEmpty ? "Vehicle" : shareTitle,
+            shareTitle: shareTitle.isEmpty ? "vehicle".localizedString : shareTitle,
             price: askingPrice,
             inventoryID: inventoryID,
             vin: vin,

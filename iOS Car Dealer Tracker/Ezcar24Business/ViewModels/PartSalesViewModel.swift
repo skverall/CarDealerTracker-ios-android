@@ -149,7 +149,7 @@ struct PartSaleItem: Identifiable {
         self.id = sale.objectID
         self.sale = sale
         self.saleDate = sale.date ?? Date()
-        self.buyerName = sale.buyerName?.isEmpty == false ? sale.buyerName! : "Walk-in"
+        self.buyerName = sale.buyerName?.isEmpty == false ? sale.buyerName! : "Walk-in".localizedStringFallback
 
         let items = sale.activeLineItemsArray
         if items.isEmpty {
@@ -171,7 +171,7 @@ struct PartSaleItem: Identifiable {
             amount += qty * price
             cost += qty * unitCost
 
-            let partName = item.part?.displayName ?? "Part"
+            let partName = item.part?.displayName ?? "Part".localizedStringFallback
             grouped[partName, default: 0] += qty
         }
 

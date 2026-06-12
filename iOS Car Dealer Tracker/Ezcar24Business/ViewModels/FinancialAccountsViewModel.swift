@@ -59,10 +59,10 @@ class FinancialAccountsViewModel: ObservableObject {
         let accountType = FinancialAccountKind.compose(kind: kind, name: name)
         let normalized = accountType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if normalized.isEmpty {
-            return "Account name is required."
+            return "Account name is required.".localizedStringFallback
         }
         if accounts.contains(where: { ($0.accountType ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized }) {
-            return "An account with this name already exists."
+            return "An account with this name already exists.".localizedStringFallback
         }
 
         let account = FinancialAccount(context: context)
@@ -83,10 +83,10 @@ class FinancialAccountsViewModel: ObservableObject {
         let accountType = FinancialAccountKind.compose(kind: kind, name: name)
         let normalized = accountType.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if normalized.isEmpty {
-            return "Account name is required."
+            return "Account name is required.".localizedStringFallback
         }
         if accounts.contains(where: { $0.objectID != account.objectID && ($0.accountType ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == normalized }) {
-            return "An account with this name already exists."
+            return "An account with this name already exists.".localizedStringFallback
         }
 
         account.accountType = accountType
@@ -107,7 +107,7 @@ class FinancialAccountsViewModel: ObservableObject {
         transaction.transactionType = delta >= 0 ? AccountTransactionType.deposit.rawValue : AccountTransactionType.withdrawal.rawValue
         transaction.amount = NSDecimalNumber(decimal: delta >= 0 ? delta : -delta)
         transaction.date = Date()
-        transaction.note = "Manual balance adjustment"
+        transaction.note = "Manual balance adjustment".localizedStringFallback
         transaction.createdAt = Date()
         transaction.updatedAt = transaction.createdAt
         transaction.account = account

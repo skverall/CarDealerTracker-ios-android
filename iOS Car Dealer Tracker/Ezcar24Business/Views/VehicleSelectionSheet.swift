@@ -124,7 +124,7 @@ struct VehicleSelectionRow: View {
                     }
 
                     if vehicle.inventoryIDValue != nil, let vin = vehicle.vinValue {
-                        Text("VIN: \(vin)")
+                        Text(String(format: "VIN: %@".localizedString, vin))
                             .font(.caption)
                             .monospacedDigit()
                     }

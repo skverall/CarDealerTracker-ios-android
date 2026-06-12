@@ -196,7 +196,7 @@ struct AddFinancialAccountView: View {
                 dismiss()
             }
         } label: {
-            Text("Create Account")
+            Text("Create Account".localizedString)
                 .font(.headline)
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)

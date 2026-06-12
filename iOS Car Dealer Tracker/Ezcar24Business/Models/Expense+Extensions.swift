@@ -14,6 +14,8 @@ extension Expense {
         case "vehicle": return "vehicle".localizedStringFallback
         case "personal": return "personal".localizedStringFallback
         case "employee": return "employee".localizedStringFallback
+        case "office": return "bills".localizedStringFallback
+        case "marketing": return "marketing".localizedStringFallback
         default: return "other".localizedStringFallback
         }
     }

@@ -41,15 +41,15 @@ struct LoginView: View {
     }
 
     private var primaryActionTitle: String {
-        appSessionState.mode == .signIn ? "Sign In" : "Create Account"
+        appSessionState.mode == .signIn ? "Sign In".localizedString : "Create Account".localizedString
     }
 
     private var pendingInviteMessage: String? {
         guard !trimmedTeamInviteCode.isEmpty else { return nil }
         if appSessionState.mode == .signIn {
-            return "Team access will be applied after you sign in."
+            return "team_access_applied_after_sign_in".localizedString
         }
-        return "This sign-up is ready to join a team automatically."
+        return "team_access_ready_after_sign_up".localizedString
     }
 
     var body: some View {
@@ -150,7 +150,7 @@ struct LoginView: View {
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundStyle(ColorTheme.primaryText)
 
-                Text(appSessionState.mode == .signIn ? "Welcome Back" : "Create your account")
+                Text(appSessionState.mode == .signIn ? "Welcome Back".localizedString : "Create your account".localizedString)
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(ColorTheme.secondaryText)
             }
@@ -183,7 +183,7 @@ struct LoginView: View {
                     passwordField
 
                     if appSessionState.mode == .signIn {
-                        Button("Forgot password?") {
+                        Button("Forgot password?".localizedString) {
                             handlePasswordReset()
                         }
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -219,11 +219,11 @@ struct LoginView: View {
             .disabled(appSessionState.isProcessing || sessionStore.isAuthenticating || !appSessionState.isFormValid)
             
             HStack {
-                Text(appSessionState.mode == .signIn ? "Don't have an account?" : "Already have an account?")
+                Text(appSessionState.mode == .signIn ? "Don't have an account?".localizedString : "Already have an account?".localizedString)
                     .font(.system(size: 14, weight: .regular))
                     .foregroundStyle(ColorTheme.secondaryText)
                 
-                Button(appSessionState.mode == .signIn ? "Sign Up" : "Sign In") {
+                Button(appSessionState.mode == .signIn ? "Sign Up".localizedString : "Sign In".localizedString) {
                     withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
                         appSessionState.mode = appSessionState.mode == .signIn ? .signUp : .signIn
                     }
@@ -233,7 +233,7 @@ struct LoginView: View {
             }
             .padding(.top, 4)
 
-            Button("Continue as Guest") {
+            Button("Continue as Guest".localizedString) {
                 startGuestMode()
             }
             .font(.system(size: 14, weight: .medium, design: .rounded))
@@ -263,7 +263,7 @@ struct LoginView: View {
                 HStack(spacing: 8) {
                     Image(systemName: showingOptionalCodes ? "chevron.down" : "chevron.right")
                         .font(.system(size: 12, weight: .bold))
-                    Text("Have an invite code?")
+                    Text("Have an invite code?".localizedString)
                         .font(.system(size: 14, weight: .medium))
                 }
                 .foregroundStyle(ColorTheme.secondaryText)
@@ -277,7 +277,7 @@ struct LoginView: View {
                         .textContentType(.oneTimeCode)
                         .focused($focusedField, equals: .referral)
 
-                    authField(icon: "person.badge.plus", placeholder: "Team access code", text: $appSessionState.teamInviteCode)
+                    authField(icon: "person.badge.plus", placeholder: "Team Invite Code", text: $appSessionState.teamInviteCode)
                         .textInputAutocapitalization(.characters)
                         .textContentType(.oneTimeCode)
                         .focused($focusedField, equals: .teamInvite)
@@ -312,10 +312,10 @@ struct LoginView: View {
             
             Group {
                 if showPassword {
-                    TextField("Password", text: $appSessionState.password)
+                    TextField("Password".localizedString, text: $appSessionState.password)
                         .keyboardType(.asciiCapable)
                 } else {
-                    SecureField("Password", text: $appSessionState.password)
+                    SecureField("Password".localizedString, text: $appSessionState.password)
                         .keyboardType(.asciiCapable)
                 }
             }
@@ -331,6 +331,7 @@ struct LoginView: View {
                     .foregroundStyle(ColorTheme.secondaryText)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel((showPassword ? "hide_password" : "show_password").localizedString)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 16)
@@ -351,7 +352,7 @@ struct LoginView: View {
                 .foregroundStyle(ColorTheme.secondaryText)
                 .frame(width: 20)
             
-            TextField(placeholder, text: text)
+            TextField(placeholder.localizedString, text: text)
                 .font(.system(size: 16, weight: .regular))
         }
         .padding(.horizontal, 16)

@@ -27,11 +27,11 @@ struct ForceUpdateView: View {
                 
                 // Title
                 VStack(spacing: 12) {
-                    Text(remoteConfig.isMaintenanceMode ? "Maintenance Break" : "Update Required")
+                    Text(remoteConfig.isMaintenanceMode ? "Maintenance Break".localizedString : "Update Required".localizedString)
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.primary)
                     
-                    Text(remoteConfig.configMessage ?? (remoteConfig.isMaintenanceMode ? "We are performing scheduled maintenance. Please check back later." : "A new version of Car Dealer Tracker is available. Please update to continue using the app."))
+                    Text(remoteConfig.configMessage ?? (remoteConfig.isMaintenanceMode ? "We are performing scheduled maintenance. Please check back later.".localizedString : "A new version of Car Dealer Tracker is available. Please update to continue using the app.".localizedString))
                         .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -41,11 +41,11 @@ struct ForceUpdateView: View {
                 // Version info
                 if !remoteConfig.isMaintenanceMode, let latestVersion = remoteConfig.latestVersion {
                     VStack(spacing: 4) {
-                        Text("Current: \(remoteConfig.currentVersion)")
+                        Text(String(format: "Current: %@".localizedString, remoteConfig.currentVersion))
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
-                        Text("Available: \(latestVersion)")
+                        Text(String(format: "Available: %@".localizedString, latestVersion))
                             .font(.caption)
                             .foregroundColor(.green)
                             .fontWeight(.medium)
@@ -65,7 +65,7 @@ struct ForceUpdateView: View {
                     }) {
                         HStack {
                             Image(systemName: "arrow.down.circle.fill")
-                            Text("Update Now")
+                            Text("Update Now".localizedString)
                                 .fontWeight(.semibold)
                         }
                         .frame(maxWidth: .infinity)

@@ -10,7 +10,7 @@ import CoreData
 import Combine
 
 
-enum DashboardTimeRange: String, CaseIterable, Identifiable {
+enum DashboardTimeRange: String, CaseIterable, Identifiable, Hashable {
     case today, week, month, threeMonths, sixMonths, all
     var id: String { rawValue }
     var startDate: Date? {

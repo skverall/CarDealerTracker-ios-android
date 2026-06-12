@@ -183,12 +183,12 @@ struct EditProfileView: View {
                         .lowercased() ?? ""
 
                     if pendingEmail == normalizedEmail && returnedEmail != normalizedEmail {
-                        emailChangeMessage = "Check your inbox. Depending on your account security settings, you may need to confirm the change from both your current and new email addresses."
+                        emailChangeMessage = "Check your inbox. Depending on your account security settings, you may need to confirm the change from both your current and new email addresses.".localizedString
                     } else if returnedEmail == normalizedEmail {
-                        emailChangeMessage = "Your account email was updated."
+                        emailChangeMessage = "Your account email was updated.".localizedString
                         shouldPersistEmailLocally = true
                     } else {
-                        emailChangeMessage = "Check your inbox to confirm your email change."
+                        emailChangeMessage = "Check your inbox to confirm your email change.".localizedString
                     }
                 }
 

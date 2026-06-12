@@ -11,17 +11,17 @@ enum InventoryAlertType: String, CaseIterable {
     var displayName: String {
         switch self {
         case .aging:
-            return "Aging Alert"
+            return "Aging Alert".localizedStringFallback
         case .highHoldingCost:
-            return "High Holding Cost"
+            return "High Holding Cost".localizedStringFallback
         case .lowROI:
-            return "Low ROI"
+            return "Low ROI".localizedStringFallback
         case .longDaysInInventory:
-            return "Long Time in Inventory"
+            return "Long Time in Inventory".localizedStringFallback
         case .priceDrop:
-            return "Price Drop Suggested"
+            return "Price Drop Suggested".localizedStringFallback
         case .staleInventory:
-            return "Stale Inventory"
+            return "Stale Inventory".localizedStringFallback
         }
     }
 

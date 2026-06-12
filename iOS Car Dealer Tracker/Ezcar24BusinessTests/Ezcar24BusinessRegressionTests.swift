@@ -63,6 +63,8 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual(AppRegion.japan.localeIdentifier, "ja_JP")
         XCTAssertTrue(AppLanguage.allCases.contains(.japanese))
         XCTAssertTrue(AppLanguage.selectableLanguages.contains(.japanese))
+        XCTAssertTrue(AppLanguage.allCases.contains(.uzbek))
+        XCTAssertTrue(AppLanguage.selectableLanguages.contains(.uzbek))
         XCTAssertTrue(formatted.contains("¥"))
         XCTAssertFalse(formatted.contains("¥ "))
         XCTAssertFalse(formatted.contains(".00"))
@@ -76,6 +78,47 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual("Continue".localizedString, "Продолжить")
         XCTAssertEqual("Yearly".localizedString, "Годовой")
         XCTAssertEqual("Best value".localizedString, "Выгодно")
+
+        manager.selectedLanguage = .uzbek
+        XCTAssertEqual("Continue".localizedString, "Davom etish")
+        XCTAssertEqual("Weekly".localizedString, "Haftalik")
+        XCTAssertEqual("Billed yearly".localizedString, "Yillik toʻlov")
+        XCTAssertEqual("Best value".localizedString, "Eng yaxshi taklif")
+        XCTAssertEqual("Save Deal Desk Sale".localizedString, "Deal Desk sotuvini saqlash")
+        XCTAssertEqual("search_client".localizedString, "Mijoz qidirish")
+        XCTAssertEqual("lowest_roi".localizedString, "Eng past ROI")
+        XCTAssertEqual("oldest_inventory".localizedString, "Avval eng eski zaxira")
+        XCTAssertEqual("newest_inventory".localizedString, "Avval eng yangi zaxira")
+        XCTAssertEqual("sync".localizedString, "Sinxronlash")
+        XCTAssertEqual("Status".localizedString, "Holat")
+        XCTAssertEqual("Email address".localizedString, "Elektron pochta")
+        XCTAssertEqual("show_password".localizedString, "Parolni koʻrsatish")
+        XCTAssertEqual("hide_password".localizedString, "Parolni yashirish")
+        XCTAssertEqual("guest_preview_hot_leads".localizedString, "Issiq lidlar")
+        XCTAssertEqual("guest_preview_row_hot_lead".localizedString, "Issiq lid")
+        XCTAssertEqual("guest_preview_row_hot_lead_detail".localizedString, "Sedanga qiziqadi")
+        XCTAssertEqual("guest_preview_row_test_drive".localizedString, "Test-drayv")
+        XCTAssertEqual("guest_preview_followups".localizedString, "Keyingi aloqalar")
+        XCTAssertEqual("guest_preview_row_oil_filters".localizedString, "Yogʻ filtrlari")
+        XCTAssertEqual("guest_preview_units".localizedString, "dona")
+    }
+
+    func testUzbekistanRegionUsesUZSFormatting() {
+        let manager = RegionSettingsManager.shared
+        let originalRegion = manager.selectedRegion
+        defer {
+            manager.selectedRegion = originalRegion
+        }
+
+        manager.selectedRegion = .uzbekistan
+
+        let formatted = manager.formatCurrency(Decimal(1_234_567))
+
+        XCTAssertEqual(AppRegion.uzbekistan.currencyCode, "UZS")
+        XCTAssertEqual(AppRegion.uzbekistan.currencyDecimals, 0)
+        XCTAssertEqual(AppRegion.uzbekistan.localeIdentifier, "uz_UZ")
+        XCTAssertTrue(formatted.contains("soʻm"))
+        XCTAssertFalse(formatted.contains(".00"))
     }
 
     func testEmailReminderBannerHidesForISO8601ConfirmationString() {

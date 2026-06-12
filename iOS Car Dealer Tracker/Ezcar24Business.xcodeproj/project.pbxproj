@@ -70,6 +70,7 @@
 		E2460F022F150C680048EA80 /* AddPartSaleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2460EF92F150C680048EA80 /* AddPartSaleView.swift */; };
 		E29C0AEF2F0B92620087CEB6 /* String+Localization.swift in Sources */ = {isa = PBXBuildFile; fileRef = E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */; };
 		E29C0AF12F0B92BA0087CEB6 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */; };
+		E29C0AF32F0B92BA0087CEB6 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = E29C0AF22F0B92BA0087CEB6 /* InfoPlist.xcstrings */; };
 		E2A08AAF2F10532C0071352E /* RemoteConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */; };
 		E2A08AB12F1056F00071352E /* PermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AB02F1056F00071352E /* PermissionService.swift */; };
 		E2A08AB32F105B580071352E /* TeamManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AB22F105B580071352E /* TeamManagementView.swift */; };
@@ -204,6 +205,7 @@
 		E2460EFD2F150C680048EA80 /* ReceivePartStockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceivePartStockView.swift; sourceTree = "<group>"; };
 		E29C0AEE2F0B92620087CEB6 /* String+Localization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+Localization.swift"; sourceTree = "<group>"; };
 		E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		E29C0AF22F0B92BA0087CEB6 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigService.swift; sourceTree = "<group>"; };
 		E2A08AB02F1056F00071352E /* PermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionService.swift; sourceTree = "<group>"; };
 		E2A08AB22F105B580071352E /* TeamManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamManagementView.swift; sourceTree = "<group>"; };
@@ -319,6 +321,7 @@
 			children = (
 				E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */,
 				E29C0AF02F0B92BA0087CEB6 /* Localizable.xcstrings */,
+				E29C0AF22F0B92BA0087CEB6 /* InfoPlist.xcstrings */,
 				A1000000 /* Ezcar24BusinessApp.swift */,
 				A1000002 /* ContentView.swift */,
 				B2000007 /* Auth */,
@@ -614,6 +617,8 @@
 				en,
 				ru,
 				ja,
+				uz,
+				ar,
 				Base,
 			);
 			mainGroup = A0FFFFFC;
@@ -641,6 +646,7 @@
 				E2DC15452F1A1AB500068680 /* GoogleService-Info.plist in Resources */,
 				B2000105 /* SupabaseConfig.plist in Resources */,
 				E29C0AF12F0B92BA0087CEB6 /* Localizable.xcstrings in Resources */,
+				E29C0AF32F0B92BA0087CEB6 /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -916,7 +922,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 9;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Ezcar24Business/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -929,7 +935,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.15;
+				MARKETING_VERSION = 2.1.17;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -948,7 +954,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = Ezcar24Business/Ezcar24Business.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 9;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = Ezcar24Business/Info.plist;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
@@ -961,7 +967,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.15;
+				MARKETING_VERSION = 2.1.17;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ezcar24.business;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -980,7 +986,7 @@
 				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = 2RCZ658ZDD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundlePackageType = BNDL;
@@ -1007,7 +1013,7 @@
 				CODE_SIGNING_ALLOWED = NO;
 				CODE_SIGNING_REQUIRED = NO;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 9;
 				DEVELOPMENT_TEAM = 2RCZ658ZDD;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundlePackageType = BNDL;

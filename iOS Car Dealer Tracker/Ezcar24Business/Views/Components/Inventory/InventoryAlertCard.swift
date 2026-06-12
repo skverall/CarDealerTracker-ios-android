@@ -7,6 +7,55 @@
 
 import SwiftUI
 
+private func localizedInventoryAlertMessage(_ message: String) -> String {
+    let patterns: [(String, String, ([String]) -> String)] = [
+        (#"Vehicle has been in inventory for (\d+) days\. Consider aggressive pricing\."#, "Vehicle has been in inventory for %lld days. Consider aggressive pricing.", { captures in
+            String(format: "Vehicle has been in inventory for %lld days. Consider aggressive pricing.".localizedStringFallback, Int64(captures.first ?? "0") ?? 0)
+        }),
+        (#"Vehicle has been in inventory for (\d+) days\. Review pricing strategy\."#, "Vehicle has been in inventory for %lld days. Review pricing strategy.", { captures in
+            String(format: "Vehicle has been in inventory for %lld days. Review pricing strategy.".localizedStringFallback, Int64(captures.first ?? "0") ?? 0)
+        }),
+        (#"Vehicle has been in inventory for (\d+) days\. Monitor closely\."#, "Vehicle has been in inventory for %lld days. Monitor closely.", { captures in
+            String(format: "Vehicle has been in inventory for %lld days. Monitor closely.".localizedStringFallback, Int64(captures.first ?? "0") ?? 0)
+        }),
+        (#"Projected ROI is ([0-9.]+)%\. Consider cost reduction or price increase\."#, "Projected ROI is %@%%. Consider cost reduction or price increase.", { captures in
+            String(format: "Projected ROI is %@%%. Consider cost reduction or price increase.".localizedStringFallback, captures.first ?? "0")
+        }),
+        (#"Holding cost is ([0-9.]+)% of total cost\. Consider faster turnover\."#, "Holding cost is %@%% of total cost. Consider faster turnover.", { captures in
+            String(format: "Holding cost is %@%% of total cost. Consider faster turnover.".localizedStringFallback, captures.first ?? "0")
+        }),
+        (#"Holding costs are ([0-9.]+)% of vehicle cost\. Consider faster turnover\."#, "Holding costs are %@%% of vehicle cost. Consider faster turnover.", { captures in
+            String(format: "Holding costs are %@%% of vehicle cost. Consider faster turnover.".localizedStringFallback, captures.first ?? "0")
+        })
+    ]
+
+    for pattern in patterns {
+        guard let regex = try? NSRegularExpression(pattern: pattern.0) else { continue }
+        let range = NSRange(message.startIndex..<message.endIndex, in: message)
+        guard let match = regex.firstMatch(in: message, range: range), match.range.location != NSNotFound else { continue }
+        let captures = (1..<match.numberOfRanges).compactMap { index -> String? in
+            guard let captureRange = Range(match.range(at: index), in: message) else { return nil }
+            return String(message[captureRange])
+        }
+        return pattern.2(captures)
+    }
+
+    return message.localizedStringFallback
+}
+
+private func localizedInventoryAlertSeverity(_ severity: String?) -> String {
+    switch severity {
+    case "high":
+        return "High".localizedStringFallback
+    case "medium":
+        return "Medium".localizedStringFallback
+    case "low":
+        return "Low".localizedStringFallback
+    default:
+        return (severity ?? "low").capitalized.localizedStringFallback
+    }
+}
+
 struct InventoryAlertCard: View {
     let alert: InventoryAlert
     let vehicle: Vehicle?
@@ -54,7 +103,7 @@ struct InventoryAlertCard: View {
                     .cornerRadius(10)
                 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(alertType?.displayName ?? "Alert")
+                    Text(alertType?.displayName ?? "Alert".localizedStringFallback)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(ColorTheme.primaryText)
@@ -78,7 +127,7 @@ struct InventoryAlertCard: View {
             }
             
             if let message = alert.message {
-                Text(message)
+                Text(localizedInventoryAlertMessage(message))
                     .font(.subheadline)
                     .foregroundColor(ColorTheme.primaryText)
                     .fixedSize(horizontal: false, vertical: true)
@@ -90,7 +139,7 @@ struct InventoryAlertCard: View {
                         .fill(severityColor)
                         .frame(width: 6, height: 6)
                     
-                    Text((alert.severity ?? "low").capitalized)
+                    Text(localizedInventoryAlertSeverity(alert.severity))
                         .font(.caption)
                         .foregroundColor(severityColor)
                 }
@@ -148,7 +197,7 @@ struct InventoryAlertListItem: View {
                 .cornerRadius(8)
             
             VStack(alignment: .leading, spacing: 2) {
-                Text(alertType?.displayName ?? "Alert")
+                Text(alertType?.displayName ?? "Alert".localizedStringFallback)
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundColor(ColorTheme.primaryText)
@@ -160,7 +209,7 @@ struct InventoryAlertListItem: View {
                 }
                 
                 if let message = alert.message {
-                    Text(message)
+                    Text(localizedInventoryAlertMessage(message))
                         .font(.caption2)
                         .foregroundColor(ColorTheme.tertiaryText)
                         .lineLimit(1)

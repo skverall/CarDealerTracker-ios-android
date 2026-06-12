@@ -210,16 +210,16 @@ struct AddExpenseView: View {
                 case .datePicker:
                     NavigationStack {
                         VStack(spacing: 20) {
-                            DatePicker("Date", selection: $draft.date, displayedComponents: .date)
+                            DatePicker("date".localizedString, selection: $draft.date, displayedComponents: .date)
                                 .datePickerStyle(.graphical)
                                 .tint(ColorTheme.primary)
 
-                            DatePicker("Time", selection: $draft.date, displayedComponents: .hourAndMinute)
+                            DatePicker("Time".localizedString, selection: $draft.date, displayedComponents: .hourAndMinute)
                                 .datePickerStyle(.wheel)
                                 .labelsHidden()
                         }
                         .padding()
-                        .navigationTitle("Select Date & Time")
+                        .navigationTitle("Select Date & Time".localizedString)
                         .toolbar {
                             ToolbarItem(placement: .confirmationAction) {
                                 Button("done".localizedString) { activeSheet = nil }
@@ -263,13 +263,13 @@ struct AddExpenseView: View {
             .onChange(of: selectedReceiptPhoto) { _, newValue in
                 loadReceiptPhoto(from: newValue)
             }
-            .alert("Add New User", isPresented: $showAddUserAlert) {
-                TextField("User Name", text: $newUserName)
+            .alert("add_new_user".localizedString, isPresented: $showAddUserAlert) {
+                TextField("User Name".localizedString, text: $newUserName)
                     .textInputAutocapitalization(.words)
                 Button("cancel".localizedString, role: .cancel) { newUserName = "" }
-                Button("Add") { addNewUser() }
+                Button("add_new".localizedString) { addNewUser() }
             } message: {
-                Text("Enter the name of the new user.")
+                Text("Enter the name of the new user.".localizedString)
             }
             .onAppear {
                 viewModel.refreshFiltersIfNeeded()
@@ -486,8 +486,8 @@ struct AddExpenseView: View {
         VStack(spacing: 12) {
             if draft.category == "vehicle" {
                 contextButton(
-                    title: "Vehicle",
-                    value: draft.selectedVehicle.map(vehicleDisplayName) ?? "Select Vehicle",
+                    title: "vehicle".localizedString,
+                    value: draft.selectedVehicle.map(vehicleDisplayName) ?? "select_vehicle".localizedString,
                     icon: "car.fill",
                     isActive: draft.selectedVehicle != nil,
                     showsError: shouldShowVehicleSelectionError,
@@ -498,8 +498,8 @@ struct AddExpenseView: View {
             }
             
             contextButton(
-                title: "Paid By",
-                value: draft.selectedUser?.name ?? "Select User",
+                title: "paid_by".localizedString,
+                value: draft.selectedUser?.name ?? "select_user".localizedString,
                 icon: "person.fill",
                 isActive: draft.selectedUser != nil
             ) {
@@ -507,8 +507,8 @@ struct AddExpenseView: View {
             }
             
             contextButton(
-                title: "Account",
-                value: draft.selectedAccount.map(accountDisplayName) ?? "Select Account",
+                title: "account".localizedString,
+                value: draft.selectedAccount.map(accountDisplayName) ?? "select_account".localizedString,
                 icon: "creditcard.fill",
                 isActive: draft.selectedAccount != nil
             ) {
@@ -633,11 +633,14 @@ struct AddExpenseView: View {
                         Text(title)
                             .font(.caption)
                             .foregroundColor(showsError ? .red : ColorTheme.secondaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                         Text(value)
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .foregroundColor(showsError ? .red : ColorTheme.primaryText)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.75)
                     }
                     
                     Spacer()
@@ -677,7 +680,7 @@ struct AddExpenseView: View {
                         .tint(.white)
                         .padding(.trailing, 8)
                 }
-                Text(isSaving ? "Saving..." : "Save Expense")
+                Text(isSaving ? "saving".localizedString : "save_expense".localizedString)
                     .font(.headline)
             }
             .foregroundColor(.white)
@@ -727,7 +730,7 @@ struct AddExpenseView: View {
     }
     
     private var userSelector: some View {
-        SelectionSheet(title: "Select User") {
+        SelectionSheet(title: "select_user".localizedString) {
             Button {
                 showAddUserAlert = true
             } label: {
@@ -746,7 +749,7 @@ struct AddExpenseView: View {
                 draft.selectedUser = nil
                 activeSheet = nil
             } label: {
-                SelectionRow(title: "None", isSelected: draft.selectedUser == nil)
+                SelectionRow(title: "none".localizedString, isSelected: draft.selectedUser == nil)
             }
             
             ForEach(users, id: \.objectID) { user in
@@ -755,7 +758,7 @@ struct AddExpenseView: View {
                     activeSheet = nil
                 } label: {
                     SelectionRow(
-                        title: user.name ?? "Unknown",
+                        title: user.name ?? "unknown".localizedString,
                         isSelected: draft.selectedUser?.objectID == user.objectID
                     )
                 }
@@ -764,12 +767,12 @@ struct AddExpenseView: View {
     }
     
     private var accountSelector: some View {
-        SelectionSheet(title: "Select Account") {
+        SelectionSheet(title: "select_account".localizedString) {
             Button {
                 draft.selectedAccount = nil
                 activeSheet = nil
             } label: {
-                SelectionRow(title: "None", isSelected: draft.selectedAccount == nil)
+                SelectionRow(title: "none".localizedString, isSelected: draft.selectedAccount == nil)
             }
             
             ForEach(viewModel.accounts, id: \.objectID) { account in
@@ -796,10 +799,10 @@ struct AddExpenseView: View {
                     activeSheet = nil
                 } label: {
                     VStack(alignment: .leading) {
-                        Text(t.name ?? "Template")
+                        Text(t.name ?? "Template".localizedString)
                             .font(.headline)
                         if let cat = t.category {
-                            Text(cat.capitalized)
+                            Text(localizedExpenseCategory(cat))
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
                         }
@@ -819,9 +822,9 @@ struct AddExpenseView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("Template Name", text: $templateName)
+                    TextField("Template Name".localizedString, text: $templateName)
                 } footer: {
-                    Text("This will save the current category, vehicle, user, and account as a template.")
+                    Text("This will save the current category, vehicle, user, and account as a template.".localizedString)
                 }
             }
             .navigationTitle("save_template".localizedString)
@@ -886,6 +889,20 @@ struct AddExpenseView: View {
     
     private func accountDisplayName(_ account: FinancialAccount) -> String {
         account.displayTitle
+    }
+
+    private func localizedExpenseCategory(_ category: String) -> String {
+        switch category.lowercased() {
+        case "vehicle": return "vehicle".localizedString
+        case "personal": return "personal".localizedString
+        case "employee": return "employee".localizedString
+        case "office": return "bills".localizedString
+        case "marketing": return "marketing".localizedString
+        default:
+            return category.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? "category".localizedString
+                : category
+        }
     }
 
     private var hasReceipt: Bool {

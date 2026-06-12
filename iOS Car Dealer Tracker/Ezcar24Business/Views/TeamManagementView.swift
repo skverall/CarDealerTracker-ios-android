@@ -340,9 +340,9 @@ struct TeamManagementView: View {
                         viewModel.listErrorMessage = nil
                     }
                 } message: {
-                    Text(viewModel.listErrorMessage ?? "Something went wrong.")
+                    Text(viewModel.listErrorMessage ?? "Something went wrong.".localizedString)
                 }
-                .alert("Notice", isPresented: inviteInfoBinding) {
+                .alert("Notice".localizedString, isPresented: inviteInfoBinding) {
                     Button("OK", role: .cancel) {
                         inviteInfoMessage = nil
                     }
@@ -375,7 +375,7 @@ struct TeamManagementView: View {
             Image(systemName: "person.3.fill")
                 .font(.system(size: 50))
                 .foregroundColor(ColorTheme.secondaryText)
-            Text("No team members found")
+            Text("No team members found".localizedString)
                 .foregroundColor(ColorTheme.secondaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -397,7 +397,7 @@ struct TeamManagementView: View {
                         Button(role: .destructive) {
                             deleteMember(member)
                         } label: {
-                            Label("Delete", systemImage: "trash")
+                            Label("Delete".localizedString, systemImage: "trash")
                         }
                     }
                 }
@@ -708,19 +708,15 @@ struct InviteMemberSheet: View {
                     }
                 }
                 
-                Button(createAccount ? "team_generate_access_button".localizedString : "Generate Invite Code") {
+                Button(createAccount ? "team_generate_access_button".localizedString : "Generate Invite Code".localizedString) {
                     Task {
-                        // Detect current language
-                        let currentLanguage = Locale.current.language.languageCode?.identifier ?? "en"
-                        let lang = currentLanguage == "ru" ? "ru" : "en"
-                        
                         let result = await viewModel.inviteMember(
                             email: email,
                             role: selectedRole,
                             permissions: permissions,
                             organizationId: organizationId,
                             createAccount: createAccount,
-                            language: lang
+                            language: RegionSettingsManager.shared.selectedLanguage.rawValue
                         )
                         if let result {
                             if let password = result.generatedPassword {

@@ -1601,14 +1601,14 @@ struct DealDeskSettingsView: View {
 
             if saveSuccess {
                 Section {
-                    Text("Deal Desk settings saved.")
+                    Text("Deal Desk settings saved.".localizedString)
                         .foregroundColor(.green)
                 }
             }
 
             if canEdit {
                 Section {
-                    Button(isSaving ? "Saving..." : "Save settings") {
+                    Button(isSaving ? "saving".localizedString : "Save settings".localizedString) {
                         Task {
                             await saveSettings()
                         }
@@ -1617,7 +1617,7 @@ struct DealDeskSettingsView: View {
                 }
             }
         }
-        .navigationTitle("Deal Desk")
+        .navigationTitle("Deal Desk".localizedString)
         .task {
             await loadSettings()
         }

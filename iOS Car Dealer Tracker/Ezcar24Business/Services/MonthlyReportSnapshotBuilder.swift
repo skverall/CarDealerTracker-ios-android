@@ -522,7 +522,7 @@ final class MonthlyReportSnapshotBuilder {
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .joined(separator: " ")
-        return title.isEmpty ? "Vehicle" : title
+        return title.isEmpty ? "vehicle".localizedStringFallback : title
     }
 
     private func trimmedOrFallback(_ value: String?, fallback: String) -> String {

@@ -126,7 +126,7 @@ struct ClientDetailView: View {
                 VStack {
                     if let id = activeInteractionId, let index = interactionDrafts.firstIndex(where: { $0.id == id }) {
                         let binding = $interactionDrafts[index].occurredAt
-                        DatePicker("Date", selection: binding, displayedComponents: .date)
+                        DatePicker("date".localizedString, selection: binding, displayedComponents: .date)
                             .datePickerStyle(.graphical)
                             .padding()
                             .onChange(of: binding.wrappedValue) { _, _ in
@@ -680,15 +680,15 @@ struct ClientDetailView: View {
                     }
                 }
                 
-                crmRow(label: "Email", value: displayValue(for: email), icon: "envelope.fill")
+                crmRow(label: "Email".localizedString, value: displayValue(for: email), icon: "envelope.fill")
             }
         }
     }
 
     private var vehicleCard: some View {
-        crmCard(title: "Vehicle Interest", icon: "car.fill") {
-            crmRow(label: "Model", value: selectedVehicle?.displayName ?? "Not selected", icon: "car.side")
-            crmRow(label: "Date", value: formattedDate(), icon: "calendar")
+        crmCard(title: "vehicle_interest".localizedString, icon: "car.fill") {
+            crmRow(label: "Model".localizedString, value: selectedVehicle?.displayName ?? "select_vehicle".localizedString, icon: "car.side")
+            crmRow(label: "date".localizedString, value: formattedDate(), icon: "calendar")
             if !requestDetails.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 Text(requestDetails)
                     .font(.footnote)

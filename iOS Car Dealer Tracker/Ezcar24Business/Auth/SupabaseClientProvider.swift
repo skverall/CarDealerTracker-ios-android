@@ -51,9 +51,9 @@ private extension SupabaseClientProvider {
         var errorDescription: String? {
             switch self {
             case .missingCredentials:
-                return "SUPABASE_URL and SUPABASE_ANON_KEY are missing."
+                return "SUPABASE_URL and SUPABASE_ANON_KEY are missing.".localizedStringFallback
             case .invalidURL:
-                return "SUPABASE_URL has an invalid format."
+                return "SUPABASE_URL has an invalid format.".localizedStringFallback
             }
         }
     }

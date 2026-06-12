@@ -42,12 +42,12 @@ struct AddPartView: View {
     
     // Common categories for quick selection
     private let suggestedCategories = [
-        ("engine", "Engine", "engine.combustion.fill"),
-        ("body", "Body", "car.side.front.open.fill"),
-        ("electrical", "Electrical", "bolt.fill"),
-        ("suspension", "Suspension", "figure.cooldown"),
-        ("interior", "Interior", "carseat.left.fill"),
-        ("other", "Other", "wrench.and.screwdriver.fill")
+        (storedValue: "Engine", labelKey: "parts_category_engine", icon: "engine.combustion.fill"),
+        (storedValue: "Body", labelKey: "parts_category_body", icon: "car.side.front.open.fill"),
+        (storedValue: "Electrical", labelKey: "parts_category_electrical", icon: "bolt.fill"),
+        (storedValue: "Suspension", labelKey: "parts_category_suspension", icon: "figure.cooldown"),
+        (storedValue: "Interior", labelKey: "parts_category_interior", icon: "carseat.left.fill"),
+        (storedValue: "Other", labelKey: "parts_category_other", icon: "wrench.and.screwdriver.fill")
     ]
     
     var isFormValid: Bool {
@@ -68,6 +68,42 @@ struct AddPartView: View {
     
     private var totalCost: Decimal {
         quantityDecimal * unitCostDecimal
+    }
+
+    private func isSuggestedCategorySelected(_ storedValue: String) -> Bool {
+        category.trimmingCharacters(in: .whitespacesAndNewlines)
+            .caseInsensitiveCompare(storedValue) == .orderedSame
+    }
+
+    private var categoryDisplayBinding: Binding<String> {
+        Binding(
+            get: { localizedPartCategory(category) },
+            set: { category = storedPartCategory(from: $0) }
+        )
+    }
+
+    private func localizedPartCategory(_ storedValue: String) -> String {
+        switch storedValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "engine": return "parts_category_engine".localizedString
+        case "body": return "parts_category_body".localizedString
+        case "electrical": return "parts_category_electrical".localizedString
+        case "suspension": return "parts_category_suspension".localizedString
+        case "interior": return "parts_category_interior".localizedString
+        case "other": return "parts_category_other".localizedString
+        default: return storedValue
+        }
+    }
+
+    private func storedPartCategory(from displayValue: String) -> String {
+        let trimmed = displayValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let lower = trimmed.lowercased()
+        if lower == "engine" || lower == "parts_category_engine".localizedString.lowercased() { return "Engine" }
+        if lower == "body" || lower == "parts_category_body".localizedString.lowercased() { return "Body" }
+        if lower == "electrical" || lower == "parts_category_electrical".localizedString.lowercased() { return "Electrical" }
+        if lower == "suspension" || lower == "parts_category_suspension".localizedString.lowercased() { return "Suspension" }
+        if lower == "interior" || lower == "parts_category_interior".localizedString.lowercased() { return "Interior" }
+        if lower == "other" || lower == "parts_category_other".localizedString.lowercased() { return "Other" }
+        return displayValue
     }
 
     var body: some View {
@@ -186,11 +222,11 @@ struct AddPartView: View {
             
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
-                    ForEach(suggestedCategories, id: \.0) { cat in
-                        let isSelected = category.lowercased() == cat.0
+                    ForEach(suggestedCategories, id: \.storedValue) { cat in
+                        let isSelected = isSuggestedCategorySelected(cat.storedValue)
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                category = cat.1
+                                category = cat.storedValue
                             }
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         } label: {
@@ -201,12 +237,12 @@ struct AddPartView: View {
                                         .frame(width: 52, height: 52)
                                         .shadow(color: isSelected ? ColorTheme.primary.opacity(0.4) : Color.clear, radius: 8, y: 4)
                                     
-                                    Image(systemName: cat.2)
+                                    Image(systemName: cat.icon)
                                         .font(.system(size: 20))
                                         .foregroundColor(isSelected ? .white : ColorTheme.secondaryText)
                                 }
                                 
-                                Text(cat.1)
+                                Text(cat.labelKey.localizedString)
                                     .font(.caption)
                                     .fontWeight(isSelected ? .semibold : .medium)
                                     .foregroundColor(isSelected ? ColorTheme.primaryText : ColorTheme.secondaryText)
@@ -247,7 +283,7 @@ struct AddPartView: View {
                     .foregroundColor(ColorTheme.secondaryText)
                     .frame(width: 24)
                 
-                TextField("parts_add_part_category".localizedString, text: $category)
+                TextField("parts_add_part_category".localizedString, text: categoryDisplayBinding)
                     .font(.body)
                     .focused($focusedField, equals: .category)
                     .submitLabel(.next)

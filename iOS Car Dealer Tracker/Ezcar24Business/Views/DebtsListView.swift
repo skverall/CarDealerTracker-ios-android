@@ -97,7 +97,7 @@ struct DebtCard: View {
                             Image(systemName: item.isOverdue ? "exclamationmark.triangle.fill" : "calendar")
                                 .font(.caption2)
                                 .foregroundColor(item.isOverdue ? ColorTheme.danger : ColorTheme.secondaryText)
-                            Text(item.isOverdue ? "Overdue • \(dueText)" : "Due \(dueText)")
+                            Text(item.isOverdue ? String(format: "Overdue • %@".localizedString, dueText) : String(format: "Due %@".localizedString, dueText))
                                 .font(.system(.caption, design: .rounded))
                                 .foregroundColor(item.isOverdue ? ColorTheme.danger : ColorTheme.secondaryText)
                         }

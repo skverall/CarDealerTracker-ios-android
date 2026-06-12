@@ -348,18 +348,18 @@ struct UnifiedSaleItem: Identifiable {
         self.id = vehicleSale.objectID
         self.type = .vehicle(vehicleSale)
         self.date = vehicleSale.date ?? Date()
-        self.buyerName = vehicleSale.buyerName ?? "Unknown Buyer"
+        self.buyerName = vehicleSale.buyerName ?? "unknown".localizedStringFallback
         
         // Title
         if let vehicle = vehicleSale.vehicle {
             let make = vehicle.make ?? ""
             let model = vehicle.model ?? ""
             let combined = "\(make) \(model)".trimmingCharacters(in: .whitespaces)
-            self.title = combined.isEmpty ? "Vehicle" : combined
+            self.title = combined.isEmpty ? "vehicle".localizedStringFallback : combined
             // Optional: trim name if needed
             self.subtitle = vehicle.vin
         } else {
-            self.title = "Vehicle Removed"
+            self.title = "vehicle_removed".localizedStringFallback
             self.subtitle = nil
         }
         

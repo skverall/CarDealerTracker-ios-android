@@ -33,6 +33,8 @@ struct UserGuideView: View {
         switch regionSettings.selectedLanguage {
         case .russian:
             return russianSections
+        case .uzbek:
+            return uzbekSections
         default:
             return englishSections
         }
@@ -283,6 +285,131 @@ struct UserGuideView: View {
                     "Если фото или данные не отображаются, обновите список или запустите Sync Now.",
                     "Если видите дубликаты, запустите Deduplicate.",
                     "Поддержка доступна через Accounts > Contact Developer."
+                ]
+            )
+        ]
+    }
+
+    private var uzbekSections: [GuideSection] {
+        [
+            GuideSection(
+                title: "Tez boshlash",
+                items: [
+                    "Hisobga kiring yoki diler tashkilotini yarating.",
+                    "Region, valyuta va tilni Hisob > Region bo'limida sozlang.",
+                    "Birinchi avtomobilingizni Avtomobillar bo'limidan qo'shing.",
+                    "Jamoa a'zolarini Hisob > Jamoani boshqarish orqali taklif qiling."
+                ]
+            ),
+            GuideSection(
+                title: "Navigatsiya",
+                items: [
+                    "Pastki tablar: Boshqaruv paneli, Xarajatlar, Avtomobillar, Qismlar, Sotuvlar, Mijozlar.",
+                    "Ro'yxatlarda marka, model, mijoz yoki izoh bo'yicha qidiruvdan foydalaning.",
+                    "Onlayn bo'lganda majburiy sinxronlash uchun ro'yxatni pastga torting."
+                ]
+            ),
+            GuideSection(
+                title: "Avtomobillar va zaxira",
+                items: [
+                    "Avtomobillar zaxiradagi asosiy yozuvlardir.",
+                    "Holatlar: sotuvda, band qilingan, yo'lda, servisda, sotilgan.",
+                    "Tahrirlashda narx, probeg, izoh va holatni yangilashingiz mumkin.",
+                    "Avtomobilni sotilgan deb belgilash sotuv yozuvini yaratadi.",
+                    "Ulashish tugmasi avtomobil uchun ommaviy havola yaratadi."
+                ]
+            ),
+            GuideSection(
+                title: "Avtomobil fotosuratlari",
+                items: [
+                    "Avtomobilni tahrirlang va bir nechta rasm tanlash uchun Rasm qo'shish tugmasini bosing.",
+                    "Rasmlarni tekshiring va paket qilib yuklang; xohlasangiz birinchi rasm muqova bo'ladi.",
+                    "Miniatyurani uzoq bosib, uni muqova qilish yoki o'chirish mumkin.",
+                    "Muqova ro'yxatlarda va ulashish havolalarida ishlatiladi."
+                ]
+            ),
+            GuideSection(
+                title: "Saqlash xarajati",
+                items: [
+                    "Saqlash xarajati xarid narxi va xarajatlar asosida kunlik turib qolish qiymatini hisoblaydi.",
+                    "Yillik stavkani Hisob > Saqlash xarajati sozlamalari bo'limida sozlang.",
+                    "Kerak bo'lmasa, uni Hisob > Saqlash xarajati sozlamalari bo'limida o'chirishingiz mumkin.",
+                    "Hisoblash sotuv sanasigacha davom etadi; sotuvdan keyin to'xtaydi.",
+                    "Sotuv foydasi saqlash xarajatini ham hisobga oladi."
+                ]
+            ),
+            GuideSection(
+                title: "Xarajatlar",
+                items: [
+                    "Xarajatlarni kategoriya bo'yicha kiriting va kerak bo'lsa avtomobilga ulang.",
+                    "Avtomobil xarajatlari foyda va saqlash xarajati bazasiga ta'sir qiladi."
+                ]
+            ),
+            GuideSection(
+                title: "Sotuvlar (avtomobillar)",
+                items: [
+                    "Sotuvlar avtomobil sotilgan deb belgilanganda yaratiladi.",
+                    "Sotuv summasi tanlangan hisobga tushadi va balans yangilanadi.",
+                    "Foyda = sotuv narxi - (xarid + xarajatlar + saqlash xarajati) + QQS qaytimi."
+                ]
+            ),
+            GuideSection(
+                title: "Qismlar zaxirasi va sotuvlar",
+                items: [
+                    "Qismlar zaxirasini yuriting, kirim qiling va qismlarni soting.",
+                    "Qismlar sotuvi pozitsiyalar va tannarxni foyda uchun hisobga oladi."
+                ]
+            ),
+            GuideSection(
+                title: "Mijozlar / CRM",
+                items: [
+                    "Mijoz ma'lumotlarini saqlang va ularni sotuvlar hamda qarzlarga ulang.",
+                    "Ism, telefon va izohlar bo'yicha qidiring."
+                ]
+            ),
+            GuideSection(
+                title: "Qarzlar",
+                items: [
+                    "Sizga qarz yoki sizning qarzingiz bo'lgan summalarni yozib boring.",
+                    "Qolgan balansni kamaytirish uchun to'lovlarni belgilang."
+                ]
+            ),
+            GuideSection(
+                title: "Tahlil va ogohlantirishlar",
+                items: [
+                    "Zaxira holati eskirish, ROI va saqlash xarajatini hisobga oladi.",
+                    "Sekin sotilayotgan avtomobillar alohida ko'rsatiladi.",
+                    "Ogohlantirishlar chegaralar va tavsiyalar asosida yaratiladi."
+                ]
+            ),
+            GuideSection(
+                title: "Sinxronlash va oflayn",
+                items: [
+                    "Avval lokal saqlanadi: o'zgarishlar darhol yoziladi va fonda sinxronlanadi.",
+                    "Qo'lda sinxronlash Hisob bo'limida mavjud.",
+                    "Ma'lumotlar salomatligi va dublikatlarni tozalash vositalari tartibga keltirishga yordam beradi."
+                ]
+            ),
+            GuideSection(
+                title: "Jamoa va ruxsatlar",
+                items: [
+                    "Rollar tannarx, foyda va boshqaruv vositalariga kirishni nazorat qiladi.",
+                    "Ega jamoa a'zolari va ruxsatlarni boshqarishi mumkin."
+                ]
+            ),
+            GuideSection(
+                title: "Xavfsizlik va huquqiy hujjatlar",
+                items: [
+                    "Parolni Hisob bo'limida o'zgartiring.",
+                    "Foydalanish shartlari va Maxfiylik siyosati Hisob bo'limida joylashgan."
+                ]
+            ),
+            GuideSection(
+                title: "Nosozliklarni bartaraf etish",
+                items: [
+                    "Agar rasmlar yoki ma'lumotlar ko'rinmasa, ro'yxatni yangilang yoki Hozir sinxronlashni ishga tushiring.",
+                    "Avtomobil dublikat ko'rinsa, dublikatlarni tozalashni ishga tushiring.",
+                    "Yordam uchun Hisob > Dasturchi bilan bog'lanish bo'limidan foydalaning."
                 ]
             )
         ]

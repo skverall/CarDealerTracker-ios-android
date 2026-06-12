@@ -40,6 +40,7 @@ struct DashboardView: View {
     @EnvironmentObject private var regionSettings: RegionSettingsManager
     @StateObject private var viewModel: DashboardViewModel
     @StateObject private var expenseEntryViewModel: ExpenseViewModel
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @ObservedObject private var permissionService = PermissionService.shared
 
     @State private var selectedRange: DashboardTimeRange = .week
@@ -160,6 +161,7 @@ private extension DashboardView {
                     .font(.title.weight(.heavy))
                     .foregroundColor(ColorTheme.primaryText)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             
             Spacer()
@@ -248,6 +250,9 @@ private extension DashboardView {
                 } label: {
                     Text(range.displayLabel)
                         .font(.system(size: 13, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .allowsTightening(true)
                         .padding(.vertical, 8)
                         .frame(maxWidth: .infinity)
                         .background(
@@ -294,7 +299,7 @@ private extension DashboardView {
                 .foregroundColor(ColorTheme.primaryText)
 
             if offlineQueueCount > 0 {
-                Text("• \(offlineQueueCount) queued")
+                Text(String(format: "• %lld queued".localizedString, Int64(offlineQueueCount)))
                     .font(.caption2)
                     .foregroundColor(ColorTheme.secondaryText)
             }
@@ -386,7 +391,7 @@ private extension DashboardView {
                 if permissionService.can(.viewFinancials) {
                     // 1. Account Balances
                     VStack(spacing: 12) {
-                        Text("Account Balances")
+                        Text("Account Balances".localizedString)
                             .font(.title3.weight(.bold))
                             .foregroundColor(ColorTheme.primaryText)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -420,7 +425,7 @@ private extension DashboardView {
                                 navPath.append(.creditAccounts)
                             } label: {
                                 AccountBalanceCard(
-                                    title: "Credit Card",
+                                    title: "credit_card".localizedString,
                                     amount: viewModel.totalCredit,
                                     icon: "creditcard.fill",
                                     color: DashboardPalette.credit
@@ -470,7 +475,7 @@ private extension DashboardView {
 
                     // 3. Operations
                     VStack(spacing: 12) {
-                        Text("Operations")
+                        Text("Operations".localizedString)
                             .font(.title3.weight(.bold))
                             .foregroundColor(ColorTheme.primaryText)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -480,7 +485,7 @@ private extension DashboardView {
                                 navPath.append(.assets)
                             } label: {
                                 OperationCard(
-                                    title: "Inventory",
+                                    title: "inventory".localizedString,
                                     amount: viewModel.inventoryOperationValue.asCurrencyCompact(),
                                     icon: "car.2.fill",
                                     color: DashboardPalette.assets
@@ -492,7 +497,7 @@ private extension DashboardView {
                                 navPath.append(.sold)
                             } label: {
                                 OperationCard(
-                                    title: "Vehicles Sold",
+                                    title: "vehicles_sold".localizedString,
                                     amount: "\(viewModel.soldCount)",
                                     icon: "checkmark.circle.fill",
                                     color: DashboardPalette.sold
@@ -504,7 +509,7 @@ private extension DashboardView {
                 } else {
                     // Non-Financial View (Sales Person Mode)
                     VStack(spacing: 12) {
-                        Text("Operations")
+                        Text("Operations".localizedString)
                             .font(.title3.weight(.bold))
                             .foregroundColor(ColorTheme.primaryText)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -549,7 +554,7 @@ private extension DashboardView {
             Button {
                 navPath.append(.analytics)
             } label: {
-                AnalyticsEntryCard()
+                AnalyticsEntryCard(isProAccessActive: subscriptionManager.isProAccessActive)
             }
             .buttonStyle(.plain)
         }
@@ -985,48 +990,72 @@ private struct OperationCard: View {
 }
 
 private struct AnalyticsEntryCard: View {
+    let isProAccessActive: Bool
+
     var body: some View {
         HStack(alignment: .center, spacing: 16) {
-            Image(systemName: "chart.bar.fill")
+            Image(systemName: "sparkles")
                 .font(.system(size: 24, weight: .semibold))
                 .foregroundColor(.white)
                 .frame(width: 50, height: 50)
                 .background(
                      LinearGradient(
-                         colors: [Color(red: 0.25, green: 0.45, blue: 0.90), Color(red: 0.15, green: 0.35, blue: 0.70)],
+                         colors: [ColorTheme.purple, ColorTheme.primary],
                          startPoint: .topLeading,
                          endPoint: .bottomTrailing
                      )
                 )
                 .clipShape(Circle())
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Your Insights Center")
+            VStack(alignment: .leading, spacing: 5) {
+                HStack(spacing: 6) {
+                    Text(isProAccessActive ? "AI" : "Pro".localizedString)
+                        .font(.system(size: 10, weight: .heavy))
+                        .foregroundColor(isProAccessActive ? ColorTheme.primary : ColorTheme.purple)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background((isProAccessActive ? ColorTheme.primary : ColorTheme.purple).opacity(0.11), in: Capsule())
+
+                    if !isProAccessActive {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(ColorTheme.purple)
+                    }
+                }
+
+                Text("Your Insights Center".localizedString)
                     .font(.headline.weight(.heavy))
                     .foregroundColor(ColorTheme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
                 
-                Text("Deep dive into your business performance.")
+                Text("Deep dive into your business performance.".localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.75)
             }
             
             Spacer()
             
-            Text("Open")
+            Text((isProAccessActive ? "dashboard_ai_cta_open" : "dashboard_ai_cta_upgrade").localizedString)
                 .font(.subheadline.weight(.bold))
                 .foregroundColor(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
                 .background(
                      LinearGradient(
-                         colors: [Color(red: 0.3, green: 0.6, blue: 1.0), Color(red: 0.10, green: 0.30, blue: 0.85)],
+                         colors: [ColorTheme.purple, ColorTheme.primary],
                          startPoint: .leading,
                          endPoint: .trailing
                      )
                 )
                 .clipShape(Capsule())
-                .shadow(color: Color(red: 0.3, green: 0.6, blue: 1.0).opacity(0.3), radius: 6, x: 0, y: 3)
+                .shadow(color: ColorTheme.purple.opacity(0.22), radius: 6, x: 0, y: 3)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 20)
@@ -1513,6 +1542,8 @@ extension Expense {
         case "vehicle": return "vehicle".localizedStringFallback
         case "personal": return "personal".localizedStringFallback
         case "employee": return "employee".localizedStringFallback
+        case "office": return "bills".localizedStringFallback
+        case "marketing": return "marketing".localizedStringFallback
         default: return "other".localizedStringFallback
         }
     }

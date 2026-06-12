@@ -482,10 +482,12 @@ final class SessionStore: ObservableObject {
             struct PasswordResetPayload: Encodable {
                 let email: String
                 let redirect_to: String
+                let language: String
             }
             let payload = PasswordResetPayload(
                 email: email,
-                redirect_to: AuthRedirect.callbackURL.absoluteString
+                redirect_to: AuthRedirect.callbackURL.absoluteString,
+                language: RegionSettingsManager.shared.selectedLanguage.rawValue
             )
             do {
                 _ = try await client.functions.invoke(
@@ -1378,7 +1380,7 @@ final class SessionStore: ObservableObject {
 
     private func prettify(_ message: String) -> String {
         if message.contains("gmail.com") && message.contains("invalid") {
-            return "Supabase rejects gmail addresses shorter than 6 characters before the @. Add characters before @ or use another email."
+            return "Supabase rejects gmail addresses shorter than 6 characters before the @. Add characters before @ or use another email.".localizedStringFallback
         }
         return message
     }

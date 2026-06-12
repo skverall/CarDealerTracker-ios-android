@@ -57,10 +57,10 @@ struct ExpenseDetailSheet: View {
                     .padding(.top, 24)
 
                     VStack(alignment: .leading, spacing: 10) {
-                        DetailRow(title: "Category", value: expense.categoryTitle, icon: "tag")
-                        DetailRow(title: "Vehicle", value: expense.vehicleSubtitle, icon: "car.fill")
+                        DetailRow(title: "category".localizedString, value: expense.categoryTitle, icon: "tag")
+                        DetailRow(title: "vehicle".localizedString, value: expense.vehicleSubtitle, icon: "car.fill")
                         DetailRow(
-                            title: "Date",
+                            title: "date".localizedString,
                             value: expenseDetailDateTime(expense).formatted(date: .abbreviated, time: .shortened),
                             icon: "calendar"
                         )
@@ -87,7 +87,7 @@ struct ExpenseDetailSheet: View {
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Comment")
+                        Text("Comment".localizedString)
                             .font(.caption)
                             .foregroundColor(ColorTheme.secondaryText)
 

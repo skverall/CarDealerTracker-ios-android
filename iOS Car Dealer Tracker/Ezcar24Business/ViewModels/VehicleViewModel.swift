@@ -477,9 +477,9 @@ extension Vehicle {
 
         if let inventoryIDValue {
             if !name.isEmpty {
-                return "\(name) • ID \(inventoryIDValue)"
+                return String(format: "%@ • ID %@".localizedStringFallback, name, inventoryIDValue)
             }
-            return "ID \(inventoryIDValue)"
+            return String(format: "ID %@".localizedStringFallback, inventoryIDValue)
         }
 
         if !name.isEmpty {
@@ -495,10 +495,10 @@ extension Vehicle {
 
     var inventoryOrVINLabel: String? {
         if let inventoryIDValue {
-            return "ID: \(inventoryIDValue)"
+            return String(format: "ID: %@".localizedStringFallback, inventoryIDValue)
         }
         if let vinValue {
-            return "VIN: \(vinValue)"
+            return String(format: "VIN: %@".localizedStringFallback, vinValue)
         }
         return nil
     }

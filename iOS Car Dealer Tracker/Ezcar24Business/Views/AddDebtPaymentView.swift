@@ -294,7 +294,7 @@ struct AddDebtPaymentView: View {
                         .tint(.white)
                         .padding(.trailing, 8)
                 }
-                Text(isSaving ? "Saving..." : "Save Payment")
+                Text(isSaving ? "saving".localizedString : "Save Payment".localizedString)
                     .font(.headline)
             }
             .foregroundColor(.white)

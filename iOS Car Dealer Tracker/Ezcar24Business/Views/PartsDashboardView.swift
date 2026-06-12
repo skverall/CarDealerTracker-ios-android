@@ -181,11 +181,11 @@ struct PartsDashboardView: View {
                             Button("all".localizedString) { inventoryViewModel.selectedCategory = nil }
                             Divider()
                             ForEach(inventoryViewModel.getAllCategories(), id: \.self) { cat in
-                                Button(cat) { inventoryViewModel.selectedCategory = cat }
+                                Button(localizedPartCategory(cat)) { inventoryViewModel.selectedCategory = cat }
                             }
                         } label: {
                             PartsFilterChip(
-                                title: inventoryViewModel.selectedCategory ?? "category".localizedString,
+                                title: inventoryViewModel.selectedCategory.map(localizedPartCategory) ?? "category".localizedString,
                                 icon: "tag.fill",
                                 isSelected: inventoryViewModel.selectedCategory != nil
                             )
@@ -227,7 +227,7 @@ struct PartsDashboardView: View {
                                     .foregroundColor(ColorTheme.primary)
                             }
                             
-                            Text(group.category)
+                            Text(localizedPartCategory(group.category))
                                 .font(.system(size: 13, weight: .bold, design: .rounded))
                                 .foregroundColor(ColorTheme.secondaryText)
                             
@@ -311,10 +311,31 @@ struct PartsDashboardView: View {
     private var groupedParts: [(category: String, parts: [Part])] {
          let groups = Dictionary(grouping: inventoryViewModel.parts) { part in
               let cat = part.category?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-              return cat.isEmpty ? "parts_uncategorized".localizedString : cat.localizedString
+              return cat.isEmpty ? "__uncategorized" : cat
          }
          return groups.map { (category: $0.key, parts: $0.value) }
-             .sorted { $0.category < $1.category }
+             .sorted { localizedPartCategory($0.category) < localizedPartCategory($1.category) }
+    }
+
+    private func localizedPartCategory(_ category: String) -> String {
+        switch category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "__uncategorized", "":
+            return "parts_uncategorized".localizedString
+        case "engine":
+            return "parts_category_engine".localizedString
+        case "body":
+            return "parts_category_body".localizedString
+        case "electrical":
+            return "parts_category_electrical".localizedString
+        case "suspension":
+            return "parts_category_suspension".localizedString
+        case "interior":
+            return "parts_category_interior".localizedString
+        case "other":
+            return "parts_category_other".localizedString
+        default:
+            return category
+        }
     }
     
     private var activeSearchText: Binding<String> {

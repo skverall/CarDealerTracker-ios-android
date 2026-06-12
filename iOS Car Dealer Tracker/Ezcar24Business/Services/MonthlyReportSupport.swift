@@ -101,7 +101,7 @@ enum MonthlyReportDeliveryError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unavailable:
-            return "Backend delivery is not connected yet."
+            return "Backend delivery is not connected yet.".localizedStringFallback
         }
     }
 }

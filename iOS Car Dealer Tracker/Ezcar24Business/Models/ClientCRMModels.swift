@@ -111,8 +111,8 @@ extension ClientReminder {
     }
 
     var statusLabel: String {
-        if isCompleted { return "Completed" }
-        return isOverdue ? "Overdue" : "Scheduled"
+        if isCompleted { return "Completed".localizedStringFallback }
+        return isOverdue ? "Overdue".localizedStringFallback : "Scheduled".localizedStringFallback
     }
 
     func asDraft() -> ReminderDraft {

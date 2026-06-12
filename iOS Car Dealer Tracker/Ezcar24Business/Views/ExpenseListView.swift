@@ -24,6 +24,20 @@ func expenseDisplayDateTime(_ expense: Expense) -> Date {
     return calendar.date(from: combined) ?? expenseDate
 }
 
+func localizedExpenseCategoryName(_ category: String) -> String {
+    switch category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "vehicle": return "vehicle".localizedStringFallback
+    case "personal": return "personal".localizedStringFallback
+    case "employee": return "employee".localizedStringFallback
+    case "office": return "bills".localizedStringFallback
+    case "marketing": return "marketing".localizedStringFallback
+    case "":
+        return "category".localizedStringFallback
+    default:
+        return category
+    }
+}
+
 
 struct VehicleFilterMenu: View {
     @ObservedObject var viewModel: ExpenseViewModel
@@ -238,7 +252,7 @@ struct ExpenseListView: View {
         default: return "category".localizedString
         }
     }
-    private var groupTitle: String { groupMode == .date ? "Date" : "Category" }
+    private var groupTitle: String { groupMode == .date ? "date".localizedString : "category".localizedString }
     private var filtersAreDefault: Bool {
         periodFilter == .all &&
         viewModel.selectedCategory.lowercased() == "all" &&
@@ -414,14 +428,7 @@ struct ExpenseListView: View {
     }
 
     private func categoryDisplayName(_ category: String) -> String {
-        switch category.lowercased() {
-        case "vehicle": return "vehicle".localizedString
-        case "personal": return "personal".localizedString
-        case "employee": return "employee".localizedString
-        case "office": return "bills".localizedString
-        case "marketing": return "marketing".localizedString
-        default: return category.capitalized
-        }
+        localizedExpenseCategoryName(category)
     }
 
     private func resetFilters() {
@@ -954,20 +961,7 @@ struct CategoryBadge: View {
     let category: String
 
     var categoryText: String {
-        switch category.lowercased() {
-        case "vehicle":
-            return "vehicle".localizedString
-        case "personal":
-            return "personal".localizedString
-        case "employee":
-            return "employee".localizedString
-        case "office":
-            return "bills".localizedString
-        case "marketing":
-            return "marketing".localizedString
-        default:
-            return category.capitalized
-        }
+        localizedExpenseCategoryName(category)
     }
 
     var body: some View {
@@ -1484,7 +1478,7 @@ struct DealerExpenseDashboardView: View {
         private func primaryText(for expense: Expense) -> String {
             let desc = (expense.expenseDescription ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             if !desc.isEmpty { return desc }
-            return expense.category?.capitalized ?? "expense_fallback".localizedString
+            return expense.category.map(localizedExpenseCategoryName) ?? "expense_fallback".localizedString
         }
         
         private func subtitleText(for expense: Expense) -> String {
@@ -1553,7 +1547,7 @@ struct DealerExpenseDashboardView: View {
     private var categoryChipTitle: String {
         let title = viewModel.selectedCategory
         if title.lowercased() == "all" { return "category".localizedString }
-        return title.capitalized
+        return localizedExpenseCategoryName(title)
     }
 
     private func iconName(for expense: Expense) -> String {
@@ -1573,7 +1567,7 @@ struct DealerExpenseDashboardView: View {
     private func primaryText(for expense: Expense) -> String {
         let desc = (expense.expenseDescription ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if !desc.isEmpty { return desc }
-        return expense.category?.capitalized ?? "expense_fallback".localizedString
+        return expense.category.map(localizedExpenseCategoryName) ?? "expense_fallback".localizedString
     }
 
     private func subtitleText(for expense: Expense) -> String {
@@ -1597,7 +1591,7 @@ struct DealerExpenseDashboardView: View {
             parts.append(vin)
         }
         
-        return parts.isEmpty ? "No details" : parts.joined(separator: " • ")
+        return parts.isEmpty ? "no_details".localizedString : parts.joined(separator: " • ")
     }
 }
 

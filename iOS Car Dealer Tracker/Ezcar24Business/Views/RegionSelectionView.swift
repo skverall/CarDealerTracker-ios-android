@@ -169,7 +169,7 @@ private struct RegionCard: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     
-                    Text("\(region.currencyCode) • \(region.usesKilometers ? "km" : "mi")")
+                    Text("\(region.currencyCode) • \(region.usesKilometers ? "km".localizedString : "mi".localizedString)")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(ColorTheme.secondaryText)
@@ -229,7 +229,7 @@ struct RegionLanguageSettingsView: View {
                                     .font(.body)
                                     .foregroundColor(ColorTheme.primaryText)
                                 
-                                Text("\(region.currencyCode) • \(region.usesKilometers ? "km" : "miles")")
+                                Text("\(region.currencyCode) • \(region.usesKilometers ? "km".localizedString : "miles".localizedString)")
                                     .font(.caption)
                                     .foregroundColor(ColorTheme.secondaryText)
                             }

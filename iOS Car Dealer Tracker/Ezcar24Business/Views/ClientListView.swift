@@ -629,9 +629,9 @@ struct ClientRowView: View {
         if cal.isDateInToday(date) {
             let formatter = DateFormatter()
             formatter.timeStyle = .short
-            return "Today " + formatter.string(from: date)
+            return "today".localizedStringFallback + " " + formatter.string(from: date)
         } else if cal.isDateInYesterday(date) {
-            return "Yesterday"
+            return "yesterday".localizedStringFallback
         } else {
             let formatter = DateFormatter()
             formatter.dateFormat = "d MMM"
@@ -649,6 +649,6 @@ extension Vehicle {
         if let vin = vin?.trimmingCharacters(in: .whitespacesAndNewlines), !vin.isEmpty {
             return vin
         }
-        return "Vehicle"
+        return "vehicle".localizedStringFallback
     }
 }

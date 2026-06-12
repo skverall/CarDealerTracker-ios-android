@@ -259,7 +259,7 @@ final class BackupExportManager: ObservableObject {
             content: snapshot.vehicleSales.isEmpty
                 ? emptyStateHTML("No vehicle sales recorded in this period.")
                 : dataTableHTML(
-                    headers: ["Vehicle", "Sold", "Revenue", "Profit"],
+                    headers: ["vehicle".localizedStringFallback, "sold".localizedStringFallback, "revenue".localizedStringFallback, "profit".localizedStringFallback],
                     rows: snapshot.vehicleSales.map { sale in
                         [
                             primaryDetailCellHTML(
@@ -358,7 +358,7 @@ final class BackupExportManager: ObservableObject {
             content: snapshot.inventorySnapshot.isEmpty
                 ? emptyStateHTML("No active vehicles in stock.")
                 : dataTableHTML(
-                    headers: ["Vehicle", "Status", "Purchase", "Cost basis"],
+                    headers: ["vehicle".localizedStringFallback, "status".localizedStringFallback, "purchase".localizedStringFallback, "cost_basis".localizedStringFallback],
                     rows: snapshot.inventorySnapshot.map { vehicle in
                         [
                             primaryDetailCellHTML(
@@ -402,7 +402,7 @@ final class BackupExportManager: ObservableObject {
             content: snapshot.topProfitableVehicles.isEmpty
                 ? emptyStateHTML("No profitable vehicle sales in this period.")
                 : dataTableHTML(
-                    headers: ["Vehicle", "Sold", "Profit"],
+                    headers: ["vehicle".localizedStringFallback, "sold".localizedStringFallback, "profit".localizedStringFallback],
                     rows: snapshot.topProfitableVehicles.map { sale in
                         [
                             plainCellHTML(sale.title),
@@ -420,7 +420,7 @@ final class BackupExportManager: ObservableObject {
             content: snapshot.lossMakingVehicles.isEmpty
                 ? emptyStateHTML("No loss-making vehicle sales in this period.")
                 : dataTableHTML(
-                    headers: ["Vehicle", "Sold", "Profit"],
+                    headers: ["vehicle".localizedStringFallback, "sold".localizedStringFallback, "profit".localizedStringFallback],
                     rows: snapshot.lossMakingVehicles.map { sale in
                         [
                             plainCellHTML(sale.title),

@@ -21,8 +21,8 @@ struct AddAccountTransactionView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Type") {
-                    Picker("Transaction", selection: $transactionType) {
+                Section("Type".localizedString) {
+                    Picker("Transaction".localizedString, selection: $transactionType) {
                         ForEach(AccountTransactionType.allCases) { type in
                             Text(type.title).tag(type)
                         }
@@ -30,8 +30,8 @@ struct AddAccountTransactionView: View {
                     .pickerStyle(.segmented)
                 }
 
-                Section("Amount") {
-                    TextField("Amount", text: $amount)
+                Section("Amount".localizedString) {
+                    TextField("amount".localizedString, text: $amount)
                         .keyboardType(.decimalPad)
                         .onChange(of: amount) { _, newValue in
                             let filtered = newValue.filter { "0123456789.".contains($0) }
@@ -39,16 +39,16 @@ struct AddAccountTransactionView: View {
                         }
                 }
 
-                Section("Date") {
-                    DatePicker("Date", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                Section("date".localizedString) {
+                    DatePicker("date".localizedString, selection: $date, displayedComponents: [.date, .hourAndMinute])
                 }
 
-                Section("Note") {
-                    TextField("Note (Optional)", text: $note, axis: .vertical)
+                Section("Note".localizedString) {
+                    TextField("Note (Optional)".localizedString, text: $note, axis: .vertical)
                         .lineLimit(2...4)
                 }
             }
-            .navigationTitle("New Transaction")
+            .navigationTitle("New Transaction".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

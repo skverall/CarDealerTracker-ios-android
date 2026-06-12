@@ -66,7 +66,7 @@ struct MonthlyReportPreviewView: View {
                     if isExporting {
                         ProgressView()
                     } else {
-                        Text("Export PDF")
+                        Text("Export PDF".localizedString)
                     }
                 }
                 .disabled(isExporting || isLoading || snapshot == nil)
@@ -92,7 +92,7 @@ struct MonthlyReportPreviewView: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Previous calendar month")
+                        Text("Previous calendar month".localizedString)
                             .font(.caption)
                             .foregroundColor(ColorTheme.secondaryText)
                         Text(reportMonth.displayTitle)
@@ -116,7 +116,7 @@ struct MonthlyReportPreviewView: View {
                         metricCard(title: "Net cash movement", value: summary.netCashMovement.asCurrency(), tint: .indigo)
                     }
 
-                    Text("Structured around realized sales profit, monthly expenses, and cash movement instead of one synthetic net figure.")
+                    Text("Structured around realized sales profit, monthly expenses, and cash movement instead of one synthetic net figure.".localizedString)
                         .font(.footnote)
                         .foregroundColor(ColorTheme.secondaryText)
                 }
@@ -135,7 +135,7 @@ struct MonthlyReportPreviewView: View {
         return card {
             VStack(alignment: .leading, spacing: 14) {
                 sectionTitle("Executive brief")
-                Text("A faster operator-level scan before the detailed tables.")
+                Text("A faster operator-level scan before the detailed tables.".localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
 
@@ -171,7 +171,7 @@ struct MonthlyReportPreviewView: View {
         return card {
             VStack(alignment: .leading, spacing: 14) {
                 sectionTitle("Financial overview")
-                Text("Fast visual comparison of the month’s core metrics.")
+                Text("Fast visual comparison of the month’s core metrics.".localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
 
@@ -186,7 +186,7 @@ struct MonthlyReportPreviewView: View {
         card {
             VStack(alignment: .leading, spacing: 14) {
                 sectionTitle("Expense mix")
-                Text("Where spend concentrated the most in the month.")
+                Text("Where spend concentrated the most in the month.".localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
 
@@ -226,7 +226,7 @@ struct MonthlyReportPreviewView: View {
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
 
-                            Text("Revenue \(sale.revenue.asCurrency()) • Purchase \(sale.purchasePrice.asCurrency()) • Expenses \(sale.vehicleExpenses.asCurrency()) • Holding \(sale.holdingCost.asCurrency()) • VAT refund \(sale.vatRefund.asCurrency())")
+                            Text(String(format: "Revenue %@ • Purchase %@ • Expenses %@ • Holding %@ • VAT refund %@".localizedString, sale.revenue.asCurrency(), sale.purchasePrice.asCurrency(), sale.vehicleExpenses.asCurrency(), sale.holdingCost.asCurrency(), sale.vatRefund.asCurrency()))
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
                         }
@@ -258,7 +258,7 @@ struct MonthlyReportPreviewView: View {
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
 
-                            Text("Revenue \(sale.revenue.asCurrency()) • COGS \(sale.costOfGoodsSold.asCurrency())")
+                            Text(String(format: "Revenue %@ • COGS %@".localizedString, sale.revenue.asCurrency(), sale.costOfGoodsSold.asCurrency()))
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
                         }
@@ -355,7 +355,7 @@ struct MonthlyReportPreviewView: View {
                                     .foregroundColor(ColorTheme.primaryText)
                             }
 
-                            Text("\(vehicle.status.capitalized) • Purchase \(vehicle.purchasePrice.asCurrency()) • Expenses \(vehicle.totalExpenses.asCurrency())")
+                            Text(String(format: "%@ • Purchase %@ • Expenses %@".localizedString, vehicle.status.localizedString.capitalized, vehicle.purchasePrice.asCurrency(), vehicle.totalExpenses.asCurrency()))
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
                         }
@@ -519,14 +519,14 @@ struct MonthlyReportPreviewView: View {
     }
 
     private func sectionTitle(_ value: String) -> some View {
-        Text(value)
+        Text(value.localizedString)
             .font(.headline)
             .foregroundColor(ColorTheme.primaryText)
     }
 
     private func metricCard(title: String, value: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title)
+            Text(title.localizedString)
                 .font(.caption)
                 .foregroundColor(ColorTheme.secondaryText)
             Text(value)
@@ -541,10 +541,10 @@ struct MonthlyReportPreviewView: View {
 
     private func healthSignalCard(_ signal: ReportHealthSignal) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(signal.title)
+            Text(signal.title.localizedString)
                 .font(.headline)
                 .foregroundColor(ColorTheme.primaryText)
-            Text(signal.detail)
+            Text(signal.detail.localizedString)
                 .font(.subheadline)
                 .foregroundColor(ColorTheme.secondaryText)
         }
@@ -560,13 +560,13 @@ struct MonthlyReportPreviewView: View {
 
     private func executiveHighlightCard(_ highlight: ReportHighlightCard) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(highlight.title)
+            Text(highlight.title.localizedString)
                 .font(.caption)
                 .foregroundColor(ColorTheme.secondaryText)
             Text(highlight.value)
                 .font(.headline)
                 .foregroundColor(ColorTheme.primaryText)
-            Text(highlight.detail)
+            Text(highlight.detail.localizedString)
                 .font(.caption)
                 .foregroundColor(ColorTheme.secondaryText)
         }
@@ -579,7 +579,7 @@ struct MonthlyReportPreviewView: View {
     private func chartRow(item: ReportChartItem, maxValue: Decimal) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(item.title)
+                Text(item.title.localizedString)
                     .foregroundColor(ColorTheme.primaryText)
                 Spacer()
                 Text(item.valueLabel)
@@ -600,7 +600,7 @@ struct MonthlyReportPreviewView: View {
             .frame(height: 10)
 
             if let detail = item.detail {
-                Text(detail)
+                Text(detail.localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
             }
@@ -609,12 +609,12 @@ struct MonthlyReportPreviewView: View {
 
     private func compositionCard(title: String, subtitle: String, items: [ReportCompositionItem], emptyMessage: String) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title)
+            Text(title.localizedString)
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(ColorTheme.primaryText)
 
-            Text(subtitle)
+            Text(subtitle.localizedString)
                 .font(.caption)
                 .foregroundColor(ColorTheme.secondaryText)
 
@@ -629,7 +629,7 @@ struct MonthlyReportPreviewView: View {
                             Circle()
                                 .fill(item.tint)
                                 .frame(width: 10, height: 10)
-                            Text(item.title)
+                            Text(item.title.localizedString)
                                 .foregroundColor(ColorTheme.primaryText)
                         }
                         Spacer()
@@ -661,7 +661,7 @@ struct MonthlyReportPreviewView: View {
 
     private func detailLine(title: String, value: String) -> some View {
         HStack {
-            Text(title)
+            Text(title.localizedString)
                 .foregroundColor(ColorTheme.secondaryText)
             Spacer()
             Text(value)
@@ -670,7 +670,7 @@ struct MonthlyReportPreviewView: View {
     }
 
     private func emptyState(_ message: String) -> some View {
-        Text(message)
+        Text(message.localizedString)
             .font(.subheadline)
             .foregroundColor(ColorTheme.secondaryText)
     }
@@ -715,28 +715,28 @@ struct MonthlyReportPreviewView: View {
                 valueLabel: summary.totalRevenue.asCurrency(),
                 magnitude: absoluteDecimal(summary.totalRevenue),
                 tint: .blue,
-                detail: "Vehicle \(summary.vehicleRevenue.asCurrency()) • Parts \(summary.partRevenue.asCurrency())"
+                detail: String(format: "Vehicle %@ • Parts %@".localizedString, summary.vehicleRevenue.asCurrency(), summary.partRevenue.asCurrency())
             ),
             ReportChartItem(
                 title: "Realized sales profit",
                 valueLabel: summary.realizedSalesProfit.asCurrency(),
                 magnitude: absoluteDecimal(summary.realizedSalesProfit),
                 tint: .green,
-                detail: "Vehicle \(summary.vehicleProfit.asCurrency()) • Parts \(summary.partProfit.asCurrency())"
+                detail: String(format: "Vehicle %@ • Parts %@".localizedString, summary.vehicleProfit.asCurrency(), summary.partProfit.asCurrency())
             ),
             ReportChartItem(
                 title: "Monthly expenses",
                 valueLabel: summary.monthlyExpenses.asCurrency(),
                 magnitude: absoluteDecimal(summary.monthlyExpenses),
                 tint: .orange,
-                detail: "\(snapshot.expenseActivity.count) recorded entries"
+                detail: String(format: "%lld recorded entries".localizedString, Int64(snapshot.expenseActivity.count))
             ),
             ReportChartItem(
                 title: "Net cash movement",
                 valueLabel: summary.netCashMovement.asCurrency(),
                 magnitude: absoluteDecimal(summary.netCashMovement),
                 tint: summary.netCashMovement >= 0 ? .indigo : .red,
-                detail: "Deposits \(summary.depositsTotal.asCurrency()) • Withdrawals \(summary.withdrawalsTotal.asCurrency())"
+                detail: String(format: "Deposits %@ • Withdrawals %@".localizedString, summary.depositsTotal.asCurrency(), summary.withdrawalsTotal.asCurrency())
             )
         ]
     }
@@ -748,7 +748,7 @@ struct MonthlyReportPreviewView: View {
                 valueLabel: category.amount.asCurrency(),
                 magnitude: absoluteDecimal(category.amount),
                 tint: ColorTheme.accent,
-                detail: "\(category.count) entries"
+                detail: String(format: "%lld entries".localizedString, Int64(category.count))
             )
         }
     }
@@ -759,7 +759,7 @@ struct MonthlyReportPreviewView: View {
         if summary.totalRevenue == 0 && summary.monthlyExpenses > 0 {
             return ReportHealthSignal(
                 title: "Expense-only month",
-                detail: "No realized sales were recorded while expenses still reached \(summary.monthlyExpenses.asCurrency()).",
+                detail: String(format: "No realized sales were recorded while expenses still reached %@.".localizedString, summary.monthlyExpenses.asCurrency()),
                 tint: .orange
             )
         }
@@ -767,7 +767,7 @@ struct MonthlyReportPreviewView: View {
         if summary.realizedSalesProfit >= summary.monthlyExpenses && summary.netCashMovement >= 0 {
             return ReportHealthSignal(
                 title: "Healthy operating month",
-                detail: "Realized sales profit covered expenses and cash movement stayed non-negative at \(summary.netCashMovement.asCurrency()).",
+                detail: String(format: "Realized sales profit covered expenses and cash movement stayed non-negative at %@.".localizedString, summary.netCashMovement.asCurrency()),
                 tint: .green
             )
         }
@@ -795,26 +795,26 @@ struct MonthlyReportPreviewView: View {
         return [
             ReportHighlightCard(
                 title: "Sales closed",
-                value: "\(snapshot.vehicleSales.count) vehicle • \(snapshot.partSales.count) part",
-                detail: "Revenue \(summary.totalRevenue.asCurrency())",
+                value: String(format: "%lld vehicle • %lld part".localizedString, Int64(snapshot.vehicleSales.count), Int64(snapshot.partSales.count)),
+                detail: String(format: "Revenue %@".localizedString, summary.totalRevenue.asCurrency()),
                 tint: .blue
             ),
             ReportHighlightCard(
                 title: "Best close",
                 value: bestVehicle?.title ?? "No profitable close",
-                detail: bestVehicle.map { "Profit \($0.realizedProfit.asCurrency())" } ?? "No realized profitable vehicle sale in this month.",
+                detail: bestVehicle.map { String(format: "Profit %@".localizedString, $0.realizedProfit.asCurrency()) } ?? "No realized profitable vehicle sale in this month.",
                 tint: .green
             ),
             ReportHighlightCard(
                 title: "Expense pressure",
                 value: topExpense?.title ?? "No dominant category",
-                detail: topExpense.map { "\($0.amount.asCurrency()) across \($0.count) entries" } ?? "No expense category concentration this month.",
+                detail: topExpense.map { String(format: "%@ across %lld entries".localizedString, $0.amount.asCurrency(), Int64($0.count)) } ?? "No expense category concentration this month.",
                 tint: .orange
             ),
             ReportHighlightCard(
                 title: "Inventory exposure",
-                value: "\(summary.inventoryCount) vehicles in stock",
-                detail: "Vehicle capital \(summary.inventoryCapital.asCurrency()) • Parts \(summary.partsInventoryCost.asCurrency())",
+                value: String(format: "%lld vehicles in stock".localizedString, Int64(summary.inventoryCount)),
+                detail: String(format: "Vehicle capital %@ • Parts %@".localizedString, summary.inventoryCapital.asCurrency(), summary.partsInventoryCost.asCurrency()),
                 tint: .indigo
             )
         ]
