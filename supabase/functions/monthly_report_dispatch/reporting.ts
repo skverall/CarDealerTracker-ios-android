@@ -373,7 +373,6 @@ export async function buildMonthlyReportSnapshot(
   const vehiclesById = new Map(vehicles.map((vehicle) => [vehicle.id, vehicle]));
   const accountsById = new Map(accounts.map((account) => [account.id, account]));
   const partsById = new Map(parts.map((part) => [part.id, part]));
-  const partBatchesById = new Map(partBatches.map((batch) => [batch.id, batch]));
 
   const vehicleExpenseMap = new Map<string, ExpenseRecord[]>();
   for (const expense of vehicleSaleExpenses) {
@@ -845,20 +844,18 @@ function dateishInstant(value: string | null, timezone: string) {
 
   try {
     return Temporal.Instant.from(value);
-  } catch (_error) {
+  } catch (_instantError) {
+    try {
+      return Temporal.PlainDate.from(value)
+        .toZonedDateTime({
+          timeZone: timezone,
+          plainTime: Temporal.PlainTime.from("00:00"),
+        })
+        .toInstant();
+    } catch (_plainDateError) {
+      return null;
+    }
   }
-
-  try {
-    return Temporal.PlainDate.from(value)
-      .toZonedDateTime({
-        timeZone: timezone,
-        plainTime: Temporal.PlainTime.from("00:00"),
-      })
-      .toInstant();
-  } catch (_error) {
-  }
-
-  return null;
 }
 
 function compareDateish(left: string | null, right: string | null, timezone: string) {

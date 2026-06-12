@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 
 type InviteRow = {
   id: string
@@ -23,6 +23,7 @@ serve(async (req) => {
     const body = await req.json()
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : ""
     if (!email) throw new Error("Email is required")
+    const language = normalizeLanguage(body?.language)
 
     const redirectTo =
       typeof body?.redirect_to === "string" && body.redirect_to.length > 0
@@ -129,7 +130,7 @@ serve(async (req) => {
       const actionLink = extractActionLink(linkData)
       if (!actionLink) throw new Error("Failed to generate recovery link")
 
-      await sendRecoveryEmail({ to: email, resetUrl: actionLink })
+      await sendRecoveryEmail({ to: email, resetUrl: actionLink, language })
     }
 
     return new Response(JSON.stringify({ success: true }), {
@@ -179,8 +180,16 @@ function isUserExistsError(error: { message?: string }) {
   return message.includes("already") && (message.includes("registered") || message.includes("exists"))
 }
 
+type SupportedEmailLanguage = "en" | "ru" | "ja" | "uz"
+
+function normalizeLanguage(value: unknown): SupportedEmailLanguage {
+  const code = typeof value === "string" ? value.trim().toLowerCase().split(/[-_]/)[0] : ""
+  if (code === "ru" || code === "ja" || code === "uz") return code
+  return "en"
+}
+
 async function findUserIdByEmail(
-  supabaseAdmin: any,
+  supabaseAdmin: SupabaseClient,
   email: string
 ): Promise<string | null> {
   const { data: profile, error: profileError } = await supabaseAdmin
@@ -199,7 +208,7 @@ async function findUserIdByEmail(
     const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage })
     if (error) break
     const users = data?.users ?? []
-    const match = users.find((u: any) => (u.email ?? "").toLowerCase() === email.toLowerCase())
+    const match = users.find((u) => (u.email ?? "").toLowerCase() === email.toLowerCase())
     if (match) return match.id
     if (users.length < perPage) break
     page += 1
@@ -208,7 +217,7 @@ async function findUserIdByEmail(
 }
 
 async function repairUserEmailState(
-  supabaseAdmin: any,
+  supabaseAdmin: SupabaseClient,
   userId: string,
   email: string
 ) {
@@ -233,32 +242,69 @@ async function repairUserEmailState(
   if (updateError) throw updateError
 }
 
-async function sendRecoveryEmail(payload: { to: string; resetUrl: string }) {
+function recoveryEmailCopy(language: SupportedEmailLanguage) {
+  return {
+    en: {
+      subject: "Reset your Ezcar24 Business password",
+      heading: "Reset your password",
+      intro: "We received a request to reset your Ezcar24 Business password.",
+      button: "Reset Password",
+      linkLabel: "Reset password",
+      ignore: "If you did not request this, you can ignore this email.",
+    },
+    ru: {
+      subject: "Сброс пароля Ezcar24 Business",
+      heading: "Сброс пароля",
+      intro: "Мы получили запрос на сброс пароля Ezcar24 Business.",
+      button: "Сбросить пароль",
+      linkLabel: "Сбросить пароль",
+      ignore: "Если вы не запрашивали сброс пароля, просто проигнорируйте это письмо.",
+    },
+    ja: {
+      subject: "Ezcar24 Businessのパスワード再設定",
+      heading: "パスワードを再設定",
+      intro: "Ezcar24 Businessのパスワード再設定リクエストを受け付けました。",
+      button: "パスワードを再設定",
+      linkLabel: "パスワード再設定",
+      ignore: "この操作に心当たりがない場合は、このメールを無視してください。",
+    },
+    uz: {
+      subject: "Ezcar24 Business parolini tiklash",
+      heading: "Parolni tiklash",
+      intro: "Ezcar24 Business parolingizni tiklash so'rovi qabul qilindi.",
+      button: "Parolni tiklash",
+      linkLabel: "Parolni tiklash",
+      ignore: "Agar buni siz so'ramagan bo'lsangiz, ushbu xatni e'tiborsiz qoldiring.",
+    },
+  }[language]
+}
+
+async function sendRecoveryEmail(payload: { to: string; resetUrl: string; language: SupportedEmailLanguage }) {
   const apiKey = Deno.env.get("RESEND_API_KEY")
   if (!apiKey) {
     throw new Error("Email is not configured: RESEND_API_KEY is missing")
   }
 
   const from = Deno.env.get("RESEND_FROM_EMAIL") ?? "Ezcar24 <no-reply@ezcar24.com>"
-  const subject = "Reset your Ezcar24 Business password"
+  const copy = recoveryEmailCopy(payload.language)
 
   const text = [
-    "We received a request to reset your Ezcar24 Business password.",
-    `Reset password: ${payload.resetUrl}`,
-    "If you did not request this, you can ignore this email.",
+    copy.intro,
+    `${copy.linkLabel}: ${payload.resetUrl}`,
+    copy.ignore,
   ].join("\n")
 
   const html = `
     <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
-      <h2 style="margin: 0 0 12px;">Reset your password</h2>
-      <p style="margin: 0 0 8px;">We received a request to reset your Ezcar24 Business password.</p>
+      <h2 style="margin: 0 0 12px;">${copy.heading}</h2>
+      <p style="margin: 0 0 8px;">${copy.intro}</p>
       <p style="margin: 0 0 16px;">
         <a href="${payload.resetUrl}" style="display: inline-block; padding: 10px 16px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px;">
-          Reset Password
+          ${copy.button}
         </a>
       </p>
       <p style="margin: 0; color: #6b7280; font-size: 13px;">
-        If you did not request this, you can ignore this email.
+        ${copy.ignore}
       </p>
     </div>
   `
@@ -272,7 +318,7 @@ async function sendRecoveryEmail(payload: { to: string; resetUrl: string }) {
     body: JSON.stringify({
       from,
       to: [payload.to],
-      subject,
+      subject: copy.subject,
       html,
       text,
     }),

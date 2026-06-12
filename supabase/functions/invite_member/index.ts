@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2"
 
-type AnySupabaseClient = SupabaseClient<any, any, any>
+type AnySupabaseClient = SupabaseClient
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -34,6 +34,7 @@ Deno.serve(async (req) => {
     }
     const normalizedEmail = email.trim().toLowerCase()
     const normalizedRole = role.toLowerCase()
+    const normalizedLanguage = normalizeLanguage(language)
     const allowedRoles = new Set(["admin", "sales", "viewer"])
     if (!allowedRoles.has(normalizedRole)) {
       throw new Error("Invalid role")
@@ -256,9 +257,7 @@ Deno.serve(async (req) => {
     const baseUrl = Deno.env.get("INVITE_BASE_URL") ?? "https://ezcar24.com/accept-invite"
     const inviteUrl = new URL(baseUrl)
     inviteUrl.searchParams.set("token", token)
-    if (typeof language === "string" && language.length > 0) {
-      inviteUrl.searchParams.set("lang", language)
-    }
+    inviteUrl.searchParams.set("lang", normalizedLanguage)
     const inviteUrlValue = inviteUrl.toString()
 
     await sendInviteEmail({
@@ -266,6 +265,7 @@ Deno.serve(async (req) => {
       role: normalizedRole,
       inviteCode,
       inviteUrl: inviteUrlValue,
+      language: normalizedLanguage,
     })
 
     return new Response(
@@ -383,40 +383,100 @@ function isDuplicateViolation(error: unknown) {
   return code === "23505"
 }
 
-async function sendInviteEmail(payload: { to: string; role: string; inviteCode: string; inviteUrl: string }) {
+type SupportedEmailLanguage = "en" | "ru" | "ja" | "uz"
+
+function normalizeLanguage(value: unknown): SupportedEmailLanguage {
+  const code = typeof value === "string" ? value.trim().toLowerCase().split(/[-_]/)[0] : ""
+  if (code === "ru" || code === "ja" || code === "uz") return code
+  return "en"
+}
+
+function inviteEmailCopy(language: SupportedEmailLanguage, role: string) {
+  const roles: Record<SupportedEmailLanguage, Record<string, string>> = {
+    en: { admin: "Admin", sales: "Sales", viewer: "Viewer" },
+    ru: { admin: "Администратор", sales: "Продажи", viewer: "Просмотр" },
+    ja: { admin: "管理者", sales: "販売", viewer: "閲覧者" },
+    uz: { admin: "Administrator", sales: "Sotuvchi", viewer: "Kuzatuvchi" },
+  }
+  const roleLabel = roles[language][role] ?? role.toUpperCase()
+  const copy = {
+    en: {
+      subject: "You have been invited to Ezcar24 Business",
+      heading: "You have been invited",
+      intro: "You were invited to join a team in Ezcar24 Business.",
+      roleLabel: "Role",
+      inviteCodeLabel: "Invite code",
+      instruction: "Open the app, sign in or sign up, then enter this code.",
+      fallbackLabel: "Fallback invite link",
+      ignore: "If you did not expect this invitation, you can ignore this email.",
+    },
+    ru: {
+      subject: "Вас пригласили в Ezcar24 Business",
+      heading: "Вас пригласили",
+      intro: "Вас пригласили присоединиться к команде в Ezcar24 Business.",
+      roleLabel: "Роль",
+      inviteCodeLabel: "Код приглашения",
+      instruction: "Откройте приложение, войдите или зарегистрируйтесь, затем введите этот код.",
+      fallbackLabel: "Резервная ссылка приглашения",
+      ignore: "Если вы не ожидали это приглашение, просто проигнорируйте это письмо.",
+    },
+    ja: {
+      subject: "Ezcar24 Businessへの招待",
+      heading: "招待が届いています",
+      intro: "Ezcar24 Businessのチームに招待されました。",
+      roleLabel: "役割",
+      inviteCodeLabel: "招待コード",
+      instruction: "アプリを開き、サインインまたは登録してから、このコードを入力してください。",
+      fallbackLabel: "招待リンクを開く",
+      ignore: "この招待に心当たりがない場合は、このメールを無視してください。",
+    },
+    uz: {
+      subject: "Siz Ezcar24 Business'ga taklif qilindingiz",
+      heading: "Siz taklif qilindingiz",
+      intro: "Siz Ezcar24 Business jamoasiga qo'shilishga taklif qilindingiz.",
+      roleLabel: "Rol",
+      inviteCodeLabel: "Taklif kodi",
+      instruction: "Ilovani oching, tizimga kiring yoki ro'yxatdan o'ting, keyin ushbu kodni kiriting.",
+      fallbackLabel: "Zaxira taklif havolasi",
+      ignore: "Agar bu taklifni kutmagan bo'lsangiz, ushbu xatni e'tiborsiz qoldiring.",
+    },
+  }[language]
+  return { ...copy, role: roleLabel }
+}
+
+async function sendInviteEmail(payload: { to: string; role: string; inviteCode: string; inviteUrl: string; language: SupportedEmailLanguage }) {
   const apiKey = Deno.env.get("RESEND_API_KEY")
   if (!apiKey) {
     throw new Error("Email is not configured: RESEND_API_KEY is missing")
   }
 
   const from = Deno.env.get("RESEND_FROM_EMAIL") ?? "Ezcar24 <no-reply@ezcar24.com>"
-  const subject = "You have been invited to Ezcar24 Business"
-  const safeRole = payload.role.toUpperCase()
+  const copy = inviteEmailCopy(payload.language, payload.role)
 
   const text = [
-    "You have been invited to join a team in Ezcar24 Business.",
-    `Role: ${safeRole}`,
-    `Invite code: ${payload.inviteCode}`,
-    "Open app -> Sign in / Sign up -> Enter Team Invite Code.",
-    `Fallback link: ${payload.inviteUrl}`,
+    copy.intro,
+    `${copy.roleLabel}: ${copy.role}`,
+    `${copy.inviteCodeLabel}: ${payload.inviteCode}`,
+    copy.instruction,
+    `${copy.fallbackLabel}: ${payload.inviteUrl}`,
     "",
-    "If you did not expect this invitation, you can ignore this email.",
+    copy.ignore,
   ].join("\n")
 
   const html = `
     <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
-      <h2 style="margin: 0 0 12px;">You have been invited</h2>
-      <p style="margin: 0 0 8px;">You were invited to join a team in Ezcar24 Business.</p>
-      <p style="margin: 0 0 12px;"><strong>Role:</strong> ${safeRole}</p>
-      <p style="margin: 0 0 8px;"><strong>Invite code:</strong> <span style="font-size: 18px; letter-spacing: 1px;">${payload.inviteCode}</span></p>
-      <p style="margin: 0 0 12px;">Open the app, sign in or sign up, then enter this code.</p>
+      <h2 style="margin: 0 0 12px;">${copy.heading}</h2>
+      <p style="margin: 0 0 8px;">${copy.intro}</p>
+      <p style="margin: 0 0 12px;"><strong>${copy.roleLabel}:</strong> ${copy.role}</p>
+      <p style="margin: 0 0 8px;"><strong>${copy.inviteCodeLabel}:</strong> <span style="font-size: 18px; letter-spacing: 1px;">${payload.inviteCode}</span></p>
+      <p style="margin: 0 0 12px;">${copy.instruction}</p>
       <p style="margin: 0 0 12px;">
         <a href="${payload.inviteUrl}" style="color: #2563eb; text-decoration: underline;">
-          Fallback invite link
+          ${copy.fallbackLabel}
         </a>
       </p>
       <p style="margin: 0; color: #6b7280; font-size: 13px;">
-        If you did not expect this invitation, you can ignore this email.
+        ${copy.ignore}
       </p>
     </div>
   `
@@ -430,7 +490,7 @@ async function sendInviteEmail(payload: { to: string; role: string; inviteCode: 
     body: JSON.stringify({
       from,
       to: [payload.to],
-      subject,
+      subject: copy.subject,
       html,
       text,
     }),

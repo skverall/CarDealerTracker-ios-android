@@ -1,6 +1,6 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2"
 
-type AnySupabaseClient = SupabaseClient<any, any, any>
+type AnySupabaseClient = SupabaseClient
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

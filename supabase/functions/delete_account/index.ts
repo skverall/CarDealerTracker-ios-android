@@ -1,4 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2"
+import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -169,7 +169,7 @@ function isMissingRelationError(message: string) {
 }
 
 async function removeBucketPrefix(
-  adminClient: ReturnType<typeof createClient<any>>,
+  adminClient: SupabaseClient,
   bucket: string,
   prefix: string
 ) {
@@ -188,7 +188,7 @@ async function removeBucketPrefix(
 }
 
 async function listBucketPaths(
-  adminClient: ReturnType<typeof createClient<any>>,
+  adminClient: SupabaseClient,
   bucket: string,
   prefix: string
 ): Promise<string[]> {
