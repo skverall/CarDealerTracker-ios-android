@@ -94,6 +94,8 @@ class MainActivity : ComponentActivity() {
 
                         val startDestination by viewModel.startDestination.collectAsState()
                         val isLoading by viewModel.isLoading.collectAsState()
+                        val isGuestMode by viewModel.isGuestMode.collectAsState()
+                        val permissionState by viewModel.permissionState.collectAsState()
                         val passwordResetMode by showPasswordReset.collectAsState()
 
                         // Navigate to password reset if deep-link detected
@@ -142,6 +144,8 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable("home") {
                                     MainScreen(
+                                        isGuestMode = isGuestMode,
+                                        permissionState = permissionState,
                                         onNavigateToClientDetail = { clientId ->
                                             val route = if (clientId != null) "client_detail/$clientId" else "client_detail/new"
                                             navController.navigate(route)
@@ -152,6 +156,9 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToAddVehicle = {
                                             navController.navigate("vehicle_form/new")
                                         },
+                                        onNavigateToPaywall = {
+                                            navController.navigate("paywall")
+                                        },
                                         onNavigateToAccounts = {
                                             navController.navigate("financial_accounts")
                                         },
@@ -160,6 +167,13 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onNavigateToDataHealth = {
                                             navController.navigate("data_health")
+                                        },
+                                        onRefreshPermissions = viewModel::refreshPermissions,
+                                        onGuestAccountRequested = {
+                                            viewModel.onSignedOut()
+                                            navController.navigate("login") {
+                                                popUpTo(0) { inclusive = true }
+                                            }
                                         },
                                         onNavigateToSettings = {
                                             navController.navigate("settings")
@@ -194,7 +208,8 @@ class MainActivity : ComponentActivity() {
                                     val vehicleId = backStackEntry.arguments?.getString("vehicleId")
                                     com.ezcar24.business.ui.vehicle.VehicleAddEditScreen(
                                         vehicleId = if (vehicleId == "new") null else vehicleId,
-                                        onBack = { navController.popBackStack() }
+                                        onBack = { navController.popBackStack() },
+                                        onNavigateToPaywall = { navController.navigate("paywall") }
                                     )
                                 }
                                 composable("financial_accounts") {

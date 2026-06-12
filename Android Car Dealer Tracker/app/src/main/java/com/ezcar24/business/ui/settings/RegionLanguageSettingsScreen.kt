@@ -52,7 +52,9 @@ fun RegionLanguageSettingsScreen(
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
-    val languageOptions = remember { listOf(AppLanguage.ENGLISH, AppLanguage.RUSSIAN) }
+    val languageOptions = remember {
+        listOf(AppLanguage.ENGLISH, AppLanguage.RUSSIAN, AppLanguage.ARABIC, AppLanguage.JAPANESE, AppLanguage.UZBEK)
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -60,7 +62,7 @@ fun RegionLanguageSettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Region & Language",
+                        text = localizedUiString("Region & Language"),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -101,7 +103,7 @@ fun RegionLanguageSettingsScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "This affects currency formatting, mileage units, and app language.",
+                        text = localizedUiString("This affects currency formatting, mileage units, and app language."),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)
@@ -233,12 +235,12 @@ private fun PreviewValueRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = label,
+            text = localizedUiString(label),
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = value,
+            text = localizedUiString(value),
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )

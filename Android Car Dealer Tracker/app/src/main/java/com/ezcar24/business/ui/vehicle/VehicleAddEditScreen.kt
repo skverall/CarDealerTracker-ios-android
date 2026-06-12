@@ -1,5 +1,6 @@
 package com.ezcar24.business.ui.vehicle
 
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,11 +11,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,13 +26,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.ui.theme.*
+import com.ezcar24.business.util.SubscriptionAccess
+import com.ezcar24.business.util.localizedUiString
 import com.ezcar24.business.util.rememberRegionSettingsManager
-import android.net.Uri
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import com.ezcar24.business.util.localizedUiString
+import kotlinx.coroutines.launch
 
 data class StatusOption(val value: String, val label: String)
 
@@ -41,6 +42,7 @@ data class StatusOption(val value: String, val label: String)
 fun VehicleAddEditScreen(
     vehicleId: String?,
     onBack: () -> Unit,
+    onNavigateToPaywall: () -> Unit = {},
     viewModel: VehicleViewModel = hiltViewModel()
 ) {
     // If editing, load the vehicle
@@ -100,6 +102,7 @@ fun VehicleAddEditScreen(
     var showPurchaseDatePicker by remember { mutableStateOf(false) }
     var showSaleDatePicker by remember { mutableStateOf(false) }
     var showAccountPicker by remember { mutableStateOf(false) }
+    var showVehicleLimitDialog by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
 
@@ -166,46 +169,55 @@ fun VehicleAddEditScreen(
                 actions = {
                     TextButton(
                         onClick = {
-                            coroutineScope.launch {
-                                isSaving = true
-                                saveError = null
-                                val result = viewModel.saveVehicle(
-                                    id = vehicleId,
-                                    vin = vin,
-                                    make = make,
-                                    model = model,
-                                    year = year.toIntOrNull(),
-                                    mileage = mileage.toIntOrNull()?.let(regionSettingsManager::kilometersFromInput) ?: 0,
-                                    purchasePrice = purchasePrice.toBigDecimalOrNull() ?: BigDecimal.ZERO,
-                                    purchaseDate = purchaseDate,
-                                    askingPrice = askingPrice.toBigDecimalOrNull(),
-                                    status = status,
-                                    notes = notes,
-                                    salePrice = salePrice.toBigDecimalOrNull(),
-                                    saleDate = if (status == "sold") saleDate else null,
-                                    buyerName = buyerName,
-                                    buyerPhone = buyerPhone,
-                                    paymentMethod = paymentMethod,
-                                    reportURL = reportURL,
-                                    saleAccountId = if (status == "sold") selectedAccount?.id else null
-                                )
+                            val shouldGate = !isEditing && SubscriptionAccess.shouldGateVehicleCreation(
+                                isProAccessActive = uiState.isProAccessActive,
+                                isCheckingStatus = uiState.isSubscriptionStatusLoading,
+                                vehicleCount = uiState.vehicles.size
+                            )
+                            if (shouldGate) {
+                                showVehicleLimitDialog = true
+                            } else {
+                                coroutineScope.launch {
+                                    isSaving = true
+                                    saveError = null
+                                    val result = viewModel.saveVehicle(
+                                        id = vehicleId,
+                                        vin = vin,
+                                        make = make,
+                                        model = model,
+                                        year = year.toIntOrNull(),
+                                        mileage = mileage.toIntOrNull()?.let(regionSettingsManager::kilometersFromInput) ?: 0,
+                                        purchasePrice = purchasePrice.toBigDecimalOrNull() ?: BigDecimal.ZERO,
+                                        purchaseDate = purchaseDate,
+                                        askingPrice = askingPrice.toBigDecimalOrNull(),
+                                        status = status,
+                                        notes = notes,
+                                        salePrice = salePrice.toBigDecimalOrNull(),
+                                        saleDate = if (status == "sold") saleDate else null,
+                                        buyerName = buyerName,
+                                        buyerPhone = buyerPhone,
+                                        paymentMethod = paymentMethod,
+                                        reportURL = reportURL,
+                                        saleAccountId = if (status == "sold") selectedAccount?.id else null
+                                    )
 
-                                result.onSuccess { savedVehicleId ->
-                                    if (selectedImageUris.isNotEmpty()) {
-                                        coroutineScope.launch {
-                                            val images = selectedImageUris.mapNotNull { uri ->
-                                                com.ezcar24.business.util.ImageUtils.compressImage(context, uri)
-                                            }
-                                            if (images.isNotEmpty()) {
-                                                viewModel.uploadVehicleImages(savedVehicleId, images, replaceCoverOnUpload)
+                                    result.onSuccess { savedVehicleId ->
+                                        if (selectedImageUris.isNotEmpty()) {
+                                            coroutineScope.launch {
+                                                val images = selectedImageUris.mapNotNull { uri ->
+                                                    com.ezcar24.business.util.ImageUtils.compressImage(context, uri)
+                                                }
+                                                if (images.isNotEmpty()) {
+                                                    viewModel.uploadVehicleImages(savedVehicleId, images, replaceCoverOnUpload)
+                                                }
                                             }
                                         }
+                                        onBack()
+                                    }.onFailure { error ->
+                                        saveError = error.message ?: "Failed to save vehicle."
                                     }
-                                    onBack()
-                                }.onFailure { error ->
-                                    saveError = error.message ?: "Failed to save vehicle."
+                                    isSaving = false
                                 }
-                                isSaving = false
                             }
                         },
                         enabled = isFormValid && !isSaving
@@ -618,6 +630,41 @@ fun VehicleAddEditScreen(
             dismissButton = {
                 TextButton(onClick = { showAccountPicker = false }) {
                     Text(localizedUiString("Cancel"))
+                }
+            }
+        )
+    }
+
+    if (showVehicleLimitDialog) {
+        AlertDialog(
+            onDismissRequest = { showVehicleLimitDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = EzcarNavy
+                )
+            },
+            title = { Text(localizedUiString("3-car free limit")) },
+            text = {
+                Text(
+                    localizedUiString("Free plan includes up to 3 vehicles. Upgrade to Pro to add unlimited inventory.")
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showVehicleLimitDialog = false
+                        onNavigateToPaywall()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy)
+                ) {
+                    Text(localizedUiString("Upgrade to Pro"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showVehicleLimitDialog = false }) {
+                    Text(localizedUiString("Not now"))
                 }
             }
         )

@@ -490,12 +490,12 @@ private fun ExplanationCard() {
             )
 
             Text(
-                "Example: With 15% annual rate on a $10,000 vehicle:",
+                localizedUiString("Example: With 15% annual rate on a $10,000 vehicle:"),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray
             )
             Text(
-                "Daily cost = $10,000 × (15% ÷ 365) = $4.11 per day",
+                localizedUiString("Daily cost = $10,000 × (15% ÷ 365) = $4.11 per day"),
                 style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Medium,
                 color = EzcarNavy,

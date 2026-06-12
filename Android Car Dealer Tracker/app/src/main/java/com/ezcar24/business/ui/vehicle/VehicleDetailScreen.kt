@@ -1178,7 +1178,7 @@ private fun ExpensesSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    "Expenses (${expenses.size})",
+                    localizedUiString("Expenses (%d)", expenses.size),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )

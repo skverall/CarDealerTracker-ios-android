@@ -9,11 +9,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -22,7 +26,11 @@ import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -37,6 +45,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -61,6 +70,9 @@ import com.ezcar24.business.ui.theme.EzcarNavy
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.ui.vehicle.VehicleListScreen
+import com.ezcar24.business.util.PermissionAccessState
+import com.ezcar24.business.util.PermissionKey
+import com.ezcar24.business.util.localizedUiString
 import com.ezcar24.business.util.rememberRegionSettingsManager
 
 private sealed class MainTab(
@@ -79,13 +91,18 @@ private sealed class MainTab(
 
 @Composable
 fun MainScreen(
+    isGuestMode: Boolean,
+    permissionState: PermissionAccessState,
     onNavigateToClientDetail: (String?) -> Unit,
     onNavigateToVehicleDetail: (String) -> Unit,
     onNavigateToAddVehicle: () -> Unit,
+    onNavigateToPaywall: () -> Unit,
     onNavigateToAccounts: () -> Unit,
     onNavigateToDebts: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    onNavigateToDataHealth: () -> Unit
+    onNavigateToDataHealth: () -> Unit,
+    onRefreshPermissions: () -> Unit,
+    onGuestAccountRequested: () -> Unit
 ) {
     val navController = rememberNavController()
     val regionSettingsManager = rememberRegionSettingsManager()
@@ -130,53 +147,71 @@ fun MainScreen(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(MainTab.Dashboard.route) {
-                DashboardScreen(
-                    onNavigateToAccounts = onNavigateToAccounts,
-                    onNavigateToDebts = onNavigateToDebts,
-                    onNavigateToSettings = onNavigateToSettings,
-                    onNavigateToSearch = { navController.navigate("search") },
-                    onNavigateToVehicles = {
-                        navController.navigate(MainTab.Vehicles.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                if (isGuestMode) {
+                    GuestFeaturePreview(
+                        title = localizedUiString(MainTab.Dashboard.title),
+                        tint = MainTab.Dashboard.tint,
+                        onGuestAccountRequested = onGuestAccountRequested
+                    )
+                } else {
+                    DashboardScreen(
+                        onNavigateToAccounts = onNavigateToAccounts,
+                        onNavigateToDebts = onNavigateToDebts,
+                        onNavigateToSettings = onNavigateToSettings,
+                        onNavigateToSearch = { navController.navigate("search") },
+                        onNavigateToVehicles = {
+                            navController.navigate(MainTab.Vehicles.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToSoldVehicles = {
-                        navController.navigate("vehicles?status=sold") {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                        },
+                        onNavigateToSoldVehicles = {
+                            navController.navigate("vehicles?status=sold") {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
                             }
-                            launchSingleTop = true
-                        }
-                    },
-                    onNavigateToSales = {
-                        navController.navigate(MainTab.Sales.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                        },
+                        onNavigateToSales = {
+                            navController.navigate(MainTab.Sales.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToExpenses = {
-                        navController.navigate(MainTab.Expenses.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+                        },
+                        onNavigateToExpenses = {
+                            navController.navigate(MainTab.Expenses.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    onNavigateToLeadFunnel = { navController.navigate("lead_funnel") },
-                    onNavigateToInventoryAnalytics = { navController.navigate("inventory_analytics") },
-                    onNavigateToDataHealth = onNavigateToDataHealth
-                )
+                        },
+                        onNavigateToLeadFunnel = { navController.navigate("lead_funnel") },
+                        onNavigateToInventoryAnalytics = { navController.navigate("inventory_analytics") },
+                        onNavigateToDataHealth = onNavigateToDataHealth
+                    )
+                }
             }
             composable(MainTab.Expenses.route) {
-                ExpenseScreen()
+                PermissionGate(
+                    title = localizedUiString(MainTab.Expenses.title),
+                    isGuestMode = isGuestMode,
+                    permissionState = permissionState,
+                    requiredPermissions = listOf(PermissionKey.VIEW_EXPENSES),
+                    tint = MainTab.Expenses.tint,
+                    onRefreshPermissions = onRefreshPermissions,
+                    onGuestAccountRequested = onGuestAccountRequested
+                ) {
+                    ExpenseScreen()
+                }
             }
             composable(
                 route = "vehicles?status={status}",
@@ -189,26 +224,78 @@ fun MainScreen(
                 )
             ) { backStackEntry ->
                 val statusFilter = backStackEntry.arguments?.getString("status")
-                VehicleListScreen(
-                    onNavigateToAddVehicle = onNavigateToAddVehicle,
-                    onNavigateToDetail = onNavigateToVehicleDetail,
-                    presetStatus = statusFilter?.takeIf { it.isNotEmpty() }
-                )
+                PermissionGate(
+                    title = localizedUiString(MainTab.Vehicles.title),
+                    isGuestMode = isGuestMode,
+                    permissionState = permissionState,
+                    requiredPermissions = listOf(PermissionKey.VIEW_INVENTORY),
+                    tint = MainTab.Vehicles.tint,
+                    onRefreshPermissions = onRefreshPermissions,
+                    onGuestAccountRequested = onGuestAccountRequested
+                ) {
+                    VehicleListScreen(
+                        onNavigateToAddVehicle = onNavigateToAddVehicle,
+                        onNavigateToPaywall = onNavigateToPaywall,
+                        onNavigateToDetail = onNavigateToVehicleDetail,
+                        presetStatus = statusFilter?.takeIf { it.isNotEmpty() }
+                    )
+                }
             }
             composable(MainTab.Vehicles.route) {
-                VehicleListScreen(
-                    onNavigateToAddVehicle = onNavigateToAddVehicle,
-                    onNavigateToDetail = onNavigateToVehicleDetail
-                )
+                PermissionGate(
+                    title = localizedUiString(MainTab.Vehicles.title),
+                    isGuestMode = isGuestMode,
+                    permissionState = permissionState,
+                    requiredPermissions = listOf(PermissionKey.VIEW_INVENTORY),
+                    tint = MainTab.Vehicles.tint,
+                    onRefreshPermissions = onRefreshPermissions,
+                    onGuestAccountRequested = onGuestAccountRequested
+                ) {
+                    VehicleListScreen(
+                        onNavigateToAddVehicle = onNavigateToAddVehicle,
+                        onNavigateToPaywall = onNavigateToPaywall,
+                        onNavigateToDetail = onNavigateToVehicleDetail
+                    )
+                }
             }
             composable(MainTab.Parts.route) {
-                PartsDashboardScreen()
+                PermissionGate(
+                    title = localizedUiString(MainTab.Parts.title),
+                    isGuestMode = isGuestMode,
+                    permissionState = permissionState,
+                    requiredPermissions = listOf(PermissionKey.VIEW_PARTS_INVENTORY),
+                    tint = MainTab.Parts.tint,
+                    onRefreshPermissions = onRefreshPermissions,
+                    onGuestAccountRequested = onGuestAccountRequested
+                ) {
+                    PartsDashboardScreen()
+                }
             }
             composable(MainTab.Sales.route) {
-                SalesScreen()
+                PermissionGate(
+                    title = localizedUiString(MainTab.Sales.title),
+                    isGuestMode = isGuestMode,
+                    permissionState = permissionState,
+                    requiredPermissions = listOf(PermissionKey.CREATE_SALE, PermissionKey.VIEW_FINANCIALS),
+                    tint = MainTab.Sales.tint,
+                    onRefreshPermissions = onRefreshPermissions,
+                    onGuestAccountRequested = onGuestAccountRequested
+                ) {
+                    SalesScreen()
+                }
             }
             composable(MainTab.Clients.route) {
-                ClientListScreen(onNavigateToDetail = onNavigateToClientDetail)
+                PermissionGate(
+                    title = localizedUiString(MainTab.Clients.title),
+                    isGuestMode = isGuestMode,
+                    permissionState = permissionState,
+                    requiredPermissions = listOf(PermissionKey.VIEW_LEADS),
+                    tint = MainTab.Clients.tint,
+                    onRefreshPermissions = onRefreshPermissions,
+                    onGuestAccountRequested = onGuestAccountRequested
+                ) {
+                    ClientListScreen(onNavigateToDetail = onNavigateToClientDetail)
+                }
             }
             composable("search") {
                 GlobalSearchScreen(
@@ -251,6 +338,169 @@ fun MainScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun PermissionGate(
+    title: String,
+    isGuestMode: Boolean,
+    permissionState: PermissionAccessState,
+    requiredPermissions: List<PermissionKey>,
+    tint: Color,
+    onRefreshPermissions: () -> Unit,
+    onGuestAccountRequested: () -> Unit,
+    content: @Composable () -> Unit
+) {
+    when {
+        isGuestMode -> GuestFeaturePreview(
+            title = title,
+            tint = tint,
+            onGuestAccountRequested = onGuestAccountRequested
+        )
+
+        !permissionState.didLoad && permissionState.isLoading -> PermissionLoadingScreen(title = title)
+
+        permissionState.canAny(requiredPermissions) -> content()
+
+        else -> RestrictedAccessScreen(
+            title = title,
+            onRefreshPermissions = onRefreshPermissions
+        )
+    }
+}
+
+@Composable
+private fun GuestFeaturePreview(
+    title: String,
+    tint: Color,
+    onGuestAccountRequested: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(24.dp),
+            shadowElevation = 8.dp,
+            modifier = Modifier.widthIn(max = 460.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Surface(
+                    color = tint.copy(alpha = 0.12f),
+                    shape = RoundedCornerShape(18.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.LockOpen,
+                        contentDescription = null,
+                        tint = tint,
+                        modifier = Modifier
+                            .padding(16.dp)
+                            .size(30.dp)
+                    )
+                }
+                Text(
+                    text = localizedUiString("Preview mode"),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = localizedUiString(
+                        "Create an account to use %s with sync, team access and cloud backup.",
+                        title
+                    ),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Button(
+                    onClick = onGuestAccountRequested,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp)
+                ) {
+                    Text(localizedUiString("Create your account"))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun RestrictedAccessScreen(
+    title: String,
+    onRefreshPermissions: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(horizontal = 24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            modifier = Modifier.widthIn(max = 460.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(46.dp)
+            )
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = localizedUiString("You do not have permission to open %s.", title),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Button(
+                onClick = onRefreshPermissions,
+                modifier = Modifier.height(48.dp)
+            ) {
+                Text(localizedUiString("Refresh access"))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PermissionLoadingScreen(title: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            CircularProgressIndicator()
+            Text(
+                text = localizedUiString("Checking access for %s...", title),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
@@ -300,6 +550,7 @@ private fun MainTabBarItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val title = localizedUiString(item.title)
     val iconTint by animateColorAsState(
         targetValue = if (isSelected) item.tint else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "tabIconTint"
@@ -330,14 +581,14 @@ private fun MainTabBarItem(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = item.icon,
-                    contentDescription = item.title,
+                    contentDescription = title,
                     tint = iconTint,
                     modifier = Modifier.size(22.dp)
                 )
             }
         }
         Text(
-            text = item.title,
+            text = title,
             style = MaterialTheme.typography.labelSmall,
             fontSize = 10.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,

@@ -264,6 +264,8 @@ fun DashboardScreen(
                 viewModel.refresh() // Refresh dashboard to show new expense
             },
             onSaveTemplate = expenseViewModel::saveTemplate,
+            onCreateUser = expenseViewModel::createUser,
+            onCreateAccount = expenseViewModel::createAccount,
             vehicles = expenseUiState.vehicles,
             users = expenseUiState.users,
             accounts = expenseUiState.accounts,

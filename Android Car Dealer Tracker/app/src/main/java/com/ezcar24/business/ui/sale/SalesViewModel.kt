@@ -1,18 +1,19 @@
 package com.ezcar24.business.ui.sale
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.util.Log
 import com.ezcar24.business.data.local.ExpenseDao
+import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.FinancialAccountDao
 import com.ezcar24.business.data.local.Sale
 import com.ezcar24.business.data.local.SaleDao
+import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.local.VehicleDao
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
-import java.math.MathContext
 import java.util.Date
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,14 @@ data class SalesUiState(
     val searchText: String = "",
     val isLoading: Boolean = false
 )
+
+internal fun saleAccountBalanceChange(amount: BigDecimal?): BigDecimal {
+    return amount ?: BigDecimal.ZERO
+}
+
+internal fun saleDeletionAccountBalanceChange(amount: BigDecimal?): BigDecimal {
+    return saleAccountBalanceChange(amount).negate()
+}
 
 @HiltViewModel
 class SalesViewModel @Inject constructor(
@@ -101,11 +110,9 @@ class SalesViewModel @Inject constructor(
 
     private suspend fun loadDataInternal() {
         saleDao.getAll().collect { salesList ->
-            // Map to SaleItem with calculations
             val items = salesList.map { sale ->
                 val vehicle = sale.vehicleId?.let { vehicleDao.getById(it) }
                 
-                // Fetch expenses for vehicle to calculate profit
                 val expensesList = sale.vehicleId?.let { expenseDao.getExpensesForVehicleSync(it) } ?: emptyList()
                 val totalExpenses = expensesList.sumOf { it.amount }
 
@@ -143,7 +150,6 @@ class SalesViewModel @Inject constructor(
 
     fun deleteSale(sale: Sale) {
         viewModelScope.launch {
-            // Revert Vehicle Status
             sale.vehicleId?.let { vid ->
                 vehicleDao.getById(vid)?.let { vehicle ->
                     val updatedVehicle = vehicle.copy(
@@ -155,27 +161,63 @@ class SalesViewModel @Inject constructor(
                         paymentMethod = null,
                         updatedAt = Date()
                     )
-                    // Sync Manager handles local + remote
-                    cloudSyncManager.upsertVehicle(updatedVehicle)
+                    upsertVehicleSafely(updatedVehicle)
                 }
             }
 
-            // Revert Account Balance
             sale.accountId?.let { accId ->
                 accountDao.getById(accId)?.let { account ->
-                    val amountToSubtract = sale.amount ?: BigDecimal.ZERO
-                    val currentBal = account.balance ?: BigDecimal.ZERO
-                    val newBal = currentBal.subtract(amountToSubtract)
-                    val updatedAccount = account.copy(balance = newBal, updatedAt = Date())
-
-                    cloudSyncManager.upsertFinancialAccount(updatedAccount)
+                    val updatedAccount = account.copy(
+                        balance = account.balance.add(saleDeletionAccountBalanceChange(sale.amount)),
+                        updatedAt = Date()
+                    )
+                    upsertAccountSafely(updatedAccount)
                 }
             }
 
-            // Soft Delete Sale via Manager
-            cloudSyncManager.deleteSale(sale)
+            deleteSaleSafely(sale)
+        }
+    }
 
-            // loadData() removed - Flow updates automatically
+    private suspend fun upsertVehicleSafely(vehicle: Vehicle) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            vehicleDao.upsert(vehicle)
+            return
+        }
+
+        try {
+            cloudSyncManager.upsertVehicle(vehicle)
+        } catch (e: Exception) {
+            Log.e(tag, "upsertVehicle failed: ${e.message}", e)
+            vehicleDao.upsert(vehicle)
+        }
+    }
+
+    private suspend fun upsertAccountSafely(account: FinancialAccount) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            accountDao.upsert(account)
+            return
+        }
+
+        try {
+            cloudSyncManager.upsertFinancialAccount(account)
+        } catch (e: Exception) {
+            Log.e(tag, "upsertFinancialAccount failed: ${e.message}", e)
+            accountDao.upsert(account)
+        }
+    }
+
+    private suspend fun deleteSaleSafely(sale: Sale) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            saleDao.upsert(sale.copy(deletedAt = Date(), updatedAt = Date()))
+            return
+        }
+
+        try {
+            cloudSyncManager.deleteSale(sale)
+        } catch (e: Exception) {
+            Log.e(tag, "deleteSale failed: ${e.message}", e)
+            saleDao.upsert(sale.copy(deletedAt = Date(), updatedAt = Date()))
         }
     }
 }

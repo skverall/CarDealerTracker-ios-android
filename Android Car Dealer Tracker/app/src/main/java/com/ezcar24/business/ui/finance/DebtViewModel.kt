@@ -1,8 +1,10 @@
 package com.ezcar24.business.ui.finance
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.data.local.*
+import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,14 +18,22 @@ import javax.inject.Inject
 
 data class DebtUiState(
     val debts: List<Debt> = emptyList(),
-    val filteredDebts: List<Debt> = emptyList(), // Based on tab (owed to me / by me)
-    val accounts: List<FinancialAccount> = emptyList(), // For payment selection
+    val filteredDebts: List<Debt> = emptyList(),
+    val accounts: List<FinancialAccount> = emptyList(),
     val selectedDebt: Debt? = null,
     val isLoading: Boolean = false,
-    val selectedTab: String = "owed_to_me", // or "owed_by_me"
+    val selectedTab: String = "owed_to_me",
     val searchText: String = "",
-    val debtPayments: List<com.ezcar24.business.data.local.DebtPayment> = emptyList() // Payments for selected debt
+    val debtPayments: List<DebtPayment> = emptyList()
 )
+
+internal fun debtPaymentBalanceChange(amount: BigDecimal, direction: String): BigDecimal {
+    return if (direction == "owed_to_me") amount else amount.negate()
+}
+
+internal fun debtPaymentDeletionBalanceChange(amount: BigDecimal, direction: String): BigDecimal {
+    return debtPaymentBalanceChange(amount, direction).negate()
+}
 
 @HiltViewModel
 class DebtViewModel @Inject constructor(
@@ -33,6 +43,7 @@ class DebtViewModel @Inject constructor(
     private val cloudSyncManager: CloudSyncManager
 ) : ViewModel() {
 
+    private val tag = "DebtViewModel"
     private val _uiState = MutableStateFlow(DebtUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -49,8 +60,7 @@ class DebtViewModel @Inject constructor(
                 accountDao.getAll()
             ) { allDebts, accounts ->
                 val activeDebts = allDebts.filter { it.deletedAt == null }
-                
-                // If a debt is selected, ensure we have the latest version of it
+
                 val currentSelection = _uiState.value.selectedDebt
                 val updatedSelection = if (currentSelection != null) {
                     activeDebts.find { it.id == currentSelection.id } ?: currentSelection
@@ -135,62 +145,146 @@ class DebtViewModel @Inject constructor(
                     amount = amount,
                     direction = direction,
                     notes = notes,
-                    dueDate = null, // Can add date picker later
+                    dueDate = null,
                     createdAt = now,
                     updatedAt = now,
                     deletedAt = null
                 )
             }
-            debtDao.upsert(debt)
-            // loadData() removed - Flow updates automatically
+            upsertDebtSafely(debt)
         }
     }
     
     fun deleteDebt(id: UUID) {
         viewModelScope.launch {
-             val existing = debtDao.getById(id) ?: return@launch
-             debtDao.upsert(existing.copy(deletedAt = Date()))
-             // loadData() removed - Flow updates automatically
+            val existing = debtDao.getById(id) ?: return@launch
+            val activePayments = debtPaymentDao.getAllIncludingDeleted()
+                .filter { it.debtId == id && it.deletedAt == null }
+            val affectedAccounts = mutableMapOf<UUID, FinancialAccount>()
+            val now = Date()
+
+            activePayments.forEach { payment ->
+                val accountId = payment.accountId
+                if (accountId != null) {
+                    val account = affectedAccounts[accountId] ?: accountDao.getById(accountId)
+                    if (account != null) {
+                        affectedAccounts[accountId] = account.copy(
+                            balance = account.balance.add(
+                                debtPaymentDeletionBalanceChange(payment.amount, existing.direction)
+                            ),
+                            updatedAt = now
+                        )
+                    }
+                }
+            }
+
+            affectedAccounts.values.forEach { upsertAccountSafely(it) }
+            activePayments.forEach { deleteDebtPaymentSafely(it) }
+            deleteDebtSafely(existing)
+            _uiState.update { it.copy(selectedDebt = null, debtPayments = emptyList()) }
         }
     }
 
     fun recordPayment(debtId: UUID, amount: BigDecimal, accountId: UUID) {
         viewModelScope.launch {
-            // 1. Create Payment Record
+            val now = Date()
             val payment = DebtPayment(
                 id = UUID.randomUUID(),
                 debtId = debtId,
                 accountId = accountId,
                 amount = amount,
-                date = Date(),
+                date = now,
                 note = "Payment",
                 paymentMethod = "transfer",
-                createdAt = Date(),
-                updatedAt = Date(),
+                createdAt = now,
+                updatedAt = now,
                 deletedAt = null
             )
-            debtPaymentDao.upsert(payment)
+            upsertDebtPaymentSafely(payment)
             
-            // 2. Reduce Debt Amount
             val debt = debtDao.getById(debtId) ?: return@launch
             val newAmount = debt.amount.subtract(amount)
-            // If new amount is <= 0, maybe mark as paid/archived? For now just reduce.
-            debtDao.upsert(debt.copy(amount = newAmount, updatedAt = Date()))
+            upsertDebtSafely(debt.copy(amount = newAmount, updatedAt = Date()))
             
-            // 3. Update Account Balance
             val account = accountDao.getById(accountId) ?: return@launch
-            // Logic:
-            // "owed_to_me" (I receive money) -> Account Balance Increases
-            // "owed_by_me" (I pay money) -> Account Balance Decreases
-            val balanceChange = if (debt.direction == "owed_to_me") amount else amount.negate()
+            val balanceChange = debtPaymentBalanceChange(amount, debt.direction)
             val newBalance = account.balance.add(balanceChange)
             
-            accountDao.upsert(account.copy(balance = newBalance, updatedAt = Date()))
+            upsertAccountSafely(account.copy(balance = newBalance, updatedAt = Date()))
             
-            // Reload Payment History for the Detail View
             val allPayments = debtPaymentDao.getAllIncludingDeleted()
             val filtered = allPayments.filter { it.debtId == debtId && it.deletedAt == null }.sortedByDescending { it.date }
             _uiState.update { it.copy(debtPayments = filtered) }
+        }
+    }
+
+    private suspend fun upsertDebtSafely(debt: Debt) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            debtDao.upsert(debt)
+            return
+        }
+
+        try {
+            cloudSyncManager.upsertDebt(debt)
+        } catch (e: Exception) {
+            Log.e(tag, "upsertDebt failed: ${e.message}", e)
+            debtDao.upsert(debt)
+        }
+    }
+
+    private suspend fun deleteDebtSafely(debt: Debt) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            debtDao.upsert(debt.copy(deletedAt = Date(), updatedAt = Date()))
+            return
+        }
+
+        try {
+            cloudSyncManager.deleteDebt(debt)
+        } catch (e: Exception) {
+            Log.e(tag, "deleteDebt failed: ${e.message}", e)
+            debtDao.upsert(debt.copy(deletedAt = Date(), updatedAt = Date()))
+        }
+    }
+
+    private suspend fun upsertDebtPaymentSafely(payment: DebtPayment) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            debtPaymentDao.upsert(payment)
+            return
+        }
+
+        try {
+            cloudSyncManager.upsertDebtPayment(payment)
+        } catch (e: Exception) {
+            Log.e(tag, "upsertDebtPayment failed: ${e.message}", e)
+            debtPaymentDao.upsert(payment)
+        }
+    }
+
+    private suspend fun deleteDebtPaymentSafely(payment: DebtPayment) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            debtPaymentDao.upsert(payment.copy(deletedAt = Date(), updatedAt = Date()))
+            return
+        }
+
+        try {
+            cloudSyncManager.deleteDebtPayment(payment)
+        } catch (e: Exception) {
+            Log.e(tag, "deleteDebtPayment failed: ${e.message}", e)
+            debtPaymentDao.upsert(payment.copy(deletedAt = Date(), updatedAt = Date()))
+        }
+    }
+
+    private suspend fun upsertAccountSafely(account: FinancialAccount) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            accountDao.upsert(account)
+            return
+        }
+
+        try {
+            cloudSyncManager.upsertFinancialAccount(account)
+        } catch (e: Exception) {
+            Log.e(tag, "upsertFinancialAccount failed: ${e.message}", e)
+            accountDao.upsert(account)
         }
     }
 }

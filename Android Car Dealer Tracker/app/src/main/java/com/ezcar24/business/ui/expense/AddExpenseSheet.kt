@@ -64,6 +64,8 @@ fun AddExpenseSheet(
     onDismiss: () -> Unit,
     onSave: (BigDecimal, Date, String, String, Vehicle?, User?, FinancialAccount?, ExpenseCategoryType, ExpenseReceiptDraft?) -> Unit,
     onSaveTemplate: (String, String, BigDecimal?, String?, Vehicle?, User?, FinancialAccount?) -> Unit,
+    onCreateUser: (String, (User) -> Unit) -> Unit,
+    onCreateAccount: (String, BigDecimal, (FinancialAccount) -> Unit) -> Unit,
     vehicles: List<Vehicle>,
     users: List<User>,
     accounts: List<FinancialAccount>,
@@ -85,11 +87,16 @@ fun AddExpenseSheet(
     var showVehicleSheet by remember { mutableStateOf(false) }
     var showUserSheet by remember { mutableStateOf(false) }
     var showAccountSheet by remember { mutableStateOf(false) }
+    var showAddUserDialog by remember { mutableStateOf(false) }
+    var showAddAccountDialog by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
     var showTemplatesSheet by remember { mutableStateOf(false) }
     var showSaveTemplateDialog by remember { mutableStateOf(false) }
     var showReceiptActionsSheet by remember { mutableStateOf(false) }
     var templateName by remember { mutableStateOf("") }
+    var newUserName by remember { mutableStateOf("") }
+    var newAccountName by remember { mutableStateOf("") }
+    var newAccountInitialBalance by remember { mutableStateOf("") }
     var receiptDraft by remember { mutableStateOf<ExpenseReceiptDraft?>(null) }
 
     val context = LocalContext.current
@@ -558,7 +565,7 @@ fun AddExpenseSheet(
                         showUserSheet = false
                     },
                     onAddClick = {
-                        android.widget.Toast.makeText(context, context.localizedUiString("Add User feature coming soon"), android.widget.Toast.LENGTH_SHORT).show()
+                        showAddUserDialog = true
                     }
                 )
             }
@@ -594,10 +601,102 @@ fun AddExpenseSheet(
                         showAccountSheet = false
                     },
                     onAddClick = {
-                        android.widget.Toast.makeText(context, context.localizedUiString("Add Account feature coming soon"), android.widget.Toast.LENGTH_SHORT).show()
+                        showAddAccountDialog = true
                     }
                 )
             }
+        }
+
+        if (showAddUserDialog) {
+            AlertDialog(
+                onDismissRequest = { showAddUserDialog = false },
+                title = { Text(localizedUiString("Add User")) },
+                text = {
+                    OutlinedTextField(
+                        value = newUserName,
+                        onValueChange = { newUserName = it },
+                        label = { Text(localizedUiString("Name")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onCreateUser(newUserName) { user ->
+                                selectedUser = user
+                                newUserName = ""
+                                showAddUserDialog = false
+                                showUserSheet = false
+                            }
+                        },
+                        enabled = newUserName.trim().isNotEmpty()
+                    ) {
+                        Text(localizedUiString("Add"))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddUserDialog = false }) {
+                        Text(localizedUiString("Cancel"))
+                    }
+                }
+            )
+        }
+
+        if (showAddAccountDialog) {
+            val parsedInitialBalance = newAccountInitialBalance.toBigDecimalOrNull()
+            val canSaveAccount = newAccountName.trim().isNotEmpty() &&
+                (newAccountInitialBalance.isBlank() || parsedInitialBalance != null)
+
+            AlertDialog(
+                onDismissRequest = { showAddAccountDialog = false },
+                title = { Text(localizedUiString("Add Account")) },
+                text = {
+                    Column {
+                        OutlinedTextField(
+                            value = newAccountName,
+                            onValueChange = { newAccountName = it },
+                            label = { Text(localizedUiString("Account Name")) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = newAccountInitialBalance,
+                            onValueChange = { newAccountInitialBalance = it },
+                            label = { Text(localizedUiString("Initial Balance")) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = newAccountInitialBalance.isNotBlank() && parsedInitialBalance == null
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            onCreateAccount(
+                                newAccountName,
+                                parsedInitialBalance ?: BigDecimal.ZERO
+                            ) { account ->
+                                selectedAccount = account
+                                newAccountName = ""
+                                newAccountInitialBalance = ""
+                                showAddAccountDialog = false
+                                showAccountSheet = false
+                            }
+                        },
+                        enabled = canSaveAccount
+                    ) {
+                        Text(localizedUiString("Add"))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showAddAccountDialog = false }) {
+                        Text(localizedUiString("Cancel"))
+                    }
+                }
+            )
         }
 
         if (showTemplatesSheet) {

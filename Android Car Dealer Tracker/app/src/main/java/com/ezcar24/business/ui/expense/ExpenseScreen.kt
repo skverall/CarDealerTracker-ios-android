@@ -137,6 +137,8 @@ fun ExpenseScreen(
                 showAddSheet = false
             },
             onSaveTemplate = viewModel::saveTemplate,
+            onCreateUser = viewModel::createUser,
+            onCreateAccount = viewModel::createAccount,
             vehicles = uiState.vehicles,
             users = uiState.users,
             accounts = uiState.accounts,

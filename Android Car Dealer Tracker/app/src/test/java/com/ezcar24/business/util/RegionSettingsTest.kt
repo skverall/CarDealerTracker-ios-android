@@ -19,4 +19,11 @@ class RegionSettingsTest {
         assertEquals("日本語", AppLanguage.JAPANESE.nativeName)
         assertFalse(AppLanguage.JAPANESE.isRtl)
     }
+
+    @Test
+    fun `uzbek latin language option is available`() {
+        assertEquals("uz", AppLanguage.UZBEK.tag)
+        assertEquals("Oʻzbekcha", AppLanguage.UZBEK.nativeName)
+        assertFalse(AppLanguage.UZBEK.isRtl)
+    }
 }

@@ -463,14 +463,14 @@ fun DebtDetailScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = if (debt.direction == "owed_to_me") "OWES YOU" else "YOU OWE",
+                            text = localizedUiString(if (debt.direction == "owed_to_me") "OWES YOU" else "YOU OWE"),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Gray,
                             letterSpacing = 1.1.sp
                         )
                         if (debt.dueDate != null) {
                             Text(
-                                "Due: ${java.text.SimpleDateFormat("MMM dd", Locale.getDefault()).format(debt.dueDate)}",
+                                localizedUiString("Due: %s", java.text.SimpleDateFormat("MMM dd", Locale.getDefault()).format(debt.dueDate)),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = EzcarDanger
                             )

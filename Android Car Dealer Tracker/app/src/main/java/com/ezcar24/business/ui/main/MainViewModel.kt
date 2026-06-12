@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.data.repository.AccountRepository
 import com.ezcar24.business.data.repository.AuthRepository
+import com.ezcar24.business.data.repository.PermissionRepository
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +24,8 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val authRepository: AuthRepository,
-    private val cloudSyncManager: CloudSyncManager
+    private val cloudSyncManager: CloudSyncManager,
+    private val permissionRepository: PermissionRepository
 ) : ViewModel(), DefaultLifecycleObserver {
 
     private val _startDestination = MutableStateFlow<String?>(null)
@@ -34,6 +36,8 @@ class MainViewModel @Inject constructor(
 
     private val _isGuestMode = MutableStateFlow(false)
     val isGuestMode = _isGuestMode.asStateFlow()
+
+    val permissionState = permissionRepository.state
 
     // Periodic sync interval (5 minutes, matching iOS)
     private val periodicSyncIntervalMs = 5 * 60 * 1000L
@@ -50,6 +54,7 @@ class MainViewModel @Inject constructor(
             accountRepository.activeOrganization.collectLatest { organization ->
                 currentDealerId = organization?.organizationId
                 CloudSyncEnvironment.currentDealerId = organization?.organizationId
+                permissionRepository.activate(organization)
                 cloudSyncManager.refreshLastSyncForCurrentOrg()
                 refreshPeriodicSync()
             }
@@ -99,6 +104,7 @@ class MainViewModel @Inject constructor(
 
     fun onGuestMode() {
         _isGuestMode.value = true
+        permissionRepository.reset()
         stopPeriodicSync()
         _startDestination.value = "home"
         _isLoading.value = false
@@ -106,6 +112,7 @@ class MainViewModel @Inject constructor(
 
     fun onSignedOut() {
         _isGuestMode.value = false
+        permissionRepository.reset()
         accountRepository.clearSessionState()
         cloudSyncManager.resetSyncState()
         currentDealerId = null
@@ -170,6 +177,12 @@ class MainViewModel @Inject constructor(
             return
         }
         startPeriodicSync()
+    }
+
+    fun refreshPermissions() {
+        viewModelScope.launch {
+            permissionRepository.refresh()
+        }
     }
 
     override fun onCleared() {

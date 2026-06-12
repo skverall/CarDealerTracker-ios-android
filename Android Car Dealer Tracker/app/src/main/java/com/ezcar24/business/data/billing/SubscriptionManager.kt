@@ -15,6 +15,7 @@ import com.android.billingclient.api.QueryPurchasesParams
 import com.android.billingclient.api.acknowledgePurchase
 import com.android.billingclient.api.queryProductDetails
 import com.android.billingclient.api.queryPurchasesAsync
+import com.ezcar24.business.BuildConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,9 @@ class SubscriptionManager @Inject constructor(
     private val _isProAccessActive = MutableStateFlow(false)
     val isProAccessActive: StateFlow<Boolean> = _isProAccessActive.asStateFlow()
 
+    private val _isCheckingStatus = MutableStateFlow(true)
+    val isCheckingStatus: StateFlow<Boolean> = _isCheckingStatus.asStateFlow()
+
     private val _offerings = MutableStateFlow<List<SubscriptionOffer>>(emptyList())
     val offerings: StateFlow<List<SubscriptionOffer>> = _offerings.asStateFlow()
 
@@ -72,8 +76,9 @@ class SubscriptionManager @Inject constructor(
     }
 
     init {
-        if (com.ezcar24.business.BuildConfig.DEBUG) {
+        if (BuildConfig.DEBUG) {
             _isProAccessActive.value = true
+            _isCheckingStatus.value = false
             Log.d(TAG, "Debug build — Pro access granted automatically")
         }
         initialize()
@@ -111,6 +116,7 @@ class SubscriptionManager @Inject constructor(
                     checkProAccess()
                 } else {
                     Log.e(TAG, "Billing setup failed: ${billingResult.debugMessage}")
+                    _isCheckingStatus.value = false
                 }
             }
 
@@ -177,8 +183,12 @@ class SubscriptionManager @Inject constructor(
     }
 
     fun checkProAccess() {
-        val client = billingClient ?: return
+        val client = billingClient ?: run {
+            _isCheckingStatus.value = false
+            return
+        }
         scope.launch(Dispatchers.IO) {
+            _isCheckingStatus.value = true
             try {
                 val params = QueryPurchasesParams.newBuilder()
                     .setProductType(BillingClient.ProductType.SUBS)
@@ -189,9 +199,11 @@ class SubscriptionManager @Inject constructor(
                     purchase.purchaseState == com.android.billingclient.api.Purchase.PurchaseState.PURCHASED &&
                         purchase.isAcknowledged
                 }
-                _isProAccessActive.value = hasActive
+                _isProAccessActive.value = if (BuildConfig.DEBUG) true else hasActive
             } catch (e: Exception) {
                 Log.e(TAG, "Error checking pro access", e)
+            } finally {
+                _isCheckingStatus.value = false
             }
         }
     }

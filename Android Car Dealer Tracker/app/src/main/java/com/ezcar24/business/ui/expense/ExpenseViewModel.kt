@@ -260,6 +260,64 @@ class ExpenseViewModel @Inject constructor(
             cloudSyncManager.upsertTemplate(template)
         }
     }
+
+    fun createUser(
+        name: String,
+        onCreated: (User) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val trimmedName = name.trim()
+            if (trimmedName.isEmpty()) return@launch
+
+            val now = Date()
+            val user = User(
+                id = UUID.randomUUID(),
+                name = trimmedName,
+                createdAt = now,
+                updatedAt = now
+            )
+            userDao.upsert(user)
+            onCreated(user)
+
+            if (CloudSyncEnvironment.currentDealerId != null) {
+                try {
+                    cloudSyncManager.upsertUser(user)
+                } catch (e: Exception) {
+                    Log.e(tag, "upsertUser failed: ${e.message}", e)
+                }
+            }
+        }
+    }
+
+    fun createAccount(
+        name: String,
+        initialBalance: BigDecimal,
+        onCreated: (FinancialAccount) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val trimmedName = name.trim()
+            if (trimmedName.isEmpty()) return@launch
+
+            val now = Date()
+            val account = FinancialAccount(
+                id = UUID.randomUUID(),
+                accountType = trimmedName,
+                balance = initialBalance,
+                updatedAt = now,
+                deletedAt = null
+            )
+            financialAccountDao.upsert(account)
+            onCreated(account)
+
+            if (CloudSyncEnvironment.currentDealerId != null) {
+                try {
+                    cloudSyncManager.upsertFinancialAccount(account)
+                } catch (e: Exception) {
+                    Log.e(tag, "upsertFinancialAccount failed: ${e.message}", e)
+                }
+            }
+        }
+    }
     
     fun saveExpense(
         amount: BigDecimal,

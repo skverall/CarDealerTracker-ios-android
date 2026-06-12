@@ -1,44 +1,46 @@
 package com.ezcar24.business.ui.vehicle
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.util.Log
+import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.ClientDao
-import com.ezcar24.business.data.local.Vehicle
-import com.ezcar24.business.data.local.VehicleDao
-import com.ezcar24.business.data.local.VehicleWithFinancials
+import com.ezcar24.business.data.local.Expense
+import com.ezcar24.business.data.local.ExpenseDao
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.FinancialAccountDao
-import com.ezcar24.business.data.local.ExpenseDao
-import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.HoldingCostSettings
 import com.ezcar24.business.data.local.HoldingCostSettingsDao
-import com.ezcar24.business.data.local.VehicleInventoryStats
-import com.ezcar24.business.data.local.VehicleInventoryStatsDao
 import com.ezcar24.business.data.local.InventoryAlert
 import com.ezcar24.business.data.local.InventoryAlertDao
 import com.ezcar24.business.data.local.LeadStage
 import com.ezcar24.business.data.local.Sale
 import com.ezcar24.business.data.local.SaleDao
+import com.ezcar24.business.data.local.Vehicle
+import com.ezcar24.business.data.local.VehicleDao
+import com.ezcar24.business.data.local.VehicleInventoryStats
+import com.ezcar24.business.data.local.VehicleInventoryStatsDao
+import com.ezcar24.business.data.local.VehicleWithFinancials
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
+import com.ezcar24.business.util.SubscriptionAccess
 import com.ezcar24.business.util.calculator.HoldingCostCalculator
-import com.ezcar24.business.util.calculator.VehicleFinancialsCalculator
 import com.ezcar24.business.util.calculator.InventoryMetricsCalculator
+import com.ezcar24.business.util.calculator.VehicleFinancialsCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.math.BigDecimal
+import java.util.Date
+import java.util.UUID
+import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import javax.inject.Inject
-import java.util.UUID
-import java.util.Date
-import java.math.BigDecimal
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class VehicleFinancialSummary(
     val purchasePrice: BigDecimal = BigDecimal.ZERO,
@@ -84,7 +86,9 @@ data class VehicleUiState(
     val accounts: List<FinancialAccount> = emptyList(),
     val sortOrder: String = "newest",
     val agingBucketFilter: String? = null,
-    val inventoryStats: Map<String, VehicleInventoryStats> = emptyMap()
+    val inventoryStats: Map<String, VehicleInventoryStats> = emptyMap(),
+    val isProAccessActive: Boolean = false,
+    val isSubscriptionStatusLoading: Boolean = true
 )
 
 @HiltViewModel
@@ -97,6 +101,7 @@ class VehicleViewModel @Inject constructor(
     private val holdingCostSettingsDao: HoldingCostSettingsDao,
     private val inventoryAlertDao: InventoryAlertDao,
     private val vehicleInventoryStatsDao: VehicleInventoryStatsDao,
+    private val subscriptionManager: SubscriptionManager,
     private val cloudSyncManager: CloudSyncManager
 ) : ViewModel() {
 
@@ -110,6 +115,25 @@ class VehicleViewModel @Inject constructor(
     init {
         loadVehicles()
         loadAccounts()
+        observeSubscriptionAccess()
+    }
+
+    private fun observeSubscriptionAccess() {
+        viewModelScope.launch {
+            combine(
+                subscriptionManager.isProAccessActive,
+                subscriptionManager.isCheckingStatus
+            ) { isPro, isChecking ->
+                isPro to isChecking
+            }.collect { (isPro, isChecking) ->
+                _uiState.update {
+                    it.copy(
+                        isProAccessActive = isPro,
+                        isSubscriptionStatusLoading = isChecking
+                    )
+                }
+            }
+        }
     }
 
     private fun loadAccounts() {
@@ -554,6 +578,19 @@ class VehicleViewModel @Inject constructor(
         reportURL: String? = null,
         saleAccountId: UUID? = null
     ): Result<UUID> = runCatching {
+        if (id == null) {
+            val subscriptionState = _uiState.value
+            val activeVehicleCount = vehicleDao.count()
+            if (SubscriptionAccess.shouldGateVehicleCreation(
+                    isProAccessActive = subscriptionState.isProAccessActive,
+                    isCheckingStatus = subscriptionState.isSubscriptionStatusLoading,
+                    vehicleCount = activeVehicleCount
+                )
+            ) {
+                error("Free plan includes up to 3 vehicles. Upgrade to Pro to add unlimited inventory.")
+            }
+        }
+
         val now = Date()
         val normalizedNotes = notes.trim().takeIf { it.isNotEmpty() }
         val normalizedBuyerName = buyerName?.trim()?.takeIf { it.isNotEmpty() }

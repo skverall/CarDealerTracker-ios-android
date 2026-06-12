@@ -55,7 +55,8 @@ enum class AppLanguage(
     RUSSIAN("ru", "Русский", false),
     ARABIC("ar", "العربية", true),
     JAPANESE("ja", "日本語", false),
-    KOREAN("ko", "한국어", false)
+    KOREAN("ko", "한국어", false),
+    UZBEK("uz", "Oʻzbekcha", false)
 }
 
 data class RegionSettingsState(

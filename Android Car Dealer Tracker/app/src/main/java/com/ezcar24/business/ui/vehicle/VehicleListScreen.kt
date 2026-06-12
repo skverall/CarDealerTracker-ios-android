@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
@@ -53,13 +54,14 @@ import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.local.VehicleWithFinancials
 import com.ezcar24.business.ui.theme.*
+import com.ezcar24.business.util.SubscriptionAccess
+import com.ezcar24.business.util.localizedUiString
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
-import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
@@ -68,10 +70,12 @@ fun VehicleListScreen(
     presetStatus: String? = null,
     showNavigation: Boolean = true,
     onNavigateToAddVehicle: () -> Unit = {},
+    onNavigateToPaywall: () -> Unit = {},
     onNavigateToDetail: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var quickSaleVehicle by remember { mutableStateOf<Vehicle?>(null) }
+    var showVehicleLimitDialog by remember { mutableStateOf(false) }
     
     LaunchedEffect(presetStatus) {
         if (presetStatus != null) {
@@ -109,7 +113,18 @@ fun VehicleListScreen(
                             color = MaterialTheme.colorScheme.onBackground
                         )
                         IconButton(
-                            onClick = onNavigateToAddVehicle,
+                            onClick = {
+                                val shouldGate = SubscriptionAccess.shouldGateVehicleCreation(
+                                    isProAccessActive = uiState.isProAccessActive,
+                                    isCheckingStatus = uiState.isSubscriptionStatusLoading,
+                                    vehicleCount = uiState.vehicles.size
+                                )
+                                if (shouldGate) {
+                                    showVehicleLimitDialog = true
+                                } else {
+                                    onNavigateToAddVehicle()
+                                }
+                            },
                             colors = IconButtonDefaults.iconButtonColors(
                                 containerColor = EzcarNavy,
                                 contentColor = Color.White
@@ -388,6 +403,41 @@ fun VehicleListScreen(
                     paymentMethod = paymentMethod,
                     accountId = accountId
                 )
+            }
+        )
+    }
+
+    if (showVehicleLimitDialog) {
+        AlertDialog(
+            onDismissRequest = { showVehicleLimitDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = null,
+                    tint = EzcarNavy
+                )
+            },
+            title = { Text(localizedUiString("3-car free limit")) },
+            text = {
+                Text(
+                    localizedUiString("Free plan includes up to 3 vehicles. Upgrade to Pro to add unlimited inventory.")
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showVehicleLimitDialog = false
+                        onNavigateToPaywall()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy)
+                ) {
+                    Text(localizedUiString("Upgrade to Pro"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showVehicleLimitDialog = false }) {
+                    Text(localizedUiString("Not now"))
+                }
             }
         )
     }
