@@ -627,22 +627,28 @@ private struct AnalyticsPulseStatusBadge: View {
     let status: AnalyticsPulseStatus
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 7) {
             Circle()
-                .fill(status.tint)
-                .frame(width: 7, height: 7)
+                .fill(dotColor)
+                .frame(width: 6, height: 6)
 
             Text(status.title)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(.white.opacity(0.78))
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.8)
+                .textCase(.uppercase)
+                .foregroundColor(.white.opacity(0.72))
+                .lineLimit(1)
         }
-        .padding(.horizontal, 11)
-        .padding(.vertical, 6)
-        .background(Color.white.opacity(0.08), in: Capsule())
-        .overlay(
-            Capsule()
-                .strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-        )
+        .padding(.top, 8)
+    }
+
+    private var dotColor: Color {
+        switch status {
+        case .healthy: return Color(red: 0.36, green: 0.85, blue: 0.55)
+        case .watch: return Color(red: 1.0, green: 0.82, blue: 0.40)
+        case .attention: return Color(red: 1.0, green: 0.45, blue: 0.45)
+        case .neutral: return Color.white.opacity(0.45)
+        }
     }
 }
 
