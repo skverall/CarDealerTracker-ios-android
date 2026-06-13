@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
 import androidx.compose.material.pullrefresh.pullRefresh
@@ -128,7 +129,7 @@ fun ClientTopBar(onFilterClick: () -> Unit, onAddClick: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Clients",
+                text = localizedUiString("Clients"),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
@@ -146,7 +147,7 @@ fun ClientTopBar(onFilterClick: () -> Unit, onAddClick: () -> Unit) {
         IconButton(
             onClick = onAddClick,
             modifier = Modifier
-                .size(40.dp)
+                .size(48.dp)
                 .background(EzcarNavy, CircleShape)
         ) {
             Icon(
@@ -170,8 +171,7 @@ fun SearchBar(searchText: String, onSearchChange: (String) -> Unit) {
             .padding(horizontal = 16.dp)
             .height(56.dp)
             .clip(RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant), // Explicit white input bg
+            .background(MaterialTheme.colorScheme.surfaceVariant),
         colors = TextFieldDefaults.colors(
             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
@@ -196,18 +196,19 @@ fun ClientFilters(selectedFilter: DateFilterType, onFilterSelected: (DateFilterT
             FilterChip(
                 selected = isSelected,
                 onClick = { onFilterSelected(filter) },
-                label = { Text(filter.name) },
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = EzcarNavy,
-                    selectedLabelColor = Color.White,
-                    containerColor = Color.White,
-                    labelColor = EzcarNavy
-                ),
+                    label = { Text(localizedUiString(filter.labelSource())) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = EzcarNavy,
+                        selectedLabelColor = Color.White,
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        labelColor = EzcarNavy
+                    ),
                 border = FilterChipDefaults.filterChipBorder(
                     enabled = true,
                     selected = isSelected,
                     borderColor = if (isSelected) EzcarNavy else Color.Transparent
-                )
+                ),
+                modifier = Modifier.heightIn(min = 48.dp)
             )
         }
     }
@@ -221,9 +222,7 @@ fun ClientGroupedList(
     onCallClick: (Client) -> Unit,
     onWhatsAppClick: (Client) -> Unit
 ) {
-    // Group by status
-    val grouped = clients.groupBy { it.status ?: "new" } // Use safe access
-    // Define order
+    val grouped = clients.groupBy { it.status ?: "new" }
     val statusOrder = listOf("new", "engaged", "negotiation", "purchased", "lost")
 
     LazyColumn(
@@ -250,14 +249,8 @@ fun ClientGroupedList(
 
 @Composable
 fun ClientStatusHeader(status: String, count: Int) {
-    val displayStatus = when(status) {
-        "new" -> "NEW LEADS"
-        "engaged" -> "ENGAGED"
-        "negotiation" -> "NEGOTIATION"
-        "purchased" -> "PURCHASED"
-        "lost" -> "LOST"
-        else -> status.uppercase()
-    }
+    val displayStatus = localizedUiString(clientStatusSectionLabelSource(status))
+        .uppercase(Locale.getDefault())
     
     Row(
         modifier = Modifier
@@ -271,12 +264,12 @@ fun ClientStatusHeader(status: String, count: Int) {
             text = displayStatus,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = count.toString(),
             style = MaterialTheme.typography.labelMedium,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -301,14 +294,7 @@ fun ClientRow(
         else -> EzcarGreen
     }
     
-    val statusDisplayName = when(client.status) {
-        "new" -> "New"
-        "engaged" -> "Engaged"
-        "negotiation" -> "Negotiation"
-        "purchased" -> "Purchased"
-        "lost" -> "Lost"
-        else -> "New"
-    }
+    val statusDisplayName = localizedUiString(clientStatusLabelSource(client.status))
     
     Card(
         modifier = Modifier
@@ -316,7 +302,7 @@ fun ClientRow(
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -354,16 +340,16 @@ fun ClientRow(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = client.name ?: "Unknown Client",
+                            text = client.name ?: localizedUiString("Unknown Client"),
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color.Black
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         
                         // Status Badge
                         if (isNew) {
                             Text(
-                                text = "New",
+                                text = localizedUiString("New"),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = EzcarGreen,
@@ -407,7 +393,7 @@ fun ClientRow(
                             Text(
                                 text = client.requestDetails!!,
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = Color.Black.copy(alpha = 0.85f),
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
                                 maxLines = 1
                             )
                         }
@@ -425,7 +411,10 @@ fun ClientRow(
                             modifier = Modifier.size(10.dp)
                         )
                         Text(
-                            text = "Added on ${SimpleDateFormat("d MMM", Locale.getDefault()).format(client.createdAt ?: Date())}",
+                            text = localizedUiString(
+                                "Added on %s",
+                                SimpleDateFormat("d MMM", Locale.getDefault()).format(client.createdAt ?: Date())
+                            ),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Gray
                         )
@@ -435,7 +424,7 @@ fun ClientRow(
             
             // Action Buttons (Compact) - only show if phone exists
             if (!client.phone.isNullOrBlank()) {
-                HorizontalDivider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
                 
                 Row(
                     modifier = Modifier
@@ -446,13 +435,15 @@ fun ClientRow(
                     // Call Button
                     Button(
                         onClick = onCall,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFFF7F7F8),
-                            contentColor = Color.Black
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurface
                         ),
-                        contentPadding = PaddingValues(vertical = 6.dp),
-                        shape = RoundedCornerShape(6.dp)
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Phone,
@@ -466,16 +457,18 @@ fun ClientRow(
                     // WhatsApp Button
                     Button(
                         onClick = onWhatsApp,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .heightIn(min = 48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = EzcarGreen.copy(alpha = 0.1f),
                             contentColor = EzcarGreen
                         ),
-                        contentPadding = PaddingValues(vertical = 6.dp),
-                        shape = RoundedCornerShape(6.dp)
+                        contentPadding = PaddingValues(vertical = 8.dp),
+                        shape = RoundedCornerShape(10.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Message,
+                            imageVector = Icons.AutoMirrored.Filled.Message,
                             contentDescription = null,
                             modifier = Modifier.size(12.dp)
                         )
@@ -505,21 +498,45 @@ fun EmptyClientState() {
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "No Clients Found",
+            text = localizedUiString("No Clients Found"),
             style = MaterialTheme.typography.titleMedium,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(localizedUiString("Tap + to add a new client"), style = MaterialTheme.typography.bodyMedium, color = Color.LightGray)
+        Text(
+            localizedUiString("Tap + to add a new client"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f)
+        )
     }
 }
 
-fun getStatusDisplayName(status: String): String {
-    return when(status) {
+private fun DateFilterType.labelSource(): String {
+    return when (this) {
+        DateFilterType.ALL -> "All"
+        DateFilterType.TODAY -> "Today"
+        DateFilterType.WEEK -> "Week"
+        DateFilterType.MONTH -> "Month"
+    }
+}
+
+private fun clientStatusLabelSource(status: String?): String {
+    return when (status) {
+        "new" -> "New"
+        "engaged" -> "Engaged"
+        "negotiation" -> "Negotiation"
+        "purchased" -> "Purchased"
+        "lost" -> "Lost"
+        else -> "New"
+    }
+}
+
+private fun clientStatusSectionLabelSource(status: String): String {
+    return when (status) {
         "new" -> "New Leads"
         "engaged" -> "Engaged"
         "negotiation" -> "Negotiation"
         "purchased" -> "Purchased"
         "lost" -> "Lost"
-        else -> "Others"
+        else -> status
     }
 }

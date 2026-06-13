@@ -335,12 +335,12 @@ fun DashboardTopBar(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = getGreeting(),
+                    text = localizedUiString(getGreeting()),
                     style = MaterialTheme.typography.titleSmall.copy(fontStyle = FontStyle.Italic),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Text(
-                    text = "Dashboard",
+                    text = localizedUiString("Dashboard"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -372,7 +372,7 @@ fun DashboardTopBar(
                 IconButton(
                     onClick = onSearchClick,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .background(MaterialTheme.colorScheme.surface, CircleShape)
                 ) {
                     Icon(Icons.Default.Search, contentDescription = localizedUiString("Search"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -381,7 +381,7 @@ fun DashboardTopBar(
                 IconButton(
                     onClick = onProfileClick,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .background(MaterialTheme.colorScheme.surface, CircleShape)
                 ) {
                     Icon(Icons.Default.Person, contentDescription = localizedUiString("Profile"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -390,7 +390,7 @@ fun DashboardTopBar(
                 IconButton(
                     onClick = onAddClick,
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(48.dp)
                         .background(EzcarNavy, CircleShape)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = localizedUiString("Add"), tint = Color.White)
@@ -429,7 +429,7 @@ private fun DashboardOrganizationSwitcher(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = activeOrganization?.organizationName ?: "Select Business",
+                        text = activeOrganization?.organizationName ?: localizedUiString("Select Business"),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
@@ -437,7 +437,7 @@ private fun DashboardOrganizationSwitcher(
                     )
                     Text(
                         text = activeOrganization?.role?.replaceFirstChar { it.titlecase(Locale.getDefault()) }
-                            ?: "Switch business or create one",
+                            ?: localizedUiString("Switch business or create one"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
@@ -598,7 +598,7 @@ private fun DashboardCreateBusinessDialog(
                 onClick = { onCreate(businessName.trim()) },
                 enabled = businessName.trim().isNotEmpty() && !isSaving
             ) {
-                Text(if (isSaving) "Creating..." else "Create")
+                Text(localizedUiString(if (isSaving) "Creating..." else "Create"))
             }
         },
         dismissButton = {
@@ -642,11 +642,12 @@ fun TimeRangePicker(
                     .clip(RoundedCornerShape(50))
                     .background(if (isSelected) EzcarNavy else MaterialTheme.colorScheme.surface)
                     .clickable { onRangeSelected(range) }
+                    .heightIn(min = 48.dp)
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = range.displayLabel,
+                    text = localizedUiString(range.displayLabel),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
@@ -840,7 +841,7 @@ fun TodaysExpensesSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Today's Expenses",
+                text = localizedUiString("Today's Expenses"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -947,7 +948,7 @@ fun TodayExpenseCard(
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = expense.expenseDescription ?: expense.category ?: "Expense",
+                    text = expense.expenseDescription ?: expense.category ?: localizedUiString("Expense"),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                     maxLines = 1
@@ -979,7 +980,7 @@ fun EmptyTodayCard(onAddExpense: () -> Unit) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "No expenses today",
+                text = localizedUiString("No expenses today"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Medium
             )
@@ -1036,7 +1037,7 @@ fun SummaryOverviewCard(
             ) {
                 Column {
                     Text(
-                        text = "Total Spent (${selectedRange.displayLabel})",
+                        text = localizedUiString("Total Spent (%s)", localizedUiString(selectedRange.displayLabel)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray
                     )
@@ -1092,7 +1093,7 @@ fun SummaryOverviewCard(
                 }
             } else {
                 Text(
-                    text = "No spending data for this period",
+                    text = localizedUiString("No spending data for this period"),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -1305,7 +1306,7 @@ fun CategoryBreakdownCard(stats: List<CategoryStat>) {
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
             Text(
-                text = "Spending Breakdown",
+                text = localizedUiString("Spending Breakdown"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
@@ -1315,7 +1316,7 @@ fun CategoryBreakdownCard(stats: List<CategoryStat>) {
             
             if (stats.isEmpty()) {
                 Text(
-                    text = "No expenses for this period",
+                    text = localizedUiString("No expenses for this period"),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.Gray
                 )
@@ -1404,7 +1405,7 @@ fun RecentExpensesSection(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Recent Expenses",
+                text = localizedUiString("Recent Expenses"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -1419,7 +1420,7 @@ fun RecentExpensesSection(
         
         if (recentExpenses.isEmpty()) {
             Text(
-                text = "No recent expenses",
+                text = localizedUiString("No recent expenses"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray,
                 modifier = Modifier.padding(vertical = 12.dp)
@@ -1478,12 +1479,16 @@ fun RecentExpenseItem(
             
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = expense.expenseDescription ?: expense.category ?: "Expense",
+                    text = expense.expenseDescription ?: expense.category ?: localizedUiString("Expense"),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(
-                    text = "${vehicleTitle ?: "General"} • ${dateFormat.format(expenseDisplayDateTime(expense))}",
+                    text = localizedUiString(
+                        "%s • %s",
+                        vehicleTitle ?: localizedUiString("General"),
+                        dateFormat.format(expenseDisplayDateTime(expense))
+                    ),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.Gray
                 )
@@ -1545,15 +1550,15 @@ fun SyncStatusCard(
                     ?.lineSequence()
                     ?.firstOrNull()
                     ?.takeIf { it.isNotBlank() }
-                    ?: "Sync failed"
-            lastSyncTime != null && !isSyncing -> "Synced at ${dateFormat.format(lastSyncTime)}"
-            else -> text
+                    ?: localizedUiString("Sync failed")
+            lastSyncTime != null && !isSyncing -> localizedUiString("Synced at %s", dateFormat.format(lastSyncTime))
+            else -> localizedUiString(text)
         }
 
         Text(
             text = displayMessage,
             style = MaterialTheme.typography.labelMedium,
-            color = Color.Black.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
             maxLines = if (syncState is SyncState.Failure) 2 else 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -1561,7 +1566,7 @@ fun SyncStatusCard(
         if (queueCount > 0) {
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "• $queueCount queued",
+                text = localizedUiString("• %d queued", queueCount),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -1573,24 +1578,33 @@ fun SyncStatusCard(
             horizontalArrangement = Arrangement.spacedBy(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.MonitorHeart,
-                contentDescription = localizedUiString("Data Health"),
-                tint = if (queueCount > 0) EzcarOrange else EzcarBlueBright,
+            IconButton(
+                onClick = onDataHealthClick,
                 modifier = Modifier
-                    .size(16.dp)
-                    .clickable { onDataHealthClick() }
-            )
+                    .size(48.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MonitorHeart,
+                    contentDescription = localizedUiString("Data Health"),
+                    tint = if (queueCount > 0) EzcarOrange else EzcarBlueBright,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
 
-            Icon(
-                imageVector = Icons.Default.Refresh,
-                contentDescription = localizedUiString("Sync"),
-                tint = EzcarBlueBright,
+            IconButton(
+                onClick = onSyncClick,
+                enabled = !isSyncing,
                 modifier = Modifier
-                    .size(16.dp)
+                    .size(48.dp)
                     .alpha(if (isSyncing) 0.35f else 1f)
-                    .clickable(enabled = !isSyncing) { onSyncClick() }
-            )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = localizedUiString("Sync"),
+                    tint = EzcarBlueBright,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
     }
 }
@@ -1625,7 +1639,7 @@ fun CRMSummaryCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "CRM Summary",
+                    text = localizedUiString("CRM Summary"),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -1685,7 +1699,7 @@ private fun CRMStatItem(
             color = color
         )
         Text(
-            text = label,
+            text = localizedUiString(label),
             fontSize = 11.sp,
             color = Color.White.copy(alpha = 0.7f)
         )
@@ -1735,7 +1749,7 @@ fun InventorySummaryCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Inventory Summary",
+                        text = localizedUiString("Inventory Summary"),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color.Black
@@ -1799,7 +1813,7 @@ private fun InventoryStatItem(
             color = color
         )
         Text(
-            text = label,
+            text = localizedUiString(label),
             fontSize = 12.sp,
             color = Color.Gray
         )

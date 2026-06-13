@@ -133,12 +133,16 @@ fun VehicleDetailScreen(
                                 val vehicleTitle = listOfNotNull(vehicle.year?.toString(), vehicle.make, vehicle.model)
                                     .joinToString(" ")
                                     .trim()
-                                    .ifBlank { "vehicle" }
+                                    .ifBlank { context.localizedUiString("vehicle") }
                                 val price = regionSettingsManager.formatCurrency(vehicle.salePrice ?: vehicle.askingPrice ?: vehicle.purchasePrice)
-                                var shareText = "Check out this $vehicleTitle.\nAsking: $price"
+                                var shareText = context.localizedUiString(
+                                    "Check out this %1\$s.\nAsking: %2\$s",
+                                    vehicleTitle,
+                                    price
+                                )
                                 val reportLink = vehicle.reportURL?.trim().orEmpty()
                                 if (reportLink.isNotEmpty()) {
-                                    shareText += "\nReport: $reportLink"
+                                    shareText += "\n" + context.localizedUiString("Report: %s", reportLink)
                                 }
                                 val sendIntent = android.content.Intent().apply {
                                     action = android.content.Intent.ACTION_SEND
@@ -223,7 +227,8 @@ fun VehicleDetailScreen(
                         buyerName = vehicle.buyerName,
                         buyerPhone = vehicle.buyerPhone,
                         paymentMethod = vehicle.paymentMethod,
-                        accountName = detailState.saleAccount?.accountType
+                        accountName = detailState.saleAccount?.accountType,
+                        isDealDeskSale = detailState.sale?.isDealDeskSale == true
                     )
                 }
 
@@ -375,7 +380,7 @@ fun VehicleDetailScreen(
             expense = expense,
             vehicleTitle = listOfNotNull(detailState.vehicle?.make, detailState.vehicle?.model)
                 .joinToString(" ")
-                .ifBlank { detailState.vehicle?.vin ?: "No vehicle linked" },
+                .ifBlank { detailState.vehicle?.vin ?: localizedUiString("No vehicle linked") },
             onDismiss = { selectedExpense = null },
             onSaveComment = viewModel::updateExpenseComment,
             onViewReceipt = { expenseViewModel.openExpenseReceipt(context, it) },
@@ -1084,12 +1089,12 @@ private fun VehicleHeaderCard(
             ) {
                 Column {
                     Text(
-                        text = "${vehicle.make ?: ""} ${vehicle.model ?: ""}".trim().ifEmpty { "Vehicle" },
+                        text = "${vehicle.make ?: ""} ${vehicle.model ?: ""}".trim().ifEmpty { localizedUiString("Vehicle") },
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Year: ${vehicle.year ?: "N/A"}",
+                        text = localizedUiString("Year: %s", vehicle.year?.toString() ?: localizedUiString("N/A")),
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray
                     )
@@ -1136,7 +1141,7 @@ private fun VehicleHeaderCard(
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(localizedUiString("Days in Inventory:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
                     Text(
-                        "${stats.daysInInventory} days (${stats.agingBucket})",
+                        localizedUiString("%1\$d days (%2\$s)", stats.daysInInventory, stats.agingBucket),
                         fontWeight = FontWeight.Medium,
                         color = when (stats.agingBucket) {
                             "0-30" -> EzcarGreen
@@ -1215,7 +1220,7 @@ private fun ExpensesSection(
                 if (expenses.size > 5) {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "+${expenses.size - 5} more expenses",
+                        localizedUiString("+%d more expenses", expenses.size - 5),
                         color = Color.Gray,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -1233,7 +1238,8 @@ private fun SaleDetailsCard(
     buyerName: String?,
     buyerPhone: String?,
     paymentMethod: String?,
-    accountName: String?
+    accountName: String?,
+    isDealDeskSale: Boolean = false
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -1245,38 +1251,78 @@ private fun SaleDetailsCard(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Text(
-                text = "Sale Details",
+                text = localizedUiString("Sale Details"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
 
+            if (isDealDeskSale) {
+                DealDeskProtectedNotice()
+            }
+
             FinancialDetailRow(
-                label = "Sale Price",
+                label = localizedUiString("Sale Price"),
                 amount = salePrice,
                 color = EzcarGreen,
                 isBold = true
             )
             FinancialDetailRow(
-                label = "Sale Date",
+                label = localizedUiString("Sale Date"),
                 value = saleDate?.let { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(it) } ?: "-",
                 isBold = true
             )
             FinancialDetailRow(
-                label = "Buyer Name",
+                label = localizedUiString("Buyer Name"),
                 value = buyerName?.takeIf { it.isNotBlank() } ?: "-"
             )
             FinancialDetailRow(
-                label = "Buyer Phone",
+                label = localizedUiString("Buyer Phone"),
                 value = buyerPhone?.takeIf { it.isNotBlank() } ?: "-"
             )
             FinancialDetailRow(
-                label = "Payment Method",
+                label = localizedUiString("Payment Method"),
                 value = paymentMethod?.takeIf { it.isNotBlank() } ?: "-"
             )
             FinancialDetailRow(
-                label = "Deposited To",
+                label = localizedUiString("Deposited To"),
                 value = accountName?.takeIf { it.isNotBlank() } ?: "-"
             )
+        }
+    }
+}
+
+@Composable
+private fun DealDeskProtectedNotice() {
+    Surface(
+        color = EzcarBlueBright.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                tint = EzcarBlueBright,
+                modifier = Modifier.size(18.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = localizedUiString("Protected by Deal Desk"),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = EzcarBlueBright,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = localizedUiString("Revenue, payment method and deposit account are locked so taxes, fees and collected cash stay correct."),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -1322,13 +1368,13 @@ fun VehicleStatusBadge(status: String) {
         "owned" -> "Owned" to Color.Gray
         "on_sale" -> "On Sale" to EzcarGreen
         "in_transit" -> "In Transit" to EzcarPurple
-        "under_service" -> "Service" to EzcarOrange
+        "under_service" -> "Under Service" to EzcarOrange
         "sold" -> "Sold" to EzcarBlueBright
         else -> status.replaceFirstChar { it.uppercase() } to EzcarGreen
     }
 
     Text(
-        text = text,
+        text = localizedUiString(text),
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         color = color,

@@ -127,11 +127,11 @@ fun ClientDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        when {
+                        localizedUiString(when {
                             isNewClient -> "New Client"
                             isEditing -> "Edit Client"
                             else -> "Client Details"
-                        }
+                        })
                     )
                 },
                 navigationIcon = {
@@ -434,9 +434,13 @@ fun ClientDetailScreen(
                                 Icon(Icons.Default.DirectionsCar, contentDescription = null)
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
-                                    text = selectedVehicle?.let(::formatVehicleInterestLabel) ?: "Select vehicle",
+                                    text = selectedVehicle?.let(::formatVehicleInterestLabel) ?: localizedUiString("Select vehicle"),
                                     modifier = Modifier.weight(1f),
-                                    color = if (selectedVehicle == null) Color.Gray else Color.Black
+                                    color = if (selectedVehicle == null) {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    }
                                 )
                                 Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
                             }
@@ -846,7 +850,7 @@ private fun ClientReadOnlyContent(
     ClientReadOnlyCard(title = "Vehicle Interest") {
         ClientReadOnlyRow(
             label = "Vehicle",
-            value = selectedVehicle?.let(::formatVehicleInterestLabel) ?: "Not selected"
+            value = selectedVehicle?.let(::formatVehicleInterestLabel) ?: localizedUiString("Not selected")
         )
         ClientReadOnlyRow(
             label = "Preferred Date",
@@ -901,14 +905,21 @@ private fun ClientReadOnlyCard(
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            content = content
-        )
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = localizedUiString(title),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            content()
+        }
     }
 }
 
@@ -916,15 +927,15 @@ private fun ClientReadOnlyCard(
 private fun ClientReadOnlyRow(label: String, value: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(
-            text = label,
+            text = localizedUiString(label),
             style = MaterialTheme.typography.labelSmall,
-            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium,
-            color = Color.DarkGray
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -949,7 +960,9 @@ private fun ClientContactActions(
         ) {
             FilledTonalButton(
                 onClick = { onCall(cleanPhone) },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
             ) {
                 Icon(Icons.Default.Phone, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -957,7 +970,9 @@ private fun ClientContactActions(
             }
             FilledTonalButton(
                 onClick = { onWhatsApp(cleanPhone) },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
             ) {
                 Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -965,7 +980,9 @@ private fun ClientContactActions(
             }
             FilledTonalButton(
                 onClick = { onSms(cleanPhone) },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .heightIn(min = 48.dp)
             ) {
                 Icon(Icons.Default.Sms, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(8.dp))
@@ -978,7 +995,9 @@ private fun ClientContactActions(
         Spacer(modifier = Modifier.height(8.dp))
         FilledTonalButton(
             onClick = { onEmail(cleanEmail) },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 48.dp)
         ) {
             Icon(Icons.Default.Email, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(modifier = Modifier.width(8.dp))
@@ -1024,10 +1043,12 @@ private fun ReadOnlyReminderItem(reminder: ClientReminder) {
     }
 }
 
-private fun displayValue(value: String?): String = value?.takeIf { it.isNotBlank() } ?: "Not provided"
+@Composable
+private fun displayValue(value: String?): String = value?.takeIf { it.isNotBlank() } ?: localizedUiString("Not provided")
 
+@Composable
 private fun formatDateTime(date: Date?): String {
-    if (date == null) return "Not set"
+    if (date == null) return localizedUiString("Not set")
     return SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(date)
 }
 
@@ -1036,8 +1057,8 @@ fun StatusSelector(selectedStatus: String, onStatusSelected: (String) -> Unit) {
     val statuses = listOf(
         "new" to "New",
         "engaged" to "Engaged",
-        "negotiation" to "Negot.",
-        "purchased" to "Bought",
+        "negotiation" to "Negotiation",
+        "purchased" to "Purchased",
         "lost" to "Lost"
     )
     
@@ -1046,11 +1067,12 @@ fun StatusSelector(selectedStatus: String, onStatusSelected: (String) -> Unit) {
             FilterChip(
                 selected = selectedStatus == key,
                 onClick = { onStatusSelected(key) },
-                label = { Text(label) },
+                label = { Text(localizedUiString(label)) },
                 colors = FilterChipDefaults.filterChipColors(
                     selectedContainerColor = MaterialTheme.colorScheme.primary,
                     selectedLabelColor = Color.White
-                )
+                ),
+                modifier = Modifier.heightIn(min = 48.dp)
             )
         }
     }
@@ -1118,7 +1140,7 @@ fun LegacyInteractionItem(interaction: com.ezcar24.business.data.local.ClientInt
                  horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = (interaction.title ?: "Interaction").replaceFirstChar { it.uppercase() },
+                    text = (interaction.title ?: localizedUiString("Interaction")).replaceFirstChar { it.uppercase() },
                     style = MaterialTheme.typography.labelSmall,
                     color = EzcarBlueBright,
                     fontWeight = FontWeight.Bold

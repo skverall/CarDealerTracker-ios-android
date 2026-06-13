@@ -6,10 +6,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -27,10 +31,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
@@ -38,6 +46,7 @@ import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.data.repository.AuthRepository
 import com.ezcar24.business.ui.auth.AuthErrorMapper
 import com.ezcar24.business.ui.auth.AuthFailureContext
+import com.ezcar24.business.ui.theme.EzcarSuccess
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -119,14 +128,20 @@ fun ChangePasswordScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showNewPassword by remember { mutableStateOf(false) }
+    var showConfirmPassword by remember { mutableStateOf(false) }
+    val localizedError = uiState.error?.let { localizedUiString(it) }
+    val passwordUpdatedMessage = localizedUiString("Password updated successfully.")
+    val passwordsMismatch = uiState.confirmPassword.isNotEmpty() &&
+        uiState.newPassword != uiState.confirmPassword
 
-    LaunchedEffect(uiState.error) {
-        uiState.error?.let { snackbarHostState.showSnackbar(it) }
+    LaunchedEffect(localizedError) {
+        localizedError?.let { snackbarHostState.showSnackbar(it) }
     }
 
-    LaunchedEffect(uiState.didSave) {
+    LaunchedEffect(uiState.didSave, passwordUpdatedMessage) {
         if (uiState.didSave) {
-            snackbarHostState.showSnackbar("Password updated successfully.")
+            snackbarHostState.showSnackbar(passwordUpdatedMessage)
         }
     }
 
@@ -137,7 +152,7 @@ fun ChangePasswordScreen(
                 title = { Text(localizedUiString("Change Password")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = localizedUiString("Back"))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -155,7 +170,7 @@ fun ChangePasswordScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Use the same secure flow as iOS and keep account access in sync across devices.",
+                text = localizedUiString("Changes the password for the currently signed-in account."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -163,8 +178,20 @@ fun ChangePasswordScreen(
                 value = uiState.newPassword,
                 onValueChange = viewModel::onNewPasswordChange,
                 label = { Text(localizedUiString("New Password")) },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                placeholder = { Text(localizedUiString("At least 6 characters")) },
+                trailingIcon = {
+                    IconButton(onClick = { showNewPassword = !showNewPassword }) {
+                        Icon(
+                            imageVector = if (showNewPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = localizedUiString(if (showNewPassword) "Hide password" else "Show password")
+                        )
+                    }
+                },
+                visualTransformation = if (showNewPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Next
+                ),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -172,19 +199,58 @@ fun ChangePasswordScreen(
                 value = uiState.confirmPassword,
                 onValueChange = viewModel::onConfirmPasswordChange,
                 label = { Text(localizedUiString("Confirm Password")) },
-                visualTransformation = PasswordVisualTransformation(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                placeholder = { Text(localizedUiString("Re-enter password")) },
+                trailingIcon = {
+                    IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) {
+                        Icon(
+                            imageVector = if (showConfirmPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = localizedUiString(if (showConfirmPassword) "Hide password" else "Show password")
+                        )
+                    }
+                },
+                visualTransformation = if (showConfirmPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done
+                ),
                 singleLine = true,
+                isError = passwordsMismatch,
                 modifier = Modifier.fillMaxWidth()
             )
+            if (passwordsMismatch) {
+                Text(
+                    text = localizedUiString("Passwords do not match"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            localizedError?.let { error ->
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+            if (uiState.didSave) {
+                Text(
+                    text = passwordUpdatedMessage,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = EzcarSuccess
+                )
+            }
             Button(
                 onClick = viewModel::save,
                 enabled = uiState.canSave && !uiState.isLoading,
                 contentPadding = PaddingValues(vertical = 14.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
             ) {
                 if (uiState.isLoading) {
-                    CircularProgressIndicator(strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
                     Text(localizedUiString("Update Password"))
                 }

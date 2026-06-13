@@ -138,7 +138,7 @@ fun GlobalSearchScreen(
                 ) {
                     item {
                         Text(
-                            text = "No results",
+                            text = localizedUiString("No results"),
                             modifier = Modifier.padding(top = 16.dp),
                             color = Color.Gray
                         )
@@ -242,6 +242,6 @@ private fun ExpenseSearchRow(
 @Composable
 private fun TextButtonInline(text: String, onClick: () -> Unit) {
     androidx.compose.material3.TextButton(onClick = onClick) {
-        Text(text)
+        Text(localizedUiString(text))
     }
 }

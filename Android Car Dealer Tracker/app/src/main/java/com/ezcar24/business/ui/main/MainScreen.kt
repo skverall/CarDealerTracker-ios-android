@@ -281,7 +281,7 @@ fun MainScreen(
                     onRefreshPermissions = onRefreshPermissions,
                     onGuestAccountRequested = onGuestAccountRequested
                 ) {
-                    SalesScreen()
+                    SalesScreen(permissionState = permissionState)
                 }
             }
             composable(MainTab.Clients.route) {

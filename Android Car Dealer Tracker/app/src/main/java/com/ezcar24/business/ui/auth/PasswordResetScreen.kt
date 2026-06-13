@@ -73,7 +73,7 @@ fun PasswordResetScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "Reset Password",
+                text = localizedUiString("Reset Password"),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -81,7 +81,7 @@ fun PasswordResetScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Create a new password to regain access.\nYou'll sign in again after saving.",
+                text = localizedUiString("Create a new password to regain access.\nYou'll sign in again after saving."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp)
@@ -106,7 +106,7 @@ fun PasswordResetScreen(
                     IconButton(onClick = { showNewPassword = !showNewPassword }) {
                         Icon(
                             imageVector = if (showNewPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = null,
+                            contentDescription = localizedUiString(if (showNewPassword) "Hide password" else "Show password"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -140,7 +140,7 @@ fun PasswordResetScreen(
                     IconButton(onClick = { showConfirmPassword = !showConfirmPassword }) {
                         Icon(
                             imageVector = if (showConfirmPassword) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = null,
+                            contentDescription = localizedUiString(if (showConfirmPassword) "Hide password" else "Show password"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -159,7 +159,7 @@ fun PasswordResetScreen(
             // Password mismatch hint
             if (uiState.confirmPassword.isNotEmpty() && uiState.newPassword != uiState.confirmPassword) {
                 Text(
-                    text = "Passwords do not match",
+                    text = localizedUiString("Passwords do not match"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier
@@ -179,7 +179,7 @@ fun PasswordResetScreen(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = error,
+                        text = localizedUiString(error),
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodyMedium
@@ -208,7 +208,7 @@ fun PasswordResetScreen(
                     )
                 } else {
                     Text(
-                        text = "Update Password",
+                        text = localizedUiString("Update Password"),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )

@@ -528,7 +528,7 @@ private fun QuickSaleSheet(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Mark as Sold",
+                        text = localizedUiString("Mark as Sold"),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -539,7 +539,7 @@ private fun QuickSaleSheet(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Purchase ${regionSettingsManager.formatCurrency(vehicle.purchasePrice)}",
+                        text = localizedUiString("Purchase %s", regionSettingsManager.formatCurrency(vehicle.purchasePrice)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -548,7 +548,7 @@ private fun QuickSaleSheet(
 
             FormSection(title = "Sale Details", icon = Icons.Default.CheckCircle) {
                 CustomFormField(
-                    label = "Sale Price ($currencyCode)",
+                    label = localizedUiString("Sale Price (%s)", currencyCode),
                     value = salePrice,
                     onValueChange = {
                         salePrice = it.filter { char -> char.isDigit() || char == '.' }
@@ -590,7 +590,7 @@ private fun QuickSaleSheet(
                     placeholder = "+971..."
                 )
                 Text(
-                    text = "Payment Method",
+                    text = localizedUiString("Payment Method"),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color.Gray
                 )
@@ -604,7 +604,7 @@ private fun QuickSaleSheet(
                         FilterChip(
                             selected = paymentMethod == method,
                             onClick = { paymentMethod = method },
-                            label = { Text(method) },
+                            label = { Text(localizedUiString(method)) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = EzcarGreen,
                                 selectedLabelColor = Color.White
@@ -622,7 +622,7 @@ private fun QuickSaleSheet(
                     border = BorderStroke(1.dp, EzcarDanger.copy(alpha = 0.2f))
                 ) {
                     Text(
-                        text = "No financial accounts available. Add at least one cash or bank account before completing this sale.",
+                        text = localizedUiString("No financial accounts available. Add at least one cash or bank account before completing this sale."),
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
                         color = EzcarDanger
@@ -691,7 +691,7 @@ private fun QuickSaleSheet(
                     )
                 } else {
                     Text(
-                        text = "Complete Sale",
+                        text = localizedUiString("Complete Sale"),
                         fontWeight = FontWeight.SemiBold
                     )
                 }

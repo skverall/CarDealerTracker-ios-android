@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,6 +28,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -51,6 +54,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -160,7 +164,9 @@ fun PaywallScreen(
                     ) {
                         PaywallHero()
                         Spacer(modifier = Modifier.height(16.dp))
-                        FeatureStrip()
+                        SectionTitle("WHAT YOU GET")
+                        Spacer(modifier = Modifier.height(10.dp))
+                        FeatureGrid()
                         Spacer(modifier = Modifier.height(18.dp))
                         SectionTitle("CHOOSE YOUR PLAN")
                         Spacer(modifier = Modifier.height(10.dp))
@@ -287,59 +293,110 @@ private fun PremiumBadge() {
 }
 
 @Composable
-private fun FeatureStrip() {
+private fun FeatureGrid() {
     val features = listOf(
-        "Cars" to "Unlimited",
-        "Sync" to "All devices",
-        "PDF" to "Reports",
-        "Analytics" to "Insights"
+        PaywallFeatureItem(
+            icon = Icons.Default.Star,
+            title = "AI Tips",
+            subtitle = "Instant insights for smarter deals"
+        ),
+        PaywallFeatureItem(
+            icon = Icons.Default.Check,
+            title = "Unlimited",
+            subtitle = "Add unlimited cars, no restrictions"
+        ),
+        PaywallFeatureItem(
+            icon = Icons.Default.CloudUpload,
+            title = "Sync",
+            subtitle = "Synced across all your devices"
+        ),
+        PaywallFeatureItem(
+            icon = Icons.Default.Description,
+            title = "Reports",
+            subtitle = "Export professional PDF reports"
+        )
     )
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .widthIn(max = 520.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        features.forEach { (title, subtitle) ->
-            Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(58.dp),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White.copy(alpha = 0.08f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.14f))
+        features.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Check,
-                        contentDescription = null,
-                        tint = Color(0xFFA855F7),
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = localizedUiString(title),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = localizedUiString(subtitle),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White.copy(alpha = 0.58f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                rowItems.forEach { feature ->
+                    FeatureCard(
+                        feature = feature,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
         }
     }
 }
+
+@Composable
+private fun FeatureCard(
+    feature: PaywallFeatureItem,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier.heightIn(min = 86.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = Color.White.copy(alpha = 0.08f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.14f))
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .background(Color(0xFFA855F7).copy(alpha = 0.16f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = feature.icon,
+                    contentDescription = null,
+                    tint = Color(0xFFC084FC),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = localizedUiString(feature.title),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = localizedUiString(feature.subtitle),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.58f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private data class PaywallFeatureItem(
+    val icon: ImageVector,
+    val title: String,
+    val subtitle: String
+)
 
 @Composable
 private fun SectionTitle(title: String) {

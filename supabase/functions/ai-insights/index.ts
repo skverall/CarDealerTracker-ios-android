@@ -1,22 +1,61 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-const deepSeekEndpoint = "https://api.deepseek.com/v1/chat/completions"
+const deepSeekEndpoint = "https://api.deepseek.com/chat/completions"
 const deepSeekModel = "deepseek-v4-flash"
+const dailyLimit = positiveInteger(Deno.env.get("AI_INSIGHTS_DAILY_LIMIT"), 15)
+const historyLimit = positiveInteger(Deno.env.get("AI_INSIGHTS_HISTORY_LIMIT"), 20)
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 }
 
-const systemPrompt =
-  "Ты финансовый аналитик автодилерского бизнеса. Проанализируй данные и верни JSON: {summary: краткий итог 2-3 предложения, insights: массив из 3 конкретных наблюдений, recommendations: массив из 3 действий}. Отвечай только валидным JSON, на языке данных пользователя."
+const systemPrompt = [
+  "You are a financial analyst for a car dealership business.",
+  "Analyze the dealer data and return only valid JSON with this exact shape: {summary: string, insights: string[], recommendations: string[]}.",
+  "The language rule is mandatory: write every user-facing value in summary, insights, and recommendations only in outputLanguage.name.",
+  "Do not answer in Russian unless outputLanguage.code is ru.",
+  "If previousReports use another language, use them only as context and rewrite the final answer in outputLanguage.name.",
+  "Keep summary to 2-3 sentences, insights to 3 concrete observations, and recommendations to 3 practical actions.",
+].join(" ")
 
 type DealerDataPayload = {
+  mode?: unknown
   sales?: unknown
   expenses?: unknown
   inventory?: unknown
   metadata?: unknown
+  forceRefresh?: unknown
+  fingerprint?: unknown
+}
+
+type NormalizedMetadata = {
+  language: string
+  currencyCode: string
+  region: string
+  period: string
+  organizationId: string | null
+  periodStart: string | null
+  periodEnd: string | null
+}
+
+type NormalizedDealerData = {
+  sales: unknown[]
+  expenses: unknown[]
+  inventory: unknown[]
+  metadata: NormalizedMetadata
+}
+
+type AIInsightsPromptPayload = NormalizedDealerData & {
+  outputLanguage: OutputLanguageInstruction
+  previousReports?: AIInsightReportPayload[]
+}
+
+type OutputLanguageInstruction = {
+  code: string
+  name: string
+  instruction: string
 }
 
 type AIInsightsResponse = {
@@ -25,12 +64,38 @@ type AIInsightsResponse = {
   recommendations: string[]
 }
 
+type AIInsightsUsage = {
+  used: number
+  limit: number
+  remaining: number
+  resetsAt: string
+}
+
+type AIInsightReportPayload = AIInsightsResponse & {
+  id: string
+  period: string
+  createdAt: string
+}
+
+type AIInsightReportRow = {
+  id: string
+  period: string
+  summary: string
+  insights: unknown
+  recommendations: unknown
+  created_at: string
+}
+
 class HttpError extends Error {
   status: number
+  code?: string
+  details?: Record<string, unknown>
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code?: string, details?: Record<string, unknown>) {
     super(message)
     this.status = status
+    this.code = code
+    this.details = details
   }
 }
 
@@ -49,10 +114,20 @@ serve(async (req) => {
       throw new HttpError("Unauthorized", 401)
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+
     const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: authorization } } }
+      supabaseUrl,
+      anonKey,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+        global: { headers: { Authorization: authorization } },
+      },
     )
 
     const {
@@ -63,64 +138,192 @@ serve(async (req) => {
       throw new HttpError("Unauthorized", 401)
     }
 
+    const admin = serviceRoleKey
+      ? createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      })
+      : null
+
+    const body = await req.json() as DealerDataPayload
+    const mode = body.mode === "history" ? "history" : "generate"
+    const metadata = normalizeMetadata(body.metadata)
+
+    if (mode === "history") {
+      const organizationId = await resolveAuthorizedOrganizationId(admin, user.id, metadata.organizationId)
+      const usage = await loadUsage(admin, user.id)
+      const reports = await loadHistory(admin, organizationId, metadata.period)
+      return jsonResponse({ reports, usage }, 200)
+    }
+
     const deepSeekApiKey = Deno.env.get("DEEPSEEK_API_KEY")
     if (!deepSeekApiKey) {
       throw new HttpError("DeepSeek API key is not configured", 500)
     }
 
-    const body = await req.json() as DealerDataPayload
-    const payload = normalizeDealerData(body)
+    const payload = normalizeDealerData(body, metadata)
+    const fingerprint = normalizeFingerprint(body.fingerprint) ?? await fingerprintFor(payload)
+    const forceRefresh = body.forceRefresh === true
 
-    const deepSeekResponse = await fetch(deepSeekEndpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${deepSeekApiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: deepSeekModel,
-        temperature: 0.2,
-        max_tokens: 900,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: JSON.stringify(payload) },
-        ],
-      }),
-    })
+    if (admin) {
+      const organizationId = await resolveAuthorizedOrganizationId(admin, user.id, payload.metadata.organizationId)
+      const usage = await loadUsage(admin, user.id)
 
-    if (!deepSeekResponse.ok) {
-      const detail = await safeResponseText(deepSeekResponse)
-      console.error("DeepSeek ai-insights error", deepSeekResponse.status, detail)
-      throw new HttpError("AI provider request failed", 502)
+      if (!forceRefresh) {
+        const existingReport = await findExistingReport(admin, organizationId, payload.metadata.period, fingerprint)
+        if (existingReport) {
+          const reports = await loadHistory(admin, organizationId, payload.metadata.period)
+          return jsonResponse({
+            ...existingReport,
+            reportId: existingReport.id,
+            generatedAt: existingReport.createdAt,
+            usage,
+            history: reports,
+          }, 200)
+        }
+      }
+
+      if (usage.remaining <= 0) {
+        throw new HttpError(
+          "AI insights daily limit reached",
+          429,
+          "AI_INSIGHTS_LIMIT_REACHED",
+          { usage },
+        )
+      }
+
+      const previousReports = await loadHistory(admin, organizationId, payload.metadata.period)
+      const parsed = await requestDeepSeekInsights(deepSeekApiKey, payload, previousReports.slice(0, 5))
+      const report = await saveReport(admin, {
+        organizationId,
+        requestedBy: user.id,
+        fingerprint,
+        payload,
+        response: parsed,
+      })
+      const nextUsage = await loadUsage(admin, user.id)
+      const reports = await loadHistory(admin, organizationId, payload.metadata.period)
+
+      return jsonResponse({
+        ...parsed,
+        reportId: report.id,
+        generatedAt: report.createdAt,
+        usage: nextUsage,
+        history: reports,
+      }, 200)
     }
 
-    const deepSeekPayload = await deepSeekResponse.json()
-    const content = deepSeekPayload?.choices?.[0]?.message?.content
-    if (typeof content !== "string" || content.trim().length === 0) {
-      throw new HttpError("AI provider returned an empty response", 502)
-    }
-
-    const parsed = parseAIInsights(content)
+    const parsed = await requestDeepSeekInsights(deepSeekApiKey, payload)
     return jsonResponse(parsed, 200)
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 400
-    return jsonResponse({ error: errorMessage(error) }, status)
+    return jsonResponse(errorBody(error), status)
   }
 })
 
-function normalizeDealerData(body: DealerDataPayload) {
+async function requestDeepSeekInsights(
+  deepSeekApiKey: string,
+  payload: NormalizedDealerData,
+  previousReports: AIInsightReportPayload[] = [],
+) {
+  const outputLanguage = outputLanguageInstruction(payload.metadata.language)
+  const promptPayload: AIInsightsPromptPayload = previousReports.length > 0
+    ? { ...payload, outputLanguage, previousReports }
+    : { ...payload, outputLanguage }
+
+  const deepSeekResponse = await fetch(deepSeekEndpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${deepSeekApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: deepSeekModel,
+      thinking: { type: "disabled" },
+      response_format: { type: "json_object" },
+      temperature: 0.2,
+      max_tokens: 900,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: JSON.stringify(promptPayload) },
+      ],
+    }),
+  })
+
+  if (!deepSeekResponse.ok) {
+    const detail = await safeResponseText(deepSeekResponse)
+    console.error("DeepSeek ai-insights error", deepSeekResponse.status, detail)
+    throw new HttpError("AI provider request failed", 502)
+  }
+
+  const deepSeekPayload = await deepSeekResponse.json()
+  const content = deepSeekPayload?.choices?.[0]?.message?.content
+  if (typeof content !== "string" || content.trim().length === 0) {
+    throw new HttpError("AI provider returned an empty response", 502)
+  }
+
+  return parseAIInsights(content)
+}
+
+function normalizeDealerData(body: DealerDataPayload, metadata: NormalizedMetadata): NormalizedDealerData {
   const sales = normalizeArray(body?.sales, "sales", 200)
   const expenses = normalizeArray(body?.expenses, "expenses", 500)
   const inventory = normalizeArray(body?.inventory, "inventory", 300)
-  const metadata = body?.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata)
-    ? body.metadata
-    : {}
 
   if (sales.length === 0 && expenses.length === 0 && inventory.length === 0) {
     throw new HttpError("Dealer data is empty", 400)
   }
 
   return { sales, expenses, inventory, metadata }
+}
+
+function normalizeMetadata(value: unknown): NormalizedMetadata {
+  const object = value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {}
+
+  return {
+    language: normalizeLanguageCode(object.language),
+    currencyCode: cleanString(object.currencyCode, "USD"),
+    region: cleanString(object.region, "unknown"),
+    period: normalizePeriod(object.period),
+    organizationId: sanitizeUuid(cleanString(object.organizationId, "")),
+    periodStart: normalizeDateString(object.periodStart),
+    periodEnd: normalizeDateString(object.periodEnd),
+  }
+}
+
+function normalizeLanguageCode(value: unknown) {
+  const code = cleanString(value, "en").toLowerCase().split(/[-_]/)[0]
+  const allowed = new Set(["en", "ru", "ar", "ja", "ko", "uz"])
+  return allowed.has(code) ? code : "en"
+}
+
+function outputLanguageInstruction(code: string): OutputLanguageInstruction {
+  const languages: Record<string, string> = {
+    en: "English",
+    ru: "Russian",
+    ar: "Arabic",
+    ja: "Japanese",
+    ko: "Korean",
+    uz: "Uzbek",
+  }
+  const normalized = normalizeLanguageCode(code)
+  const name = languages[normalized] ?? "English"
+
+  return {
+    code: normalized,
+    name,
+    instruction: `Answer only in ${name}.`,
+  }
+}
+
+function normalizePeriod(value: unknown) {
+  const period = cleanString(value, "month")
+  const allowed = new Set(["today", "week", "month", "threeMonths", "sixMonths", "all"])
+  return allowed.has(period) ? period : "month"
 }
 
 function normalizeArray(value: unknown, name: string, maxItems: number): unknown[] {
@@ -165,12 +368,245 @@ function parseAIInsights(content: string): AIInsightsResponse {
   }
 }
 
+async function resolveAuthorizedOrganizationId(
+  admin: SupabaseClient | null,
+  userId: string,
+  requestedOrganizationId: string | null,
+) {
+  if (!admin) {
+    throw new HttpError("AI history storage is not configured", 500)
+  }
+
+  const organizationId = requestedOrganizationId ?? await resolveFallbackOrganizationId(admin, userId)
+  if (!organizationId) {
+    throw new HttpError("Organization not found", 403)
+  }
+
+  await assertOrganizationAccess(admin, userId, organizationId)
+  return organizationId
+}
+
+async function resolveFallbackOrganizationId(admin: SupabaseClient, userId: string) {
+  const { data: ownedOrg, error: ownedError } = await admin
+    .from("organizations")
+    .select("id")
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (ownedError) throw ownedError
+  if (ownedOrg?.id && typeof ownedOrg.id === "string") return ownedOrg.id
+
+  const { data: membership, error: membershipError } = await admin
+    .from("dealer_team_members")
+    .select("organization_id")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  if (membershipError) throw membershipError
+  return typeof membership?.organization_id === "string" ? membership.organization_id : null
+}
+
+async function assertOrganizationAccess(admin: SupabaseClient, userId: string, organizationId: string) {
+  const { data: ownedOrg, error: ownedError } = await admin
+    .from("organizations")
+    .select("id")
+    .eq("id", organizationId)
+    .eq("owner_id", userId)
+    .maybeSingle()
+
+  if (ownedError) throw ownedError
+  if (ownedOrg?.id) return
+
+  const { data: membership, error: membershipError } = await admin
+    .from("dealer_team_members")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle()
+
+  if (membershipError) throw membershipError
+  if (!membership?.id) {
+    throw new HttpError("Forbidden", 403)
+  }
+}
+
+async function loadUsage(admin: SupabaseClient | null, userId: string): Promise<AIInsightsUsage> {
+  if (!admin) {
+    throw new HttpError("AI history storage is not configured", 500)
+  }
+
+  const now = new Date()
+  const windowStart = new Date(Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  ))
+  const resetsAt = new Date(windowStart)
+  resetsAt.setUTCDate(resetsAt.getUTCDate() + 1)
+
+  const { count, error } = await admin
+    .from("ai_insight_reports")
+    .select("id", { count: "exact", head: true })
+    .eq("requested_by", userId)
+    .gte("created_at", windowStart.toISOString())
+
+  if (error) throw error
+
+  const used = count ?? 0
+
+  return {
+    used,
+    limit: dailyLimit,
+    remaining: Math.max(0, dailyLimit - used),
+    resetsAt: resetsAt.toISOString(),
+  }
+}
+
+async function findExistingReport(
+  admin: SupabaseClient,
+  organizationId: string,
+  period: string,
+  fingerprint: string,
+) {
+  const { data, error } = await admin
+    .from("ai_insight_reports")
+    .select("id, period, summary, insights, recommendations, created_at")
+    .eq("organization_id", organizationId)
+    .eq("period", period)
+    .eq("fingerprint", fingerprint)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (error) throw error
+  return data ? reportPayload(data as AIInsightReportRow) : null
+}
+
+async function loadHistory(admin: SupabaseClient | null, organizationId: string, period: string) {
+  if (!admin) {
+    throw new HttpError("AI history storage is not configured", 500)
+  }
+
+  const { data, error } = await admin
+    .from("ai_insight_reports")
+    .select("id, period, summary, insights, recommendations, created_at")
+    .eq("organization_id", organizationId)
+    .eq("period", period)
+    .order("created_at", { ascending: false })
+    .limit(historyLimit)
+
+  if (error) throw error
+  return (data ?? []).map((row) => reportPayload(row as AIInsightReportRow))
+}
+
+async function saveReport(
+  admin: SupabaseClient,
+  args: {
+    organizationId: string
+    requestedBy: string
+    fingerprint: string
+    payload: NormalizedDealerData
+    response: AIInsightsResponse
+  },
+) {
+  const { organizationId, requestedBy, fingerprint, payload, response } = args
+  const { data, error } = await admin
+    .from("ai_insight_reports")
+    .insert({
+      organization_id: organizationId,
+      requested_by: requestedBy,
+      period: payload.metadata.period,
+      range_start: payload.metadata.periodStart,
+      range_end: payload.metadata.periodEnd,
+      fingerprint,
+      language: payload.metadata.language,
+      currency_code: payload.metadata.currencyCode,
+      region: payload.metadata.region,
+      summary: response.summary,
+      insights: response.insights,
+      recommendations: response.recommendations,
+      source_counts: {
+        sales: payload.sales.length,
+        expenses: payload.expenses.length,
+        inventory: payload.inventory.length,
+      },
+      request_metadata: payload.metadata,
+    })
+    .select("id, period, summary, insights, recommendations, created_at")
+    .single()
+
+  if (error) throw error
+  return reportPayload(data as AIInsightReportRow)
+}
+
+function reportPayload(row: AIInsightReportRow): AIInsightReportPayload {
+  return {
+    id: row.id,
+    period: row.period,
+    summary: row.summary,
+    insights: normalizeStringList(row.insights),
+    recommendations: normalizeStringList(row.recommendations),
+    createdAt: row.created_at,
+  }
+}
+
 function normalizeStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return []
   return value
     .filter((item): item is string => typeof item === "string")
     .map((item) => item.trim())
     .filter((item) => item.length > 0)
+}
+
+async function fingerprintFor(payload: NormalizedDealerData) {
+  const encoded = new TextEncoder().encode(stableStringify(payload))
+  const digest = await crypto.subtle.digest("SHA-256", encoded)
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("")
+}
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(",")}]`
+  }
+  if (value && typeof value === "object") {
+    const object = value as Record<string, unknown>
+    return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${stableStringify(object[key])}`).join(",")}}`
+  }
+  return JSON.stringify(value)
+}
+
+function cleanString(value: unknown, fallback: string) {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback
+}
+
+function normalizeFingerprint(value: unknown) {
+  const text = cleanString(value, "")
+  return /^[0-9a-f]{64}$/i.test(text) ? text.toLowerCase() : null
+}
+
+function normalizeDateString(value: unknown) {
+  const text = cleanString(value, "")
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null
+}
+
+function sanitizeUuid(value: string | null | undefined) {
+  if (!value) return null
+  const trimmed = value.trim()
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(trimmed) ? trimmed : null
+}
+
+function positiveInteger(value: string | null | undefined, fallback: number) {
+  const parsed = Number.parseInt(value ?? "", 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
 }
 
 async function safeResponseText(response: Response) {
@@ -186,6 +622,17 @@ function jsonResponse(body: unknown, status: number) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   })
+}
+
+function errorBody(error: unknown) {
+  if (error instanceof HttpError) {
+    return {
+      error: error.message,
+      ...(error.code ? { code: error.code } : {}),
+      ...(error.details ?? {}),
+    }
+  }
+  return { error: errorMessage(error) }
 }
 
 function errorMessage(error: unknown) {

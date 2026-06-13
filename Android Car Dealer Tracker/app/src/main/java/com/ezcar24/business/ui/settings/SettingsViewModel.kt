@@ -9,6 +9,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.data.billing.SubscriptionManager
+import com.ezcar24.business.data.local.User
+import com.ezcar24.business.data.local.UserDao
 import com.ezcar24.business.data.repository.AccountRepository
 import com.ezcar24.business.data.repository.AuthRepository
 import com.ezcar24.business.data.repository.OrganizationMembership
@@ -18,6 +20,8 @@ import com.ezcar24.business.notification.NotificationPreferences
 import com.ezcar24.business.notification.NotificationScheduler
 import com.ezcar24.business.util.UserFacingErrorContext
 import com.ezcar24.business.util.UserFacingErrorMapper
+import com.ezcar24.business.util.localizedUiString
+import com.ezcar24.business.util.toUUID
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.auth.user.UserInfo
@@ -34,6 +38,7 @@ import kotlinx.coroutines.withContext
 
 data class SettingsUiState(
     val currentUser: UserInfo? = null,
+    val currentLocalUser: User? = null,
     val organizations: List<OrganizationMembership> = emptyList(),
     val activeOrganization: OrganizationMembership? = null,
     val referralCode: String? = null,
@@ -43,9 +48,11 @@ data class SettingsUiState(
     val isBackupLoading: Boolean = false,
     val isDeduplicating: Boolean = false,
     val isFetchingReferralCode: Boolean = false,
+    val isSavingProfile: Boolean = false,
     val isSwitchingOrganization: Boolean = false,
     val isSigningOut: Boolean = false,
     val signedOut: Boolean = false,
+    val profileSaved: Boolean = false,
     val diagnosticsResult: String? = null,
     val statusMessage: String? = null,
     val errorMessage: String? = null,
@@ -61,6 +68,7 @@ class SettingsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val authRepository: AuthRepository,
     private val cloudSyncManager: CloudSyncManager,
+    private val userDao: UserDao,
     private val notificationPreferences: NotificationPreferences,
     private val notificationScheduler: NotificationScheduler,
     private val subscriptionManager: SubscriptionManager
@@ -89,6 +97,7 @@ class SettingsViewModel @Inject constructor(
             }
             try {
                 val user = authRepository.getCurrentUser()
+                val localUser = user?.id?.toUUID()?.let { userDao.getById(it) }
                 val organizations = accountRepository.refreshOrganizations()
                 val activeOrganization = accountRepository.activeOrganization.value
                 val referralStats = if (activeOrganization != null) {
@@ -99,6 +108,7 @@ class SettingsViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         currentUser = user,
+                        currentLocalUser = localUser,
                         organizations = organizations,
                         activeOrganization = activeOrganization,
                         referralStats = referralStats,
@@ -112,6 +122,73 @@ class SettingsViewModel @Inject constructor(
                     it.copy(
                         isLoadingAccount = false,
                         errorMessage = UserFacingErrorMapper.map(e, UserFacingErrorContext.LOAD_ACCOUNT)
+                    )
+                }
+            }
+        }
+    }
+
+    fun updateDisplayName(name: String) {
+        val displayName = name.trim()
+        if (displayName.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Name is required.", profileSaved = false) }
+            return
+        }
+        if (_uiState.value.isSavingProfile) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isSavingProfile = true,
+                    errorMessage = null,
+                    statusMessage = null,
+                    profileSaved = false
+                )
+            }
+
+            try {
+                val authUser = authRepository.getCurrentUser()
+                val userId = authUser?.id?.toUUID()
+                if (userId == null) {
+                    _uiState.update {
+                        it.copy(
+                            isSavingProfile = false,
+                            errorMessage = context.localizedUiString("Please sign in again and try again.")
+                        )
+                    }
+                    return@launch
+                }
+
+                val existing = userDao.getById(userId)
+                val now = Date()
+                val updatedUser = (existing ?: User(
+                    id = userId,
+                    name = displayName,
+                    createdAt = now,
+                    updatedAt = now,
+                    deletedAt = null
+                )).copy(
+                    name = displayName,
+                    updatedAt = now,
+                    deletedAt = null
+                )
+
+                cloudSyncManager.upsertUser(updatedUser)
+                _uiState.update {
+                    it.copy(
+                        currentLocalUser = updatedUser,
+                        isSavingProfile = false,
+                        statusMessage = context.localizedUiString("Profile updated."),
+                        profileSaved = true
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(SETTINGS_TAG, "updateDisplayName failed", e)
+                _uiState.update {
+                    it.copy(
+                        isSavingProfile = false,
+                        errorMessage = context.localizedUiString("Unable to save profile."),
+                        profileSaved = false
                     )
                 }
             }
@@ -281,7 +358,7 @@ class SettingsViewModel @Inject constructor(
                         referralCode = null,
                         isSwitchingOrganization = false,
                         statusMessage = organization?.let { active ->
-                            "Switched to ${active.organizationName}."
+                            context.localizedUiString("Switched to %s.", active.organizationName)
                         }
                     )
                 }
@@ -316,7 +393,7 @@ class SettingsViewModel @Inject constructor(
                         referralStats = accountRepository.getReferralStats(),
                         referralCode = null,
                         isSwitchingOrganization = false,
-                        statusMessage = "Created ${organization.organizationName}."
+                        statusMessage = context.localizedUiString("Created %s.", organization.organizationName)
                     )
                 }
             } catch (e: Exception) {
@@ -371,6 +448,10 @@ class SettingsViewModel @Inject constructor(
 
     fun clearErrorMessage() {
         _uiState.update { it.copy(errorMessage = null) }
+    }
+
+    fun consumeProfileSaved() {
+        _uiState.update { it.copy(profileSaved = false) }
     }
 
     fun signOut() {

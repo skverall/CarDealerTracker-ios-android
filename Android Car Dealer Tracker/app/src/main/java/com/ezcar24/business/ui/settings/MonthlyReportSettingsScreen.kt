@@ -69,8 +69,8 @@ import com.ezcar24.business.util.DateUtils
 import com.ezcar24.business.util.UserFacingErrorContext
 import com.ezcar24.business.util.UserFacingErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.text.NumberFormat
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
@@ -249,18 +249,6 @@ class MonthlyReportSettingsViewModel @Inject constructor(
         return previewMonth.displayTitle()
     }
 
-    fun scheduleDescription(): String {
-        val preferences = _uiState.value.preferences
-        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault()).apply {
-            timeZone = TimeZone.getTimeZone(preferences.timezoneIdentifier)
-        }
-        val baseDate = java.util.Calendar.getInstance().apply {
-            clear()
-            set(2000, java.util.Calendar.JANUARY, 1, preferences.deliveryHour, preferences.deliveryMinute)
-        }.time
-        return "${ordinal(preferences.deliveryDay)} day of each month at ${formatter.format(baseDate)}"
-    }
-
     private suspend fun handleOrganizationChanged(organization: OrganizationMembership?) {
         if (organization == null) {
             _uiState.update {
@@ -399,22 +387,13 @@ class MonthlyReportSettingsViewModel @Inject constructor(
         return role?.trim()?.lowercase(Locale.US) in setOf("owner", "admin")
     }
 
-    private fun ordinal(number: Int): String {
-        val formatter = NumberFormat.getIntegerInstance(Locale.getDefault())
-        return when {
-            number % 100 in 11..13 -> "${formatter.format(number)}th"
-            number % 10 == 1 -> "${formatter.format(number)}st"
-            number % 10 == 2 -> "${formatter.format(number)}nd"
-            number % 10 == 3 -> "${formatter.format(number)}rd"
-            else -> "${formatter.format(number)}th"
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MonthlyReportSettingsScreen(
     onBack: () -> Unit,
+    onNavigateToPreview: () -> Unit,
     viewModel: MonthlyReportSettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -427,7 +406,7 @@ fun MonthlyReportSettingsScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Email Reports",
+                            text = localizedUiString("Email Reports"),
                             fontWeight = FontWeight.Bold,
                             color = EzcarNavy
                         )
@@ -504,7 +483,7 @@ fun MonthlyReportSettingsScreen(
                 item {
                     MonthlyReportCard {
                         Text(
-                            text = "Email reports are available to owners and admins only.",
+                            text = localizedUiString("Email reports are available to owners and admins only."),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -523,38 +502,50 @@ fun MonthlyReportSettingsScreen(
                 item {
                     MonthlyReportCard {
                         Text(
-                            text = "Delivery",
+                            text = localizedUiString("Delivery"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = EzcarNavy
                         )
                         Spacer(modifier = Modifier.height(14.dp))
-                        MonthlyReportDetailRow("Schedule", viewModel.scheduleDescription())
+                        MonthlyReportDetailRow(
+                            title = "Schedule",
+                            value = localizedScheduleDescription(uiState.preferences),
+                            icon = Icons.Default.Schedule
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
-                        MonthlyReportDetailRow("Timezone", uiState.preferences.timezoneIdentifier)
+                        MonthlyReportDetailRow(
+                            title = "Timezone",
+                            value = uiState.preferences.timezoneIdentifier,
+                            icon = Icons.Default.Schedule
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
-                        MonthlyReportDetailRow("Preview month", previewMonthTitle)
+                        MonthlyReportDetailRow(
+                            title = "Preview month",
+                            value = previewMonthTitle,
+                            icon = Icons.Default.Schedule
+                        )
                     }
                 }
 
                 item {
                     MonthlyReportCard {
                         Text(
-                            text = "Recipients",
+                            text = localizedUiString("Recipients"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = EzcarNavy
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "All owner and admin members with a resolved email address.",
+                            text = localizedUiString("All owner and admin members with a resolved email address."),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         if (uiState.recipients.isEmpty()) {
                             Text(
-                                text = "No owner or admin email address is available for delivery.",
+                                text = localizedUiString("No owner or admin email address is available for delivery."),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = EzcarOrange
                             )
@@ -572,19 +563,28 @@ fun MonthlyReportSettingsScreen(
                 item {
                     MonthlyReportCard {
                         Text(
-                            text = "Report contents",
+                            text = localizedUiString("Report contents"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = EzcarNavy
                         )
                         Spacer(modifier = Modifier.height(14.dp))
-                        MonthlyReportDetailRow("Scope", "Finance + inventory + parts")
-                        Spacer(modifier = Modifier.height(12.dp))
-                        MonthlyReportDetailRow("Format", "Email summary + PDF attachment")
+                        MonthlyReportDetailRow(
+                            title = "Scope",
+                            value = localizedUiString("Finance + inventory + parts"),
+                            icon = Icons.Default.Description
+                        )
                         Spacer(modifier = Modifier.height(12.dp))
                         MonthlyReportDetailRow(
-                            "Profit display",
-                            "Realized sales profit, monthly expenses, and net cash movement"
+                            title = "Format",
+                            value = localizedUiString("Email summary + PDF attachment"),
+                            icon = Icons.Default.Description
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        MonthlyReportDetailRow(
+                            title = "Profit display",
+                            value = localizedUiString("Realized sales profit, monthly expenses, and net cash movement"),
+                            icon = Icons.Default.Description
                         )
                     }
                 }
@@ -592,7 +592,7 @@ fun MonthlyReportSettingsScreen(
                 item {
                     MonthlyReportCard {
                         Text(
-                            text = "Actions",
+                            text = localizedUiString("Actions"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = EzcarNavy
@@ -601,9 +601,9 @@ fun MonthlyReportSettingsScreen(
                         MonthlyReportActionButton(
                             icon = Icons.Default.Visibility,
                             title = "Preview previous month",
-                            subtitle = "Load the finance snapshot used for delivery",
-                            isLoading = uiState.isLoadingPreview,
-                            onClick = viewModel::loadPreview
+                            subtitle = "Open the finance snapshot used for PDF export",
+                            isLoading = false,
+                            onClick = onNavigateToPreview
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         MonthlyReportActionButton(
@@ -613,12 +613,6 @@ fun MonthlyReportSettingsScreen(
                             isLoading = uiState.isSendingTest,
                             onClick = viewModel::sendTest
                         )
-                    }
-                }
-
-                uiState.preview?.let { preview ->
-                    item {
-                        MonthlyReportPreviewCard(preview = preview)
                     }
                 }
             }
@@ -653,14 +647,14 @@ private fun MonthlyReportHeaderCard(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Monthly email reports",
+                    text = localizedUiString("Monthly email reports"),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = EzcarNavy
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "Preview and trigger the same finance snapshot that backs monthly email delivery.",
+                    text = localizedUiString("Preview and export the same finance snapshot that will back future email delivery."),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -675,13 +669,13 @@ private fun MonthlyReportHeaderCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Enable monthly report emails",
+                    text = localizedUiString("Enable monthly report emails"),
                     style = MaterialTheme.typography.bodyLarge,
                     color = EzcarNavy
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Owner and admin recipients only",
+                    text = localizedUiString("Owner and admin recipients only"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -724,7 +718,7 @@ private fun MonthlyReportPreviewCard(preview: MonthlyReportPreview) {
 
     MonthlyReportCard {
         Text(
-            text = "Preview snapshot",
+            text = localizedUiString("Preview snapshot"),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = EzcarNavy
@@ -750,7 +744,7 @@ private fun MonthlyReportPreviewCard(preview: MonthlyReportPreview) {
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Generated $generatedAtLabel",
+            text = localizedUiString("Generated %s", generatedAtLabel),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -847,7 +841,7 @@ private fun MonthlyReportRecipientRow(recipient: MonthlyReportRecipient) {
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = recipient.role.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+                text = localizedMonthlyReportRole(recipient.role),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -898,7 +892,11 @@ private fun MonthlyReportActionButton(
 }
 
 @Composable
-private fun MonthlyReportDetailRow(title: String, value: String) {
+private fun MonthlyReportDetailRow(
+    title: String,
+    value: String,
+    icon: ImageVector
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -911,11 +909,7 @@ private fun MonthlyReportDetailRow(title: String, value: String) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = when (title) {
-                    "Schedule" -> Icons.Default.Schedule
-                    "Scope", "Format", "Profit display" -> Icons.Default.Description
-                    else -> Icons.Default.Schedule
-                },
+                imageVector = icon,
                 contentDescription = null,
                 tint = EzcarOrange
             )
@@ -933,6 +927,36 @@ private fun MonthlyReportDetailRow(title: String, value: String) {
                 color = EzcarNavy
             )
         }
+    }
+}
+
+@Composable
+private fun localizedScheduleDescription(preferences: MonthlyReportPreferences): String {
+    val deliveryTime = remember(
+        preferences.deliveryHour,
+        preferences.deliveryMinute,
+        preferences.timezoneIdentifier
+    ) {
+        val formatter = SimpleDateFormat("HH:mm", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone(preferences.timezoneIdentifier)
+        }
+        val baseDate = Calendar.getInstance().apply {
+            clear()
+            set(2000, Calendar.JANUARY, 1, preferences.deliveryHour, preferences.deliveryMinute)
+        }.time
+        formatter.format(baseDate)
+    }
+    return localizedUiString("Day %d of each month at %s", preferences.deliveryDay, deliveryTime)
+}
+
+@Composable
+private fun localizedMonthlyReportRole(role: String): String {
+    return when (role.trim().lowercase(Locale.US)) {
+        "owner" -> localizedUiString("Owner")
+        "admin" -> localizedUiString("Admin")
+        "sales" -> localizedUiString("Sales")
+        "viewer" -> localizedUiString("Viewer")
+        else -> role.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
     }
 }
 

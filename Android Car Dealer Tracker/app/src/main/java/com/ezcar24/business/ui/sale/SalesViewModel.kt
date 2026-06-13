@@ -149,6 +149,11 @@ class SalesViewModel @Inject constructor(
     }
 
     fun deleteSale(sale: Sale) {
+        if (sale.isDealDeskSale) {
+            Log.w(tag, "Skipping delete for Deal Desk protected sale ${sale.id}")
+            return
+        }
+
         viewModelScope.launch {
             sale.vehicleId?.let { vid ->
                 vehicleDao.getById(vid)?.let { vehicle ->

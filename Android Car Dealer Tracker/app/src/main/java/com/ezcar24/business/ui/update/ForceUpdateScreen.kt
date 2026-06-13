@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ezcar24.business.data.version.PlayStoreVersionChecker
+import com.ezcar24.business.util.localizedUiString
 
 /**
  * Full-screen blocking view that requires user to update the app.
@@ -66,7 +67,7 @@ fun ForceUpdateScreen(
 
             // Title
             Text(
-                text = "Update Required",
+                text = localizedUiString("Update Required"),
                 style = MaterialTheme.typography.headlineLarge.copy(
                     fontWeight = FontWeight.Bold,
                     fontSize = 28.sp
@@ -78,7 +79,7 @@ fun ForceUpdateScreen(
 
             // Description
             Text(
-                text = "A new version of Car Dealer Tracker is available. Please update to continue using the app.",
+                text = localizedUiString("A new version of Car Dealer Tracker is available. Please update to continue using the app."),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -100,13 +101,13 @@ fun ForceUpdateScreen(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
-                            text = "Current: ${versionChecker.currentVersion}",
+                            text = localizedUiString("Current: %s", versionChecker.currentVersion),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Available: $storeVersion",
+                            text = localizedUiString("Available: %s", storeVersion),
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontWeight = FontWeight.Medium
                             ),
@@ -139,7 +140,7 @@ fun ForceUpdateScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Update Now",
+                    text = localizedUiString("Update Now"),
                     style = MaterialTheme.typography.titleMedium.copy(
                         fontWeight = FontWeight.SemiBold
                     )

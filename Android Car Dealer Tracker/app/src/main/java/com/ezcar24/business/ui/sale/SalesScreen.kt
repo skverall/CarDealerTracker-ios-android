@@ -1,9 +1,9 @@
 package com.ezcar24.business.ui.sale
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,30 +23,71 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ezcar24.business.data.local.Sale
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
 import java.util.Locale
 import com.ezcar24.business.ui.finance.DebtsContent
+import com.ezcar24.business.ui.parts.PartSaleItemSummary
+import com.ezcar24.business.ui.parts.PartSalesViewModel
+import com.ezcar24.business.util.PermissionAccessState
+import com.ezcar24.business.util.PermissionKey
 import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 fun SalesScreen(
+    permissionState: PermissionAccessState,
     salesViewModel: SalesViewModel = hiltViewModel(),
+    partSalesViewModel: PartSalesViewModel = hiltViewModel(),
     debtViewModel: com.ezcar24.business.ui.finance.DebtViewModel = hiltViewModel()
 ) {
     val salesUiState by salesViewModel.uiState.collectAsState()
+    val partSalesUiState by partSalesViewModel.uiState.collectAsState()
     val debtUiState by debtViewModel.uiState.collectAsState()
-    val regionSettingsManager = rememberRegionSettingsManager()
-    val regionState by regionSettingsManager.state.collectAsState()
     
     var selectedTab by remember { mutableStateOf(0) }
+    var selectedSaleTypeFilter by remember { mutableStateOf(SaleTypeFilter.ALL) }
     var showAddSheet by remember { mutableStateOf(false) }
     var showAddDebtDialog by remember { mutableStateOf(false) }
     var isSearching by remember { mutableStateOf(false) }
+
+    val canCreateSale = permissionState.can(PermissionKey.CREATE_SALE)
+    val canDeleteRecords = permissionState.can(PermissionKey.DELETE_RECORDS)
+    val canViewVehicleCost = permissionState.canViewVehicleCost()
+    val canViewVehicleProfit = permissionState.canViewVehicleProfit()
+    val canViewPartCost = permissionState.canViewPartCost()
+    val canViewPartProfit = permissionState.canViewPartProfit()
+    val visiblePartSales = if (partSalesUiState.searchQuery.isBlank()) {
+        partSalesUiState.sales
+    } else {
+        partSalesUiState.filteredSales
+    }
+    val unifiedSales = remember(
+        salesUiState.filteredSales,
+        visiblePartSales,
+        selectedSaleTypeFilter
+    ) {
+        val vehicleRows = salesUiState.filteredSales.map { it.toUnifiedSaleItem() }
+        val partRows = visiblePartSales.map { it.toUnifiedSaleItem() }
+        when (selectedSaleTypeFilter) {
+            SaleTypeFilter.ALL -> vehicleRows + partRows
+            SaleTypeFilter.VEHICLES -> vehicleRows
+            SaleTypeFilter.PARTS -> partRows
+        }.sortedByDescending { it.saleDate }
+    }
+    val totalRevenue = unifiedSales.fold(BigDecimal.ZERO) { total, item -> total.add(item.salePrice) }
+    val totalProfit = unifiedSales
+        .filter { it.canViewProfit(canViewVehicleProfit, canViewPartProfit) }
+        .fold(BigDecimal.ZERO) { total, item -> total.add(item.netProfit) }
+    val showProfitSummary = selectedSaleTypeFilter.canShowProfitSummary(
+        canViewVehicleProfit = canViewVehicleProfit,
+        canViewPartProfit = canViewPartProfit
+    )
     
     val pullRefreshState = rememberPullRefreshState(
         refreshing = salesUiState.isLoading || debtUiState.isLoading,
@@ -61,11 +102,22 @@ fun SalesScreen(
         debtViewModel.loadData()
     }
     
-    // Search Logic
     val searchText = if (selectedTab == 0) salesUiState.searchText else debtUiState.searchText
-    val onSearchTextChange: (String) -> Unit = if (selectedTab == 0) salesViewModel::onSearchTextChange else debtViewModel::onSearchTextChange
+    val onSearchTextChange: (String) -> Unit = if (selectedTab == 0) {
+        { text ->
+            salesViewModel.onSearchTextChange(text)
+            partSalesViewModel.onSearchQueryChanged(text)
+        }
+    } else {
+        debtViewModel::onSearchTextChange
+    }
     val onCloseSearch = {
-        if (selectedTab == 0) salesViewModel.onSearchTextChange("") else debtViewModel.onSearchTextChange("")
+        if (selectedTab == 0) {
+            salesViewModel.onSearchTextChange("")
+            partSalesViewModel.onSearchQueryChanged("")
+        } else {
+            debtViewModel.onSearchTextChange("")
+        }
         isSearching = false
     }
 
@@ -80,6 +132,7 @@ fun SalesScreen(
                     onSearchTextChange = onSearchTextChange,
                     onSearchClick = { isSearching = true },
                     onCloseSearch = onCloseSearch,
+                    showAddAction = selectedTab == 1 || canCreateSale,
                     onAddClick = { 
                         if (selectedTab == 0) showAddSheet = true 
                         else showAddDebtDialog = true
@@ -89,7 +142,7 @@ fun SalesScreen(
                     selectedTab = selectedTab,
                     onTabSelected = { 
                         selectedTab = it 
-                        isSearching = false // Reset search mode when switching tabs
+                        isSearching = false
                     }
                 )
             }
@@ -101,31 +154,59 @@ fun SalesScreen(
                 .padding(padding)
         ) {
             if (selectedTab == 0) {
-                // Sales Tab
                 Box(modifier = Modifier.pullRefresh(pullRefreshState)) {
-                    if (salesUiState.filteredSales.isEmpty()) {
-                        EmptySalesState(PaddingValues())
+                    if (unifiedSales.isEmpty()) {
+                        Column(modifier = Modifier.fillMaxSize()) {
+                            SalesTypeFilterRow(
+                                selectedFilter = selectedSaleTypeFilter,
+                                onFilterSelected = { selectedSaleTypeFilter = it },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            SalesInsightsStrip(
+                                salesCount = unifiedSales.size,
+                                totalRevenue = totalRevenue,
+                                netProfit = totalProfit,
+                                showProfit = showProfitSummary,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                            EmptySalesState(
+                                padding = PaddingValues(),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     } else {
                         SalesList(
-                            sales = salesUiState.filteredSales,
+                            sales = unifiedSales,
                             padding = PaddingValues(top = 0.dp),
-                            onDelete = salesViewModel::deleteSale
+                            selectedFilter = selectedSaleTypeFilter,
+                            onFilterSelected = { selectedSaleTypeFilter = it },
+                            salesCount = unifiedSales.size,
+                            totalRevenue = totalRevenue,
+                            netProfit = totalProfit,
+                            showProfitSummary = showProfitSummary,
+                            canDeleteRecords = canDeleteRecords,
+                            canViewVehicleCost = canViewVehicleCost,
+                            canViewVehicleProfit = canViewVehicleProfit,
+                            canViewPartCost = canViewPartCost,
+                            canViewPartProfit = canViewPartProfit,
+                            onDeleteVehicle = salesViewModel::deleteSale,
+                            onDeletePart = partSalesViewModel::deleteSale
                         )
                     }
                     PullRefreshIndicator(
                         refreshing = salesUiState.isLoading,
                         state = pullRefreshState,
                         modifier = Modifier.align(Alignment.TopCenter),
-                        backgroundColor = Color.White,
-                        contentColor = EzcarNavy
+                        backgroundColor = MaterialTheme.colorScheme.surface,
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
                 }
             } else {
-                // Debts Tab
                 DebtsContent(
                     viewModel = debtViewModel,
                     showAddDialog = showAddDebtDialog,
-                    onAddDialogDismiss = { showAddDebtDialog = false }
+                    onAddDialogDismiss = { showAddDebtDialog = false },
+                    canDeleteRecords = canDeleteRecords
                 )
             }
         }
@@ -135,13 +216,7 @@ fun SalesScreen(
         AddSaleScreen(
             onDismiss = { showAddSheet = false },
             onSave = { 
-                // Creating a sale will be handled inside AddSaleScreen ViewModel or via callback 
-                // For this architecture, AddSaleScreen will likely have its own ViewModel injected or logic
-                // But following Expenses pattern... let's stick to simple callback or internal VM.
-                // Given complexity, AddSaleScreen probably needs its own VM or access to DAOs directly.
-                // I will make AddSaleScreen self-contained or passed VM later.
-                // For now, let's assume AddSaleScreen handles saving internally via Hilt VM.
-                salesViewModel.loadData() // Refresh after save
+                salesViewModel.loadData()
                 showAddSheet = false
             }
         )
@@ -157,6 +232,7 @@ fun SalesTopBar(
     onSearchTextChange: (String) -> Unit,
     onSearchClick: () -> Unit,
     onCloseSearch: () -> Unit,
+    showAddAction: Boolean,
     onAddClick: () -> Unit
 ) {
     if (isSearching) {
@@ -178,10 +254,14 @@ fun SalesTopBar(
             },
             actions = {
                  IconButton(onClick = onCloseSearch) {
-                     Icon(Icons.Default.Close, contentDescription = localizedUiString("Close"), tint = EzcarNavy)
+                     Icon(
+                         Icons.Default.Close,
+                         contentDescription = localizedUiString("Close"),
+                         tint = MaterialTheme.colorScheme.primary
+                     )
                  }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
         )
     } else {
         TopAppBar(
@@ -189,18 +269,28 @@ fun SalesTopBar(
                 Text(localizedUiString(title),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = EzcarNavy
+                    color = MaterialTheme.colorScheme.primary
                 )
             },
             actions = {
                 IconButton(onClick = onSearchClick) {
-                    Icon(Icons.Default.Search, contentDescription = localizedUiString("Search"), tint = EzcarNavy)
+                    Icon(
+                        Icons.Default.Search,
+                        contentDescription = localizedUiString("Search"),
+                        tint = MaterialTheme.colorScheme.primary
+                    )
                 }
-                IconButton(onClick = onAddClick) {
-                    Icon(Icons.Default.AddCircle, contentDescription = localizedUiString("Add"), tint = EzcarNavy)
+                if (showAddAction) {
+                    IconButton(onClick = onAddClick) {
+                        Icon(
+                            Icons.Default.AddCircle,
+                            contentDescription = localizedUiString("Add"),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
             },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
+            colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
         )
     }
 }
@@ -209,12 +299,12 @@ fun SalesTopBar(
 fun SalesTabs(selectedTab: Int, onTabSelected: (Int) -> Unit) {
     TabRow(
         selectedTabIndex = selectedTab,
-        containerColor = Color.White,
-        contentColor = EzcarNavy,
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.primary,
         indicator = { tabPositions ->
             TabRowDefaults.SecondaryIndicator(
                 modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                color = EzcarNavy
+                color = MaterialTheme.colorScheme.primary
             )
         }
     ) {
@@ -233,9 +323,21 @@ fun SalesTabs(selectedTab: Int, onTabSelected: (Int) -> Unit) {
 
 @Composable
 fun SalesList(
-    sales: List<SaleItem>,
+    sales: List<UnifiedSaleItem>,
     padding: PaddingValues,
-    onDelete: (com.ezcar24.business.data.local.Sale) -> Unit
+    selectedFilter: SaleTypeFilter,
+    onFilterSelected: (SaleTypeFilter) -> Unit,
+    salesCount: Int,
+    totalRevenue: BigDecimal,
+    netProfit: BigDecimal,
+    showProfitSummary: Boolean,
+    canDeleteRecords: Boolean,
+    canViewVehicleCost: Boolean,
+    canViewVehicleProfit: Boolean,
+    canViewPartCost: Boolean,
+    canViewPartProfit: Boolean,
+    onDeleteVehicle: (Sale) -> Unit,
+    onDeletePart: (com.ezcar24.business.data.local.PartSale) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -247,18 +349,94 @@ fun SalesList(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(sales, key = { it.sale.id.toString() }) { item ->
-            SaleCard(item = item, onDelete = { onDelete(item.sale) })
+        item {
+            SalesTypeFilterRow(
+                selectedFilter = selectedFilter,
+                onFilterSelected = onFilterSelected
+            )
+        }
+        item {
+            SalesInsightsStrip(
+                salesCount = salesCount,
+                totalRevenue = totalRevenue,
+                netProfit = netProfit,
+                showProfit = showProfitSummary
+            )
+        }
+        items(sales, key = { "${it.type.name}-${it.id}" }) { item ->
+            SaleCard(
+                item = item,
+                canDelete = canDeleteRecords && item.vehicleSale?.isDealDeskSale != true,
+                canViewCost = item.canViewCost(canViewVehicleCost, canViewPartCost),
+                canViewProfit = item.canViewProfit(canViewVehicleProfit, canViewPartProfit),
+                onDelete = {
+                    when (item.type) {
+                        UnifiedSaleType.VEHICLE -> item.vehicleSale?.let(onDeleteVehicle)
+                        UnifiedSaleType.PART -> item.partSale?.sale?.let(onDeletePart)
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun SalesTypeFilterRow(
+    selectedFilter: SaleTypeFilter,
+    onFilterSelected: (SaleTypeFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(SaleTypeFilter.values()) { filter ->
+            val isSelected = filter == selectedFilter
+            FilterChip(
+                selected = isSelected,
+                onClick = { onFilterSelected(filter) },
+                label = { Text(localizedUiString(filter.labelSource)) },
+                leadingIcon = if (isSelected) {
+                    {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                } else {
+                    null
+                },
+                modifier = Modifier.heightIn(min = 48.dp),
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    labelColor = MaterialTheme.colorScheme.primary
+                ),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = isSelected,
+                    borderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline
+                )
+            )
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SaleCard(item: SaleItem, onDelete: () -> Unit) {
+fun SaleCard(
+    item: UnifiedSaleItem,
+    canDelete: Boolean,
+    canViewCost: Boolean,
+    canViewProfit: Boolean,
+    onDelete: () -> Unit
+) {
     val dismissState = rememberSwipeToDismissBoxState(
         confirmValueChange = {
-            if (it == SwipeToDismissBoxValue.EndToStart) {
+            if (canDelete && it == SwipeToDismissBoxValue.EndToStart) {
                 onDelete()
                 true
             } else {
@@ -270,7 +448,7 @@ fun SaleCard(item: SaleItem, onDelete: () -> Unit) {
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
-            val color = if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) EzcarDanger else Color.Transparent
+            val color = if (canDelete && dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) EzcarDanger else Color.Transparent
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -279,71 +457,117 @@ fun SaleCard(item: SaleItem, onDelete: () -> Unit) {
                     .padding(horizontal = 24.dp),
                 contentAlignment = Alignment.CenterEnd
             ) {
-                Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = Color.White)
+                if (canDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = Color.White)
+                }
             }
         },
         content = {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                 shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    // Header
                     Row(verticalAlignment = Alignment.Top) {
-                        Column {
-                            Text(
-                                text = item.vehicleName,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = EzcarNavy
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(12.dp), tint = Color.Gray)
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = item.buyerName,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = Color.Gray
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.Top,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(32.dp)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (item.type == UnifiedSaleType.VEHICLE) Icons.Default.DirectionsCar else Icons.Default.Build,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.primary
                                 )
                             }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = saleDisplayTitle(item),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                item.subtitle?.takeIf { it.isNotBlank() }?.let { subtitle ->
+                                    Text(
+                                        text = subtitle,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                         }
-                        Spacer(modifier = Modifier.weight(1f))
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = java.text.SimpleDateFormat("d MMM", Locale.getDefault()).format(item.saleDate),
                             style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier
-                                .background(EzcarBackgroundLight, CircleShape)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp).alpha(0.5f))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // Financial Grid
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.Person,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = saleDisplayBuyerName(item.buyerName),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 12.dp).alpha(0.5f),
+                        color = MaterialTheme.colorScheme.outline
+                    )
+
+                    val metrics = buildSaleMetrics(
+                        item = item,
+                        canViewCost = canViewCost,
+                        canViewProfit = canViewProfit,
+                        primaryColor = MaterialTheme.colorScheme.primary,
+                        secondaryColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     Row(modifier = Modifier.fillMaxWidth()) {
-                        FinancialColumn(
-                            title = "REVENUE", 
-                            amount = item.salePrice, 
-                            color = EzcarNavy,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Box(modifier = Modifier.width(1.dp).height(30.dp).background(Color.LightGray))
-                        FinancialColumn(
-                            title = "COST", 
-                            amount = item.costPrice, 
-                            color = Color.Gray,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Box(modifier = Modifier.width(1.dp).height(30.dp).background(Color.LightGray))
-                        FinancialColumn(
-                            title = "NET PROFIT", 
-                            amount = item.netProfit, 
-                            color = if (item.netProfit >= BigDecimal.ZERO) EzcarSuccess else EzcarDanger,
-                            isBold = true,
-                            modifier = Modifier.weight(1f)
-                        )
+                        metrics.forEachIndexed { index, metric ->
+                            if (index > 0) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(1.dp)
+                                        .height(30.dp)
+                                        .background(MaterialTheme.colorScheme.outline)
+                                )
+                            }
+                            FinancialColumn(
+                                title = metric.title,
+                                amount = metric.amount,
+                                color = metric.color,
+                                isBold = metric.isBold,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                     }
                 }
             }
@@ -365,9 +589,9 @@ fun FinancialColumn(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = localizedUiString(title),
+            text = localizedUiString(title).uppercase(Locale.getDefault()),
             style = MaterialTheme.typography.labelSmall,
-            color = Color.Gray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             fontWeight = FontWeight.Bold
         )
         Spacer(modifier = Modifier.height(2.dp))
@@ -381,34 +605,307 @@ fun FinancialColumn(
 }
 
 @Composable
-fun EmptySalesState(padding: PaddingValues) {
+fun SalesInsightsStrip(
+    salesCount: Int,
+    totalRevenue: BigDecimal,
+    netProfit: BigDecimal,
+    showProfit: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CompactSaleInsightCard(
+                title = localizedUiString("Sold").uppercase(Locale.getDefault()),
+                value = salesCount.toString(),
+                icon = Icons.Default.DirectionsCar,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.weight(1f)
+            )
+            CompactSaleInsightCard(
+                title = localizedUiString("Revenue").uppercase(Locale.getDefault()),
+                value = regionSettingsManager.formatCurrency(totalRevenue),
+                icon = Icons.Default.AttachMoney,
+                color = MaterialTheme.colorScheme.tertiary,
+                modifier = Modifier.weight(1f)
+            )
+        }
+
+        if (showProfit) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(EzcarSuccess.copy(alpha = 0.14f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MonetizationOn,
+                            contentDescription = null,
+                            tint = EzcarSuccess
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            localizedUiString("Net Profit").uppercase(Locale.getDefault()),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            regionSettingsManager.formatCurrency(netProfit),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (netProfit >= BigDecimal.ZERO) EzcarSuccess else EzcarDanger,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompactSaleInsightCard(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(18.dp),
+        modifier = modifier.heightIn(min = 72.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .background(color.copy(alpha = 0.14f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(imageVector = icon, contentDescription = null, tint = color)
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    value,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = color,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun saleDisplayTitle(item: UnifiedSaleItem): String {
+    return when (item.title) {
+        "Vehicle Removed" -> localizedUiString("Vehicle Removed")
+        "Parts Sale" -> localizedUiString("Parts Sale")
+        else -> item.title
+    }
+}
+
+@Composable
+private fun saleDisplayBuyerName(buyerName: String): String {
+    return when (buyerName) {
+        "Unknown Buyer" -> localizedUiString("Unknown Buyer")
+        "Walk-in" -> localizedUiString("Walk-in")
+        else -> buyerName
+    }
+}
+
+@Composable
+fun EmptySalesState(
+    padding: PaddingValues,
+    modifier: Modifier = Modifier
+) {
     Box(
-        modifier = Modifier
-            .fillMaxSize()
+        modifier = modifier
+            .fillMaxWidth()
             .padding(padding),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.MonetizationOn,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = Color.LightGray
-            )
+        Column(
+            modifier = Modifier.padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MonetizationOn,
+                    contentDescription = null,
+                    modifier = Modifier.size(42.dp),
+                    tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.72f)
+                )
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "No Sales Yet",
+                text = localizedUiString("No Sales Yet"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = EzcarNavy
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
-                text = "Record your first sale to see profit analytics.",
+                text = localizedUiString("Record your first sale to see profit analytics."),
                 style = MaterialTheme.typography.bodyMedium,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
 }
 
-// AddSaleScreen will be in a separate file
+enum class SaleTypeFilter(val labelSource: String) {
+    ALL("All"),
+    VEHICLES("Vehicles"),
+    PARTS("Parts")
+}
+
+enum class UnifiedSaleType {
+    VEHICLE,
+    PART
+}
+
+private data class SaleMetric(
+    val title: String,
+    val amount: BigDecimal,
+    val color: Color,
+    val isBold: Boolean = false
+)
+
+data class UnifiedSaleItem(
+    val id: String,
+    val type: UnifiedSaleType,
+    val title: String,
+    val subtitle: String?,
+    val buyerName: String,
+    val saleDate: java.util.Date,
+    val salePrice: BigDecimal,
+    val costPrice: BigDecimal,
+    val netProfit: BigDecimal,
+    val vehicleSale: Sale? = null,
+    val partSale: PartSaleItemSummary? = null
+)
+
+private fun SaleItem.toUnifiedSaleItem() = UnifiedSaleItem(
+    id = sale.id.toString(),
+    type = UnifiedSaleType.VEHICLE,
+    title = vehicleName,
+    subtitle = null,
+    buyerName = buyerName,
+    saleDate = saleDate,
+    salePrice = salePrice,
+    costPrice = costPrice,
+    netProfit = netProfit,
+    vehicleSale = sale
+)
+
+private fun PartSaleItemSummary.toUnifiedSaleItem() = UnifiedSaleItem(
+    id = sale.id.toString(),
+    type = UnifiedSaleType.PART,
+    title = "Parts Sale",
+    subtitle = itemsSummary.takeIf { it.isNotBlank() },
+    buyerName = buyerName,
+    saleDate = saleDate,
+    salePrice = totalAmount,
+    costPrice = totalCost,
+    netProfit = profit,
+    partSale = this
+)
+
+private fun UnifiedSaleItem.canViewCost(
+    canViewVehicleCost: Boolean,
+    canViewPartCost: Boolean
+): Boolean {
+    return when (type) {
+        UnifiedSaleType.VEHICLE -> canViewVehicleCost
+        UnifiedSaleType.PART -> canViewPartCost
+    }
+}
+
+private fun UnifiedSaleItem.canViewProfit(
+    canViewVehicleProfit: Boolean,
+    canViewPartProfit: Boolean
+): Boolean {
+    return when (type) {
+        UnifiedSaleType.VEHICLE -> canViewVehicleProfit
+        UnifiedSaleType.PART -> canViewPartProfit
+    }
+}
+
+private fun SaleTypeFilter.canShowProfitSummary(
+    canViewVehicleProfit: Boolean,
+    canViewPartProfit: Boolean
+): Boolean {
+    return when (this) {
+        SaleTypeFilter.ALL -> canViewVehicleProfit || canViewPartProfit
+        SaleTypeFilter.VEHICLES -> canViewVehicleProfit
+        SaleTypeFilter.PARTS -> canViewPartProfit
+    }
+}
+
+private fun buildSaleMetrics(
+    item: UnifiedSaleItem,
+    canViewCost: Boolean,
+    canViewProfit: Boolean,
+    primaryColor: Color,
+    secondaryColor: Color
+): List<SaleMetric> {
+    return buildList {
+        add(SaleMetric(title = "Revenue", amount = item.salePrice, color = primaryColor))
+        if (canViewCost) {
+            add(SaleMetric(title = "Cost", amount = item.costPrice, color = secondaryColor))
+        }
+        if (canViewProfit) {
+            add(
+                SaleMetric(
+                    title = "Net Profit",
+                    amount = item.netProfit,
+                    color = if (item.netProfit >= BigDecimal.ZERO) EzcarSuccess else EzcarDanger,
+                    isBold = true
+                )
+            )
+        }
+    }
+}

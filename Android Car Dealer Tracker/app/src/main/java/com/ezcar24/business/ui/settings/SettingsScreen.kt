@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Book
@@ -37,14 +38,16 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.Notifications
@@ -98,12 +101,16 @@ import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarNavy
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
+import com.ezcar24.business.util.AppTheme
+import com.ezcar24.business.util.PermissionAccessState
+import com.ezcar24.business.util.PermissionKey
+import com.ezcar24.business.util.TeamPermissionCatalog
+import com.ezcar24.business.util.localizedUiString
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
-import com.ezcar24.business.util.localizedUiString
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,22 +123,42 @@ fun SettingsScreen(
     onNavigateToMonthlyReports: () -> Unit,
     onNavigateToDataHealth: () -> Unit,
     onNavigateToHoldingCostSettings: () -> Unit,
+    onNavigateToDealDesk: () -> Unit,
+    onNavigateToEditProfile: () -> Unit = {},
+    onNavigateToReferralStats: () -> Unit = {},
     onNavigateToChangePassword: () -> Unit = {},
     onNavigateToUserGuide: () -> Unit = {},
     onNavigateToPaywall: () -> Unit = {},
     onSignedOut: () -> Unit = {},
+    permissionState: PermissionAccessState = PermissionAccessState(),
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     val context = LocalContext.current
-    val canCleanDuplicates = remember(uiState.activeOrganization?.role) {
-        when (uiState.activeOrganization?.role?.lowercase(Locale.US)) {
-            "owner", "admin" -> true
-            else -> false
+    val activeRole = permissionState.role
+        .ifBlank { uiState.activeOrganization?.role.orEmpty() }
+        .lowercase(Locale.US)
+    val fallbackPermissions = remember(activeRole) {
+        if (activeRole.isBlank()) emptyMap() else TeamPermissionCatalog.defaultPermissions(activeRole)
+    }
+    val hasPermissionSnapshot = permissionState.role.isNotBlank() || permissionState.permissions.isNotEmpty()
+    fun canAccess(key: PermissionKey): Boolean {
+        return if (hasPermissionSnapshot) {
+            permissionState.can(key)
+        } else {
+            fallbackPermissions[key.rawValue] == true
         }
     }
+    val canViewFinancials = canAccess(PermissionKey.VIEW_FINANCIALS)
+    val canManageTeam = canAccess(PermissionKey.MANAGE_TEAM)
+    val canManageFinancialAccounts = activeRole in setOf("owner", "admin")
+    val canManageMonthlyReports = activeRole in setOf("owner", "admin")
+    val canManageBackups = activeRole == "owner"
+    val canCleanDuplicates = canManageTeam
+    val canDeleteAccount = activeRole == "owner"
+    val hasManagementTools = canManageTeam || canManageMonthlyReports || canManageBackups
     val appVersion = remember(context) {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
@@ -176,7 +203,7 @@ fun SettingsScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "Account",
+                        text = localizedUiString("Account"),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -224,13 +251,18 @@ fun SettingsScreen(
 
             item {
                 AccountHeaderCard(
-                    email = uiState.currentUser?.email ?: "Guest Mode",
+                    displayName = resolvedDisplayName(
+                        name = uiState.currentLocalUser?.name,
+                        email = uiState.currentUser?.email
+                    ),
+                    email = uiState.currentUser?.email ?: localizedUiString("Guest Mode"),
                     createdAt = uiState.currentUser?.createdAt?.toEpochMilliseconds()?.let(::Date),
                     activeOrganization = uiState.activeOrganization,
                     organizations = uiState.organizations,
                     isSwitchingOrganization = uiState.isSwitchingOrganization || uiState.isLoadingAccount,
                     onSelectOrganization = viewModel::switchOrganization,
-                    onCreateBusiness = { showCreateBusinessDialog = true }
+                    onCreateBusiness = { showCreateBusinessDialog = true },
+                    onEditProfile = onNavigateToEditProfile
                 )
             }
 
@@ -262,12 +294,26 @@ fun SettingsScreen(
                             copyToClipboard(context, "Dealer invite code", referralCode)
                         }
                     },
+                    onStatsClick = onNavigateToReferralStats,
                     onJoinTeam = { showJoinTeamDialog = true }
                 )
             }
 
             item {
                 SettingsSection(title = "General") {
+                    SettingsRow(
+                        title = "Region & Language",
+                        subtitle = "${regionState.selectedRegion.displayName} • ${regionState.selectedLanguage.nativeName}",
+                        icon = Icons.Default.Public,
+                        color = EzcarBlueBright,
+                        onClick = onNavigateToRegionSettings
+                    )
+                    SectionDivider()
+                    ThemeToggleRow(
+                        selectedTheme = regionState.selectedTheme,
+                        onThemeChange = regionSettingsManager::updateTheme
+                    )
+                    SectionDivider()
                     NotificationRow(
                         checked = uiState.notificationsEnabled,
                         onCheckedChange = viewModel::toggleNotifications
@@ -281,53 +327,54 @@ fun SettingsScreen(
                         checked = regionState.isPartsEnabled,
                         onCheckedChange = { regionSettingsManager.updatePartsEnabled(it) }
                     )
-                    SectionDivider()
-                    SettingsRow(
-                        title = "Region & Language",
-                        subtitle = "${regionState.selectedRegion.displayName} • ${regionState.selectedLanguage.nativeName}",
-                        icon = Icons.Default.Public,
-                        color = EzcarBlueBright,
-                        onClick = onNavigateToRegionSettings
-                    )
-                    SectionDivider()
-                    SettingsRow(
-                        title = "Holding Cost Settings",
-                        subtitle = "Align inventory carrying cost with iOS analytics",
-                        icon = Icons.Default.Calculate,
-                        color = EzcarOrange,
-                        onClick = onNavigateToHoldingCostSettings
-                    )
-                    SectionDivider()
-                    SettingsRow(
-                        title = "Financial Accounts",
-                        subtitle = "Cash, bank and account movement",
-                        icon = Icons.Default.AccountBalance,
-                        color = EzcarGreen,
-                        onClick = onNavigateToFinancialAccounts
-                    )
+                    if (canViewFinancials) {
+                        SectionDivider()
+                        SettingsRow(
+                            title = "Holding Cost Settings",
+                            subtitle = "Align inventory carrying cost with iOS analytics",
+                            icon = Icons.Default.Calculate,
+                            color = EzcarOrange,
+                            onClick = onNavigateToHoldingCostSettings
+                        )
+                    }
+                    if (canManageFinancialAccounts) {
+                        SectionDivider()
+                        SettingsRow(
+                            title = "Deal Desk",
+                            subtitle = "Tax and fee templates for vehicle sales",
+                            icon = Icons.Default.Calculate,
+                            color = EzcarBlueBright,
+                            onClick = onNavigateToDealDesk
+                        )
+                        SectionDivider()
+                        SettingsRow(
+                            title = "Financial Accounts",
+                            subtitle = "Cash, bank and account movement",
+                            icon = Icons.Default.AccountBalance,
+                            color = EzcarGreen,
+                            onClick = onNavigateToFinancialAccounts
+                        )
+                    }
                 }
             }
 
             item {
-                SettingsSection(title = "Management") {
-                    SettingsRow(
-                        title = "Team Members",
-                        subtitle = uiState.activeOrganization?.let { "Manage ${it.organizationName} access and roles" }
-                            ?: "Manage dealer access and roles",
-                        icon = Icons.Default.Group,
-                        color = EzcarBlueBright,
-                        onClick = onNavigateToTeamMembers
-                    )
-                    SectionDivider()
-                    SettingsRow(
-                        title = "Backup & Export",
-                        subtitle = "Snapshots, export, and recovery",
-                        icon = Icons.Default.CloudUpload,
-                        color = EzcarOrange,
-                        onClick = onNavigateToBackupCenter
-                    )
-                    if (canCleanDuplicates) {
-                        SectionDivider()
+                SettingsSection(title = if (hasManagementTools) "Management" else "Sync") {
+                    if (canManageTeam) {
+                        SettingsRow(
+                            title = "Team Members",
+                            subtitle = uiState.activeOrganization?.let {
+                                localizedUiString("Manage %s access and roles", it.organizationName)
+                            } ?: localizedUiString("Manage dealer access and roles"),
+                            icon = Icons.Default.Group,
+                            color = EzcarBlueBright,
+                            onClick = onNavigateToTeamMembers
+                        )
+                    }
+                    if (canManageMonthlyReports) {
+                        if (canManageTeam) {
+                            SectionDivider()
+                        }
                         SettingsRow(
                             title = "Email Reports",
                             subtitle = "Monthly finance snapshot, preview and test delivery",
@@ -336,7 +383,21 @@ fun SettingsScreen(
                             onClick = onNavigateToMonthlyReports
                         )
                     }
-                    SectionDivider()
+                    if (canManageBackups) {
+                        if (canManageTeam || canManageMonthlyReports) {
+                            SectionDivider()
+                        }
+                        SettingsRow(
+                            title = "Backup & Export",
+                            subtitle = "Snapshots, export, and recovery",
+                            icon = Icons.Default.CloudUpload,
+                            color = EzcarOrange,
+                            onClick = onNavigateToBackupCenter
+                        )
+                    }
+                    if (hasManagementTools) {
+                        SectionDivider()
+                    }
                     SettingsRow(
                         title = "Data Health",
                         subtitle = "Duplicates, sync state and diagnostics",
@@ -358,8 +419,9 @@ fun SettingsScreen(
                     SectionDivider()
                     SettingsRow(
                         title = "Sync Now",
-                        subtitle = uiState.lastBackupDate?.let { "Last sync ${formatDate(it)}" }
-                            ?: "Manually force a cloud sync",
+                        subtitle = uiState.lastBackupDate?.let {
+                            localizedUiString("Last sync %s", formatDate(it))
+                        } ?: localizedUiString("Manually force a cloud sync"),
                         icon = Icons.Default.Sync,
                         color = EzcarNavy,
                         isLoading = uiState.isBackupLoading || uiState.isSwitchingOrganization,
@@ -377,21 +439,23 @@ fun SettingsScreen(
                         color = EzcarPurple,
                         onClick = onNavigateToChangePassword
                     )
-                    SectionDivider()
-                    SettingsRow(
-                        title = "Delete Account & Data",
-                        subtitle = "Request permanent removal of your account and all data",
-                        icon = Icons.Default.DeleteForever,
-                        color = EzcarDanger,
-                        onClick = {
-                            context.startActivity(
-                                Intent(
-                                    Intent.ACTION_VIEW,
-                                    Uri.parse("https://www.ezcar24.com/en/delete-account")
+                    if (canDeleteAccount) {
+                        SectionDivider()
+                        SettingsRow(
+                            title = "Delete Account & Data",
+                            subtitle = "Request permanent removal of your account and all data",
+                            icon = Icons.Default.DeleteForever,
+                            color = EzcarDanger,
+                            onClick = {
+                                context.startActivity(
+                                    Intent(
+                                        Intent.ACTION_VIEW,
+                                        Uri.parse("https://www.ezcar24.com/en/delete-account")
+                                    )
                                 )
-                            )
-                        }
-                    )
+                            }
+                        )
+                    }
                 }
             }
 
@@ -469,7 +533,7 @@ fun SettingsScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Sign Out",
+                            text = localizedUiString("Sign Out"),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -482,7 +546,7 @@ fun SettingsScreen(
                             )
                         } else {
                             Icon(
-                                imageVector = Icons.Default.ExitToApp,
+                                imageVector = Icons.AutoMirrored.Filled.ExitToApp,
                                 contentDescription = null
                             )
                         }
@@ -492,7 +556,7 @@ fun SettingsScreen(
 
             item {
                 Text(
-                    text = "Car Dealer Tracker v$appVersion",
+                    text = localizedUiString("Car Dealer Tracker v%s", appVersion),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -543,7 +607,7 @@ private fun StatusCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = text,
+                text = localizedUiString(text),
                 style = MaterialTheme.typography.bodyMedium,
                 color = color,
                 modifier = Modifier.weight(1f)
@@ -551,7 +615,7 @@ private fun StatusCard(
             IconButton(onClick = onDismiss) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = null,
+                    contentDescription = localizedUiString("Dismiss"),
                     tint = color
                 )
             }
@@ -561,13 +625,15 @@ private fun StatusCard(
 
 @Composable
 private fun AccountHeaderCard(
+    displayName: String,
     email: String,
     createdAt: Date?,
     activeOrganization: OrganizationMembership?,
     organizations: List<OrganizationMembership>,
     isSwitchingOrganization: Boolean,
     onSelectOrganization: (UUID) -> Unit,
-    onCreateBusiness: () -> Unit
+    onCreateBusiness: () -> Unit,
+    onEditProfile: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 
@@ -589,23 +655,40 @@ private fun AccountHeaderCard(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = email.take(2).uppercase(Locale.getDefault()).ifBlank { "??" },
+                    text = initialsForDisplayName(displayName),
                     style = MaterialTheme.typography.displaySmall,
                     color = EzcarNavy
                 )
             }
             Spacer(modifier = Modifier.height(14.dp))
             Text(
-                text = email,
+                text = displayName,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(6.dp))
             Text(
-                text = createdAt?.let { "Member since ${formatDate(it)}" } ?: "Guest session",
+                text = email,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = createdAt?.let { localizedUiString("Member since %s", formatDate(it)) }
+                    ?: localizedUiString("Guest session"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(modifier = Modifier.height(10.dp))
+            TextButton(onClick = onEditProfile) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(localizedUiString("Edit Profile"))
+            }
             Spacer(modifier = Modifier.height(16.dp))
             Box(modifier = Modifier.fillMaxWidth()) {
                 Surface(
@@ -644,13 +727,13 @@ private fun AccountHeaderCard(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = activeOrganization?.organizationName ?: "Select Business",
+                                text = activeOrganization?.organizationName ?: localizedUiString("Select Business"),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
-                                text = activeOrganization?.role?.replaceFirstChar { it.titlecase(Locale.getDefault()) }
-                                    ?: "Tap to switch business",
+                                text = activeOrganization?.role?.let { localizedRoleName(it) }
+                                    ?: localizedUiString("Tap to switch business"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -672,7 +755,7 @@ private fun AccountHeaderCard(
                                 Column {
                                     Text(organization.organizationName)
                                     Text(
-                                        text = organization.role.replaceFirstChar { it.titlecase(Locale.getDefault()) },
+                                        text = localizedRoleName(organization.role),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -724,7 +807,7 @@ private fun AccountHeaderCard(
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = "Verified Account",
+                    text = localizedUiString("Verified Account"),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = EzcarGreen
@@ -766,12 +849,12 @@ private fun SubscriptionCard(isPro: Boolean, onClick: () -> Unit = {}) {
             Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isPro) "Dealer Pro" else "Free Plan",
+                    text = localizedUiString(if (isPro) "Dealer Pro" else "Free Plan"),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (isPro) "Active subscription" else "Tap to upgrade to Pro",
+                    text = localizedUiString(if (isPro) "Active subscription" else "Tap to upgrade to Pro"),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isPro) EzcarGreen else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -792,6 +875,7 @@ private fun ReferralCard(
     isLoading: Boolean,
     onInviteClick: () -> Unit,
     onCopyCode: () -> Unit,
+    onStatsClick: () -> Unit,
     onJoinTeam: () -> Unit
 ) {
     Surface(
@@ -821,12 +905,12 @@ private fun ReferralCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column {
                     Text(
-                        text = "Invite Dealer",
+                        text = localizedUiString("Invite Dealer"),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Share your referral link and grow the team like on iOS.",
+                        text = localizedUiString("Share your referral link and earn Pro bonus months when other dealers subscribe."),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -835,7 +919,7 @@ private fun ReferralCard(
 
             referralStats?.bonusAccessUntil?.let {
                 Text(
-                    text = "Bonus access until ${formatDate(it)}",
+                    text = localizedUiString("Bonus access until %s", formatDate(it)),
                     style = MaterialTheme.typography.bodySmall,
                     color = EzcarGreen,
                     fontWeight = FontWeight.SemiBold
@@ -886,12 +970,12 @@ private fun ReferralCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text(if (referralCode.isNullOrBlank()) "Generate Invite Link" else "Share Invite Link")
+                Text(localizedUiString(if (referralCode.isNullOrBlank()) "Generate Invite Link" else "Share Invite Link"))
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Rewards: ${referralStats?.totalRewards ?: 0} referrals",
+                    text = localizedUiString("Rewards: %d referrals", referralStats?.totalRewards ?: 0),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
@@ -899,6 +983,13 @@ private fun ReferralCard(
                 TextButton(onClick = onJoinTeam) {
                     Text(localizedUiString("Join Team by Code"))
                 }
+            }
+
+            TextButton(
+                onClick = onStatsClick,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(localizedUiString("View referral stats"))
             }
         }
     }
@@ -1039,6 +1130,63 @@ private fun NotificationRow(
 }
 
 @Composable
+private fun ThemeToggleRow(
+    selectedTheme: AppTheme,
+    onThemeChange: (AppTheme) -> Unit
+) {
+    val nextTheme = if (selectedTheme == AppTheme.LIGHT) AppTheme.DARK else AppTheme.LIGHT
+    val currentLabel = if (selectedTheme == AppTheme.LIGHT) "Light" else "Dark"
+    val nextLabel = if (nextTheme == AppTheme.LIGHT) "Light" else "Dark"
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onThemeChange(nextTheme) }
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .background(EzcarBlueBright.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (selectedTheme == AppTheme.LIGHT) Icons.Default.LightMode else Icons.Default.DarkMode,
+                contentDescription = null,
+                tint = EzcarBlueBright,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = localizedUiString("Appearance"),
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = localizedUiString(currentLabel),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Surface(
+            color = EzcarBlueBright.copy(alpha = 0.12f),
+            shape = CircleShape
+        ) {
+            Text(
+                text = localizedUiString(nextLabel),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = EzcarBlueBright,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+            )
+        }
+    }
+}
+
+@Composable
 fun SwitchRow(
     title: String,
     subtitle: String,
@@ -1124,7 +1272,7 @@ private fun CreateBusinessDialog(
                 onClick = { onCreate(businessName) },
                 enabled = businessName.trim().isNotEmpty() && !isSaving
             ) {
-                Text(if (isSaving) "Creating..." else "Create")
+                Text(localizedUiString(if (isSaving) "Creating..." else "Create"))
             }
         },
         dismissButton = {
@@ -1148,7 +1296,7 @@ private fun JoinTeamByCodeDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "Paste the invite code you received from the business owner.",
+                    text = localizedUiString("Paste the invite code you received from the business owner."),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 OutlinedTextField(
@@ -1191,8 +1339,49 @@ private fun shareDealerInvite(context: Context, referralCode: String) {
 
 private fun copyToClipboard(context: Context, label: String, value: String) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText(label, value))
+    clipboard.setPrimaryClip(ClipData.newPlainText(context.localizedUiString(label), value))
     Toast.makeText(context, context.localizedUiString("Invite code copied"), Toast.LENGTH_SHORT).show()
+}
+
+private fun resolvedDisplayName(name: String?, email: String?): String {
+    name?.trim()?.takeIf { it.isNotBlank() }?.let { return it }
+    email
+        ?.substringBefore("@")
+        ?.replace('.', ' ')
+        ?.replace('_', ' ')
+        ?.split(" ")
+        ?.filter { it.isNotBlank() }
+        ?.joinToString(" ") { word ->
+            word.replaceFirstChar { char ->
+                if (char.isLowerCase()) char.titlecase(Locale.getDefault()) else char.toString()
+            }
+        }
+        ?.takeIf { it.isNotBlank() }
+        ?.let { return it }
+    return "User"
+}
+
+private fun initialsForDisplayName(displayName: String): String {
+    val parts = displayName
+        .trim()
+        .split(Regex("\\s+"))
+        .filter { it.isNotBlank() }
+    return when {
+        parts.size >= 2 -> "${parts.first().first()}${parts.last().first()}".uppercase(Locale.getDefault())
+        parts.size == 1 -> parts.first().take(2).uppercase(Locale.getDefault())
+        else -> "??"
+    }
+}
+
+@Composable
+private fun localizedRoleName(role: String): String {
+    return when (role.lowercase(Locale.US)) {
+        "owner" -> localizedUiString("Owner")
+        "admin" -> localizedUiString("Admin")
+        "sales" -> localizedUiString("Sales")
+        "viewer" -> localizedUiString("Viewer")
+        else -> role.replaceFirstChar { it.titlecase(Locale.getDefault()) }
+    }
 }
 
 private fun formatDate(date: Date): String {

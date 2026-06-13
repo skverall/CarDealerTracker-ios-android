@@ -134,8 +134,14 @@ data class Sale(
     val updatedAt: Date?,
     val deletedAt: Date? = null,
     val vehicleId: UUID?,
-    val accountId: UUID?
-)
+    val accountId: UUID?,
+    val dealDeskPayload: String? = null,
+    val dealDeskTemplateCode: String? = null,
+    val dealDeskTemplateVersion: Int? = null
+) {
+    val isDealDeskSale: Boolean
+        get() = !dealDeskPayload.isNullOrBlank() || !dealDeskTemplateCode.isNullOrBlank()
+}
 
 @Entity(
     tableName = "clients",

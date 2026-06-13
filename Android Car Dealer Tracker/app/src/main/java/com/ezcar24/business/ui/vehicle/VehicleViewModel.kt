@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.ClientDao
+import com.ezcar24.business.data.local.ClientInteraction
+import com.ezcar24.business.data.local.ClientInteractionDao
 import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.ExpenseDao
 import com.ezcar24.business.data.local.FinancialAccount
@@ -96,6 +98,7 @@ class VehicleViewModel @Inject constructor(
     private val vehicleDao: VehicleDao,
     private val saleDao: SaleDao,
     private val clientDao: ClientDao,
+    private val clientInteractionDao: ClientInteractionDao,
     private val financialAccountDao: FinancialAccountDao,
     private val expenseDao: ExpenseDao,
     private val holdingCostSettingsDao: HoldingCostSettingsDao,
@@ -256,11 +259,25 @@ class VehicleViewModel @Inject constructor(
             leadCreatedAt = now,
             lastContactAt = now
         )
+        val closedWonInteraction = ClientInteraction(
+            id = UUID.randomUUID(),
+            title = "Vehicle Purchased",
+            detail = buildClientInteractionDetail(vehicle, salePrice),
+            occurredAt = saleDate,
+            stage = LeadStage.closed_won.name,
+            value = salePrice,
+            clientId = client.id,
+            interactionType = "sale",
+            outcome = "closed_won",
+            createdAt = now,
+            updatedAt = now
+        )
 
         cloudSyncManager.upsertSale(sale)
         cloudSyncManager.upsertVehicle(updatedVehicle)
         cloudSyncManager.upsertFinancialAccount(updatedAccount)
         cloudSyncManager.upsertClient(client)
+        upsertClientInteractionSafely(closedWonInteraction)
     }
 
     private fun applyFilters() {
@@ -606,6 +623,18 @@ class VehicleViewModel @Inject constructor(
         val existingClient = clientDao.getByVehicleId(vehicleId)
         val previousSaleAmount = existingSale?.amount ?: BigDecimal.ZERO
         val previousSaleAccount = existingSale?.accountId?.let { financialAccountDao.getById(it) }
+        val isExistingDealDeskSale = existingSale?.isDealDeskSale == true
+        val resolvedStatus = if (isExistingDealDeskSale) "sold" else status
+        val resolvedSalePrice = if (resolvedStatus == "sold" && isExistingDealDeskSale) {
+            previousSaleAmount.takeIf { it > BigDecimal.ZERO } ?: salePrice
+        } else {
+            salePrice
+        }
+        val resolvedPaymentMethod = if (resolvedStatus == "sold" && isExistingDealDeskSale) {
+            existingSale?.paymentMethod ?: normalizedPaymentMethod
+        } else {
+            normalizedPaymentMethod
+        }
 
         val vehicle = if (existingVehicle != null) {
             existingVehicle.copy(
@@ -617,13 +646,13 @@ class VehicleViewModel @Inject constructor(
                 purchasePrice = purchasePrice,
                 purchaseDate = purchaseDate,
                 askingPrice = askingPrice,
-                status = status,
+                status = resolvedStatus,
                 notes = normalizedNotes,
-                salePrice = if (status == "sold") salePrice else null,
-                saleDate = if (status == "sold") saleDate else null,
-                buyerName = if (status == "sold") normalizedBuyerName else null,
-                buyerPhone = if (status == "sold") normalizedBuyerPhone else null,
-                paymentMethod = if (status == "sold") normalizedPaymentMethod else null,
+                salePrice = if (resolvedStatus == "sold") resolvedSalePrice else null,
+                saleDate = if (resolvedStatus == "sold") saleDate else null,
+                buyerName = if (resolvedStatus == "sold") normalizedBuyerName else null,
+                buyerPhone = if (resolvedStatus == "sold") normalizedBuyerPhone else null,
+                paymentMethod = if (resolvedStatus == "sold") resolvedPaymentMethod else null,
                 reportURL = normalizedReportUrl,
                 updatedAt = now
             )
@@ -637,93 +666,99 @@ class VehicleViewModel @Inject constructor(
                 mileage = mileage,
                 purchasePrice = purchasePrice,
                 purchaseDate = purchaseDate,
-                status = status,
+                status = resolvedStatus,
                 notes = normalizedNotes,
                 askingPrice = askingPrice,
                 createdAt = now,
                 updatedAt = now,
                 deletedAt = null,
-                saleDate = if (status == "sold") saleDate else null,
-                buyerName = if (status == "sold") normalizedBuyerName else null,
-                buyerPhone = if (status == "sold") normalizedBuyerPhone else null,
-                paymentMethod = if (status == "sold") normalizedPaymentMethod else null,
-                salePrice = if (status == "sold") salePrice else null,
+                saleDate = if (resolvedStatus == "sold") saleDate else null,
+                buyerName = if (resolvedStatus == "sold") normalizedBuyerName else null,
+                buyerPhone = if (resolvedStatus == "sold") normalizedBuyerPhone else null,
+                paymentMethod = if (resolvedStatus == "sold") resolvedPaymentMethod else null,
+                salePrice = if (resolvedStatus == "sold") resolvedSalePrice else null,
                 reportURL = normalizedReportUrl
             )
         }
 
         cloudSyncManager.upsertVehicle(vehicle)
 
-        if (status == "sold") {
-            val normalizedSalePrice = salePrice?.takeIf { it > BigDecimal.ZERO }
+        if (resolvedStatus == "sold") {
+            val normalizedSalePrice = resolvedSalePrice?.takeIf { it > BigDecimal.ZERO }
                 ?: error("Sale price is required.")
             val normalizedSaleDate = saleDate ?: error("Sale date is required.")
-            val targetAccount = saleAccountId?.let { financialAccountDao.getById(it) }
-                ?: previousSaleAccount
-                ?: defaultSaleAccount()
-                ?: error("A financial account is required for sold vehicles.")
+            val targetAccount = if (isExistingDealDeskSale) {
+                previousSaleAccount
+            } else {
+                saleAccountId?.let { financialAccountDao.getById(it) }
+                    ?: previousSaleAccount
+                    ?: defaultSaleAccount()
+                    ?: error("A financial account is required for sold vehicles.")
+            }
 
             val sale = existingSale?.copy(
                 amount = normalizedSalePrice,
                 date = normalizedSaleDate,
                 buyerName = normalizedBuyerName,
                 buyerPhone = normalizedBuyerPhone,
-                paymentMethod = normalizedPaymentMethod,
+                paymentMethod = resolvedPaymentMethod,
                 updatedAt = now,
                 deletedAt = null,
                 vehicleId = vehicle.id,
-                accountId = targetAccount.id
+                accountId = targetAccount?.id ?: existingSale?.accountId
             ) ?: Sale(
                 id = UUID.randomUUID(),
                 amount = normalizedSalePrice,
                 date = normalizedSaleDate,
                 buyerName = normalizedBuyerName,
                 buyerPhone = normalizedBuyerPhone,
-                paymentMethod = normalizedPaymentMethod,
+                paymentMethod = resolvedPaymentMethod,
                 createdAt = now,
                 updatedAt = now,
                 deletedAt = null,
                 vehicleId = vehicle.id,
-                accountId = targetAccount.id
+                accountId = targetAccount?.id
             )
 
-            when {
-                existingSale == null -> {
-                    cloudSyncManager.upsertFinancialAccount(
-                        targetAccount.copy(
-                            balance = targetAccount.balance.add(normalizedSalePrice),
-                            updatedAt = now
-                        )
-                    )
-                }
-                previousSaleAccount?.id == targetAccount.id -> {
-                    val delta = normalizedSalePrice.subtract(previousSaleAmount)
-                    if (delta.compareTo(BigDecimal.ZERO) != 0) {
+            if (!isExistingDealDeskSale && targetAccount != null) {
+                when {
+                    existingSale == null -> {
                         cloudSyncManager.upsertFinancialAccount(
                             targetAccount.copy(
-                                balance = targetAccount.balance.add(delta),
+                                balance = targetAccount.balance.add(normalizedSalePrice),
                                 updatedAt = now
                             )
                         )
                     }
-                }
-                else -> {
-                    previousSaleAccount?.let { previousAccount ->
-                        if (previousSaleAmount.compareTo(BigDecimal.ZERO) != 0) {
+                    previousSaleAccount?.id == targetAccount.id -> {
+                        val delta = normalizedSalePrice.subtract(previousSaleAmount)
+                        if (delta.compareTo(BigDecimal.ZERO) != 0) {
                             cloudSyncManager.upsertFinancialAccount(
-                                previousAccount.copy(
-                                    balance = previousAccount.balance.subtract(previousSaleAmount),
+                                targetAccount.copy(
+                                    balance = targetAccount.balance.add(delta),
                                     updatedAt = now
                                 )
                             )
                         }
                     }
-                    cloudSyncManager.upsertFinancialAccount(
-                        targetAccount.copy(
-                            balance = targetAccount.balance.add(normalizedSalePrice),
-                            updatedAt = now
+                    else -> {
+                        previousSaleAccount?.let { previousAccount ->
+                            if (previousSaleAmount.compareTo(BigDecimal.ZERO) != 0) {
+                                cloudSyncManager.upsertFinancialAccount(
+                                    previousAccount.copy(
+                                        balance = previousAccount.balance.subtract(previousSaleAmount),
+                                        updatedAt = now
+                                    )
+                                )
+                            }
+                        }
+                        cloudSyncManager.upsertFinancialAccount(
+                            targetAccount.copy(
+                                balance = targetAccount.balance.add(normalizedSalePrice),
+                                updatedAt = now
+                            )
                         )
-                    )
+                    }
                 }
             }
 
@@ -758,8 +793,25 @@ class VehicleViewModel @Inject constructor(
                     lastContactAt = now
                 )
                 cloudSyncManager.upsertClient(client)
+                if (existingSale == null) {
+                    upsertClientInteractionSafely(
+                        ClientInteraction(
+                            id = UUID.randomUUID(),
+                            title = "Vehicle Purchased",
+                            detail = buildClientInteractionDetail(vehicle, normalizedSalePrice),
+                            occurredAt = normalizedSaleDate,
+                            stage = LeadStage.closed_won.name,
+                            value = normalizedSalePrice,
+                            clientId = client.id,
+                            interactionType = "sale",
+                            outcome = "closed_won",
+                            createdAt = now,
+                            updatedAt = now
+                        )
+                    )
+                }
             }
-        } else if (existingSale != null) {
+        } else if (existingSale != null && !isExistingDealDeskSale) {
             previousSaleAccount?.let { previousAccount ->
                 if (previousSaleAmount.compareTo(BigDecimal.ZERO) != 0) {
                     cloudSyncManager.upsertFinancialAccount(
@@ -784,12 +836,33 @@ class VehicleViewModel @Inject constructor(
     }
 
     private fun buildClientPurchaseNote(vehicle: Vehicle): String {
-        val title = listOfNotNull(vehicle.year?.toString(), vehicle.make, vehicle.model)
+        return "Purchased ${buildVehicleDisplayName(vehicle)}"
+    }
+
+    private fun buildClientInteractionDetail(vehicle: Vehicle, saleAmount: BigDecimal): String {
+        return "Purchased ${buildVehicleDisplayName(vehicle)} for ${saleAmount.stripTrailingZeros().toPlainString()}"
+    }
+
+    private fun buildVehicleDisplayName(vehicle: Vehicle): String {
+        return listOfNotNull(vehicle.year?.toString(), vehicle.make, vehicle.model)
             .joinToString(" ")
             .ifBlank { vehicle.vin }
-        return "Purchased $title"
     }
-    
+
+    private suspend fun upsertClientInteractionSafely(interaction: ClientInteraction) {
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            clientInteractionDao.upsert(interaction)
+            return
+        }
+
+        try {
+            cloudSyncManager.upsertClientInteraction(interaction)
+        } catch (e: Exception) {
+            Log.e(tag, "upsertClientInteraction failed: ${e.message}", e)
+            clientInteractionDao.upsert(interaction)
+        }
+    }
+
     fun uploadVehicleImage(vehicleId: UUID, imageData: ByteArray) {
         val dealerId = CloudSyncEnvironment.currentDealerId ?: return
         viewModelScope.launch {

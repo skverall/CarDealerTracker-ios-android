@@ -13,6 +13,8 @@ enum class UserFacingErrorContext {
     SAVE_MONTHLY_REPORT_SETTINGS,
     LOAD_MONTHLY_REPORT_PREVIEW,
     SEND_MONTHLY_REPORT_TEST,
+    LOAD_DEAL_DESK_SETTINGS,
+    SAVE_DEAL_DESK_SETTINGS,
     SWITCH_BUSINESS,
     CREATE_BUSINESS,
     ACCEPT_TEAM_INVITE,
@@ -138,6 +140,12 @@ object UserFacingErrorMapper {
 
             UserFacingErrorContext.SEND_MONTHLY_REPORT_TEST ->
                 "We couldn't send the test report right now. Please try again."
+
+            UserFacingErrorContext.LOAD_DEAL_DESK_SETTINGS ->
+                "We couldn't load Deal Desk settings right now. Please try again."
+
+            UserFacingErrorContext.SAVE_DEAL_DESK_SETTINGS ->
+                "We couldn't save Deal Desk settings right now. Please try again."
 
             UserFacingErrorContext.SWITCH_BUSINESS ->
                 "We couldn't switch businesses right now. Please try again."

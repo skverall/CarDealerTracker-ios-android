@@ -60,6 +60,7 @@ fun VehicleAddEditScreen(
     val selectedVehicle = uiState.selectedVehicle
     val accounts = uiState.accounts
     val isEditing = vehicleId != null
+    val isDealDeskSale = detailState.sale?.isDealDeskSale == true
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
 
@@ -145,6 +146,12 @@ fun VehicleAddEditScreen(
         }
     }
 
+    LaunchedEffect(isDealDeskSale) {
+        if (isDealDeskSale) {
+            status = "sold"
+        }
+    }
+
     // Validation
     val isFormValid = vin.isNotBlank() && 
                       make.isNotBlank() && 
@@ -160,7 +167,7 @@ fun VehicleAddEditScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Edit Vehicle" else "Add Vehicle") },
+                title = { Text(localizedUiString(if (isEditing) "Edit Vehicle" else "Add Vehicle")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.Close, contentDescription = localizedUiString("Cancel"))
@@ -424,7 +431,7 @@ fun VehicleAddEditScreen(
             // --- Purchase & Status Section ---
             FormSection(title = "Purchase & Status", icon = Icons.Default.AttachMoney) {
                 CustomFormField(
-                    label = "Purchase Price ($currencyCode)",
+                    label = localizedUiString("Purchase Price (%s)", currencyCode),
                     value = purchasePrice,
                     onValueChange = { purchasePrice = it.filter { c -> c.isDigit() || c == '.' } },
                     icon = Icons.Default.Money,
@@ -433,7 +440,7 @@ fun VehicleAddEditScreen(
                 )
                 
                 CustomFormField(
-                    label = "Asking Price ($currencyCode)",
+                    label = localizedUiString("Asking Price (%s)", currencyCode),
                     value = askingPrice,
                     onValueChange = { askingPrice = it.filter { c -> c.isDigit() || c == '.' } },
                     icon = Icons.Default.Sell,
@@ -472,8 +479,9 @@ fun VehicleAddEditScreen(
                     statusOptions.forEach { option ->
                         FilterChip(
                             selected = status == option.value,
-                            onClick = { status = option.value },
-                            label = { Text(option.label, style = MaterialTheme.typography.labelSmall) },
+                            onClick = { if (!isDealDeskSale) status = option.value },
+                            enabled = !isDealDeskSale || option.value == "sold",
+                            label = { Text(localizedUiString(option.label), style = MaterialTheme.typography.labelSmall) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = EzcarGreen,
                                 selectedLabelColor = Color.White
@@ -481,18 +489,22 @@ fun VehicleAddEditScreen(
                         )
                     }
                 }
+                if (isDealDeskSale) {
+                    DealDeskProtectedNotice()
+                }
             }
 
             // --- Sale Details Section (Conditional) ---
             if (status == "sold") {
                 FormSection(title = "Sale Details", icon = Icons.Default.CheckCircle) {
                     CustomFormField(
-                        label = "Sale Price ($currencyCode)",
+                        label = localizedUiString("Sale Price (%s)", currencyCode),
                         value = salePrice,
                         onValueChange = { salePrice = it.filter { c -> c.isDigit() || c == '.' } },
                         icon = Icons.Default.Money,
                         keyboardType = KeyboardType.Decimal,
-                        placeholder = "0.00"
+                        placeholder = "0.00",
+                        enabled = !isDealDeskSale
                     )
 
                     PickerField(
@@ -534,8 +546,9 @@ fun VehicleAddEditScreen(
                         paymentMethods.forEach { method ->
                              FilterChip(
                                 selected = paymentMethod == method,
-                                onClick = { paymentMethod = method },
-                                label = { Text(method) },
+                                onClick = { if (!isDealDeskSale) paymentMethod = method },
+                                enabled = !isDealDeskSale,
+                                label = { Text(localizedUiString(method)) },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = EzcarGreen,
                                     selectedLabelColor = Color.White
@@ -548,7 +561,8 @@ fun VehicleAddEditScreen(
                     PickerField(
                         label = "Deposit To",
                         value = selectedAccount?.accountType ?: localizedUiString("Select Account"),
-                        onClick = { showAccountPicker = true }
+                        onClick = { showAccountPicker = true },
+                        enabled = !isDealDeskSale
                     )
                 }
             }
@@ -713,11 +727,12 @@ fun CustomFormField(
     icon: ImageVector,
     modifier: Modifier = Modifier,
     placeholder: String = "",
-    keyboardType: KeyboardType = KeyboardType.Text
+    keyboardType: KeyboardType = KeyboardType.Text,
+    enabled: Boolean = true
 ) {
     Column(modifier = modifier) {
         Text(
-            label,
+            localizedUiString(label),
             style = MaterialTheme.typography.labelSmall,
             color = Color.Gray
         )
@@ -725,8 +740,9 @@ fun CustomFormField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
+            enabled = enabled,
             modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder, color = Color.Gray.copy(alpha = 0.5f)) },
+            placeholder = { Text(localizedUiString(placeholder), color = Color.Gray.copy(alpha = 0.5f)) },
             leadingIcon = {
                 Icon(
                     icon,
@@ -752,11 +768,12 @@ fun CustomFormField(
 fun PickerField(
     label: String,
     value: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    enabled: Boolean = true
 ) {
     Column {
         Text(
-            label,
+            localizedUiString(label),
             style = MaterialTheme.typography.labelSmall,
             color = Color.Gray
         )
@@ -767,17 +784,53 @@ fun PickerField(
                 .clip(RoundedCornerShape(10.dp))
                 .background(EzcarBackgroundLight)
                 .border(1.dp, Color.Gray.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
-                .clickable(onClick = onClick)
+                .clickable(enabled = enabled, onClick = onClick)
                 .padding(horizontal = 12.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(value, color = Color.Black)
+            Text(value, color = if (enabled) Color.Black else Color.Gray)
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = Color.Gray
+                tint = Color.Gray.copy(alpha = if (enabled) 1f else 0.45f)
             )
+        }
+    }
+}
+
+@Composable
+private fun DealDeskProtectedNotice() {
+    Surface(
+        color = EzcarBlueBright.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                tint = EzcarBlueBright,
+                modifier = Modifier.size(18.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = localizedUiString("Deal Desk protected sale"),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = EzcarBlueBright,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = localizedUiString("Revenue, payment method and deposit account are locked so taxes, fees and collected cash stay correct."),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

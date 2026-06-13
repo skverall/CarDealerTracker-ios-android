@@ -15,11 +15,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -79,7 +79,7 @@ fun PartsDashboardScreen(
         topBar = {
             Column(modifier = Modifier.background(EzcarBackground)) {
                 Text(
-                    text = "Parts",
+                    text = localizedUiString("Parts"),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -94,7 +94,9 @@ fun PartsDashboardScreen(
                         }
                     },
                     leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                    placeholder = { Text(if (selectedTab == 0) "Search parts" else "Search sales") },
+                    placeholder = {
+                        Text(localizedUiString(if (selectedTab == 0) "Search parts" else "Search sales"))
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
@@ -304,7 +306,7 @@ private fun PartsInventoryContent(
             )
         }
 
-        Divider(modifier = Modifier.padding(vertical = 8.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
         LazyColumn(
             contentPadding = PaddingValues(bottom = 96.dp),
@@ -414,7 +416,7 @@ private fun CategoryFilter(
     var expanded by remember { mutableStateOf(false) }
     Box {
         Text(
-            text = selectedCategory ?: "All Categories",
+            text = selectedCategory ?: localizedUiString("All Categories"),
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
                 .background(EzcarBackgroundLight)
@@ -446,7 +448,7 @@ private fun LowStockToggle(enabled: Boolean, onToggle: (Boolean) -> Unit) {
             .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
         Text(
-            text = "Low Stock",
+            text = localizedUiString("Low Stock"),
             color = if (enabled) Color.White else Color.Black
         )
     }
@@ -498,7 +500,7 @@ private fun AddPartDialog(
                             .clickable { addInitialStock = !addInitialStock }
                             .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text(if (addInitialStock) "On" else "Off", color = if (addInitialStock) Color.White else Color.Black)
+                        Text(localizedUiString(if (addInitialStock) "On" else "Off"), color = if (addInitialStock) Color.White else Color.Black)
                     }
                 }
                 if (addInitialStock) {
@@ -594,7 +596,10 @@ private fun ReceiveStockDialog(
                 OutlinedTextField(value = batchLabel, onValueChange = { batchLabel = it }, label = { Text(localizedUiString("Batch Label")) })
                 OutlinedTextField(value = notes, onValueChange = { notes = it }, label = { Text(localizedUiString("Notes")) })
                 Text(
-                    text = "Purchase Date: ${SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(purchaseDate)}",
+                    text = localizedUiString(
+                        "Purchase Date: %s",
+                        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(purchaseDate)
+                    ),
                     modifier = Modifier
                         .padding(top = 8.dp)
                         .clickable { showDatePicker = true }
@@ -671,7 +676,10 @@ private fun AddPartSaleDialog(
         text = {
             Column {
                 Text(
-                    text = "Sale Date: ${SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(saleDate)}",
+                    text = localizedUiString(
+                        "Sale Date: %s",
+                        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(saleDate)
+                    ),
                     modifier = Modifier
                         .padding(bottom = 8.dp)
                         .clickable { showDatePicker = true }
@@ -800,7 +808,7 @@ private fun PartDropdown(
     onSelected: (UUID?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedName = parts.firstOrNull { it.id == selectedPartId }?.name ?: "Select Part"
+    val selectedName = parts.firstOrNull { it.id == selectedPartId }?.name ?: localizedUiString("Select Part")
     Box {
         Text(
             text = selectedName,
@@ -858,7 +866,7 @@ private fun ClientDropdown(
     onSelected: (UUID?) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedName = clients.firstOrNull { it.id == selectedClientId }?.name ?: "Select Client"
+    val selectedName = clients.firstOrNull { it.id == selectedClientId }?.name ?: localizedUiString("Select Client")
     Box(modifier = Modifier.padding(top = 8.dp)) {
         Text(
             text = selectedName,

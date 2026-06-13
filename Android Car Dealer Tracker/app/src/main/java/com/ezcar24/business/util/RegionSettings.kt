@@ -59,11 +59,17 @@ enum class AppLanguage(
     UZBEK("uz", "Oʻzbekcha", false)
 }
 
+enum class AppTheme {
+    LIGHT,
+    DARK
+}
+
 data class RegionSettingsState(
     val selectedRegion: AppRegion = AppRegion.UAE,
     val selectedLanguage: AppLanguage = AppLanguage.ENGLISH,
     val hasSelectedRegion: Boolean = false,
-    val isPartsEnabled: Boolean = true
+    val isPartsEnabled: Boolean = true,
+    val selectedTheme: AppTheme = AppTheme.LIGHT
 )
 
 @Singleton
@@ -102,6 +108,13 @@ class RegionSettingsManager @Inject constructor(
             .putBoolean(PARTS_ENABLED_KEY, enabled)
             .apply()
         _state.value = _state.value.copy(isPartsEnabled = enabled)
+    }
+
+    fun updateTheme(theme: AppTheme) {
+        preferences.edit()
+            .putString(THEME_KEY, theme.name)
+            .apply()
+        _state.value = _state.value.copy(selectedTheme = theme)
     }
 
     fun formatCurrency(value: BigDecimal?): String {
@@ -147,11 +160,15 @@ class RegionSettingsManager @Inject constructor(
             ?: AppLanguage.ENGLISH
         val hasSelectedRegion = preferences.getBoolean(HAS_SELECTED_REGION_KEY, false)
         val isPartsEnabled = preferences.getBoolean(PARTS_ENABLED_KEY, true)
+        val selectedTheme = preferences.getString(THEME_KEY, null)
+            ?.let { runCatching { AppTheme.valueOf(it) }.getOrNull() }
+            ?: AppTheme.LIGHT
         return RegionSettingsState(
             selectedRegion = storedRegion,
             selectedLanguage = storedLanguage,
             hasSelectedRegion = hasSelectedRegion,
-            isPartsEnabled = isPartsEnabled
+            isPartsEnabled = isPartsEnabled,
+            selectedTheme = selectedTheme
         )
     }
 
@@ -180,6 +197,7 @@ class RegionSettingsManager @Inject constructor(
         private const val LANGUAGE_KEY = "app_selected_language"
         private const val HAS_SELECTED_REGION_KEY = "app_has_selected_region"
         private const val PARTS_ENABLED_KEY = "app_parts_enabled"
+        private const val THEME_KEY = "app_selected_theme"
         private const val KILOMETERS_TO_MILES = 0.621371
     }
 }

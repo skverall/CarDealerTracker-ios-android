@@ -22,13 +22,22 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.Vehicle
+import com.ezcar24.business.data.repository.DealDeskLine
+import com.ezcar24.business.data.repository.DealDeskLineCalculationType
+import com.ezcar24.business.data.repository.DealDeskPaymentPlan
+import com.ezcar24.business.data.repository.DealDeskSettings
+import com.ezcar24.business.data.repository.DealDeskSnapshot
+import com.ezcar24.business.data.repository.DealDeskTemplateCatalog
+import com.ezcar24.business.data.repository.DealDeskTotals
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.*
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.math.pow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,9 +62,18 @@ fun AddSaleScreen(
     var date by remember { mutableStateOf(Date()) }
     var paymentMenuExpanded by remember { mutableStateOf(false) }
     var accountMenuExpanded by remember { mutableStateOf(false) }
+    var useDealDesk by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadData()
+    }
+
+    LaunchedEffect(
+        selectedVehicle?.id,
+        uiState.dealDeskSettings?.isEnabled,
+        uiState.dealDeskSettings?.defaultTemplateCode
+    ) {
+        useDealDesk = selectedVehicle != null && uiState.dealDeskSettings?.isEnabled == true
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.fillMaxHeight(0.9f)) {
@@ -148,11 +166,10 @@ fun AddSaleScreen(
                 }
             } else {
                 item {
-                    val vehicle = selectedVehicle
+                    val vehicle = selectedVehicle!!
+                    val activeDealDeskSettings = uiState.dealDeskSettings?.takeIf { it.isEnabled }
                     val saleAmount = amountStr.toBigDecimalOrNull()
-                    val totalCost = vehicle?.let {
-                        uiState.vehicleCosts[it.id] ?: it.purchasePrice
-                    } ?: BigDecimal.ZERO
+                    val totalCost = uiState.vehicleCosts[vehicle.id] ?: vehicle.purchasePrice
                     val estimatedProfit = saleEstimatedProfit(saleAmount, totalCost)
 
                     Card(
@@ -178,167 +195,856 @@ fun AddSaleScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
-                    SaleSectionTitle("Sale Details")
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    OutlinedTextField(
-                        value = amountStr,
-                        onValueChange = { amountStr = it },
-                        label = { Text(localizedUiString("Sale Price (%s)", regionState.selectedRegion.currencyCode)) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    SaleFinancialPreviewCard(
-                        totalCost = totalCost,
-                        salePrice = saleAmount ?: BigDecimal.ZERO,
-                        estimatedProfit = estimatedProfit,
-                        canViewFinancials = uiState.canViewFinancials,
-                        formatCurrency = regionSettingsManager::formatCurrency
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    SaleSelectorButton(
-                        icon = Icons.Default.Today,
-                        label = localizedUiString("Sale Date"),
-                        value = dateFormatter.format(date),
-                        onClick = {
-                            val calendar = Calendar.getInstance()
-                            calendar.time = date
-                            DatePickerDialog(
-                                context,
-                                { _, year, month, day ->
-                                    calendar.set(year, month, day)
-                                    date = calendar.time
-                                },
-                                calendar.get(Calendar.YEAR),
-                                calendar.get(Calendar.MONTH),
-                                calendar.get(Calendar.DAY_OF_MONTH)
-                            ).show()
-                        }
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        SaleSelectorButton(
-                            icon = Icons.Default.CreditCard,
-                            label = localizedUiString("Payment Method"),
-                            value = localizedUiString(paymentMethod),
-                            onClick = { paymentMenuExpanded = true }
-                        )
-                        DropdownMenu(
-                            expanded = paymentMenuExpanded,
-                            onDismissRequest = { paymentMenuExpanded = false }
-                        ) {
-                            paymentMethods.forEach { method ->
-                                DropdownMenuItem(
-                                    text = { Text(localizedUiString(method)) },
-                                    onClick = {
-                                        paymentMethod = method
-                                        paymentMenuExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(20.dp))
-                    SaleSectionTitle("Deposit To")
-
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        SaleSelectorButton(
-                            icon = Icons.Default.AccountBalance,
-                            label = localizedUiString("Account"),
-                            value = selectedAccount?.accountType ?: localizedUiString("None"),
-                            onClick = { accountMenuExpanded = true }
-                        )
-                        DropdownMenu(
-                            expanded = accountMenuExpanded,
-                            onDismissRequest = { accountMenuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(localizedUiString("None")) },
-                                onClick = {
-                                    selectedAccount = null
-                                    accountMenuExpanded = false
-                                }
+                    when {
+                        activeDealDeskSettings != null -> {
+                            DealDeskModeCard(
+                                useDealDesk = useDealDesk,
+                                onUseDealDeskChange = { useDealDesk = it }
                             )
-                            uiState.accounts.forEach { account ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Column {
-                                            Text(account.accountType)
-                                            Text(
-                                                regionSettingsManager.formatCurrency(account.balance),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = Color.Gray
-                                            )
-                                        }
-                                    },
-                                    onClick = {
-                                        selectedAccount = account
-                                        accountMenuExpanded = false
-                                    }
-                                )
-                            }
+                        }
+
+                        uiState.isDealDeskSettingsLoading -> {
+                            DealDeskInfoCard(
+                                icon = Icons.Default.Calculate,
+                                title = localizedUiString("Checking Deal Desk"),
+                                message = localizedUiString("Loading tax and fee settings for this business.")
+                            )
+                        }
+
+                        uiState.dealDeskSettingsError != null -> {
+                            DealDeskInfoCard(
+                                icon = Icons.Default.Info,
+                                title = localizedUiString("Classic sale"),
+                                message = localizedUiString("Deal Desk settings are unavailable, so this sale uses the standard flow.")
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
-                    SaleSectionTitle("Buyer Details")
 
-                    OutlinedTextField(
-                        value = buyerName,
-                        onValueChange = { buyerName = it },
-                        label = { Text(localizedUiString("Buyer Name")) },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    OutlinedTextField(
-                        value = buyerPhone,
-                        onValueChange = { buyerPhone = it },
-                        label = { Text(localizedUiString("Buyer Phone")) },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Spacer(modifier = Modifier.height(24.dp))
-
-                    val canSave = saleAmount != null && saleAmount > BigDecimal.ZERO && buyerName.isNotBlank()
-
-                    Button(
-                        onClick = {
-                            if (selectedVehicle != null && saleAmount != null && canSave) {
+                    if (activeDealDeskSettings != null && useDealDesk) {
+                        DealDeskSaleContent(
+                            vehicle = vehicle,
+                            settings = activeDealDeskSettings,
+                            accounts = uiState.accounts,
+                            dateFormatter = dateFormatter,
+                            onPickDate = { currentDate, onDateSelected ->
+                                val calendar = Calendar.getInstance()
+                                calendar.time = currentDate
+                                DatePickerDialog(
+                                    context,
+                                    { _, year, month, day ->
+                                        calendar.set(year, month, day)
+                                        onDateSelected(calendar.time)
+                                    },
+                                    calendar.get(Calendar.YEAR),
+                                    calendar.get(Calendar.MONTH),
+                                    calendar.get(Calendar.DAY_OF_MONTH)
+                                ).show()
+                            },
+                            formatCurrency = regionSettingsManager::formatCurrency,
+                            currencyCode = regionState.selectedRegion.currencyCode,
+                            onSaveDealDeskSale = { request ->
                                 viewModel.saveSale(
-                                    vehicle = selectedVehicle!!,
-                                    amount = saleAmount,
-                                    date = date,
-                                    buyerName = buyerName,
-                                    buyerPhone = buyerPhone,
-                                    paymentMethod = paymentMethod,
-                                    account = selectedAccount
+                                    vehicle = vehicle,
+                                    amount = request.saleAmount,
+                                    date = request.date,
+                                    buyerName = request.buyerName,
+                                    buyerPhone = request.buyerPhone,
+                                    paymentMethod = request.paymentMethod,
+                                    account = request.account,
+                                    accountDepositAmount = request.accountDepositAmount,
+                                    notes = request.notes,
+                                    dealDeskSnapshot = request.snapshot
                                 )
                                 onSave()
                             }
-                        },
-                        enabled = canSave,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text(localizedUiString("Complete Sale"), fontWeight = FontWeight.Bold)
+                        )
+                    } else {
+                        SaleSectionTitle("Sale Details")
+
+                        OutlinedTextField(
+                            value = amountStr,
+                            onValueChange = { amountStr = sanitizeSaleDecimalInput(it) },
+                            label = { Text(localizedUiString("Sale Price (%s)", regionState.selectedRegion.currencyCode)) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        SaleFinancialPreviewCard(
+                            totalCost = totalCost,
+                            salePrice = saleAmount ?: BigDecimal.ZERO,
+                            estimatedProfit = estimatedProfit,
+                            canViewFinancials = uiState.canViewFinancials,
+                            formatCurrency = regionSettingsManager::formatCurrency
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        SaleSelectorButton(
+                            icon = Icons.Default.Today,
+                            label = localizedUiString("Sale Date"),
+                            value = dateFormatter.format(date),
+                            onClick = {
+                                val calendar = Calendar.getInstance()
+                                calendar.time = date
+                                DatePickerDialog(
+                                    context,
+                                    { _, year, month, day ->
+                                        calendar.set(year, month, day)
+                                        date = calendar.time
+                                    },
+                                    calendar.get(Calendar.YEAR),
+                                    calendar.get(Calendar.MONTH),
+                                    calendar.get(Calendar.DAY_OF_MONTH)
+                                ).show()
+                            }
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            SaleSelectorButton(
+                                icon = Icons.Default.CreditCard,
+                                label = localizedUiString("Payment Method"),
+                                value = localizedUiString(paymentMethod),
+                                onClick = { paymentMenuExpanded = true }
+                            )
+                            DropdownMenu(
+                                expanded = paymentMenuExpanded,
+                                onDismissRequest = { paymentMenuExpanded = false }
+                            ) {
+                                paymentMethods.forEach { method ->
+                                    DropdownMenuItem(
+                                        text = { Text(localizedUiString(method)) },
+                                        onClick = {
+                                            paymentMethod = method
+                                            paymentMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+                        SaleSectionTitle("Deposit To")
+
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            SaleSelectorButton(
+                                icon = Icons.Default.AccountBalance,
+                                label = localizedUiString("Account"),
+                                value = selectedAccount?.accountType ?: localizedUiString("None"),
+                                onClick = { accountMenuExpanded = true }
+                            )
+                            DropdownMenu(
+                                expanded = accountMenuExpanded,
+                                onDismissRequest = { accountMenuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(localizedUiString("None")) },
+                                    onClick = {
+                                        selectedAccount = null
+                                        accountMenuExpanded = false
+                                    }
+                                )
+                                uiState.accounts.forEach { account ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(account.accountType)
+                                                Text(
+                                                    regionSettingsManager.formatCurrency(account.balance),
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            selectedAccount = account
+                                            accountMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+                        SaleSectionTitle("Buyer Details")
+
+                        OutlinedTextField(
+                            value = buyerName,
+                            onValueChange = { buyerName = it },
+                            label = { Text(localizedUiString("Buyer Name")) },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = buyerPhone,
+                            onValueChange = { buyerPhone = it },
+                            label = { Text(localizedUiString("Buyer Phone")) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        val canSave = saleAmount != null && saleAmount > BigDecimal.ZERO && buyerName.isNotBlank()
+
+                        Button(
+                            onClick = {
+                                if (saleAmount != null && canSave) {
+                                    viewModel.saveSale(
+                                        vehicle = vehicle,
+                                        amount = saleAmount,
+                                        date = date,
+                                        buyerName = buyerName,
+                                        buyerPhone = buyerPhone,
+                                        paymentMethod = paymentMethod,
+                                        account = selectedAccount
+                                    )
+                                    onSave()
+                                }
+                            },
+                            enabled = canSave,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(localizedUiString("Complete Sale"), fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+private data class DealDeskSaleRequest(
+    val saleAmount: BigDecimal,
+    val date: Date,
+    val buyerName: String,
+    val buyerPhone: String,
+    val paymentMethod: String,
+    val account: FinancialAccount?,
+    val accountDepositAmount: BigDecimal,
+    val notes: String,
+    val snapshot: DealDeskSnapshot
+)
+
+@Composable
+private fun DealDeskModeCard(
+    useDealDesk: Boolean,
+    onUseDealDeskChange: (Boolean) -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Calculate,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = localizedUiString("Deal Desk is on"),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = localizedUiString("Use the same tax, fee and payment snapshot as iOS."),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = { onUseDealDeskChange(true) },
+                    enabled = !useDealDesk,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(localizedUiString("Use Deal Desk"), maxLines = 1)
+                }
+
+                OutlinedButton(
+                    onClick = { onUseDealDeskChange(false) },
+                    enabled = useDealDesk,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(localizedUiString("Use classic sale"), maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DealDeskInfoCard(
+    icon: ImageVector,
+    title: String,
+    message: String
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, contentDescription = null, tint = EzcarNavy)
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                Text(message, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun DealDeskSaleContent(
+    vehicle: Vehicle,
+    settings: DealDeskSettings,
+    accounts: List<FinancialAccount>,
+    dateFormatter: SimpleDateFormat,
+    onPickDate: (Date, (Date) -> Unit) -> Unit,
+    formatCurrency: (BigDecimal) -> String,
+    currencyCode: String,
+    onSaveDealDeskSale: (DealDeskSaleRequest) -> Unit
+) {
+    val startingSalePrice = remember(vehicle.id) {
+        vehicle.askingPrice ?: vehicle.salePrice ?: BigDecimal.ZERO
+    }
+    var salePriceInput by remember(vehicle.id, settings.defaultTemplateCode, settings.templateVersion) {
+        mutableStateOf(initialSaleDecimalText(startingSalePrice))
+    }
+    var buyerName by remember(vehicle.id) { mutableStateOf("") }
+    var buyerPhone by remember(vehicle.id) { mutableStateOf("") }
+    var notes by remember(vehicle.id) { mutableStateOf("") }
+    var saleDate by remember(vehicle.id) { mutableStateOf(Date()) }
+    var selectedAccount by remember(vehicle.id) { mutableStateOf<FinancialAccount?>(null) }
+    var paymentMethodCode by remember(vehicle.id) { mutableStateOf("cash") }
+    var downPaymentInput by remember(vehicle.id, settings.defaultTemplateCode, settings.templateVersion) {
+        mutableStateOf(initialSaleDecimalText(startingSalePrice))
+    }
+    var aprInput by remember(vehicle.id) { mutableStateOf("") }
+    var termMonthsInput by remember(vehicle.id) { mutableStateOf("") }
+    var jurisdictionCode by remember(settings.defaultTemplateCode) {
+        mutableStateOf(DealDeskTemplateCatalog.defaultJurisdictionCode(settings.defaultTemplateCode))
+    }
+    var taxLines by remember(settings.defaultTemplateCode, settings.templateVersion, settings.taxOverrides) {
+        mutableStateOf(settings.seededTaxLines)
+    }
+    var feeLines by remember(settings.defaultTemplateCode, settings.templateVersion, settings.feeOverrides) {
+        mutableStateOf(settings.seededFeeLines)
+    }
+    var taxLineInputs by remember(settings.defaultTemplateCode, settings.templateVersion, settings.taxOverrides) {
+        mutableStateOf(settings.seededTaxLines.map { initialSaleDecimalText(it.value) })
+    }
+    var feeLineInputs by remember(settings.defaultTemplateCode, settings.templateVersion, settings.feeOverrides) {
+        mutableStateOf(settings.seededFeeLines.map { initialSaleDecimalText(it.value) })
+    }
+    var paymentMenuExpanded by remember { mutableStateOf(false) }
+    var accountMenuExpanded by remember { mutableStateOf(false) }
+    var jurisdictionMenuExpanded by remember { mutableStateOf(false) }
+
+    LaunchedEffect(accounts) {
+        if (selectedAccount == null && accounts.isNotEmpty()) {
+            selectedAccount = accounts.firstOrNull { it.accountType.contains("cash", ignoreCase = true) }
+                ?: accounts.first()
+        }
+    }
+
+    val salePrice = decimalFromSaleInput(salePriceInput)
+    val taxTotal = taxLines.fold(BigDecimal.ZERO) { total, line ->
+        total.add(line.resolvedSaleAmount(salePrice))
+    }
+    val feeTotal = feeLines.fold(BigDecimal.ZERO) { total, line ->
+        total.add(line.resolvedSaleAmount(salePrice))
+    }
+    val outTheDoorTotal = salePrice.add(taxTotal).add(feeTotal)
+    val rawDownPayment = decimalFromSaleInput(downPaymentInput).coerceAtLeastZero()
+    val dueToday = if (paymentMethodCode == "finance") {
+        rawDownPayment.coerceAtMostValue(outTheDoorTotal)
+    } else {
+        outTheDoorTotal
+    }
+    val amountFinanced = if (paymentMethodCode == "finance") {
+        outTheDoorTotal.subtract(dueToday).coerceAtLeastZero()
+    } else {
+        BigDecimal.ZERO
+    }
+    val monthlyEstimate = monthlyPaymentEstimate(
+        principal = amountFinanced,
+        aprPercent = optionalDecimalFromSaleInput(aprInput),
+        termMonths = termMonthsInput.toIntOrNull()
+    )
+    val canSave = salePrice > BigDecimal.ZERO && buyerName.trim().isNotEmpty()
+    val paymentOptions = remember {
+        listOf("cash", "finance", "bank_transfer", "cheque", "other")
+    }
+    val jurisdictionOptions = remember(settings.defaultTemplateCode) {
+        DealDeskTemplateCatalog.jurisdictionOptions(settings.defaultTemplateCode)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        DealDeskSummaryGrid(
+            outTheDoorTotal = outTheDoorTotal,
+            dueToday = dueToday,
+            amountFinanced = amountFinanced,
+            monthlyEstimate = monthlyEstimate,
+            formatCurrency = formatCurrency
+        )
+
+        DealDeskSection(title = localizedUiString("Price")) {
+            if (settings.defaultTemplateCode.name.lowercase(Locale.US) != "generic") {
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    SaleSelectorButton(
+                        icon = Icons.Default.Place,
+                        label = localizedUiString("Jurisdiction"),
+                        value = jurisdictionOptions.firstOrNull { it.code == jurisdictionCode }?.title ?: jurisdictionCode,
+                        onClick = { jurisdictionMenuExpanded = true }
+                    )
+                    DropdownMenu(
+                        expanded = jurisdictionMenuExpanded,
+                        onDismissRequest = { jurisdictionMenuExpanded = false }
+                    ) {
+                        jurisdictionOptions.forEach { option ->
+                            DropdownMenuItem(
+                                text = { Text(option.title) },
+                                onClick = {
+                                    jurisdictionCode = option.code
+                                    jurisdictionMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            DealDeskTemplateCatalog.setupGuidanceMessage(
+                templateCode = settings.defaultTemplateCode,
+                taxLines = taxLines,
+                feeLines = feeLines
+            )?.let { message ->
+                Text(
+                    text = localizedUiString(message),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
+            OutlinedTextField(
+                value = salePriceInput,
+                onValueChange = { salePriceInput = sanitizeSaleDecimalInput(it) },
+                label = { Text(localizedUiString("Vehicle sale price (%s)", currencyCode)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            SaleSelectorButton(
+                icon = Icons.Default.Today,
+                label = localizedUiString("Sale Date"),
+                value = dateFormatter.format(saleDate),
+                onClick = { onPickDate(saleDate) { saleDate = it } }
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = buyerName,
+                onValueChange = { buyerName = it },
+                label = { Text(localizedUiString("Buyer Name")) },
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = buyerPhone,
+                onValueChange = { buyerPhone = it },
+                label = { Text(localizedUiString("Buyer Phone")) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                label = { Text(localizedUiString("Notes")) },
+                minLines = 2,
+                maxLines = 4,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        if (taxLines.isNotEmpty()) {
+            DealDeskSection(title = localizedUiString("Taxes")) {
+                DealDeskEditableLines(
+                    lines = taxLines,
+                    inputs = taxLineInputs,
+                    currencyCode = currencyCode,
+                    onLineChanged = { index, input ->
+                        taxLineInputs = taxLineInputs.updateInputValue(index, input)
+                        taxLines = taxLines.updateLineValue(index, input)
+                    }
+                )
+            }
+        }
+
+        if (feeLines.isNotEmpty()) {
+            DealDeskSection(title = localizedUiString("Fees")) {
+                DealDeskEditableLines(
+                    lines = feeLines,
+                    inputs = feeLineInputs,
+                    currencyCode = currencyCode,
+                    onLineChanged = { index, input ->
+                        feeLineInputs = feeLineInputs.updateInputValue(index, input)
+                        feeLines = feeLines.updateLineValue(index, input)
+                    }
+                )
+            }
+        }
+
+        DealDeskSection(title = localizedUiString("Payments")) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                SaleSelectorButton(
+                    icon = Icons.Default.CreditCard,
+                    label = localizedUiString("Payment Method"),
+                    value = localizedUiString(dealDeskPaymentMethodTitle(paymentMethodCode)),
+                    onClick = { paymentMenuExpanded = true }
+                )
+                DropdownMenu(
+                    expanded = paymentMenuExpanded,
+                    onDismissRequest = { paymentMenuExpanded = false }
+                ) {
+                    paymentOptions.forEach { code ->
+                        DropdownMenuItem(
+                            text = { Text(localizedUiString(dealDeskPaymentMethodTitle(code))) },
+                            onClick = {
+                                paymentMethodCode = code
+                                paymentMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                SaleSelectorButton(
+                    icon = Icons.Default.AccountBalance,
+                    label = localizedUiString("Deposit To"),
+                    value = selectedAccount?.accountType ?: localizedUiString("None"),
+                    onClick = { accountMenuExpanded = true }
+                )
+                DropdownMenu(
+                    expanded = accountMenuExpanded,
+                    onDismissRequest = { accountMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(localizedUiString("None")) },
+                        onClick = {
+                            selectedAccount = null
+                            accountMenuExpanded = false
+                        }
+                    )
+                    accounts.forEach { account ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(account.accountType)
+                                    Text(
+                                        formatCurrency(account.balance),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.Gray
+                                    )
+                                }
+                            },
+                            onClick = {
+                                selectedAccount = account
+                                accountMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            if (paymentMethodCode == "finance") {
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = downPaymentInput,
+                    onValueChange = { downPaymentInput = sanitizeSaleDecimalInput(it) },
+                    label = { Text(localizedUiString("Down payment (%s)", currencyCode)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = aprInput,
+                        onValueChange = { aprInput = sanitizeSaleDecimalInput(it) },
+                        label = { Text(localizedUiString("APR %")) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = termMonthsInput,
+                        onValueChange = { termMonthsInput = it.filter(Char::isDigit) },
+                        label = { Text(localizedUiString("Term months")) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            } else {
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = localizedUiString("Full customer total is collected today."),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        Button(
+            onClick = {
+                val snapshot = DealDeskSnapshot(
+                    templateCode = settings.defaultTemplateCode.rpcValue,
+                    templateVersion = settings.templateVersion.coerceAtLeast(1),
+                    jurisdictionType = DealDeskTemplateCatalog.defaultJurisdictionType(settings.defaultTemplateCode),
+                    jurisdictionCode = jurisdictionCode,
+                    taxLines = taxLines,
+                    feeLines = feeLines,
+                    paymentPlan = DealDeskPaymentPlan(
+                        methodCode = paymentMethodCode,
+                        downPayment = dueToday,
+                        aprPercent = optionalDecimalFromSaleInput(aprInput),
+                        termMonths = termMonthsInput.toIntOrNull()
+                    ),
+                    totals = DealDeskTotals(
+                        salePrice = salePrice,
+                        taxTotal = taxTotal,
+                        feeTotal = feeTotal,
+                        outTheDoorTotal = outTheDoorTotal,
+                        cashReceivedNow = dueToday,
+                        amountFinanced = amountFinanced,
+                        monthlyPaymentEstimate = monthlyEstimate
+                    )
+                )
+                onSaveDealDeskSale(
+                    DealDeskSaleRequest(
+                        saleAmount = salePrice,
+                        date = saleDate,
+                        buyerName = buyerName.trim(),
+                        buyerPhone = buyerPhone.trim(),
+                        paymentMethod = dealDeskPaymentMethodTitle(paymentMethodCode),
+                        account = selectedAccount,
+                        accountDepositAmount = dueToday,
+                        notes = notes.trim(),
+                        snapshot = snapshot
+                    )
+                )
+            },
+            enabled = canSave,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(localizedUiString("Save Deal Desk Sale"), fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun DealDeskSummaryGrid(
+    outTheDoorTotal: BigDecimal,
+    dueToday: BigDecimal,
+    amountFinanced: BigDecimal,
+    monthlyEstimate: BigDecimal?,
+    formatCurrency: (BigDecimal) -> String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            DealDeskSummaryMetric(
+                label = localizedUiString("Out the door"),
+                amount = formatCurrency(outTheDoorTotal),
+                modifier = Modifier.weight(1f)
+            )
+            DealDeskSummaryMetric(
+                label = localizedUiString("Due today"),
+                amount = formatCurrency(dueToday),
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+            DealDeskSummaryMetric(
+                label = localizedUiString("Financed"),
+                amount = formatCurrency(amountFinanced),
+                modifier = Modifier.weight(1f)
+            )
+            DealDeskSummaryMetric(
+                label = localizedUiString("Monthly"),
+                amount = monthlyEstimate?.let(formatCurrency) ?: "-",
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun DealDeskSummaryMetric(
+    label: String,
+    amount: String,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(14.dp),
+        modifier = modifier
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = amount,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = EzcarNavy,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun DealDeskSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = EzcarNavy
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun DealDeskEditableLines(
+    lines: List<DealDeskLine>,
+    inputs: List<String>,
+    currencyCode: String,
+    onLineChanged: (Int, String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        lines.forEachIndexed { index, line ->
+            DealDeskLineRow(
+                line = line,
+                valueInput = inputs.getOrNull(index).orEmpty(),
+                currencyCode = currencyCode,
+                onValueChange = { input -> onLineChanged(index, input) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun DealDeskLineRow(
+    line: DealDeskLine,
+    valueInput: String,
+    currencyCode: String,
+    onValueChange: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = localizedUiString(line.title),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                text = localizedUiString(line.calculationType.labelSource),
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.Gray
+            )
+        }
+
+        OutlinedTextField(
+            value = valueInput,
+            onValueChange = { onValueChange(sanitizeSaleDecimalInput(it)) },
+            prefix = if (line.calculationType == DealDeskLineCalculationType.FIXED_AMOUNT) {
+                { Text(currencyCode) }
+            } else {
+                null
+            },
+            suffix = if (line.calculationType == DealDeskLineCalculationType.PERCENT_OF_SALE_PRICE) {
+                { Text("%") }
+            } else {
+                null
+            },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            singleLine = true,
+            modifier = Modifier.widthIn(min = 132.dp, max = 156.dp)
+        )
     }
 }
 
@@ -479,5 +1185,99 @@ private fun SaleSelectorButton(
             Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
         }
         Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EzcarNavy)
+    }
+}
+
+private fun sanitizeSaleDecimalInput(value: String): String {
+    var result = ""
+    var hasDecimalSeparator = false
+
+    value.forEach { character ->
+        when {
+            character.isDigit() -> result += character
+            character == '.' && !hasDecimalSeparator -> {
+                hasDecimalSeparator = true
+                result += character
+            }
+        }
+    }
+
+    return result
+}
+
+private fun initialSaleDecimalText(value: BigDecimal): String {
+    return if (value.compareTo(BigDecimal.ZERO) == 0) {
+        ""
+    } else {
+        value.stripTrailingZeros().toPlainString()
+    }
+}
+
+private fun decimalFromSaleInput(value: String): BigDecimal {
+    return value.toBigDecimalOrNull() ?: BigDecimal.ZERO
+}
+
+private fun optionalDecimalFromSaleInput(value: String): BigDecimal? {
+    return value.toBigDecimalOrNull()
+}
+
+private fun DealDeskLine.resolvedSaleAmount(salePrice: BigDecimal): BigDecimal {
+    return when (calculationType) {
+        DealDeskLineCalculationType.FIXED_AMOUNT -> value
+        DealDeskLineCalculationType.PERCENT_OF_SALE_PRICE -> salePrice
+            .multiply(value)
+            .divide(BigDecimal("100"))
+    }
+}
+
+private fun List<DealDeskLine>.updateLineValue(index: Int, input: String): List<DealDeskLine> {
+    if (index !in indices) return this
+    return toMutableList().also { lines ->
+        lines[index] = lines[index].copy(value = decimalFromSaleInput(input))
+    }
+}
+
+private fun List<String>.updateInputValue(index: Int, input: String): List<String> {
+    if (index !in indices) return this
+    return toMutableList().also { values ->
+        values[index] = input
+    }
+}
+
+private fun BigDecimal.coerceAtLeastZero(): BigDecimal {
+    return if (this < BigDecimal.ZERO) BigDecimal.ZERO else this
+}
+
+private fun BigDecimal.coerceAtMostValue(maximum: BigDecimal): BigDecimal {
+    return if (this > maximum) maximum else this
+}
+
+private fun monthlyPaymentEstimate(
+    principal: BigDecimal,
+    aprPercent: BigDecimal?,
+    termMonths: Int?
+): BigDecimal? {
+    if (principal <= BigDecimal.ZERO || termMonths == null || termMonths <= 0 || aprPercent == null) {
+        return null
+    }
+
+    val principalDouble = principal.toDouble()
+    val monthlyRate = aprPercent.toDouble() / 1200.0
+    val payment = if (monthlyRate == 0.0) {
+        principalDouble / termMonths.toDouble()
+    } else {
+        val factor = (1.0 + monthlyRate).pow(termMonths.toDouble())
+        principalDouble * monthlyRate * factor / (factor - 1.0)
+    }
+    return BigDecimal.valueOf(payment).setScale(2, RoundingMode.HALF_UP)
+}
+
+private fun dealDeskPaymentMethodTitle(methodCode: String): String {
+    return when (methodCode) {
+        "cash" -> "Cash"
+        "finance" -> "Finance"
+        "bank_transfer" -> "Bank Transfer"
+        "cheque" -> "Cheque"
+        else -> "Other"
     }
 }

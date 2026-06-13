@@ -1,13 +1,28 @@
 package com.ezcar24.business.data.repository
 
+import com.ezcar24.business.data.local.AccountTransaction
+import com.ezcar24.business.data.local.ActiveDatabaseProvider
+import com.ezcar24.business.data.local.Expense
+import com.ezcar24.business.data.local.HoldingCostSettings
+import com.ezcar24.business.data.local.Part
+import com.ezcar24.business.data.local.PartBatch
+import com.ezcar24.business.data.local.PartSale
+import com.ezcar24.business.data.local.PartSaleLineItem
+import com.ezcar24.business.data.local.Sale
+import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
+import com.ezcar24.business.util.calculator.HoldingCostCalculator
+import com.ezcar24.business.util.calculator.VehicleFinancialsCalculator
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.postgrest
+import java.math.BigDecimal
 import java.net.HttpURLConnection
 import java.net.URL
+import java.time.ZoneId
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
@@ -88,6 +103,81 @@ data class MonthlyReportPreview(
     val netCashMovement: String
 )
 
+data class MonthlyReportSnapshot(
+    val reportMonth: ReportMonth,
+    val periodLabel: String,
+    val generatedAt: Date,
+    val executiveSummary: MonthlyReportExecutiveSummary,
+    val expenseCategories: List<MonthlyReportCategorySummary>,
+    val vehicleSales: List<MonthlyReportVehicleSaleSummary>,
+    val partSales: List<MonthlyReportPartSaleSummary>,
+    val cashMovement: MonthlyReportCashMovementSummary,
+    val inventory: MonthlyReportInventorySummary,
+    val topProfitableVehicles: List<MonthlyReportVehicleSaleSummary>,
+    val lossMakingVehicles: List<MonthlyReportVehicleSaleSummary>
+)
+
+data class MonthlyReportExecutiveSummary(
+    val totalRevenue: BigDecimal,
+    val vehicleRevenue: BigDecimal,
+    val partRevenue: BigDecimal,
+    val realizedSalesProfit: BigDecimal,
+    val vehicleProfit: BigDecimal,
+    val partProfit: BigDecimal,
+    val monthlyExpenses: BigDecimal,
+    val netCashMovement: BigDecimal,
+    val vehicleSalesCount: Int,
+    val partSalesCount: Int,
+    val inventoryCount: Int,
+    val inventoryCapital: BigDecimal,
+    val partsUnitsInStock: BigDecimal,
+    val partsInventoryCost: BigDecimal
+)
+
+data class MonthlyReportCategorySummary(
+    val title: String,
+    val amount: BigDecimal,
+    val count: Int,
+    val share: Double
+)
+
+data class MonthlyReportVehicleSaleSummary(
+    val id: UUID,
+    val title: String,
+    val buyerName: String,
+    val soldAt: Date,
+    val revenue: BigDecimal,
+    val purchasePrice: BigDecimal,
+    val vehicleExpenses: BigDecimal,
+    val holdingCost: BigDecimal,
+    val realizedProfit: BigDecimal
+)
+
+data class MonthlyReportPartSaleSummary(
+    val id: UUID,
+    val soldAt: Date,
+    val buyerName: String,
+    val summary: String,
+    val revenue: BigDecimal,
+    val costOfGoodsSold: BigDecimal,
+    val realizedProfit: BigDecimal
+)
+
+data class MonthlyReportCashMovementSummary(
+    val depositsTotal: BigDecimal,
+    val withdrawalsTotal: BigDecimal,
+    val netMovement: BigDecimal,
+    val transactionCount: Int
+)
+
+data class MonthlyReportInventorySummary(
+    val vehicleCount: Int,
+    val vehicleCapital: BigDecimal,
+    val partsCount: Int,
+    val partsUnitsInStock: BigDecimal,
+    val partsInventoryCost: BigDecimal
+)
+
 @Serializable
 private data class MonthlyReportDispatchRequest(
     val mode: String,
@@ -137,7 +227,8 @@ private data class MonthlyReportFunctionErrorPayload(
 @Singleton
 class MonthlyReportRepository @Inject constructor(
     private val accountRepository: AccountRepository,
-    private val client: SupabaseClient
+    private val client: SupabaseClient,
+    private val databaseProvider: ActiveDatabaseProvider
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -237,6 +328,81 @@ class MonthlyReportRepository @Inject constructor(
         }
     }
 
+    suspend fun loadLocalSnapshot(month: ReportMonth): MonthlyReportSnapshot = withContext(Dispatchers.IO) {
+        val db = databaseProvider.currentDatabase()
+        val allVehicles = db.vehicleDao().getAllIncludingDeleted().filter { it.deletedAt == null }
+        val vehiclesById = allVehicles.associateBy { it.id }
+        val allExpenses = db.expenseDao().getAllIncludingDeleted().filter { it.deletedAt == null }
+        val allSales = db.saleDao().getAllIncludingDeleted().filter { it.deletedAt == null }
+        val allPartSales = db.partSaleDao().getAllIncludingDeleted().filter { it.deletedAt == null }
+        val allPartLineItems = db.partSaleLineItemDao().getAllIncludingDeleted().filter { it.deletedAt == null }
+        val allParts = db.partDao().getAllIncludingDeleted().filter { it.deletedAt == null }
+        val allPartBatches = db.partBatchDao().getAllIncludingDeleted().filter { it.deletedAt == null }
+        val allTransactions = db.accountTransactionDao().getAllIncludingDeleted().filter { it.deletedAt == null }
+        val settings = CloudSyncEnvironment.currentDealerId?.let { dealerId ->
+            db.holdingCostSettingsDao().getByDealerId(dealerId)
+        } ?: db.holdingCostSettingsDao().getAllIncludingDeleted().maxByOrNull { it.updatedAt ?: it.createdAt }
+
+        val interval = month.dateInterval()
+        val expensesInMonth = allExpenses.filter { it.date.inRange(interval) }
+        val vehicleSales = allSales
+            .filter { (it.date ?: vehiclesById[it.vehicleId]?.saleDate)?.inRange(interval) == true }
+            .map { sale -> sale.toVehicleSaleSummary(vehiclesById[sale.vehicleId], allExpenses, settings) }
+            .sortedByDescending { it.soldAt }
+        val lineItemsBySale = allPartLineItems.groupBy { it.saleId }
+        val partsById = allParts.associateBy { it.id }
+        val partSales = allPartSales
+            .filter { it.date.inRange(interval) }
+            .map { sale -> sale.toPartSaleSummary(lineItemsBySale[sale.id].orEmpty(), partsById) }
+            .sortedByDescending { it.soldAt }
+        val transactionsInMonth = allTransactions.filter { it.date.inRange(interval) }
+        val expenseCategories = expensesInMonth.toExpenseCategories()
+        val cashMovement = transactionsInMonth.toCashMovementSummary()
+        val inventory = makeInventorySummary(
+            vehicles = allVehicles,
+            expenses = allExpenses,
+            parts = allParts,
+            partBatches = allPartBatches
+        )
+        val vehicleRevenue = vehicleSales.sumMoney { it.revenue }
+        val partRevenue = partSales.sumMoney { it.revenue }
+        val vehicleProfit = vehicleSales.sumMoney { it.realizedProfit }
+        val partProfit = partSales.sumMoney { it.realizedProfit }
+        val sortedByProfit = vehicleSales.sortedWith(
+            compareByDescending<MonthlyReportVehicleSaleSummary> { it.realizedProfit }
+                .thenByDescending { it.soldAt }
+        )
+
+        MonthlyReportSnapshot(
+            reportMonth = month,
+            periodLabel = interval.periodLabel(),
+            generatedAt = Date(),
+            executiveSummary = MonthlyReportExecutiveSummary(
+                totalRevenue = vehicleRevenue + partRevenue,
+                vehicleRevenue = vehicleRevenue,
+                partRevenue = partRevenue,
+                realizedSalesProfit = vehicleProfit + partProfit,
+                vehicleProfit = vehicleProfit,
+                partProfit = partProfit,
+                monthlyExpenses = expensesInMonth.sumMoney { it.amount },
+                netCashMovement = cashMovement.netMovement,
+                vehicleSalesCount = vehicleSales.size,
+                partSalesCount = partSales.size,
+                inventoryCount = inventory.vehicleCount,
+                inventoryCapital = inventory.vehicleCapital,
+                partsUnitsInStock = inventory.partsUnitsInStock,
+                partsInventoryCost = inventory.partsInventoryCost
+            ),
+            expenseCategories = expenseCategories,
+            vehicleSales = vehicleSales,
+            partSales = partSales,
+            cashMovement = cashMovement,
+            inventory = inventory,
+            topProfitableVehicles = sortedByProfit.filter { it.realizedProfit > BigDecimal.ZERO }.take(5),
+            lossMakingVehicles = sortedByProfit.reversed().filter { it.realizedProfit < BigDecimal.ZERO }.take(5)
+        )
+    }
+
     private suspend inline fun <reified T> invokeDispatch(
         mode: String,
         organizationId: UUID,
@@ -301,5 +467,168 @@ class MonthlyReportRepository @Inject constructor(
         }.getOrNull()?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
 
         return trimmed
+    }
+
+    private fun ReportMonth.dateInterval(): Pair<Date, Date> {
+        val zone = ZoneId.systemDefault()
+        val start = YearMonth.of(year, month).atDay(1).atStartOfDay(zone).toInstant()
+        val end = YearMonth.of(year, month).plusMonths(1).atDay(1).atStartOfDay(zone).toInstant()
+        return Date.from(start) to Date.from(end)
+    }
+
+    private fun Date.inRange(interval: Pair<Date, Date>): Boolean {
+        return !before(interval.first) && before(interval.second)
+    }
+
+    private fun Pair<Date, Date>.periodLabel(): String {
+        val formatter = DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault())
+        val zone = ZoneId.systemDefault()
+        val start = first.toInstant().atZone(zone).toLocalDate()
+        val end = second.toInstant().atZone(zone).toLocalDate().minusDays(1)
+        return "${formatter.format(start)} - ${formatter.format(end)}"
+    }
+
+    private fun Sale.toVehicleSaleSummary(
+        vehicle: Vehicle?,
+        allExpenses: List<Expense>,
+        settings: HoldingCostSettings?
+    ): MonthlyReportVehicleSaleSummary {
+        val soldAt = date ?: vehicle?.saleDate ?: Date()
+        val vehicleExpenses = vehicle?.let { currentVehicle ->
+            allExpenses
+                .filter { it.vehicleId == currentVehicle.id && !it.date.after(soldAt) }
+                .sumMoney { it.amount }
+        } ?: BigDecimal.ZERO
+        val holdingCost = if (vehicle != null && settings != null) {
+            HoldingCostCalculator.calculateAccumulatedHoldingCost(
+                vehicle = vehicle,
+                settings = settings,
+                allExpenses = allExpenses.filter { it.vehicleId == vehicle.id && !it.date.after(soldAt) },
+                asOfDate = soldAt
+            )
+        } else {
+            BigDecimal.ZERO
+        }
+        val revenue = amount ?: BigDecimal.ZERO
+        val purchasePrice = vehicle?.purchasePrice ?: BigDecimal.ZERO
+        val totalCost = vehicle?.let { currentVehicle ->
+            VehicleFinancialsCalculator.calculateTotalCost(
+                vehicle = currentVehicle,
+                allExpenses = allExpenses.filter { it.vehicleId == currentVehicle.id && !it.date.after(soldAt) },
+                holdingCost = holdingCost
+            )
+        } ?: BigDecimal.ZERO
+
+        return MonthlyReportVehicleSaleSummary(
+            id = id,
+            title = vehicleTitle(vehicle),
+            buyerName = buyerName.trimmedOr("Walk-in buyer"),
+            soldAt = soldAt,
+            revenue = revenue,
+            purchasePrice = purchasePrice,
+            vehicleExpenses = vehicleExpenses,
+            holdingCost = holdingCost,
+            realizedProfit = if (vehicle != null) {
+                VehicleFinancialsCalculator.calculateActualProfit(revenue, totalCost)
+            } else {
+                revenue
+            }
+        )
+    }
+
+    private fun PartSale.toPartSaleSummary(
+        lineItems: List<PartSaleLineItem>,
+        partsById: Map<UUID, Part>
+    ): MonthlyReportPartSaleSummary {
+        val costOfGoodsSold = lineItems.sumMoney { it.unitCost * it.quantity }
+        return MonthlyReportPartSaleSummary(
+            id = id,
+            soldAt = date,
+            buyerName = buyerName.trimmedOr("Walk-in buyer"),
+            summary = partSaleSummary(lineItems, partsById),
+            revenue = amount,
+            costOfGoodsSold = costOfGoodsSold,
+            realizedProfit = amount - costOfGoodsSold
+        )
+    }
+
+    private fun List<Expense>.toExpenseCategories(): List<MonthlyReportCategorySummary> {
+        val total = sumMoney { it.amount }
+        return groupBy { it.category.trim().ifEmpty { "Other" } }
+            .map { (title, rows) ->
+                val amount = rows.sumMoney { it.amount }
+                MonthlyReportCategorySummary(
+                    title = title.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() },
+                    amount = amount,
+                    count = rows.size,
+                    share = if (total > BigDecimal.ZERO) amount.toDouble() / total.toDouble() else 0.0
+                )
+            }
+            .sortedWith(compareByDescending<MonthlyReportCategorySummary> { it.amount }.thenBy { it.title })
+    }
+
+    private fun List<AccountTransaction>.toCashMovementSummary(): MonthlyReportCashMovementSummary {
+        val deposits = filter { it.transactionType.lowercase(Locale.US) == "deposit" }.sumMoney { it.amount }
+        val withdrawals = filter { it.transactionType.lowercase(Locale.US) == "withdrawal" }.sumMoney { it.amount }
+        return MonthlyReportCashMovementSummary(
+            depositsTotal = deposits,
+            withdrawalsTotal = withdrawals,
+            netMovement = deposits - withdrawals,
+            transactionCount = size
+        )
+    }
+
+    private fun makeInventorySummary(
+        vehicles: List<Vehicle>,
+        expenses: List<Expense>,
+        parts: List<Part>,
+        partBatches: List<PartBatch>
+    ): MonthlyReportInventorySummary {
+        val inventoryVehicles = vehicles.filter { it.status != "sold" }
+        val expensesByVehicle = expenses.groupBy { it.vehicleId }
+        val vehicleCapital = inventoryVehicles.sumMoney { vehicle ->
+            vehicle.purchasePrice + expensesByVehicle[vehicle.id].orEmpty().sumMoney { it.amount }
+        }
+        val activePartIds = parts.map { it.id }.toSet()
+        val activeBatches = partBatches.filter { it.partId in activePartIds && it.quantityRemaining > BigDecimal.ZERO }
+        val partsUnitsInStock = activeBatches.sumMoney { it.quantityRemaining }
+        val partsInventoryCost = activeBatches.sumMoney { it.quantityRemaining * it.unitCost }
+
+        return MonthlyReportInventorySummary(
+            vehicleCount = inventoryVehicles.size,
+            vehicleCapital = vehicleCapital,
+            partsCount = activeBatches.map { it.partId }.distinct().size,
+            partsUnitsInStock = partsUnitsInStock,
+            partsInventoryCost = partsInventoryCost
+        )
+    }
+
+    private fun vehicleTitle(vehicle: Vehicle?): String {
+        return listOfNotNull(vehicle?.make, vehicle?.model)
+            .joinToString(" ")
+            .trim()
+            .ifEmpty { vehicle?.vin?.takeIf { it.isNotBlank() } ?: "Vehicle" }
+    }
+
+    private fun partSaleSummary(
+        lineItems: List<PartSaleLineItem>,
+        partsById: Map<UUID, Part>
+    ): String {
+        val titles = lineItems.mapNotNull { item ->
+            partsById[item.partId]?.name?.trim()?.takeIf { it.isNotEmpty() }
+        }
+        return when {
+            titles.isEmpty() -> "Parts sale"
+            titles.size == 1 -> titles.first()
+            else -> "${titles.first()} + ${titles.size - 1} more"
+        }
+    }
+
+    private fun String?.trimmedOr(fallback: String): String {
+        return this?.trim()?.takeIf { it.isNotEmpty() } ?: fallback
+    }
+
+    private inline fun <T> Iterable<T>.sumMoney(selector: (T) -> BigDecimal): BigDecimal {
+        return fold(BigDecimal.ZERO) { total, item -> total + selector(item) }
     }
 }

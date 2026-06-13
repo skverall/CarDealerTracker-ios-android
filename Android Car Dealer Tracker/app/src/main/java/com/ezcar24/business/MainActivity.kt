@@ -32,6 +32,8 @@ import com.ezcar24.business.ui.theme.CarDealerTrackerAndroidTheme
 import com.ezcar24.business.ui.main.MainScreen
 import com.ezcar24.business.ui.main.MainViewModel
 import com.ezcar24.business.ui.update.ForceUpdateScreen
+import com.ezcar24.business.util.AppTheme
+import com.ezcar24.business.util.PermissionKey
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -58,10 +60,11 @@ class MainActivity : ComponentActivity() {
         handleIntent(intent)
 
         setContent {
-            CarDealerTrackerAndroidTheme {
+            val regionSettingsManager = rememberRegionSettingsManager()
+            val regionState by regionSettingsManager.state.collectAsState()
+
+            CarDealerTrackerAndroidTheme(darkTheme = regionState.selectedTheme == AppTheme.DARK) {
                 val isUpdateRequired by versionChecker.isUpdateRequired.collectAsState()
-                val regionSettingsManager = rememberRegionSettingsManager()
-                val regionState by regionSettingsManager.state.collectAsState()
 
                 // Check for updates on launch (matching iOS)
                 LaunchedEffect(Unit) {
@@ -219,7 +222,8 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable("debts") {
                                     com.ezcar24.business.ui.finance.DebtListScreen(
-                                        onBack = { navController.popBackStack() }
+                                        onBack = { navController.popBackStack() },
+                                        canDeleteRecords = permissionState.can(PermissionKey.DELETE_RECORDS)
                                     )
                                 }
                                 composable("settings") {
@@ -232,6 +236,9 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToMonthlyReports = { navController.navigate("monthly_report_settings") },
                                         onNavigateToDataHealth = { navController.navigate("data_health") },
                                         onNavigateToHoldingCostSettings = { navController.navigate("holding_cost_settings_root") },
+                                        onNavigateToDealDesk = { navController.navigate("deal_desk_settings") },
+                                        onNavigateToEditProfile = { navController.navigate("edit_profile") },
+                                        onNavigateToReferralStats = { navController.navigate("referral_stats") },
                                         onNavigateToChangePassword = { navController.navigate("change_password") },
                                         onNavigateToUserGuide = { navController.navigate("user_guide") },
                                         onNavigateToPaywall = { navController.navigate("paywall") },
@@ -240,12 +247,27 @@ class MainActivity : ComponentActivity() {
                                             navController.navigate("login") {
                                                 popUpTo(0) { inclusive = true }
                                             }
-                                        }
+                                        },
+                                        permissionState = permissionState
                                     )
                                 }
                                 composable("holding_cost_settings_root") {
                                     com.ezcar24.business.ui.settings.HoldingCostSettingsScreen(
                                         onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("deal_desk_settings") {
+                                    com.ezcar24.business.ui.settings.DealDeskSettingsScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("edit_profile") {
+                                    val settingsEntry = remember(navController) {
+                                        navController.getBackStackEntry("settings")
+                                    }
+                                    com.ezcar24.business.ui.settings.EditProfileScreen(
+                                        onBack = { navController.popBackStack() },
+                                        viewModel = androidx.hilt.navigation.compose.hiltViewModel(settingsEntry)
                                     )
                                 }
                                 composable("region_settings") {
@@ -275,11 +297,22 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable("monthly_report_settings") {
                                     com.ezcar24.business.ui.settings.MonthlyReportSettingsScreen(
+                                        onBack = { navController.popBackStack() },
+                                        onNavigateToPreview = { navController.navigate("monthly_report_preview") }
+                                    )
+                                }
+                                composable("monthly_report_preview") {
+                                    com.ezcar24.business.ui.settings.MonthlyReportPreviewScreen(
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
                                 composable("data_health") {
                                     com.ezcar24.business.ui.settings.DataHealthScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("referral_stats") {
+                                    com.ezcar24.business.ui.settings.ReferralStatsScreen(
                                         onBack = { navController.popBackStack() }
                                     )
                                 }

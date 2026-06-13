@@ -81,7 +81,7 @@ fun PartDetailBottomSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Part Details",
+                    text = localizedUiString("Part Details"),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold
                 )
@@ -151,7 +151,7 @@ fun PartDetailBottomSheet(
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Text(
-                                    text = "Notes",
+                                    text = localizedUiString("Notes"),
                                     style = MaterialTheme.typography.labelLarge,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -175,7 +175,7 @@ fun PartDetailBottomSheet(
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Batches",
+                                text = localizedUiString("Batches"),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -183,7 +183,7 @@ fun PartDetailBottomSheet(
 
                             if (sortedBatches.isEmpty()) {
                                 Text(
-                                    text = "No stock batches recorded yet",
+                                    text = localizedUiString("No stock batches recorded yet"),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Color.Gray
                                 )
@@ -277,7 +277,7 @@ private fun PartBatchRow(
     formatCurrency: (BigDecimal) -> String
 ) {
     val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-    val title = batch.batchLabel?.trim()?.takeIf { it.isNotEmpty() } ?: "Unnamed batch"
+    val title = batch.batchLabel?.trim()?.takeIf { it.isNotEmpty() } ?: localizedUiString("Unnamed batch")
     val batchValue = batch.quantityRemaining.multiply(batch.unitCost)
 
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -354,7 +354,7 @@ private fun PartBatchDetailLine(
                 tint = Color.Gray
             )
             Text(
-                text = label,
+                text = localizedUiString(label),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray
             )

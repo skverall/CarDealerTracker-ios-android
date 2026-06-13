@@ -39,6 +39,11 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
+private val remoteModelJson = Json {
+    ignoreUnknownKeys = true
+    coerceInputValues = true
+}
+
 @Singleton
 class CloudSyncManager @Inject constructor(
     private val client: SupabaseClient,
@@ -363,6 +368,7 @@ class CloudSyncManager @Inject constructor(
             lastSyncAt = lastSyncTimestamp(dealerId),
             isSyncing = isSyncing,
             offlineQueueCount = queueItems.count(),
+            oldestQueuedAt = queueItems.minByOrNull { it.createdAt }?.createdAt,
             offlineQueueSummary = queueSummary,
             entityCounts = entityCounts,
             remoteFetchError = remoteFetchError
@@ -1574,7 +1580,12 @@ class CloudSyncManager @Inject constructor(
                 updatedAt = remoteUpdated,
                 deletedAt = null,
                 vehicleId = vehicleId,
-                accountId = accountId
+                accountId = accountId,
+                dealDeskPayload = remote.dealDeskPayload?.let {
+                    json.encodeToString(JsonElement.serializer(), it)
+                },
+                dealDeskTemplateCode = remote.dealDeskTemplateCode,
+                dealDeskTemplateVersion = remote.dealDeskTemplateVersion
             )
             db.saleDao().upsert(newSale)
         }
@@ -3418,6 +3429,7 @@ data class SyncDiagnosticsReport(
     val lastSyncAt: Date?,
     val isSyncing: Boolean,
     val offlineQueueCount: Int,
+    val oldestQueuedAt: Date?,
     val offlineQueueSummary: List<SyncQueueSummaryItem>,
     val entityCounts: List<SyncEntityCount>,
     val remoteFetchError: String?
@@ -3469,6 +3481,11 @@ fun Sale.toRemote(dealerId: String): RemoteSale? {
         paymentMethod = paymentMethod,
         accountId = accountId?.toString(),
         notes = null,
+        dealDeskPayload = dealDeskPayload?.let {
+            runCatching { remoteModelJson.decodeFromString(JsonElement.serializer(), it) }.getOrNull()
+        },
+        dealDeskTemplateCode = dealDeskTemplateCode,
+        dealDeskTemplateVersion = dealDeskTemplateVersion,
         createdAt = DateUtils.formatDateAndTime(Date()),
         updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
         deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }

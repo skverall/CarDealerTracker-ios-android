@@ -2,6 +2,7 @@ package com.ezcar24.business.data.sync
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 import java.math.BigDecimal
 import com.ezcar24.business.util.BigDecimalSerializer
 
@@ -95,6 +96,9 @@ data class RemoteSale(
     @SerialName("payment_method") val paymentMethod: String? = null,
     @SerialName("account_id") val accountId: String? = null,
     val notes: String? = null,
+    @SerialName("deal_desk_payload") val dealDeskPayload: JsonElement? = null,
+    @SerialName("deal_desk_template_code") val dealDeskTemplateCode: String? = null,
+    @SerialName("deal_desk_template_version") val dealDeskTemplateVersion: Int? = null,
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
     @SerialName("deleted_at") val deletedAt: String? = null

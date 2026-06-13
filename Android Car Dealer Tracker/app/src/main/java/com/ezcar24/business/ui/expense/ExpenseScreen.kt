@@ -105,9 +105,15 @@ fun ExpenseScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No expenses found",
+                            text = localizedUiString("No expenses found"),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = localizedUiString("Add your first expense to start tracking spending."),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray.copy(alpha = 0.72f)
                         )
                     }
                 }
@@ -195,7 +201,7 @@ fun ExpenseHeader(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = dateFilter.label,
+            text = localizedUiString(dateFilter.label),
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )
@@ -229,13 +235,46 @@ fun ExpenseFilters(
             var expanded by remember { mutableStateOf(false) }
             Box {
                 FilterChip(
+                    selected = uiState.dateFilter != DateFilter.ALL,
+                    onClick = { expanded = true },
+                    label = {
+                        Text(
+                            text = localizedUiString(uiState.dateFilter.label),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Gray
+                        )
+                    },
+                    trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null, tint = Color.Gray, modifier = Modifier.size(16.dp)) },
+                    colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
+                    border = null,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.height(48.dp)
+                )
+                DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    DateFilter.values().forEach { filter ->
+                        DropdownMenuItem(
+                            text = { Text(localizedUiString(filter.label)) },
+                            onClick = {
+                                onDateFilterSelect(filter)
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
+
+        item {
+            var expanded by remember { mutableStateOf(false) }
+            Box {
+                FilterChip(
                     selected = uiState.selectedVehicle != null,
                     onClick = { expanded = true },
                     label = {
                         val display = listOfNotNull(
                             uiState.selectedVehicle?.make,
                             uiState.selectedVehicle?.model
-                        ).joinToString(" ").ifBlank { "Vehicle" }
+                        ).joinToString(" ").ifBlank { localizedUiString("Vehicle") }
                         Text(
                             text = display,
                             style = MaterialTheme.typography.bodyMedium,
@@ -246,7 +285,7 @@ fun ExpenseFilters(
                     colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
                     border = null,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(40.dp)
+                    modifier = Modifier.height(48.dp)
                 )
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
@@ -283,7 +322,7 @@ fun ExpenseFilters(
                     onClick = { expanded = true },
                     label = {
                         Text(
-                            text = uiState.selectedUser?.name ?: "Employee",
+                            text = uiState.selectedUser?.name ?: localizedUiString("Employee"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.Gray
                         )
@@ -292,7 +331,7 @@ fun ExpenseFilters(
                     colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
                     border = null,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(40.dp)
+                    modifier = Modifier.height(48.dp)
                 )
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
@@ -323,7 +362,7 @@ fun ExpenseFilters(
                     onClick = { expanded = true },
                     label = {
                         Text(
-                            text = if (uiState.selectedCategory == "All") "Category" else uiState.selectedCategory,
+                            text = localizedUiString(if (uiState.selectedCategory == "All") "Category" else uiState.selectedCategory),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.Gray
                         )
@@ -332,13 +371,13 @@ fun ExpenseFilters(
                     colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
                     border = null,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(40.dp)
+                    modifier = Modifier.height(48.dp)
                 )
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     val categories = listOf("All", "Vehicle", "Personal", "Employee", "Bills", "Marketing")
                     categories.forEach { cat ->
                         DropdownMenuItem(
-                            text = { Text(cat) },
+                            text = { Text(localizedUiString(cat)) },
                             onClick = {
                                 onCategorySelect(cat)
                                 expanded = false
@@ -363,7 +402,7 @@ fun ExpenseFilters(
                             null -> "Expense Type"
                         }
                         Text(
-                            text = text,
+                            text = localizedUiString(text),
                             style = MaterialTheme.typography.bodyMedium,
                             color = Color.Gray
                         )
@@ -372,7 +411,7 @@ fun ExpenseFilters(
                     colors = FilterChipDefaults.filterChipColors(containerColor = Color.White, labelColor = Color.Black),
                     border = null,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.height(40.dp)
+                    modifier = Modifier.height(48.dp)
                 )
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(
@@ -428,7 +467,7 @@ fun ExpenseList(
         grouped.forEach { (bucket, list) ->
             item {
                 Text(
-                    text = bucket,
+                    text = localizedUiString(bucket),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.Gray,
@@ -456,6 +495,7 @@ fun ExpenseItem(
     val regionSettingsManager = rememberRegionSettingsManager()
     val dateFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
     val displayDateTime = remember(expense.date, expense.createdAt) { expenseDisplayDateTime(expense) }
+    val expenseTypeText = localizedUiString(getExpenseTypeLabel(expense.expenseType))
 
     Row(
         modifier = Modifier
@@ -488,7 +528,7 @@ fun ExpenseItem(
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = "${dateFormat.format(displayDateTime)} • ${getExpenseTypeLabel(expense.expenseType)}",
+                text = "${dateFormat.format(displayDateTime)} • $expenseTypeText",
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray
             )

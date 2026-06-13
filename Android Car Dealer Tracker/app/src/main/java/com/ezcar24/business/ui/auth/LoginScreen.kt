@@ -225,7 +225,7 @@ fun LoginScreen(
                                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                         Icon(
                                             imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                            contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                                            contentDescription = localizedUiString(if (passwordVisible) "Hide password" else "Show password"),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
@@ -240,7 +240,7 @@ fun LoginScreen(
                                     contentPadding = ButtonDefaults.TextButtonContentPadding
                                 ) {
                                     Text(
-                                        text = "Forgot password?",
+                                        text = localizedUiString("Forgot password?"),
                                         style = MaterialTheme.typography.bodySmall,
                                         fontWeight = FontWeight.SemiBold,
                                         color = MaterialTheme.colorScheme.primary
@@ -263,7 +263,7 @@ fun LoginScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(
-                                    text = "Have an invite code?",
+                                    text = localizedUiString("Have an invite code?"),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -334,9 +334,9 @@ fun LoginScreen(
                     ) {
                         Text(
                             text = if (uiState.mode == AuthMode.SIGN_IN) {
-                                "Don't have an account?"
+                                localizedUiString("Don't have an account?")
                             } else {
-                                "Already have an account?"
+                                localizedUiString("Already have an account?")
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -351,7 +351,7 @@ fun LoginScreen(
                             contentPadding = ButtonDefaults.TextButtonContentPadding
                         ) {
                             Text(
-                                text = if (uiState.mode == AuthMode.SIGN_IN) "Sign Up" else "Sign In",
+                                text = localizedUiString(if (uiState.mode == AuthMode.SIGN_IN) "Sign Up" else "Sign In"),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onBackground
@@ -366,7 +366,7 @@ fun LoginScreen(
                         contentPadding = ButtonDefaults.TextButtonContentPadding
                     ) {
                         Text(
-                            text = "Continue as Guest",
+                            text = localizedUiString("Continue as Guest"),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -470,7 +470,7 @@ private fun AuthTextField(
                     Box(modifier = Modifier.fillMaxWidth()) {
                         if (value.isEmpty()) {
                             Text(
-                                text = placeholder,
+                                text = localizedUiString(placeholder),
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )

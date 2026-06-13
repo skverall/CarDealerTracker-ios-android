@@ -23,8 +23,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
@@ -62,6 +62,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.repository.TeamInviteResult
@@ -98,7 +99,7 @@ fun TeamMembersScreen(
                 title = {
                     Column {
                         Text(
-                            text = "Team Management",
+                            text = localizedUiString("Team Management"),
                             fontWeight = FontWeight.Bold,
                             color = EzcarNavy
                         )
@@ -113,7 +114,11 @@ fun TeamMembersScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = localizedUiString("Back"), tint = EzcarNavy)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = localizedUiString("Back"),
+                            tint = EzcarNavy
+                        )
                     }
                 },
                 actions = {
@@ -174,7 +179,7 @@ fun TeamMembersScreen(
                     uiState.error?.let { error ->
                         item {
                             TeamStatusCard(
-                                text = error,
+                                text = localizedUiString(error),
                                 color = EzcarDanger,
                                 onDismiss = viewModel::clearMessages
                             )
@@ -321,25 +326,25 @@ private fun TeamSummaryCard(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = organizationName ?: "No active business",
+                text = organizationName ?: localizedUiString("No active business"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = EzcarNavy
             )
             Text(
-                text = role?.replaceFirstChar { it.titlecase(Locale.getDefault()) }
-                    ?: "Switch to a business in Account first",
+                text = role?.let { localizedRoleName(it) }
+                    ?: localizedUiString("Switch to a business in Account first"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 TeamMetricPill(
-                    label = "Active",
+                    label = localizedUiString("Active"),
                     value = memberCount.toString(),
                     color = EzcarBlueBright
                 )
                 TeamMetricPill(
-                    label = "Invited",
+                    label = localizedUiString("Invited"),
                     value = inviteCount.toString(),
                     color = EzcarOrange
                 )
@@ -401,16 +406,20 @@ private fun EmptyTeamState() {
             }
             Spacer(modifier = Modifier.height(14.dp))
             Text(
-                text = "No team members yet",
+                text = localizedUiString("No team members yet"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = EzcarNavy
+                color = EzcarNavy,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Invite teammates by email and assign the correct role.",
+                text = localizedUiString("Invite teammates by email and assign the correct role."),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }
@@ -452,13 +461,13 @@ private fun TeamMemberCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = member.email ?: "Unknown user",
+                        text = member.email ?: localizedUiString("Unknown user"),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.SemiBold,
                         color = EzcarNavy
                     )
                     Text(
-                        text = if (member.isInvited) "Pending invite" else "Active member",
+                        text = localizedUiString(if (member.isInvited) "Pending invite" else "Active member"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -467,7 +476,7 @@ private fun TeamMemberCard(
             }
 
             Text(
-                text = TeamPermissionCatalog.permissionSummary(member.permissions, member.role),
+                text = localizedPermissionSummary(member.permissions, member.role),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -506,11 +515,14 @@ private fun TeamRoleBadge(role: String, isInvited: Boolean) {
         "viewer" -> EzcarOrange
         else -> EzcarNavy
     }
+    val roleLabel = localizedRoleName(role)
+    val badgeText = if (isInvited) {
+        "$roleLabel • ${localizedUiString("Invite")}"
+    } else {
+        roleLabel
+    }
     Text(
-        text = buildString {
-            append(role.replaceFirstChar { it.titlecase(Locale.getDefault()) })
-            if (isInvited) append(" • Invite")
-        },
+        text = badgeText,
         modifier = Modifier
             .background(color.copy(alpha = 0.12f), RoundedCornerShape(999.dp))
             .padding(horizontal = 10.dp, vertical = 6.dp),
@@ -549,7 +561,7 @@ private fun InviteMemberDialog(
                     }
                 )
                 Text(
-                    text = "Role",
+                    text = localizedUiString("Role"),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -567,24 +579,24 @@ private fun InviteMemberDialog(
                             ),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text(option.replaceFirstChar { it.titlecase(Locale.getDefault()) })
+                            Text(localizedRoleName(option))
                         }
                     }
                 }
                 Text(
-                    text = TeamPermissionCatalog.roleSummary(role),
+                    text = localizedUiString(TeamPermissionCatalog.roleSummary(role)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Create account now",
+                            text = localizedUiString("Create account now"),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = "Create a login immediately instead of sending only an invite code.",
+                            text = localizedUiString("Create a login immediately instead of sending only an invite code."),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -618,7 +630,7 @@ private fun InviteMemberDialog(
                 },
                 enabled = email.trim().isNotEmpty() && !isLoading
             ) {
-                Text(if (isLoading) "Inviting..." else "Invite")
+                Text(localizedUiString(if (isLoading) "Inviting..." else "Invite"))
             }
         },
         dismissButton = {
@@ -665,12 +677,12 @@ private fun MemberRoleDialog(
                             ),
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text(option.replaceFirstChar { it.titlecase(Locale.getDefault()) })
+                            Text(localizedRoleName(option))
                         }
                     }
                 }
                 Text(
-                    text = TeamPermissionCatalog.roleSummary(role),
+                    text = localizedUiString(TeamPermissionCatalog.roleSummary(role)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -717,15 +729,16 @@ private fun DeleteMemberDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val memberLabel = member.email ?: localizedUiString("this member")
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (member.isInvited) "Remove Invite" else "Remove Member") },
+        title = { Text(localizedUiString(if (member.isInvited) "Remove Invite" else "Remove Member")) },
         text = {
             Text(
                 if (member.isInvited) {
-                    "This will cancel the pending invite for ${member.email}."
+                    localizedUiString("This will cancel the pending invite for %s.", memberLabel)
                 } else {
-                    "This will remove ${member.email} from the team."
+                    localizedUiString("This will remove %s from the team.", memberLabel)
                 }
             )
         },
@@ -756,7 +769,7 @@ private fun PermissionMatrix(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = "Access",
+                text = localizedUiString("Access"),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f)
@@ -808,12 +821,12 @@ private fun PermissionToggleCard(
             Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = option.title,
+                    text = localizedUiString(option.title),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium
                 )
                 Text(
-                    text = option.detail,
+                    text = localizedUiString(option.detail),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -832,31 +845,33 @@ private fun InviteResultDialog(
     onDismiss: () -> Unit,
     onCopy: (String) -> Unit
 ) {
+    val inviteMessage = inviteResult.message?.let { localizedUiString(it) }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(localizedUiString("Invite Ready")) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                inviteResult.message?.let {
+                inviteMessage?.let {
                     Text(it, style = MaterialTheme.typography.bodyMedium)
                 }
                 inviteResult.inviteCode?.let { code ->
                     ResultValueRow(
-                        label = "Invite code",
+                        label = localizedUiString("Invite code"),
                         value = code,
                         onCopy = { onCopy(code) }
                     )
                 }
                 inviteResult.generatedPassword?.let { password ->
                     ResultValueRow(
-                        label = "Generated password",
+                        label = localizedUiString("Generated password"),
                         value = password,
                         onCopy = { onCopy(password) }
                     )
                 }
                 inviteResult.inviteUrl?.let { url ->
                     ResultValueRow(
-                        label = "Fallback link",
+                        label = localizedUiString("Fallback link"),
                         value = url,
                         onCopy = { onCopy(url) }
                     )
@@ -898,11 +913,38 @@ private fun ResultValueRow(
             )
             Icon(
                 imageVector = Icons.Default.ContentCopy,
-                contentDescription = null,
+                contentDescription = localizedUiString("Copy"),
                 tint = EzcarNavy,
                 modifier = Modifier.clickable(onClick = onCopy)
             )
         }
+    }
+}
+
+@Composable
+private fun localizedRoleName(role: String): String {
+    return when (role) {
+        "owner" -> localizedUiString("Owner")
+        "admin" -> localizedUiString("Admin")
+        "sales" -> localizedUiString("Sales")
+        "viewer" -> localizedUiString("Viewer")
+        else -> role.replaceFirstChar { it.titlecase(Locale.getDefault()) }
+    }
+}
+
+@Composable
+private fun localizedPermissionSummary(input: Map<String, Boolean>?, role: String): String {
+    val resolved = TeamPermissionCatalog.resolvedPermissions(input, role)
+    val labels = mutableListOf<String>()
+    for (option in TeamPermissionCatalog.permissions) {
+        if (resolved[option.key] == true) {
+            labels.add(localizedUiString(option.title))
+        }
+    }
+    return if (labels.isEmpty()) {
+        localizedUiString("No access granted.")
+    } else {
+        labels.joinToString(separator = ", ")
     }
 }
 

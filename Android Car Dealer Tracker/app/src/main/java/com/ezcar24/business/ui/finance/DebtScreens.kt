@@ -40,6 +40,7 @@ import com.ezcar24.business.util.localizedUiString
 @Composable
 fun DebtListScreen(
     onBack: () -> Unit,
+    canDeleteRecords: Boolean = true,
     viewModel: DebtViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -52,9 +53,12 @@ fun DebtListScreen(
             payments = uiState.debtPayments,
             onBack = { viewModel.clearSelection() },
             onPay = { showPaymentDialog = uiState.selectedDebt!! },
+            canDelete = canDeleteRecords,
             onDelete = { 
-                viewModel.deleteDebt(uiState.selectedDebt!!.id) 
-                viewModel.clearSelection()
+                if (canDeleteRecords) {
+                    viewModel.deleteDebt(uiState.selectedDebt!!.id)
+                    viewModel.clearSelection()
+                }
             }
         )
         // Show Payment Dialog ON TOP of Detail Screen if needed
@@ -96,7 +100,8 @@ fun DebtListScreen(
                 viewModel = viewModel,
                 showAddDialog = showAddDialog,
                 onAddDialogDismiss = { showAddDialog = false },
-                onAddClick = { showAddDialog = true }
+                onAddClick = { showAddDialog = true },
+                canDeleteRecords = canDeleteRecords
             )
         }
     }
@@ -107,7 +112,8 @@ fun DebtsContent(
     viewModel: DebtViewModel = hiltViewModel(),
     showAddDialog: Boolean = false,
     onAddDialogDismiss: () -> Unit = {},
-    onAddClick: () -> Unit = {}
+    onAddClick: () -> Unit = {},
+    canDeleteRecords: Boolean = true
 ) {
     val uiState by viewModel.uiState.collectAsState()
     // Local state for dialogs that are internal to the content
@@ -213,6 +219,7 @@ fun DebtsContent(
                     debt = debt,
                     onClick = { editingDebt = debt },
                     onPayClick = { showPaymentDialog = debt },
+                    canDelete = canDeleteRecords,
                     onDelete = { viewModel.deleteDebt(debt.id) }
                 )
             }
@@ -249,6 +256,7 @@ fun DebtItem(
     debt: Debt,
     onClick: () -> Unit,
     onPayClick: () -> Unit,
+    canDelete: Boolean = true,
     onDelete: () -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
@@ -297,10 +305,12 @@ fun DebtItem(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                TextButton(onClick = onDelete) {
-                    Text(localizedUiString("Delete"), color = Color.Gray)
+                if (canDelete) {
+                    TextButton(onClick = onDelete) {
+                        Text(localizedUiString("Delete"), color = Color.Gray)
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 Button(
                     onClick = onPayClick,
                     colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright),
@@ -421,6 +431,7 @@ fun DebtDetailScreen(
     payments: List<com.ezcar24.business.data.local.DebtPayment>,
     onBack: () -> Unit,
     onPay: () -> Unit,
+    canDelete: Boolean = true,
     onDelete: () -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
@@ -435,8 +446,10 @@ fun DebtDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = EzcarDanger)
+                    if (canDelete) {
+                        IconButton(onClick = onDelete) {
+                            Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = EzcarDanger)
+                        }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)

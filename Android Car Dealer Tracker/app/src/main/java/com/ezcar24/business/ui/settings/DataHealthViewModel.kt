@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 data class DataHealthUiState(
     val report: SyncDiagnosticsReport? = null,
     val isRunning: Boolean = false,
+    val isRefreshing: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -27,10 +28,12 @@ class DataHealthViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     fun runDiagnostics() {
+        if (_uiState.value.isRunning || _uiState.value.isRefreshing) return
+
         viewModelScope.launch {
             val dealerId = CloudSyncEnvironment.currentDealerId
             if (dealerId == null) {
-                _uiState.update { it.copy(errorMessage = "Dealer ID not set") }
+                _uiState.update { it.copy(errorMessage = "No active business found.") }
                 return@launch
             }
 
@@ -40,6 +43,27 @@ class DataHealthViewModel @Inject constructor(
                 _uiState.update { it.copy(report = report, isRunning = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isRunning = false, errorMessage = e.message ?: "Diagnostics failed") }
+            }
+        }
+    }
+
+    fun runFullRefresh() {
+        if (_uiState.value.isRunning || _uiState.value.isRefreshing) return
+
+        viewModelScope.launch {
+            val dealerId = CloudSyncEnvironment.currentDealerId
+            if (dealerId == null) {
+                _uiState.update { it.copy(errorMessage = "No active business found.") }
+                return@launch
+            }
+
+            _uiState.update { it.copy(isRefreshing = true, errorMessage = null) }
+            try {
+                cloudSyncManager.manualSync(dealerId, force = true)
+                val report = cloudSyncManager.runDiagnostics(dealerId)
+                _uiState.update { it.copy(report = report, isRefreshing = false) }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isRefreshing = false, errorMessage = e.message ?: "Refresh failed") }
             }
         }
     }
