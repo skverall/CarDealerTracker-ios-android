@@ -50,6 +50,7 @@ import com.ezcar24.business.data.local.User
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import com.ezcar24.business.util.AppRegion
 import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
@@ -75,6 +76,26 @@ fun AddExpenseSheet(
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     var amountStr by remember { mutableStateOf("") }
+
+    val quickAddOptions = remember(regionState.selectedRegion) {
+        if (regionState.selectedRegion == AppRegion.JAPAN) {
+            listOf(
+                "Auction Fee",
+                "Inspection / Shaken",
+                "Repair",
+                "Transport",
+                "Warranty",
+                "Insurance",
+                "Plate / Registration"
+            )
+        } else {
+            listOf(
+                "Petrol",
+                "Insurance",
+                "Plate Number"
+            )
+        }
+    }
     var description by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("vehicle") }
     var date by remember { mutableStateOf(Date()) }
@@ -293,6 +314,26 @@ fun AddExpenseSheet(
                                     isSelected = category == key,
                                     onClick = {
                                         category = key
+                                        focusManager.clearFocus()
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(bottom = 24.dp)
+                        ) {
+                            items(quickAddOptions) { tag ->
+                                val isSelected = description.trim().lowercase(Locale.getDefault()) == tag.trim().lowercase(Locale.getDefault())
+                                QuickAddTagChip(
+                                    tag = tag,
+                                    isSelected = isSelected,
+                                    onClick = {
+                                        description = tag
                                         focusManager.clearFocus()
                                     }
                                 )
@@ -793,6 +834,32 @@ fun AddExpenseSheet(
                 }
             )
         }
+    }
+}
+
+@Composable
+fun QuickAddTagChip(
+    tag: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val backgroundColor = if (isSelected) EzcarNavy else Color(0xFFE2E8F0).copy(alpha = 0.7f)
+    val textColor = if (isSelected) Color.White else Color(0xFF1E293B)
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50.dp))
+            .background(backgroundColor)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = localizedUiString(tag),
+            style = MaterialTheme.typography.bodyMedium,
+            color = textColor,
+            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+        )
     }
 }
 

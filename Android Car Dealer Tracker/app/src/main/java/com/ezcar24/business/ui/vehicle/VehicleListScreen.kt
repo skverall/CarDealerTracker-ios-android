@@ -3,6 +3,7 @@ package com.ezcar24.business.ui.vehicle
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -24,12 +25,15 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Sort
+import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.outlined.Garage
 import androidx.compose.material.icons.outlined.LocalOffer
 import androidx.compose.material.icons.outlined.LocalShipping
@@ -58,6 +62,9 @@ import com.ezcar24.business.util.SubscriptionAccess
 import com.ezcar24.business.util.localizedUiString
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import kotlinx.coroutines.launch
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import coil.request.CachePolicy
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
 import java.util.*
@@ -76,18 +83,18 @@ fun VehicleListScreen(
     val uiState by viewModel.uiState.collectAsState()
     var quickSaleVehicle by remember { mutableStateOf<Vehicle?>(null) }
     var showVehicleLimitDialog by remember { mutableStateOf(false) }
-    
+
     LaunchedEffect(presetStatus) {
         if (presetStatus != null) {
             viewModel.setStatusFilter(presetStatus)
         }
     }
-    
+
     val pullRefreshState = rememberPullRefreshState(
         refreshing = uiState.isLoading,
         onRefresh = { viewModel.refresh() }
     )
-    
+
     val allVehicles = uiState.vehicles
 
     Scaffold(
@@ -150,7 +157,7 @@ fun VehicleListScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 // 1. Segmented Control
                 val isInventory = uiState.filterStatus != "sold"
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
@@ -173,7 +180,7 @@ fun VehicleListScreen(
                 val currentFilter = uiState.filterStatus
 
                 androidx.compose.foundation.lazy.LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -182,7 +189,7 @@ fun VehicleListScreen(
                             title = "Total",
                             count = totalCount,
                             icon = Icons.Default.DirectionsCar,
-                            color = Color.Black,
+                            color = Color(0xFF007AFF), // Brand primary blue
                             isActive = currentFilter == "all" || currentFilter == null,
                             onClick = { viewModel.setStatusFilter("all") }
                         )
@@ -199,9 +206,9 @@ fun VehicleListScreen(
                     }
                     item {
                         StatusCard(
-                            title = "In Garage",
+                            title = "Reserved",
                             count = inGarageCount,
-                            icon = Icons.Outlined.Garage,
+                            icon = Icons.Default.Home, // house.fill equivalent
                             color = EzcarOrange,
                             isActive = currentFilter == "owned",
                             onClick = { viewModel.setStatusFilter("owned") }
@@ -229,87 +236,188 @@ fun VehicleListScreen(
                     }
                 }
 
-
-
-                // 3. Search Bar
-                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                // 3. Search Bar Row
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     TextField(
                         value = uiState.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = { Text(localizedUiString("Search Make, Model, VIN..."), color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        placeholder = { Text(localizedUiString("Search vehicles..."), color = MaterialTheme.colorScheme.onSurfaceVariant) },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        trailingIcon = {
-                            Box {
-                                var showSortMenu by remember { mutableStateOf(false) }
-                                IconButton(onClick = { showSortMenu = true }) {
-                                    Icon(Icons.Default.Sort, contentDescription = localizedUiString("Sort"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                DropdownMenu(
-                                    expanded = showSortMenu,
-                                    onDismissRequest = { showSortMenu = false }
-                                ) {
-                                    val currentSort = uiState.sortOrder
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("Newest Added")) },
-                                        onClick = { viewModel.setSortOrder("newest"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "newest") Icon(Icons.Default.Check, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("Oldest Added")) },
-                                        onClick = { viewModel.setSortOrder("oldest"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "oldest") Icon(Icons.Default.Check, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("Price: Low to High")) },
-                                        onClick = { viewModel.setSortOrder("price_asc"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "price_asc") Icon(Icons.Default.Check, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("Price: High to Low")) },
-                                        onClick = { viewModel.setSortOrder("price_desc"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "price_desc") Icon(Icons.Default.Check, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("Year: Newest")) },
-                                        onClick = { viewModel.setSortOrder("year_desc"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "year_desc") Icon(Icons.Default.Check, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("Days: Low to High")) },
-                                        onClick = { viewModel.setSortOrder("days_asc"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "days_asc") Icon(Icons.Default.Check, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("Days: High to Low")) },
-                                        onClick = { viewModel.setSortOrder("days_desc"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "days_desc") Icon(Icons.Default.Check, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("ROI: Low to High")) },
-                                        onClick = { viewModel.setSortOrder("roi_asc"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "roi_asc") Icon(Icons.Default.Check, null) }
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(localizedUiString("ROI: High to Low")) },
-                                        onClick = { viewModel.setSortOrder("roi_desc"); showSortMenu = false },
-                                        leadingIcon = { if(currentSort == "roi_desc") Icon(Icons.Default.Check, null) }
-                                    )
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp)),
                         colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surface,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent,
                             focusedTextColor = MaterialTheme.colorScheme.onSurface,
                             unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                         ),
-                        singleLine = true
+                        singleLine = true,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .border(BorderStroke(1.dp, Color.Gray.copy(alpha = 0.2f)), RoundedCornerShape(10.dp))
                     )
+
+                    // Sort Button
+                    Box {
+                        var showSortMenu by remember { mutableStateOf(false) }
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White)
+                                .border(BorderStroke(1.dp, Color.Gray.copy(alpha = 0.2f)), RoundedCornerShape(10.dp))
+                                .clickable { showSortMenu = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Sort,
+                                contentDescription = localizedUiString("Sort"),
+                                tint = EzcarNavy,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            val currentSort = uiState.sortOrder
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("Newest Added")) },
+                                onClick = { viewModel.setSortOrder("newest"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "newest") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("Oldest Added")) },
+                                onClick = { viewModel.setSortOrder("oldest"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "oldest") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("Price: Low to High")) },
+                                onClick = { viewModel.setSortOrder("price_asc"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "price_asc") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("Price: High to Low")) },
+                                onClick = { viewModel.setSortOrder("price_desc"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "price_desc") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("Year: Newest")) },
+                                onClick = { viewModel.setSortOrder("year_desc"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "year_desc") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("Days: Low to High")) },
+                                onClick = { viewModel.setSortOrder("days_asc"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "days_asc") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("Days: High to Low")) },
+                                onClick = { viewModel.setSortOrder("days_desc"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "days_desc") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("ROI: Low to High")) },
+                                onClick = { viewModel.setSortOrder("roi_asc"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "roi_asc") Icon(Icons.Default.Check, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString("ROI: High to Low")) },
+                                onClick = { viewModel.setSortOrder("roi_desc"); showSortMenu = false },
+                                leadingIcon = { if(currentSort == "roi_desc") Icon(Icons.Default.Check, null) }
+                            )
+                        }
+                    }
+
+                    // Filter Menu Button
+                    if (uiState.filterStatus != "sold") {
+                        Box {
+                            var showFilterMenu by remember { mutableStateOf(false) }
+                            val isFilterActive = uiState.filterStatus != null && uiState.filterStatus != "all"
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(Color.White)
+                                    .border(
+                                        BorderStroke(
+                                            1.dp,
+                                            if (isFilterActive) EzcarNavy.copy(alpha = 0.5f) else Color.Gray.copy(alpha = 0.2f)
+                                        ),
+                                        RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable { showFilterMenu = true },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FilterList,
+                                    contentDescription = localizedUiString("Filter"),
+                                    tint = if (isFilterActive) EzcarNavy else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showFilterMenu,
+                                onDismissRequest = { showFilterMenu = false }
+                            ) {
+                                val currentFilter = uiState.filterStatus
+                                DropdownMenuItem(
+                                    text = { Text(localizedUiString("All Inventory")) },
+                                    onClick = { viewModel.setStatusFilter("all"); showFilterMenu = false },
+                                    leadingIcon = { if(currentFilter == "all" || currentFilter == null) Icon(Icons.Default.Check, null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(localizedUiString("Reserved")) },
+                                    onClick = { viewModel.setStatusFilter("reserved"); showFilterMenu = false },
+                                    leadingIcon = { if(currentFilter == "reserved") Icon(Icons.Default.Check, null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(localizedUiString("On Sale")) },
+                                    onClick = { viewModel.setStatusFilter("on_sale"); showFilterMenu = false },
+                                    leadingIcon = { if(currentFilter == "on_sale") Icon(Icons.Default.Check, null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(localizedUiString("In Transit")) },
+                                    onClick = { viewModel.setStatusFilter("in_transit"); showFilterMenu = false },
+                                    leadingIcon = { if(currentFilter == "in_transit") Icon(Icons.Default.Check, null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(localizedUiString("Under Service")) },
+                                    onClick = { viewModel.setStatusFilter("under_service"); showFilterMenu = false },
+                                    leadingIcon = { if(currentFilter == "under_service") Icon(Icons.Default.Check, null) }
+                                )
+                            }
+                        }
+
+                        // Burning Flame Quick Filter
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color.White)
+                                .border(BorderStroke(1.dp, Color.Gray.copy(alpha = 0.2f)), RoundedCornerShape(10.dp))
+                                .clickable {
+                                    viewModel.setSortOrder("days_desc")
+                                    viewModel.setStatusFilter("all")
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Whatshot,
+                                contentDescription = localizedUiString("Burning Inventory"),
+                                tint = EzcarOrange,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
                 }
 
                 // 4. Vehicle List
@@ -349,7 +457,7 @@ fun VehicleListScreen(
                                             else -> Color.Transparent
                                         }, label = "SwipeColor"
                                     )
-                                    
+
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -377,7 +485,7 @@ fun VehicleListScreen(
                     }
                 }
             }
-            
+
             PullRefreshIndicator(
                 refreshing = uiState.isLoading,
                 state = pullRefreshState,
@@ -767,7 +875,7 @@ fun SegmentedControl(
     onItemSelection: (selectedItemIndex: Int) -> Unit
 ) {
     val selectedIndex = remember { mutableStateOf(defaultSelectedItemIndex) }
-    
+
     // Update state if external prop changes
     LaunchedEffect(defaultSelectedItemIndex) {
         selectedIndex.value = defaultSelectedItemIndex
@@ -819,22 +927,30 @@ fun StatusCard(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isActive) color.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surface
-    val contentColor = color
-    val textColor = if (isActive) color else MaterialTheme.colorScheme.onSurface
-    
+    val backgroundColor = if (isActive) color else Color.White
+    val contentColor = if (isActive) Color.White else color
+    val textColor = if (isActive) Color.White.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val valueColor = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface
+
     Row(
         modifier = Modifier
-            .clip(RoundedCornerShape(12.dp))
+            .clip(CircleShape)
             .background(backgroundColor)
+            .shadow(elevation = if (isActive) 3.dp else 1.dp, shape = CircleShape)
+            .then(
+                if (isActive) Modifier else Modifier.border(
+                    BorderStroke(1.dp, Color.Gray.copy(alpha = 0.12f)),
+                    shape = CircleShape
+                )
+            )
             .clickable(onClick = onClick)
-            .padding(vertical = 10.dp, horizontal = 12.dp),
+            .padding(vertical = 6.dp, horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(28.dp)
+                .size(24.dp)
                 .background(
                     color = if (isActive) Color.White.copy(alpha = 0.2f) else color.copy(alpha = 0.1f),
                     shape = CircleShape
@@ -845,20 +961,25 @@ fun StatusCard(
                 imageVector = icon,
                 contentDescription = null,
                 tint = contentColor,
-                modifier = Modifier.size(16.dp)
+                modifier = Modifier.size(12.dp)
             )
         }
-        Column {
+        Column(
+            verticalArrangement = Arrangement.Center
+        ) {
             Text(
                 text = localizedUiString(title),
                 style = MaterialTheme.typography.labelSmall,
-                color = if (isActive) color else MaterialTheme.colorScheme.onSurfaceVariant
+                fontSize = 9.sp,
+                color = textColor,
+                maxLines = 1
             )
             Text(
                 text = count.toString(),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
-                color = textColor
+                color = valueColor,
+                maxLines = 1
             )
         }
     }
@@ -903,17 +1024,15 @@ fun VehicleItem(
     onClick: () -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
-    val regionState by regionSettingsManager.state.collectAsState()
     val vehicle = item.vehicle
     val totalCost = vehicle.purchasePrice.add(item.totalExpenseCost ?: java.math.BigDecimal.ZERO)
-    
-    // Get stats from inventory stats map
+
     val vehicleStats = inventoryStats[vehicle.id.toString()]
     val daysInStock = vehicleStats?.daysInInventory ?: try {
         val diff = Date().time - vehicle.purchaseDate.time
         TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS).toInt()
     } catch (e: Exception) { 0 }
-    
+
     val roiPercent = vehicleStats?.roiPercent
     val isBurning = daysInStock >= 90
 
@@ -921,24 +1040,43 @@ fun VehicleItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(8.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        border = BorderStroke(0.5.dp, Color.Gray.copy(alpha = 0.1f))
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.Top) {
-                val imageUrl = vehicle.photoUrl ?: com.ezcar24.business.data.sync.CloudSyncEnvironment.vehicleImageUrl(vehicle.id)
-                
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val dealerId = com.ezcar24.business.data.sync.CloudSyncEnvironment.currentDealerId
+                val storeKey = dealerId?.toString() ?: "guest"
+                val localFile = remember(vehicle.id, storeKey) {
+                    java.io.File(java.io.File(context.filesDir, "VehicleImages"), "$storeKey/${vehicle.id}.jpg")
+                }
+                val remotePhotoUrl = vehicle.photoUrl ?: com.ezcar24.business.data.sync.CloudSyncEnvironment.vehicleImageUrl(vehicle.id)
+                val model = remember(localFile, remotePhotoUrl) {
+                    if (localFile.exists()) {
+                        localFile
+                    } else {
+                        remotePhotoUrl
+                    }
+                }
+
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .size(70.dp)
+                        .clip(RoundedCornerShape(10.dp))
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (imageUrl != null) {
+                    if (model != null) {
                         coil.compose.SubcomposeAsyncImage(
-                            model = imageUrl,
+                            model = ImageRequest.Builder(context)
+                                .data(model)
+                                .crossfade(true)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
+                                .build(),
                             contentDescription = localizedUiString("Vehicle"),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
@@ -946,31 +1084,37 @@ fun VehicleItem(
                                 Icon(
                                     imageVector = Icons.Default.DirectionsCar,
                                     contentDescription = localizedUiString("Car"),
-                                    tint = Color.Gray,
-                                    modifier = Modifier.size(32.dp)
+                                    tint = Color.Gray.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(28.dp)
                                 )
                             },
                             loading = {
-                                androidx.compose.material3.CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp
-                                )
+                                Box(
+                                    modifier = Modifier.fillMaxSize().background(Color.Gray.copy(alpha = 0.05f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.DirectionsCar,
+                                        contentDescription = null,
+                                        tint = Color.Gray.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
                             }
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.DirectionsCar,
                             contentDescription = localizedUiString("Car"),
-                            tint = Color.Gray,
-                            modifier = Modifier.size(32.dp)
+                            tint = Color.Gray.copy(alpha = 0.5f),
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.width(12.dp))
-                
+
                 Column(modifier = Modifier.weight(1f)) {
-                    // Title and Badges
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Top,
@@ -979,164 +1123,209 @@ fun VehicleItem(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "${vehicle.make ?: ""} ${vehicle.model ?: ""}",
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
-                            Text(
-                                text = "VIN: ${vehicle.vin}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Icon(Icons.Default.CalendarToday, null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text("${vehicle.year ?: "-"}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                if (vehicle.mileage > 0) {
-                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                        Icon(Icons.Default.Speed, null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        Text(
-                                            regionSettingsManager.formatMileage(vehicle.mileage),
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                    Icon(Icons.Default.Build, null, modifier = Modifier.size(10.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    Text(localizedUiString("%d exp", item.expenseCount), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-                        
-                        // Status Badge + Burning Badge
-                        Column(horizontalAlignment = Alignment.End) {
-                            if (isBurning && vehicle.status != "sold") {
-                                Surface(
-                                    color = EzcarDanger.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(6.dp)
-                                ) {
-                                    Text(
-                                        text = "BURNING",
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = EzcarDanger,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                            }
-                            
-                            Surface(
-                                color = vehicleStatusBackground(vehicle.status),
-                                shape = RoundedCornerShape(6.dp)
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(vertical = 2.dp)
                             ) {
                                 Text(
-                                    text = when(vehicle.status) {
-                                         "sold" -> "Sold"
-                                         "owned" -> "Owned"
-                                         "on_sale" -> "On Sale"
-                                         "in_transit" -> "In Transit"
-                                         "under_service" -> "Service"
-                                         else -> "On Sale"
-                                    },
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    text = "${vehicle.year ?: "-"}",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = vehicleStatusColor(vehicle.status),
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF4F6DE6)
                                 )
+                                if (vehicle.mileage > 0) {
+                                    Text("•", color = Color.Gray.copy(alpha = 0.5f), fontSize = 10.sp)
+                                    Text(
+                                        text = regionSettingsManager.formatMileage(vehicle.mileage),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.Gray
+                                    )
+                                }
                             }
                         }
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (vehicle.status != "sold" && daysInStock > 0) {
+                                val badgeColor = when {
+                                    daysInStock <= 30 -> EzcarGreen
+                                    daysInStock <= 60 -> EzcarOrange
+                                    daysInStock <= 90 -> Color(0xFFFFA500)
+                                    else -> EzcarDanger
+                                }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(badgeColor.copy(alpha = 0.1f))
+                                        .border(BorderStroke(1.dp, badgeColor.copy(alpha = 0.3f)), CircleShape)
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(6.dp)
+                                            .background(badgeColor, CircleShape)
+                                    )
+                                    Text(
+                                        text = "${daysInStock}d",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = badgeColor
+                                    )
+                                }
+                            }
+
+                            val statusBg = vehicleStatusColor(vehicle.status).copy(alpha = 0.15f)
+                            val statusColor = vehicleStatusColor(vehicle.status)
+                            val statusText = when(vehicle.status) {
+                                 "sold" -> "Sold"
+                                 "owned" -> "Owned"
+                                 "on_sale" -> "On Sale"
+                                 "in_transit" -> "In Transit"
+                                 "under_service" -> "Service"
+                                 else -> "On Sale"
+                            }
+                            Text(
+                                text = localizedUiString(statusText),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(statusBg)
+                                    .border(BorderStroke(1.dp, statusColor.copy(alpha = 0.3f)), RoundedCornerShape(8.dp))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 10.sp,
+                                color = statusColor,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    // Price
-                    Text(
-                        text = regionSettingsManager.formatCurrency(vehicle.purchasePrice),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.SemiBold
-                    )
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        Text(
+                            text = "VIN: ${vehicle.vin}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.Gray,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text("•", color = Color.Gray.copy(alpha = 0.5f), fontSize = 10.sp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Build,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Text(
+                                text = localizedUiString("%d exp", item.expenseCount),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.Gray
+                            )
+                        }
+                    }
                 }
             }
-            
-            Spacer(modifier = Modifier.height(12.dp))
+
+            Spacer(modifier = Modifier.height(10.dp))
             HorizontalDivider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            // Metrics Row
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Footer: Purchase Price, Holding Cost, Total Cost / Profit
+            val holdingCost = vehicleStats?.holdingCostAccumulated ?: java.math.BigDecimal.ZERO
             Row(
-                modifier = Modifier.fillMaxWidth(), 
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                 MetricData(
-                     label = "Stock",
-                     value = "$daysInStock days",
-                     isWarning = daysInStock >= 90
-                 )
-                 MetricData(
-                     label = "Added",
-                     value = SimpleDateFormat("dd MMM", Locale.getDefault()).format(vehicle.purchaseDate)
-                 )
-                 MetricData(
-                     label = "Expenses",
-                     value = "${item.expenseCount}",
-                     isWarning = item.expenseCount > 0
-                 )
-                 
-                 // ROI Badge
-                 if (roiPercent != null && vehicle.status != "sold") {
-                     com.ezcar24.business.ui.components.ROIBadge(roiPercent = roiPercent)
-                 } else {
-                     MetricData(
-                         label = "Total Cost",
-                         value = regionSettingsManager.formatCurrencyCompact(totalCost),
-                         isBold = true
-                     )
-                 }
-            }
-            
-            // Profit Row (for sold vehicles)
-            if (vehicle.status == "sold" && vehicle.salePrice != null) {
-                val profit = vehicle.salePrice.subtract(totalCost)
-                val isProfit = profit >= java.math.BigDecimal.ZERO
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider(color = Color(0xFFE5E5EA), thickness = 0.5.dp)
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Column(horizontalAlignment = Alignment.Start) {
                     Text(
-                        text = "Sale: ${regionSettingsManager.formatCurrency(vehicle.salePrice)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = Color.Black
+                        text = localizedUiString("PURCHASE PRICE"),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray,
+                        letterSpacing = 0.5.sp
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Text(
+                        text = regionSettingsManager.formatCurrency(vehicle.purchasePrice),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                if (holdingCost > java.math.BigDecimal.ZERO || daysInStock > 0) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "Profit:",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
+                            text = localizedUiString("HOLDING COST"),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (holdingCost > java.math.BigDecimal.ZERO) EzcarOrange else Color.Gray,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = regionSettingsManager.formatCurrency(holdingCost),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = if (holdingCost > java.math.BigDecimal.ZERO) EzcarOrange else Color.Gray
+                        )
+                    }
+                }
+
+                Column(horizontalAlignment = Alignment.End) {
+                    val totalCostWithHolding = totalCost.add(holdingCost)
+                    if (vehicle.status == "sold" && vehicle.salePrice != null) {
+                        val profit = vehicle.salePrice.subtract(totalCostWithHolding)
+                        val isProfit = profit >= java.math.BigDecimal.ZERO
+
+                        Text(
+                            text = localizedUiString("PROFIT"),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray,
+                            letterSpacing = 0.5.sp
                         )
                         Text(
                             text = regionSettingsManager.formatCurrency(profit),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Black,
                             color = if (isProfit) EzcarGreen else Color.Red
+                        )
+                    } else {
+                        Text(
+                            text = localizedUiString("TOTAL COST"),
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Gray,
+                            letterSpacing = 0.5.sp
+                        )
+                        Text(
+                            text = regionSettingsManager.formatCurrency(totalCostWithHolding),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF007AFF) // Primary color matching iOS
                         )
                     }
                 }
@@ -1155,8 +1344,8 @@ fun MetricData(
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = localizedUiString(label), style = MaterialTheme.typography.bodySmall, color = Color.Gray, fontSize = 10.sp)
         Text(
-            text = value, 
-            style = MaterialTheme.typography.bodyMedium, 
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
             color = if (isWarning) EzcarOrange else Color.Black,
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.Medium
         )

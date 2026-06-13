@@ -35,27 +35,27 @@ val hasGoogleServicesFile = listOf(
     file("src/release/google-services.json")
 ).any { it.exists() }
 
-val requiresReleaseGoogleServices = gradle.startParameter.taskNames
+val enablesReleaseGoogleServices = gradle.startParameter.taskNames
     .map { it.lowercase() }
-    .any { it == "build" || it == "assemble" || it.contains("release") }
+    .any { it.contains("release") }
 
-if (requiresReleaseGoogleServices && !hasGoogleServicesFile) {
+if (enablesReleaseGoogleServices && !hasGoogleServicesFile) {
     throw GradleException("Missing google-services.json. Download it from Firebase Console and place it at Android Car Dealer Tracker/app/google-services.json before building release.")
 }
 
-if (hasGoogleServicesFile) {
+if (enablesReleaseGoogleServices && hasGoogleServicesFile) {
     apply(plugin = "com.google.gms.google-services")
     apply(plugin = "com.google.firebase.crashlytics")
 }
 
 android {
     namespace = "com.ezcar24.business"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.ezcar24.business"
         minSdk = 26
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 2112
         versionName = "2.1.12"
 
@@ -64,7 +64,7 @@ android {
         buildConfigField("String", "SUPABASE_URL", supabaseUrl.asBuildConfigString())
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseAnonKey.asBuildConfigString())
         buildConfigField("String", "PLAY_STORE_PACKAGE_NAME", playStorePackageName.asBuildConfigString())
-        buildConfigField("boolean", "FIREBASE_ENABLED", hasGoogleServicesFile.toString())
+        buildConfigField("boolean", "FIREBASE_ENABLED", enablesReleaseGoogleServices.toString())
     }
 
     signingConfigs {

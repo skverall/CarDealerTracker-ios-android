@@ -75,6 +75,8 @@ import com.ezcar24.business.util.PermissionKey
 import com.ezcar24.business.util.localizedUiString
 import com.ezcar24.business.util.rememberRegionSettingsManager
 
+import androidx.compose.foundation.BorderStroke
+
 private sealed class MainTab(
     val route: String,
     val title: String,
@@ -512,32 +514,43 @@ private fun MainTabBar(
     onTabSelected: (MainTab) -> Unit
 ) {
     Surface(
-        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.98f),
-        contentColor = MaterialTheme.colorScheme.onSurface,
-        shadowElevation = 22.dp,
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(EzcarBackgroundLight.copy(alpha = 0.35f))
                 .navigationBarsPadding()
-                .padding(horizontal = 8.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            items.forEach { item ->
-                val selectedRoute = currentDestinationRoute?.substringBefore("?")
-                val isSelected = selectedRoute == item.route ||
-                    (selectedRoute == null && item == MainTab.Dashboard)
+            Surface(
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.94f),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                shadowElevation = 12.dp,
+                shape = CircleShape,
+                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items.forEach { item ->
+                        val selectedRoute = currentDestinationRoute?.substringBefore("?")
+                        val isSelected = selectedRoute == item.route ||
+                            (selectedRoute == null && item == MainTab.Dashboard)
 
-                MainTabBarItem(
-                    item = item,
-                    isSelected = isSelected,
-                    onClick = { onTabSelected(item) },
-                    modifier = Modifier.weight(1f)
-                )
+                        MainTabBarItem(
+                            item = item,
+                            isSelected = isSelected,
+                            onClick = { onTabSelected(item) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
             }
         }
     }
@@ -556,10 +569,9 @@ private fun MainTabBarItem(
         label = "tabIconTint"
     )
     val textColor by animateColorAsState(
-        targetValue = if (isSelected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (isSelected) item.tint else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "tabTextTint"
     )
-
 
     Column(
         modifier = modifier
@@ -573,24 +585,21 @@ private fun MainTabBarItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Surface(
-            color = if (isSelected) item.tint.copy(alpha = 0.14f) else Color.Transparent,
-            shape = CircleShape,
-            modifier = Modifier.size(42.dp)
+        Box(
+            modifier = Modifier.size(24.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = item.icon,
-                    contentDescription = title,
-                    tint = iconTint,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+            Icon(
+                imageVector = item.icon,
+                contentDescription = title,
+                tint = iconTint,
+                modifier = Modifier.size(22.dp)
+            )
         }
         Text(
             text = title,
             style = MaterialTheme.typography.labelSmall,
-            fontSize = 10.sp,
+            fontSize = 9.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = textColor,
             maxLines = 1,

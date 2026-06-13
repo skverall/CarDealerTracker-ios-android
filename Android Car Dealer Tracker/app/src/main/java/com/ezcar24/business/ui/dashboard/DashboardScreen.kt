@@ -2,12 +2,15 @@ package com.ezcar24.business.ui.dashboard
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.shadow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.pullrefresh.PullRefreshIndicator
@@ -70,6 +73,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.text.style.TextOverflow
 import com.ezcar24.business.util.localizedUiString
+import com.ezcar24.business.ui.components.AutoResizingText
 
 // Time range enum matching iOS DashboardTimeRange
 @OptIn(ExperimentalMaterialApi::class)
@@ -161,7 +165,7 @@ fun DashboardScreen(
                     )
                 }
             }
-            
+
             // --- Sync Status Card ---
             item {
                 SyncStatusCard(
@@ -232,7 +236,7 @@ fun DashboardScreen(
                     onNavigateToLeadFunnel = onNavigateToLeadFunnel
                 )
             }
-            
+
             // --- Inventory Summary Card ---
             item {
                 InventorySummaryCard(
@@ -244,7 +248,7 @@ fun DashboardScreen(
                 )
             }
         }
-        
+
         PullRefreshIndicator(
             refreshing = uiState.isLoading,
             state = pullRefreshState,
@@ -334,18 +338,6 @@ fun DashboardTopBar(
             Column(
                 modifier = Modifier.weight(1f)
             ) {
-                Text(
-                    text = localizedUiString(getGreeting()),
-                    style = MaterialTheme.typography.titleSmall.copy(fontStyle = FontStyle.Italic),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = localizedUiString("Dashboard"),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(10.dp))
                 DashboardOrganizationSwitcher(
                     activeOrganization = activeOrganization,
                     organizations = organizations,
@@ -353,47 +345,80 @@ fun DashboardTopBar(
                     onSelectOrganization = onSelectOrganization,
                     onCreateBusiness = onCreateBusiness
                 )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = localizedUiString("Dashboard"),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Black,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
             }
-            
+
             Spacer(modifier = Modifier.width(12.dp))
 
             Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (syncState is SyncState.Syncing) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
                         color = EzcarBlueBright
                     )
                 }
 
-                IconButton(
-                    onClick = onSearchClick,
+                Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(36.dp)
+                        .shadow(elevation = 2.dp, shape = CircleShape)
                         .background(MaterialTheme.colorScheme.surface, CircleShape)
+                        .clickable(onClick = onSearchClick),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Search, contentDescription = localizedUiString("Search"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = localizedUiString("Search"),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
 
-                IconButton(
-                    onClick = onProfileClick,
+                Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(36.dp)
+                        .shadow(elevation = 2.dp, shape = CircleShape)
                         .background(MaterialTheme.colorScheme.surface, CircleShape)
+                        .clickable(onClick = onProfileClick),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Person, contentDescription = localizedUiString("Profile"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = localizedUiString("Profile"),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
-                
-                IconButton(
-                    onClick = onAddClick,
+
+                Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .background(EzcarNavy, CircleShape)
+                        .size(36.dp)
+                        .shadow(elevation = 4.dp, shape = CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(EzcarBlueBright, EzcarNavy)
+                            ),
+                            shape = CircleShape
+                        )
+                        .clickable(onClick = onAddClick),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = localizedUiString("Add"), tint = Color.White)
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = localizedUiString("Add"),
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }
@@ -411,54 +436,45 @@ private fun DashboardOrganizationSwitcher(
     var showMenu by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier.widthIn(max = 240.dp)
+        modifier = Modifier.wrapContentSize()
     ) {
-        Surface(
-            shape = RoundedCornerShape(14.dp),
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 6.dp,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier
-                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
                 .clickable(enabled = !isSwitchingOrganization) { showMenu = true }
+                .padding(vertical = 4.dp)
         ) {
-            Row(
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .size(20.dp)
+                    .background(EzcarNavy, CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = activeOrganization?.organizationName ?: localizedUiString("Select Business"),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = activeOrganization?.role?.replaceFirstChar { it.titlecase(Locale.getDefault()) }
-                            ?: localizedUiString("Switch business or create one"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                if (isSwitchingOrganization) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = EzcarBlueBright
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Business,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(12.dp)
+                )
             }
+
+            Text(
+                text = activeOrganization?.organizationName ?: localizedUiString("Business"),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Icon(
+                imageVector = Icons.Default.UnfoldMore,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(14.dp)
+            )
         }
 
         DropdownMenu(
@@ -626,7 +642,7 @@ fun TimeRangePicker(
 ) {
     val ranges = DashboardTimeRange.values()
     val scrollState = rememberScrollState()
-    
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -636,7 +652,7 @@ fun TimeRangePicker(
     ) {
         ranges.forEach { range ->
             val isSelected = range == selectedRange
-            
+
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(50))
@@ -665,79 +681,99 @@ fun FinancialOverviewSection(
     onNavigateToSold: () -> Unit,
     onNavigateToSales: () -> Unit
 ) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+
     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-        // Row 1: Assets, Cash, Bank
+        // --- 1. Account Balances ---
+        Text(
+            text = localizedUiString("Account Balances"),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            FinancialCard(
-                title = "Total Assets",
-                amount = uiState.totalAssets,
-                icon = Icons.Default.AccountBalance,
-                baseColor = EzcarBlueBright,
-                gradient = Brush.linearGradient(
-                    colors = listOf(Color(0xFF5AC8FA), EzcarBlueBright), // Light Blue -> Brand Blue
-                    start = Offset(0f, 0f),
-                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY) 
-                ),
-                isSolidBackground = true,
-                modifier = Modifier.weight(1f),
-                onClick = onNavigateToAssets
-            )
-            FinancialCard(
-                title = "Cash",
+            AccountBalanceCard(
+                title = localizedUiString("Cash"),
                 amount = uiState.totalCash,
                 icon = Icons.Default.AttachMoney,
-                baseColor = EzcarGreen,
+                color = EzcarGreen,
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToAccounts
             )
-            FinancialCard(
-                title = "Bank",
+            AccountBalanceCard(
+                title = localizedUiString("Bank"),
                 amount = uiState.totalBank,
                 icon = Icons.Default.CreditCard,
-                baseColor = EzcarPurple,
+                color = EzcarPurple,
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToAccounts
             )
         }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Row 2: Revenue, Profit, Sold
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // --- 2. Performance & Profit ---
+        Text(
+            text = localizedUiString("Performance & Profit"),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            FinancialCard(
-                title = "Total Revenue",
+            val netProfitColor = if (uiState.netProfit >= BigDecimal.ZERO) EzcarSuccess else EzcarDanger
+            PerformanceCard(
+                title = localizedUiString("Total Revenue"),
                 amount = uiState.totalRevenue,
                 icon = Icons.AutoMirrored.Filled.TrendingUp,
-                baseColor = EzcarOrange,
+                color = Color(0xFF2E85EB),
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToSales
             )
-            FinancialCard(
-                title = "Net Profit",
+            PerformanceCard(
+                title = localizedUiString("Net Profit"),
                 amount = uiState.netProfit,
                 icon = Icons.Default.MonetizationOn,
-                baseColor = EzcarSuccess,
-                gradient = Brush.linearGradient(
-                    colors = listOf(Color(0xFF63E689), EzcarSuccess), // Lighter Green -> Brand Green
-                    start = Offset(0f, 0f),
-                    end = Offset(Float.POSITIVE_INFINITY, Float.POSITIVE_INFINITY)
-                ),
-                isSolidBackground = true,
+                color = netProfitColor,
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToSales
             )
-             FinancialCard(
-                title = "Sold",
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // --- 3. Operations ---
+        Text(
+            text = localizedUiString("Operations"),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OperationCard(
+                title = localizedUiString("Total Assets"),
+                valueStr = regionSettingsManager.formatCurrencyCompact(uiState.totalAssets),
+                icon = Icons.Default.DirectionsCar,
+                color = EzcarBlueBright,
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToAssets
+            )
+            OperationCard(
+                title = localizedUiString("Sold"),
                 valueStr = uiState.soldCount.toString(),
                 icon = Icons.Default.CheckCircle,
-                baseColor = EzcarBlueLight,
-                isCount = true,
+                color = EzcarBlueLight,
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToSold
             )
@@ -746,83 +782,205 @@ fun FinancialOverviewSection(
 }
 
 @Composable
-fun FinancialCard(
+fun AccountBalanceCard(
     title: String,
-    amount: BigDecimal? = null,
-    valueStr: String? = null,
+    amount: BigDecimal,
     icon: ImageVector,
-    baseColor: Color,
-    gradient: Brush? = null,
-    isSolidBackground: Boolean = false,
-    isHero: Boolean = false, 
-    isCount: Boolean = false,
+    color: Color,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
-    val regionState by regionSettingsManager.state.collectAsState()
-    val displayValue = if (isCount && valueStr != null) valueStr else {
-        regionSettingsManager.formatCurrency(amount ?: BigDecimal.ZERO)
-    }
-    
-    // Solid background logic
-    val backgroundColor = if (isSolidBackground) baseColor else Color.White
-    val contentColor = if (isSolidBackground) Color.White else Color.Black
-    val titleColor = if (isSolidBackground) Color.White.copy(alpha = 0.9f) else Color.Gray
-    
-    // Icon Logic for Solid Cards: Standard iOS icon style (white with transparency circle or just white)
-    // For Non-Solid: Colored icon with light bg
-    val iconTint = if (isSolidBackground) Color.White else baseColor
-    val iconBg = if (isSolidBackground) Color.White.copy(alpha = 0.2f) else baseColor.copy(alpha = 0.1f)
-    
-    val cardModifier = if (gradient != null && isSolidBackground) {
-        modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(gradient)
-    } else {
-        modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(backgroundColor)
-    }
+    val displayValue = regionSettingsManager.formatCurrencyCompact(amount)
 
-    Column(
-        modifier = cardModifier
-            .clickable(enabled = onClick != null, onClick = onClick ?: {})
-            .padding(12.dp)
-            .height(100.dp),
-        verticalArrangement = Arrangement.SpaceBetween
+    Card(
+        modifier = modifier.height(108.dp),
+        shape = RoundedCornerShape(17.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        // Icon Header
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(enabled = onClick != null, onClick = onClick ?: {})
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            // Icon Circle
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(color.copy(alpha = 0.8f), color)
+                        ),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+
+            // Value & Title
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                AutoResizingText(
+                    text = displayValue,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun PerformanceCard(
+    title: String,
+    amount: BigDecimal,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val displayValue = regionSettingsManager.formatCurrencyCompact(amount)
+
+    Card(
+        modifier = modifier.height(108.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+    ) {
         Box(
             modifier = Modifier
-                .size(28.dp)
-                .clip(CircleShape)
-                .background(iconBg),
-                contentAlignment = Alignment.Center
+                .fillMaxSize()
+                .background(
+                    brush = Brush.linearGradient(
+                        colors = listOf(Color(0xFF1A263D), Color(0xFF0C1324))
+                    )
+                )
+                .clickable(enabled = onClick != null, onClick = onClick ?: {})
+                .padding(horizontal = 14.dp, vertical = 14.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    AutoResizingText(
+                        text = displayValue,
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .border(BorderStroke(2.dp, color.copy(alpha = 0.5f)), shape = CircleShape)
+                        .background(color.copy(alpha = 0.2f), shape = CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun OperationCard(
+    title: String,
+    valueStr: String,
+    icon: ImageVector,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null
+) {
+    Card(
+        modifier = modifier.height(72.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .clickable(enabled = onClick != null, onClick = onClick ?: {})
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                AutoResizingText(
+                    text = valueStr,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = iconTint,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-        
-        // Value & Title
-        Column {
-            Text(
-                text = localizedUiString(title),
-                style = MaterialTheme.typography.labelSmall,
-                color = titleColor,
-                maxLines = 1
-            )
-            Text(
-                text = displayValue,
-                style = if (isCount) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = contentColor,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
+                tint = color,
+                modifier = Modifier
+                    .size(28.dp)
+                    .padding(end = 4.dp)
             )
         }
     }
@@ -852,7 +1010,7 @@ fun TodaysExpensesSection(
                 color = Color.Gray
             )
         }
-        
+
         Spacer(modifier = Modifier.height(12.dp))
 
         if (todaysExpenses.isEmpty()) {
@@ -928,7 +1086,7 @@ fun TodayExpenseCard(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-                
+
                 // Time
                 Text(
                     text = timeFormat.format(expenseDisplayDateTime(expense)),
@@ -939,7 +1097,7 @@ fun TodayExpenseCard(
                         .padding(horizontal = 8.dp, vertical = 4.dp)
                 )
             }
-            
+
             Column {
                 Text(
                     text = regionSettingsManager.formatCurrency(expense.amount),
@@ -1021,7 +1179,7 @@ fun SummaryOverviewCard(
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
-    
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -1049,13 +1207,13 @@ fun SummaryOverviewCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        
+
                         if (changePercent != null) {
                             Spacer(modifier = Modifier.width(8.dp))
                             val isPositive = changePercent >= 0
                             val color = if (isPositive) EzcarDanger else EzcarSuccess // Use Danger for + spending? iOS logic
                             val bg = color.copy(alpha = 0.1f)
-                            
+
                             Row(
                                 modifier = Modifier
                                     .background(bg, CircleShape)
@@ -1079,9 +1237,9 @@ fun SummaryOverviewCard(
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             // Chart
             if (trendPoints.isNotEmpty()) {
                 Box(
@@ -1117,9 +1275,9 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
             this.isAntiAlias = true
         }
     }
-    
+
     var selectedX by remember { mutableStateOf<Float?>(null) }
-    
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -1141,19 +1299,19 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
             if (points.isEmpty()) return@Canvas
-            
+
             val width = size.width
             val height = size.height
             // Reserve space for labels
             val bottomPadding = 20.dp.toPx()
             val availableHeight = height - bottomPadding
-            
+
             val maxVal = points.maxOf { it.value }
             val minVal = 0f // Baseline 0
-            
+
             val range = if (maxVal - minVal == 0f) 1f else maxVal - minVal
             val stepX = width / (points.size - 1).coerceAtLeast(1)
-            
+
             // Draw Grid Lines (3 lines)
             val gridLines = 3
             for (i in 0..gridLines) {
@@ -1165,18 +1323,18 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                     strokeWidth = 1.dp.toPx()
                 )
             }
-            
+
             val path = Path()
-            
+
             // Calculate coordinates
             val mappedPoints = points.mapIndexed { index, point ->
                 val x = index * stepX
                 val y = availableHeight - ((point.value - minVal) / range * availableHeight)
                 Offset(x, y)
             }
-            
+
             path.moveTo(mappedPoints[0].x, mappedPoints[0].y)
-            
+
             // Smooth Curve
             for (i in 0 until mappedPoints.size - 1) {
                 val p0 = mappedPoints[i]
@@ -1185,14 +1343,14 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                 val controlPoint2 = Offset(p0.x + (p1.x - p0.x) / 2, p1.y)
                 path.cubicTo(controlPoint1.x, controlPoint1.y, controlPoint2.x, controlPoint2.y, p1.x, p1.y)
             }
-            
+
             // Fill Gradient
             val fillPath = Path()
             fillPath.addPath(path)
             fillPath.lineTo(mappedPoints.last().x, availableHeight)
             fillPath.lineTo(0f, availableHeight)
             fillPath.close()
-            
+
             drawPath(
                 path = fillPath,
                 brush = Brush.verticalGradient(
@@ -1201,7 +1359,7 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                     endY = availableHeight
                 )
             )
-            
+
             // Stroke
             drawPath(
                 path = path,
@@ -1212,18 +1370,18 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                     join = androidx.compose.ui.graphics.StrokeJoin.Round
                 )
             )
-            
+
             // Draw X-Axis Labels (First, Middle, Last)
             if (points.size > 1) {
                 val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
                 val indices = listOf(0, points.size / 2, points.size - 1)
-                
+
                 indices.forEach { index ->
                     if (index in points.indices) {
                         val point = points[index]
                         val x = index * stepX
                         val dateStr = dateFormat.format(point.date)
-                        
+
                         // Align text: Left for first, Center for middle, Right for last
                         val measureText = textPaint.measureText(dateStr)
                         val textX = when (index) {
@@ -1231,7 +1389,7 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                             points.size - 1 -> width - measureText
                             else -> x - measureText / 2
                         }
-                        
+
                         drawContext.canvas.nativeCanvas.drawText(
                             dateStr,
                             textX,
@@ -1241,14 +1399,14 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                     }
                 }
             }
-            
+
             // Draw Touch Interaction
             selectedX?.let { touchX ->
                 // Find closest point
                 val index = (touchX / stepX).measureIndex(points.size)
                 val closestPoint = mappedPoints[index]
                 val originalPoint = points[index]
-                
+
                 // Draw vertical line
                 drawLine(
                     color = Color.Gray,
@@ -1257,7 +1415,7 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                     strokeWidth = 1.dp.toPx(),
                     pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(10f, 10f))
                 )
-                
+
                 // Draw Dot
                 drawCircle(
                     color = Color.White,
@@ -1269,7 +1427,7 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                     radius = 4.dp.toPx(),
                     center = closestPoint
                 )
-                
+
                 // Draw Tooltip (Value)
                 val valueStr = regionSettingsManager.formatCurrency(
                     BigDecimal.valueOf(originalPoint.value.toDouble())
@@ -1277,14 +1435,14 @@ fun SpendingTrendChart(points: List<TrendPoint>) {
                 val textWidth = textPaint.measureText(valueStr)
                 val tooltipX = (closestPoint.x - textWidth / 2).coerceIn(0f, width - textWidth)
                 val tooltipY = (closestPoint.y - 30.dp.toPx()).coerceAtLeast(20f)
-                
+
                 drawContext.canvas.nativeCanvas.drawText(
                     valueStr,
                     tooltipX,
                     tooltipY,
-                    textPaint.apply { 
-                        this.color = android.graphics.Color.BLACK 
-                        this.isFakeBoldText = true   
+                    textPaint.apply {
+                        this.color = android.graphics.Color.BLACK
+                        this.isFakeBoldText = true
                     }
                 )
             }
@@ -1311,9 +1469,9 @@ fun CategoryBreakdownCard(stats: List<CategoryStat>) {
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface
             )
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             if (stats.isEmpty()) {
                 Text(
                     text = localizedUiString("No expenses for this period"),
@@ -1335,7 +1493,7 @@ fun CategoryBreakdownRow(stat: CategoryStat) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     val color = getCategoryColor(stat.key)
-    
+
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1354,7 +1512,7 @@ fun CategoryBreakdownRow(stat: CategoryStat) {
                     fontWeight = FontWeight.Medium
                 )
             }
-            
+
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = regionSettingsManager.formatCurrency(stat.amount),
@@ -1368,7 +1526,7 @@ fun CategoryBreakdownRow(stat: CategoryStat) {
                 )
             }
         }
-        
+
         // Progress Bar (Custom)
         val animatedProgress by animateFloatAsState(
             targetValue = stat.percent.toFloat() / 100f,
@@ -1417,7 +1575,7 @@ fun RecentExpensesSection(
                 Text(localizedUiString("See All"))
             }
         }
-        
+
         if (recentExpenses.isEmpty()) {
             Text(
                 text = localizedUiString("No recent expenses"),
@@ -1474,9 +1632,9 @@ fun RecentExpenseItem(
                     tint = EzcarBlueBright
                 )
             }
-            
+
             Spacer(modifier = Modifier.width(16.dp))
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = expense.expenseDescription ?: expense.category ?: localizedUiString("Expense"),
@@ -1493,7 +1651,7 @@ fun RecentExpenseItem(
                     color = Color.Gray
                 )
             }
-            
+
             Text(
                 text = regionSettingsManager.formatCurrency(expense.amount),
                 style = MaterialTheme.typography.titleMedium,
@@ -1526,7 +1684,7 @@ fun SyncStatusCard(
             is SyncState.Failure -> Triple(Icons.Default.Error, EzcarDanger, "Sync failed")
             else -> Triple(null, Color.Gray, "Sync Status")
         }
-        
+
         if (isSyncing) {
              CircularProgressIndicator(
                 modifier = Modifier.size(12.dp),
@@ -1541,9 +1699,9 @@ fun SyncStatusCard(
                 modifier = Modifier.size(16.dp)
             )
         }
-        
+
         Spacer(modifier = Modifier.width(8.dp))
-        
+
         val displayMessage = when {
             syncState is SyncState.Failure ->
                 syncState.message
@@ -1571,7 +1729,7 @@ fun SyncStatusCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        
+
         Spacer(modifier = Modifier.weight(1f))
 
         Row(
@@ -1619,7 +1777,7 @@ fun CRMSummaryCard(
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
-    
+
     Card(
         colors = CardDefaults.cardColors(containerColor = EzcarNavy),
         modifier = Modifier
@@ -1651,9 +1809,9 @@ fun CRMSummaryCard(
                     modifier = Modifier.size(24.dp)
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -1720,7 +1878,7 @@ fun InventorySummaryCard(
         healthScore >= 40 -> EzcarOrange
         else -> EzcarDanger
     }
-    
+
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         modifier = Modifier
@@ -1755,16 +1913,16 @@ fun InventorySummaryCard(
                         color = Color.Black
                     )
                 }
-                
+
                 Icon(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = localizedUiString("View Analytics"),
                     tint = Color.Gray
                 )
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -1774,19 +1932,19 @@ fun InventorySummaryCard(
                     label = "Vehicles",
                     color = EzcarBlueBright
                 )
-                
+
                 InventoryStatItem(
                     value = "$averageDays",
                     label = "Avg Days",
                     color = if (averageDays <= 60) EzcarGreen else EzcarOrange
                 )
-                
+
                 InventoryStatItem(
                     value = vehiclesOver90Days.toString(),
                     label = "90+ Days",
                     color = if (vehiclesOver90Days == 0) EzcarGreen else EzcarDanger
                 )
-                
+
                 InventoryStatItem(
                     value = "$healthScore",
                     label = "Health",

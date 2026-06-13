@@ -1,6 +1,7 @@
 package com.ezcar24.business.ui.sale
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -25,10 +26,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.Sale
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import com.ezcar24.business.ui.components.AutoResizingText
 import java.math.BigDecimal
 import java.util.Locale
 import com.ezcar24.business.ui.finance.DebtsContent
@@ -49,7 +52,7 @@ fun SalesScreen(
     val salesUiState by salesViewModel.uiState.collectAsState()
     val partSalesUiState by partSalesViewModel.uiState.collectAsState()
     val debtUiState by debtViewModel.uiState.collectAsState()
-    
+
     var selectedTab by remember { mutableStateOf(0) }
     var selectedSaleTypeFilter by remember { mutableStateOf(SaleTypeFilter.ALL) }
     var showAddSheet by remember { mutableStateOf(false) }
@@ -88,10 +91,10 @@ fun SalesScreen(
         canViewVehicleProfit = canViewVehicleProfit,
         canViewPartProfit = canViewPartProfit
     )
-    
+
     val pullRefreshState = rememberPullRefreshState(
         refreshing = salesUiState.isLoading || debtUiState.isLoading,
-        onRefresh = { 
+        onRefresh = {
             salesViewModel.refresh()
             debtViewModel.loadData()
         }
@@ -101,7 +104,7 @@ fun SalesScreen(
         salesViewModel.loadData()
         debtViewModel.loadData()
     }
-    
+
     val searchText = if (selectedTab == 0) salesUiState.searchText else debtUiState.searchText
     val onSearchTextChange: (String) -> Unit = if (selectedTab == 0) {
         { text ->
@@ -133,15 +136,15 @@ fun SalesScreen(
                     onSearchClick = { isSearching = true },
                     onCloseSearch = onCloseSearch,
                     showAddAction = selectedTab == 1 || canCreateSale,
-                    onAddClick = { 
-                        if (selectedTab == 0) showAddSheet = true 
+                    onAddClick = {
+                        if (selectedTab == 0) showAddSheet = true
                         else showAddDebtDialog = true
                     }
                 )
                 SalesTabs(
                     selectedTab = selectedTab,
-                    onTabSelected = { 
-                        selectedTab = it 
+                    onTabSelected = {
+                        selectedTab = it
                         isSearching = false
                     }
                 )
@@ -215,7 +218,7 @@ fun SalesScreen(
     if (showAddSheet) {
         AddSaleScreen(
             onDismiss = { showAddSheet = false },
-            onSave = { 
+            onSave = {
                 salesViewModel.loadData()
                 showAddSheet = false
             }
@@ -344,7 +347,7 @@ fun SalesList(
         contentPadding = PaddingValues(
             top = padding.calculateTopPadding() + 8.dp,
             bottom = 80.dp,
-            start = 16.dp, 
+            start = 16.dp,
             end = 16.dp
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -577,29 +580,46 @@ fun SaleCard(
 
 @Composable
 fun FinancialColumn(
-    title: String, 
-    amount: BigDecimal, 
-    color: Color, 
+    title: String,
+    amount: BigDecimal,
+    color: Color,
     isBold: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
     Column(
-        modifier = modifier,
+        modifier = modifier
+            .padding(vertical = 4.dp, horizontal = 2.dp)
+            .background(
+                if (isBold) color.copy(alpha = 0.08f)
+                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .border(
+                1.dp,
+                if (isBold) color.copy(alpha = 0.15f)
+                else MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .padding(vertical = 8.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = localizedUiString(title).uppercase(Locale.getDefault()),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
-        Spacer(modifier = Modifier.height(2.dp))
-        Text(
+        Spacer(modifier = Modifier.height(4.dp))
+        AutoResizingText(
             text = regionSettingsManager.formatCurrency(amount),
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
             fontWeight = if (isBold) FontWeight.Bold else FontWeight.Normal,
-            color = color
+            color = color,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
@@ -628,7 +648,7 @@ fun SalesInsightsStrip(
             )
             CompactSaleInsightCard(
                 title = localizedUiString("Revenue").uppercase(Locale.getDefault()),
-                value = regionSettingsManager.formatCurrency(totalRevenue),
+                value = regionSettingsManager.formatCurrencyCompact(totalRevenue),
                 icon = Icons.Default.AttachMoney,
                 color = MaterialTheme.colorScheme.tertiary,
                 modifier = Modifier.weight(1f)
@@ -668,8 +688,8 @@ fun SalesInsightsStrip(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
                         )
-                        Text(
-                            regionSettingsManager.formatCurrency(netProfit),
+                        AutoResizingText(
+                            text = regionSettingsManager.formatCurrencyCompact(netProfit),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = if (netProfit >= BigDecimal.ZERO) EzcarSuccess else EzcarDanger,
@@ -721,8 +741,8 @@ private fun CompactSaleInsightCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    value,
+                AutoResizingText(
+                    text = value,
                     style = MaterialTheme.typography.titleMedium,
                     color = color,
                     fontWeight = FontWeight.Bold,

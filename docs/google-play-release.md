@@ -6,6 +6,87 @@
 - Android package name: `com.ezcar24.business`
 - Current Android version in project: `2.1.12`
 - Current Android version code in project: `2112`
+- Current Android compile SDK: `35`
+- Current Android target SDK: `35`
+
+## Current release status
+
+Updated: 2026-06-13 17:48 UZT
+
+Firebase Android config is installed locally at:
+
+```text
+Android Car Dealer Tracker/app/google-services.json
+```
+
+Backup copy is stored outside the repository at:
+
+```text
+~/.hermes/secrets/firebase/com.ezcar24.business-google-services.json
+```
+
+The backup path is saved in macOS Keychain under:
+
+```text
+firebase.com.ezcar24.business.google_services_json_path
+```
+
+Local checks passed after moving the Android project to target API 35:
+
+```bash
+JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+ANDROID_HOME=/opt/homebrew/share/android-commandlinetools \
+./gradlew :app:compileDebugKotlin
+
+JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+ANDROID_HOME=/opt/homebrew/share/android-commandlinetools \
+./gradlew test
+
+JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+ANDROID_HOME=/opt/homebrew/share/android-commandlinetools \
+./gradlew assembleDebug
+```
+
+Signed release AAB built successfully:
+
+```text
+Android Car Dealer Tracker/app/build/outputs/bundle/release/app-release.aab
+```
+
+Size: `12M`
+
+SHA-256:
+
+```text
+8e93c88431010b6a8bfe7c1e24fe0f77464e6e43e901624f0a61c51478f33b16
+```
+
+Release build command:
+
+```bash
+JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home \
+ANDROID_HOME=/opt/homebrew/share/android-commandlinetools \
+./gradlew :app:bundleRelease
+```
+
+Google Play Developer API candidate key is configured in Keychain under:
+
+```text
+googleplay.com.ezcar24.business.service_account_json_path
+```
+
+The key can obtain a Google OAuth token, but Android Publisher API currently
+returns:
+
+```text
+Package not found: com.ezcar24.business.
+```
+
+This means the service account does not currently see the Play Console app, or
+the app has not been created in Play Console with package `com.ezcar24.business`.
+
+The same key cannot currently fetch Firebase Android config. Firebase Management
+API is disabled or unavailable for that Google Cloud/Firebase project.
 
 ## Release signing key
 
