@@ -10,6 +10,56 @@ struct ReferralStats: Equatable {
     static let empty = ReferralStats(totalRewards: 0, lastRewardedAt: nil, bonusAccessUntil: nil, totalMonths: 0)
 }
 
+struct AppFeedbackRequest: Identifiable, Codable, Equatable {
+    let id: UUID
+    let title: String
+    let details: String?
+    var status: String
+    var voteCount: Int
+    var hasVoted: Bool
+    let isMine: Bool
+    let canDelete: Bool
+    let canAdmin: Bool
+    var completedAt: Date?
+    let createdAt: Date
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case details
+        case status
+        case voteCount = "vote_count"
+        case hasVoted = "has_voted"
+        case isMine = "is_mine"
+        case canDelete = "can_delete"
+        case canAdmin = "can_admin"
+        case completedAt = "completed_at"
+        case createdAt = "created_at"
+    }
+}
+
+struct AppFeedbackVoteResult: Codable, Equatable {
+    let voted: Bool
+    let voteCount: Int
+
+    enum CodingKeys: String, CodingKey {
+        case voted
+        case voteCount = "vote_count"
+    }
+}
+
+struct AppFeedbackStatusResult: Codable, Equatable {
+    let id: UUID
+    let status: String
+    let completedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case status
+        case completedAt = "completed_at"
+    }
+}
+
 private struct DeleteAccountPayload: Encodable {}
 
 private struct DeleteAccountResponse: Decodable {
@@ -700,6 +750,112 @@ final class SessionStore: ObservableObject {
         } catch {
             return .empty
         }
+    }
+
+    func fetchAppFeedbackRequests(limit: Int = 100) async throws -> [AppFeedbackRequest] {
+        guard case .signedIn = status else { return [] }
+        let params: [String: AnyJSON] = [
+            "p_limit": .integer(limit)
+        ]
+        return try await client
+            .rpc("get_app_feedback_requests", params: params)
+            .execute()
+            .value
+    }
+
+    func createAppFeedbackRequest(
+        title: String,
+        details: String?,
+        platform: String,
+        language: String?
+    ) async throws {
+        guard case .signedIn = status else {
+            throw NSError(
+                domain: "AppFeedback",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "feedback_sign_in_required".localizedStringFallback]
+            )
+        }
+
+        let trimmedDetails = details?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let detailsValue: AnyJSON = {
+            if let trimmedDetails, !trimmedDetails.isEmpty {
+                return .string(trimmedDetails)
+            }
+            return .null
+        }()
+        let languageValue: AnyJSON = {
+            if let language, !language.isEmpty {
+                return .string(language)
+            }
+            return .null
+        }()
+        let params: [String: AnyJSON] = [
+            "p_title": .string(title.trimmingCharacters(in: .whitespacesAndNewlines)),
+            "p_details": detailsValue,
+            "p_platform": .string(platform),
+            "p_language": languageValue
+        ]
+
+        _ = try await client
+            .rpc("create_app_feedback_request", params: params)
+            .execute()
+    }
+
+    func toggleAppFeedbackVote(requestId: UUID) async throws -> AppFeedbackVoteResult? {
+        guard case .signedIn = status else {
+            throw NSError(
+                domain: "AppFeedback",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "feedback_sign_in_required".localizedStringFallback]
+            )
+        }
+
+        let params: [String: AnyJSON] = [
+            "p_request_id": .string(requestId.uuidString)
+        ]
+        let rows: [AppFeedbackVoteResult] = try await client
+            .rpc("toggle_app_feedback_vote", params: params)
+            .execute()
+            .value
+        return rows.first
+    }
+
+    func deleteAppFeedbackRequest(requestId: UUID) async throws {
+        guard case .signedIn = status else {
+            throw NSError(
+                domain: "AppFeedback",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "feedback_sign_in_required".localizedStringFallback]
+            )
+        }
+
+        let params: [String: AnyJSON] = [
+            "p_request_id": .string(requestId.uuidString)
+        ]
+        _ = try await client
+            .rpc("delete_app_feedback_request", params: params)
+            .execute()
+    }
+
+    func setAppFeedbackStatus(requestId: UUID, status newStatus: String) async throws -> AppFeedbackStatusResult? {
+        guard case .signedIn = status else {
+            throw NSError(
+                domain: "AppFeedback",
+                code: 401,
+                userInfo: [NSLocalizedDescriptionKey: "feedback_sign_in_required".localizedStringFallback]
+            )
+        }
+
+        let params: [String: AnyJSON] = [
+            "p_request_id": .string(requestId.uuidString),
+            "p_status": .string(newStatus)
+        ]
+        let rows: [AppFeedbackStatusResult] = try await client
+            .rpc("set_app_feedback_status", params: params)
+            .execute()
+            .value
+        return rows.first
     }
 
     func dismissInviteToast() {

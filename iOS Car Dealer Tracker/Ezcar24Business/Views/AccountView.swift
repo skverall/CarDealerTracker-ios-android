@@ -20,6 +20,7 @@ struct AccountView: View {
     @State private var dedupState: DedupState = .idle
     @AppStorage(NotificationPreference.enabledKey) private var notificationsEnabled = false
     @AppStorage(NotificationPreference.inventoryStaleThresholdKey) private var inventoryStaleThreshold = NotificationPreference.defaultInventoryStaleThreshold
+    @AppStorage("app_feedback_board_prompt_dismissed") private var feedbackBoardPromptDismissed = false
     @State private var showNotificationSettingsAlert = false
     @State private var notificationAlertMessage = ""
     @State private var showMailError = false
@@ -60,6 +61,10 @@ struct AccountView: View {
                         subscriptionCard
 
                         referralCard
+
+                        if shouldShowFeedbackBoardPrompt {
+                            feedbackBoardPromptCard
+                        }
                         
                         // MARK: - General Settings
                         generalSettingsSection
@@ -301,6 +306,12 @@ struct AccountView: View {
     
     private var supportSection: some View {
         menuSection(title: "support_section".localizedKey) {
+            NavigationLink {
+                FeedbackBoardView()
+            } label: {
+                MenuRow(icon: "lightbulb.fill", title: "feedback_board_title".localizedKey, color: .orange)
+            }
+            Divider().padding(.leading, 52)
             Button {
                 sendSupportEmail()
             } label: {
@@ -366,6 +377,92 @@ struct AccountView: View {
     
     private var showManagementSection: Bool {
         permissionService.can(.manageTeam) || permissionService.currentRole == "owner"
+    }
+
+    private var shouldShowFeedbackBoardPrompt: Bool {
+        if feedbackBoardPromptDismissed { return false }
+        if case .signedIn = sessionStore.status { return true }
+        return false
+    }
+
+    private var feedbackBoardPromptCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(ColorTheme.accent.opacity(0.14))
+                        .frame(width: 48, height: 48)
+
+                    Image(systemName: "lightbulb.fill")
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(ColorTheme.accent)
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text("feedback_board_prompt_title".localizedString)
+                            .font(.headline.weight(.bold))
+                            .foregroundColor(ColorTheme.primaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Text("new_badge".localizedString)
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(ColorTheme.accent)
+                            .clipShape(Capsule())
+                    }
+
+                    Text("feedback_board_prompt_subtitle".localizedString)
+                        .font(.subheadline)
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Button {
+                    feedbackBoardPromptDismissed = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(ColorTheme.tertiaryText)
+                        .frame(width: 44, height: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("dismiss".localizedString)
+            }
+
+            NavigationLink {
+                FeedbackBoardView()
+            } label: {
+                HStack {
+                    Text("feedback_board_open".localizedString)
+                        .font(.subheadline.weight(.bold))
+                    Spacer()
+                    Image(systemName: "arrow.right")
+                        .font(.subheadline.weight(.bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 13)
+                .background(ColorTheme.primary)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.hapticScale)
+            .simultaneousGesture(TapGesture().onEnded {
+                feedbackBoardPromptDismissed = true
+            })
+        }
+        .padding(18)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(ColorTheme.accent.opacity(0.22), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 5)
     }
 
     @ViewBuilder
@@ -1147,6 +1244,1198 @@ struct AccountView: View {
 }
 
 // MARK: - Subviews
+struct FeedbackBoardView: View {
+    @EnvironmentObject private var sessionStore: SessionStore
+    @EnvironmentObject private var appSessionState: AppSessionState
+    @EnvironmentObject private var regionSettings: RegionSettingsManager
+    @State private var requests: [AppFeedbackRequest] = []
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var showingComposer = false
+    @State private var showingLogin = false
+    @State private var isSubmittingFeedback = false
+    @State private var composerError: String?
+    @State private var togglingVotes: Set<UUID> = []
+    @State private var deletingRequests: Set<UUID> = []
+    @State private var updatingStatuses: Set<UUID> = []
+    @State private var requestPendingDeletion: AppFeedbackRequest?
+
+    var body: some View {
+        ZStack {
+            ColorTheme.background.ignoresSafeArea()
+
+            if isSignedIn {
+                feedbackContent
+            } else {
+                signInRequiredView
+            }
+        }
+        .navigationTitle("feedback_board_title".localizedString)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isSignedIn {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    Button {
+                        Task { await loadFeedback() }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                    }
+                    .disabled(isLoading)
+
+                    Button {
+                        composerError = nil
+                        showingComposer = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                }
+            }
+        }
+        .task {
+            if isSignedIn, requests.isEmpty {
+                await loadFeedback()
+            }
+        }
+        .onChange(of: sessionStore.status) { _, _ in
+            if isSignedIn {
+                Task { await loadFeedback() }
+            }
+        }
+        .sheet(isPresented: $showingComposer) {
+            FeedbackComposerSheet(
+                isSubmitting: isSubmittingFeedback,
+                errorMessage: composerError,
+                onSubmit: { title, details in
+                    Task {
+                        await submitFeedback(title: title, details: details)
+                    }
+                }
+            )
+            .presentationDetents([.large])
+        }
+        .sheet(isPresented: $showingLogin) {
+            LoginView(
+                isGuest: Binding(
+                    get: { appSessionState.isGuestMode },
+                    set: { appSessionState.isGuestMode = $0 }
+                )
+            )
+        }
+        .confirmationDialog(
+            "feedback_delete_title".localizedString,
+            isPresented: Binding(
+                get: { requestPendingDeletion != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        requestPendingDeletion = nil
+                    }
+                }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("delete".localizedString, role: .destructive) {
+                if let request = requestPendingDeletion {
+                    requestPendingDeletion = nil
+                    Task { await deleteRequest(request.id) }
+                }
+            }
+            Button("cancel".localizedString, role: .cancel) {}
+        } message: {
+            Text("feedback_delete_message".localizedString)
+        }
+        .preferredColorScheme(regionSettings.selectedTheme.colorScheme)
+        .environment(\.colorScheme, regionSettings.selectedTheme.colorScheme)
+    }
+
+    private var isSignedIn: Bool {
+        if case .signedIn = sessionStore.status { return true }
+        return false
+    }
+
+    private var openFeedbackCount: Int {
+        requests.filter { $0.status != "shipped" }.count
+    }
+
+    private var completedFeedbackCount: Int {
+        requests.filter { $0.status == "shipped" }.count
+    }
+
+    private var openFeedbackRequests: [AppFeedbackRequest] {
+        requests.filter { $0.status != "shipped" }
+    }
+
+    private var completedFeedbackRequests: [AppFeedbackRequest] {
+        requests.filter { $0.status == "shipped" }
+    }
+
+    @ViewBuilder
+    private var feedbackContent: some View {
+        ScrollView {
+            LazyVStack(spacing: 12) {
+                FeedbackBoardIntroCard(
+                    openCount: openFeedbackCount,
+                    completedCount: completedFeedbackCount
+                )
+
+                FeedbackAddIdeaBar {
+                    composerError = nil
+                    showingComposer = true
+                }
+
+                if let errorMessage {
+                    FeedbackStateCard(
+                        icon: "exclamationmark.triangle.fill",
+                        title: "feedback_load_failed".localizedString,
+                        message: errorMessage,
+                        actionTitle: "try_again".localizedString,
+                        color: ColorTheme.danger,
+                        action: {
+                            Task { await loadFeedback() }
+                        }
+                    )
+                }
+
+                if isLoading && requests.isEmpty {
+                    ProgressView("loading".localizedString)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 36)
+                } else if requests.isEmpty && errorMessage == nil {
+                    FeedbackStateCard(
+                        icon: "sparkles",
+                        title: "feedback_empty_title".localizedString,
+                        message: "feedback_empty_message".localizedString,
+                        actionTitle: "feedback_add_idea".localizedString,
+                        color: ColorTheme.accent,
+                        action: {
+                            composerError = nil
+                            showingComposer = true
+                        }
+                    )
+                } else {
+                    if !openFeedbackRequests.isEmpty {
+                        FeedbackSectionHeader(
+                            title: "feedback_status_open".localizedString,
+                            count: openFeedbackRequests.count,
+                            systemImage: "flame.fill",
+                            tint: ColorTheme.primary
+                        )
+
+                        ForEach(openFeedbackRequests) { request in
+                            FeedbackRequestCard(
+                                request: request,
+                                isTogglingVote: togglingVotes.contains(request.id),
+                                isDeleting: deletingRequests.contains(request.id),
+                                isUpdatingStatus: updatingStatuses.contains(request.id),
+                                onVote: {
+                                    Task { await toggleVote(for: request.id) }
+                                },
+                                onDelete: {
+                                    requestPendingDeletion = request
+                                },
+                                onMarkDone: {
+                                    Task { await markDone(request.id) }
+                                }
+                            )
+                        }
+                    }
+
+                    if !completedFeedbackRequests.isEmpty {
+                        FeedbackSectionHeader(
+                            title: "feedback_status_shipped".localizedString,
+                            count: completedFeedbackRequests.count,
+                            systemImage: "checkmark.seal.fill",
+                            tint: ColorTheme.success
+                        )
+                        .padding(.top, openFeedbackRequests.isEmpty ? 0 : 8)
+
+                        ForEach(completedFeedbackRequests) { request in
+                            FeedbackRequestCard(
+                                request: request,
+                                isTogglingVote: togglingVotes.contains(request.id),
+                                isDeleting: deletingRequests.contains(request.id),
+                                isUpdatingStatus: updatingStatuses.contains(request.id),
+                                onVote: {
+                                    Task { await toggleVote(for: request.id) }
+                                },
+                                onDelete: {
+                                    requestPendingDeletion = request
+                                },
+                                onMarkDone: {
+                                    Task { await markDone(request.id) }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 18)
+            .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 720 : .infinity)
+            .animation(.snappy(duration: 0.28, extraBounce: 0.04), value: requests)
+        }
+        .scrollIndicators(.hidden)
+        .refreshable {
+            await loadFeedback()
+        }
+    }
+
+    private var signInRequiredView: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(ColorTheme.primary.opacity(0.12))
+                    .frame(width: 76, height: 76)
+
+                Image(systemName: "person.crop.circle.badge.plus")
+                    .font(.system(size: 34, weight: .semibold))
+                    .foregroundColor(ColorTheme.primary)
+            }
+
+            Text("feedback_sign_in_title".localizedString)
+                .font(.title3.weight(.bold))
+                .foregroundColor(ColorTheme.primaryText)
+                .multilineTextAlignment(.center)
+
+            Text("feedback_sign_in_message".localizedString)
+                .font(.body)
+                .foregroundColor(ColorTheme.secondaryText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                appSessionState.exitGuestModeForLogin()
+                showingLogin = true
+            } label: {
+                Text("sign_in".localizedString)
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(ColorTheme.primary)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+            .buttonStyle(.hapticScale)
+        }
+        .padding(24)
+        .frame(maxWidth: 420)
+    }
+
+    @MainActor
+    private func loadFeedback() async {
+        guard isSignedIn else { return }
+        isLoading = true
+        errorMessage = nil
+        do {
+            requests = try await sessionStore.fetchAppFeedbackRequests(limit: 100)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoading = false
+    }
+
+    @MainActor
+    private func submitFeedback(title: String, details: String?) async {
+        isSubmittingFeedback = true
+        composerError = nil
+        do {
+            try await sessionStore.createAppFeedbackRequest(
+                title: title,
+                details: details,
+                platform: "ios",
+                language: regionSettings.selectedLanguage.rawValue
+            )
+            showingComposer = false
+            await loadFeedback()
+        } catch {
+            composerError = error.localizedDescription
+        }
+        isSubmittingFeedback = false
+    }
+
+    @MainActor
+    private func toggleVote(for requestId: UUID) async {
+        guard !togglingVotes.contains(requestId) else { return }
+        togglingVotes.insert(requestId)
+        do {
+            if let result = try await sessionStore.toggleAppFeedbackVote(requestId: requestId),
+               let index = requests.firstIndex(where: { $0.id == requestId }) {
+                requests[index].hasVoted = result.voted
+                requests[index].voteCount = result.voteCount
+                requests.sort(by: feedbackRequestSort)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        togglingVotes.remove(requestId)
+    }
+
+    @MainActor
+    private func deleteRequest(_ requestId: UUID) async {
+        guard !deletingRequests.contains(requestId) else { return }
+        deletingRequests.insert(requestId)
+        do {
+            try await sessionStore.deleteAppFeedbackRequest(requestId: requestId)
+            requests.removeAll { $0.id == requestId }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        deletingRequests.remove(requestId)
+    }
+
+    @MainActor
+    private func markDone(_ requestId: UUID) async {
+        guard !updatingStatuses.contains(requestId) else { return }
+        updatingStatuses.insert(requestId)
+        do {
+            if let result = try await sessionStore.setAppFeedbackStatus(requestId: requestId, status: "shipped"),
+               let index = requests.firstIndex(where: { $0.id == requestId }) {
+                requests[index].status = result.status
+                requests[index].completedAt = result.completedAt
+                requests.sort(by: feedbackRequestSort)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        updatingStatuses.remove(requestId)
+    }
+}
+
+private struct FeedbackBoardIntroCard: View {
+    let openCount: Int
+    let completedCount: Int
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 13, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [ColorTheme.primary.opacity(0.16), ColorTheme.accent.opacity(0.14)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+
+                    Image(systemName: "lightbulb.max.fill")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(ColorTheme.primary)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("feedback_board_intro_title".localizedString)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(ColorTheme.primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("feedback_board_intro_subtitle".localizedString)
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: 8) {
+                FeedbackBoardStatPill(
+                    title: "feedback_status_open".localizedString,
+                    value: openCount,
+                    systemImage: "flame.fill",
+                    tint: ColorTheme.primary
+                )
+
+                FeedbackBoardStatPill(
+                    title: "feedback_status_shipped".localizedString,
+                    value: completedCount,
+                    systemImage: "checkmark.seal.fill",
+                    tint: ColorTheme.success
+                )
+            }
+        }
+        .padding(14)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(ColorTheme.primary.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.035), radius: 7, x: 0, y: 3)
+    }
+}
+
+private struct FeedbackAddIdeaBar: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: "plus.circle.fill")
+                    .font(.system(size: 17, weight: .semibold))
+
+                Text("feedback_add_idea".localizedString)
+                    .font(.subheadline.weight(.bold))
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.bold))
+                    .opacity(0.85)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 15)
+            .padding(.vertical, 12)
+            .background(ColorTheme.accent)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(color: ColorTheme.accent.opacity(0.16), radius: 6, x: 0, y: 3)
+        }
+        .buttonStyle(.hapticScale)
+    }
+}
+
+private struct FeedbackSectionHeader: View {
+    let title: String
+    let count: Int
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
+                .foregroundColor(tint)
+
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundColor(ColorTheme.primaryText)
+                .textCase(.uppercase)
+
+            Text(String(count))
+                .font(.caption2.weight(.heavy))
+                .monospacedDigit()
+                .foregroundColor(tint)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .background(tint.opacity(0.11))
+                .clipShape(Capsule())
+
+            Rectangle()
+                .fill(Color.gray.opacity(0.12))
+                .frame(height: 1)
+        }
+        .padding(.top, 4)
+    }
+}
+
+private struct FeedbackBoardStatPill: View {
+    let title: String
+    let value: Int
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
+
+            Text(String(value))
+                .font(.caption.weight(.heavy))
+                .monospacedDigit()
+
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+        }
+        .foregroundColor(tint)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 7)
+        .padding(.horizontal, 9)
+        .background(tint.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(tint.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct FeedbackRequestCard: View {
+    let request: AppFeedbackRequest
+    let isTogglingVote: Bool
+    let isDeleting: Bool
+    let isUpdatingStatus: Bool
+    let onVote: () -> Void
+    let onDelete: () -> Void
+    let onMarkDone: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                voteButton
+                requestContent
+            }
+
+            if isCompleted {
+                completedFooter
+            } else if request.canDelete || request.canAdmin {
+                actionRow
+            }
+        }
+        .padding(12)
+        .background(cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(cardAccent.opacity(isCompleted ? 0.18 : 0.12), lineWidth: 1)
+        )
+        .overlay(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                .fill(cardAccent)
+                .frame(width: 3)
+                .padding(.vertical, 14)
+                .opacity(isCompleted ? 0.55 : 0.85)
+        }
+        .shadow(color: Color.black.opacity(isCompleted ? 0.02 : 0.035), radius: 7, x: 0, y: 3)
+        .opacity(isCompleted ? 0.92 : 1)
+    }
+
+    private var isCompleted: Bool {
+        request.status == "shipped"
+    }
+
+    private var cardAccent: Color {
+        isCompleted ? ColorTheme.success : ColorTheme.primary
+    }
+
+    private var cardBackground: some ShapeStyle {
+        isCompleted ? AnyShapeStyle(ColorTheme.success.opacity(0.045)) : AnyShapeStyle(ColorTheme.cardBackground)
+    }
+
+    private var voteTint: Color {
+        if isCompleted { return ColorTheme.success }
+        return request.hasVoted ? ColorTheme.primary : ColorTheme.secondaryText
+    }
+
+    private var voteButton: some View {
+        Button(action: onVote) {
+            VStack(spacing: 4) {
+                voteIcon
+
+                Text(String(request.voteCount))
+                    .font(.headline.weight(.heavy))
+                    .monospacedDigit()
+
+                Text(isCompleted ? "feedback_status_shipped".localizedString : "feedback_vote".localizedString)
+                    .font(.caption2.weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+            .foregroundColor(voteTint)
+            .frame(width: 50, height: 58)
+            .background(voteTint.opacity(isCompleted ? 0.08 : 0.11))
+            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(voteTint.opacity(0.12), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.hapticScale)
+        .disabled(isTogglingVote || isCompleted)
+        .opacity(isCompleted ? 0.76 : 1)
+        .accessibilityLabel(request.hasVoted ? "feedback_remove_vote".localizedString : "feedback_vote".localizedString)
+    }
+
+    @ViewBuilder
+    private var voteIcon: some View {
+        if isTogglingVote {
+            ProgressView()
+                .controlSize(.small)
+        } else {
+            Image(systemName: isCompleted ? "checkmark.seal.fill" : (request.hasVoted ? "hand.thumbsup.fill" : "hand.thumbsup"))
+                .font(.system(size: 16, weight: .bold))
+        }
+    }
+
+    private var requestContent: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                FeedbackStatusBadge(status: request.status)
+                if request.isMine {
+                    mineBadge
+                }
+            }
+
+            Text(request.title)
+                .font(.subheadline.weight(.bold))
+                .foregroundColor(ColorTheme.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+                .lineSpacing(1)
+
+            if let details = request.details, !details.isEmpty {
+                Text(details)
+                    .font(.footnote)
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Label(request.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+                .font(.caption2.weight(.medium))
+                .foregroundColor(ColorTheme.tertiaryText)
+        }
+    }
+
+    @ViewBuilder
+    private var actionRow: some View {
+        Divider()
+            .opacity(0.45)
+
+        HStack(spacing: 10) {
+            Spacer(minLength: 0)
+
+            if request.canAdmin {
+                Button(action: onMarkDone) {
+                    HStack(spacing: 6) {
+                        if isUpdatingStatus {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "checkmark.seal.fill")
+                        }
+                        Text("feedback_mark_done".localizedString)
+                    }
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(ColorTheme.success)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(ColorTheme.success.opacity(0.12))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.hapticScale)
+                .disabled(isUpdatingStatus)
+            }
+
+            if request.canDelete {
+                Button(role: .destructive, action: onDelete) {
+                    HStack(spacing: 6) {
+                        if isDeleting {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "trash.fill")
+                        }
+                        Text("delete".localizedString)
+                    }
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(ColorTheme.danger)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(ColorTheme.danger.opacity(0.10))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.hapticScale)
+                .disabled(isDeleting)
+            }
+        }
+    }
+
+    private var completedFooter: some View {
+        HStack(spacing: 8) {
+            Label("feedback_done_note".localizedString, systemImage: "checkmark.seal.fill")
+                .font(.caption2.weight(.bold))
+                .foregroundColor(ColorTheme.success)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(ColorTheme.success.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    private var mineBadge: some View {
+        Text("feedback_mine_badge".localizedString)
+            .font(.caption2.weight(.bold))
+            .foregroundColor(ColorTheme.primary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(ColorTheme.primary.opacity(0.10))
+            .clipShape(Capsule())
+    }
+}
+
+private struct FeedbackStatusBadge: View {
+    let status: String
+
+    var body: some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundColor(color)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule())
+    }
+
+    private var title: String {
+        switch status {
+        case "planned": return "feedback_status_planned".localizedString
+        case "in_progress": return "feedback_status_in_progress".localizedString
+        case "shipped": return "feedback_status_shipped".localizedString
+        case "closed": return "feedback_status_closed".localizedString
+        default: return "feedback_status_open".localizedString
+        }
+    }
+
+    private var color: Color {
+        switch status {
+        case "planned": return ColorTheme.purple
+        case "in_progress": return ColorTheme.warning
+        case "shipped": return ColorTheme.success
+        case "closed": return ColorTheme.secondaryText
+        default: return ColorTheme.primary
+        }
+    }
+}
+
+private struct FeedbackStateCard: View {
+    let icon: String
+    let title: String
+    let message: String
+    let actionTitle: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundColor(color)
+
+            Text(title)
+                .font(.headline.weight(.bold))
+                .foregroundColor(ColorTheme.primaryText)
+                .multilineTextAlignment(.center)
+
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(ColorTheme.secondaryText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button(action: action) {
+                Text(actionTitle)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(color)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .background(color.opacity(0.12))
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(.hapticScale)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(22)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+private struct FeedbackComposerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
+    @State private var details = ""
+    @FocusState private var focusedField: FeedbackComposerField?
+    let isSubmitting: Bool
+    let errorMessage: String?
+    let onSubmit: (String, String?) -> Void
+
+    var body: some View {
+        NavigationStack {
+            ZStack(alignment: .bottom) {
+                ColorTheme.background.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        composerTopBar
+                        composerHero
+                        composerProgress
+                        titleCard
+                        detailsCard
+
+                        if let errorMessage, !errorMessage.isEmpty {
+                            errorCard(errorMessage)
+                        }
+                    }
+                    .padding(.horizontal, 18)
+                    .padding(.top, 14)
+                    .padding(.bottom, 116)
+                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 560 : .infinity)
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollDismissesKeyboard(.interactively)
+            }
+            .safeAreaInset(edge: .bottom) {
+                submitBar
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    focusedField = .title
+                }
+            }
+        }
+    }
+
+    private var composerTopBar: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundColor(ColorTheme.primaryText)
+                    .frame(width: 44, height: 44)
+                    .background(ColorTheme.cardBackground)
+                    .clipShape(Circle())
+                    .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
+            }
+            .buttonStyle(.hapticScale)
+            .disabled(isSubmitting)
+
+            Spacer()
+
+            Text("feedback_new_idea_title".localizedString)
+                .font(.title3.weight(.bold))
+                .foregroundColor(ColorTheme.primaryText)
+
+            Spacer()
+
+            ZStack {
+                Circle()
+                    .fill(ColorTheme.accent.opacity(0.12))
+                    .frame(width: 44, height: 44)
+
+                Image(systemName: "lightbulb.max.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(ColorTheme.accent)
+            }
+        }
+        .padding(.bottom, 2)
+    }
+
+    private var composerHero: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [ColorTheme.accent.opacity(0.18), ColorTheme.primary.opacity(0.12)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 54, height: 54)
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(ColorTheme.accent)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("feedback_board_intro_title".localizedString)
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(ColorTheme.primaryText)
+
+                Text("feedback_board_intro_subtitle".localizedString)
+                    .font(.subheadline)
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(16)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+    }
+
+    private var composerProgress: some View {
+        HStack(spacing: 8) {
+            FeedbackComposerStepPill(
+                title: "feedback_title_label".localizedString,
+                systemImage: titleIsValid ? "checkmark.circle.fill" : "1.circle.fill",
+                tint: titleIsValid ? ColorTheme.success : ColorTheme.primary,
+                isActive: focusedField == .title || titleIsValid
+            )
+
+            FeedbackComposerStepPill(
+                title: "feedback_details_label".localizedString,
+                systemImage: !details.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "checkmark.circle.fill" : "2.circle.fill",
+                tint: !details.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? ColorTheme.success : ColorTheme.accent,
+                isActive: focusedField == .details || !details.isEmpty
+            )
+        }
+    }
+
+    private var titleCard: some View {
+        FeedbackComposerCard(
+            title: "feedback_title_label".localizedString,
+            trailing: "\(trimmedTitle.count)/120",
+            tint: titleCardTint,
+            isInvalid: titleIsInvalid
+        ) {
+            TextField("feedback_title_placeholder".localizedString, text: $title)
+                .textFieldStyle(.plain)
+                .font(.body)
+                .foregroundColor(ColorTheme.primaryText)
+                .focused($focusedField, equals: .title)
+                .submitLabel(.next)
+                .onSubmit {
+                    focusedField = .details
+                }
+
+            Text("feedback_title_hint".localizedString)
+                .font(.caption)
+                .foregroundColor(titleIsInvalid ? ColorTheme.danger : ColorTheme.secondaryText)
+        }
+    }
+
+    private var detailsCard: some View {
+        FeedbackComposerCard(
+            title: "feedback_details_label".localizedString,
+            trailing: "\(details.count)/1200",
+            tint: detailsCardTint,
+            isInvalid: details.count > 1200
+        ) {
+            ZStack(alignment: .topLeading) {
+                TextEditor(text: $details)
+                    .font(.body)
+                    .foregroundColor(ColorTheme.primaryText)
+                    .frame(minHeight: 142)
+                    .scrollContentBackground(.hidden)
+                    .padding(.horizontal, -4)
+                    .padding(.vertical, -8)
+                    .focused($focusedField, equals: .details)
+
+                if details.isEmpty {
+                    Text("feedback_details_placeholder".localizedString)
+                        .font(.body)
+                        .foregroundColor(ColorTheme.tertiaryText)
+                        .padding(.top, 2)
+                        .allowsHitTesting(false)
+                }
+            }
+        }
+    }
+
+    private func errorCard(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(ColorTheme.danger)
+
+            Text(message)
+                .font(.footnote)
+                .foregroundColor(ColorTheme.danger)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ColorTheme.danger.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var submitBar: some View {
+        VStack(spacing: 0) {
+            Button {
+                onSubmit(trimmedTitle, trimmedDetails)
+            } label: {
+                HStack(spacing: 10) {
+                    if isSubmitting {
+                        ProgressView()
+                            .tint(.white)
+                    } else {
+                        Image(systemName: canSubmit ? "paperplane.fill" : "lock.fill")
+                            .font(.system(size: 15, weight: .bold))
+                    }
+
+                    Text("feedback_submit".localizedString)
+                        .font(.headline.weight(.bold))
+                }
+                .foregroundColor(canSubmit ? .white : ColorTheme.secondaryText)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 56)
+                .background(submitBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .shadow(color: canSubmit ? ColorTheme.accent.opacity(0.24) : .clear, radius: 10, x: 0, y: 5)
+            }
+            .buttonStyle(.hapticScale)
+            .disabled(!canSubmit || isSubmitting)
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 12)
+        .padding(.bottom, 10)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(Color.gray.opacity(0.10))
+                .frame(height: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var submitBackground: some View {
+        if canSubmit {
+            LinearGradient(
+                colors: [ColorTheme.accent, ColorTheme.primary],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        } else {
+            ColorTheme.secondaryText.opacity(0.14)
+        }
+    }
+
+    private var titleCardTint: Color {
+        titleIsInvalid ? ColorTheme.danger : (titleIsValid ? ColorTheme.success : ColorTheme.primary)
+    }
+
+    private var detailsCardTint: Color {
+        details.count > 1200 ? ColorTheme.danger : (details.isEmpty ? ColorTheme.accent : ColorTheme.success)
+    }
+
+    private var trimmedTitle: String {
+        title.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var trimmedDetails: String? {
+        let trimmed = details.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private var titleIsValid: Bool {
+        (4...120).contains(trimmedTitle.count)
+    }
+
+    private var titleIsInvalid: Bool {
+        !title.isEmpty && !titleIsValid
+    }
+
+    private var canSubmit: Bool {
+        titleIsValid && details.count <= 1200
+    }
+}
+
+private enum FeedbackComposerField {
+    case title
+    case details
+}
+
+private struct FeedbackComposerStepPill: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    let isActive: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
+
+            Text(title)
+                .font(.caption.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .foregroundColor(isActive ? tint : ColorTheme.secondaryText)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 9)
+        .padding(.horizontal, 10)
+        .background(isActive ? tint.opacity(0.12) : ColorTheme.cardBackground)
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(isActive ? tint.opacity(0.22) : Color.gray.opacity(0.08), lineWidth: 1)
+        )
+    }
+}
+
+private struct FeedbackComposerCard<Content: View>: View {
+    let title: String
+    let trailing: String
+    let tint: Color
+    let isInvalid: Bool
+    let content: Content
+
+    init(
+        title: String,
+        trailing: String,
+        tint: Color,
+        isInvalid: Bool,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.trailing = trailing
+        self.tint = tint
+        self.isInvalid = isInvalid
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Text(title)
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .textCase(.uppercase)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Spacer()
+
+                Text(trailing)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundColor(isInvalid ? ColorTheme.danger : ColorTheme.tertiaryText)
+            }
+
+            content
+        }
+        .padding(16)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke((isInvalid ? ColorTheme.danger : tint).opacity(isInvalid ? 0.46 : 0.16), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
+    }
+}
+
+private func feedbackStatusRank(_ status: String) -> Int {
+    switch status {
+    case "open": return 1
+    case "planned": return 2
+    case "in_progress": return 3
+    case "closed": return 4
+    case "shipped": return 5
+    default: return 6
+    }
+}
+
+private func feedbackRequestSort(_ lhs: AppFeedbackRequest, _ rhs: AppFeedbackRequest) -> Bool {
+    if lhs.status != rhs.status {
+        return feedbackStatusRank(lhs.status) < feedbackStatusRank(rhs.status)
+    }
+    if lhs.voteCount != rhs.voteCount {
+        return lhs.voteCount > rhs.voteCount
+    }
+    return lhs.createdAt > rhs.createdAt
+}
+
 struct MenuRow: View {
     let icon: String
     let title: LocalizedStringKey

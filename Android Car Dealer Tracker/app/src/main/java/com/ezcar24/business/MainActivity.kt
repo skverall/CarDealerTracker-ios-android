@@ -241,6 +241,7 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToReferralStats = { navController.navigate("referral_stats") },
                                         onNavigateToChangePassword = { navController.navigate("change_password") },
                                         onNavigateToUserGuide = { navController.navigate("user_guide") },
+                                        onNavigateToFeedbackBoard = { navController.navigate("feedback_board") },
                                         onNavigateToPaywall = { navController.navigate("paywall") },
                                         onSignedOut = {
                                             viewModel.onSignedOut()
@@ -314,6 +315,17 @@ class MainActivity : ComponentActivity() {
                                 composable("referral_stats") {
                                     com.ezcar24.business.ui.settings.ReferralStatsScreen(
                                         onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable("feedback_board") {
+                                    com.ezcar24.business.ui.settings.FeedbackBoardScreen(
+                                        onBack = { navController.popBackStack() },
+                                        onRequireSignIn = {
+                                            viewModel.onSignedOut()
+                                            navController.navigate("login") {
+                                                popUpTo(0) { inclusive = true }
+                                            }
+                                        }
                                     )
                                 }
                                 composable("paywall") {

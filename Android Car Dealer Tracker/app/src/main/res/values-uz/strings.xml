@@ -899,4 +899,37 @@
     <string name="l10n_no_loss_making_vehicle_sales_in_this_month_531acae4ba" formatted="false">Bu oyda zararli avtomobil sotuvlari yo‘q.</string>
     <string name="l10n_open_the_finance_snapshot_used_for_pdf_exp_74c9de7d2b" formatted="false">PDF eksporti uchun ishlatiladigan moliyaviy holatni ochish</string>
     <string name="l10n_realized_sales_profit_bb21f32e6e" formatted="false">Real sotuv foydasi</string>
+    <string name="l10n_ideas_voting_71b73b7de3" formatted="false">Gʻoyalar va ovoz berish</string>
+    <string name="l10n_suggest_features_and_vote_on_requests_from_92183a931f" formatted="false">Funksiyalar taklif qiling va boshqa dilerlar soʻrovlariga ovoz bering</string>
+    <string name="l10n_tell_us_what_to_build_next_2bee7e0189" formatted="false">Keyin nimani qoʻshishni ayting</string>
+    <string name="l10n_add_ideas_vote_for_requests_and_help_prior_cd98a96cbe" formatted="false">Gʻoyalar qoʻshing, soʻrovlarga ovoz bering va yangilanishlarni ustuvor qiling.</string>
+    <string name="l10n_open_ideas_c9cbf406c8" formatted="false">Gʻoyalarni ochish</string>
+    <string name="l10n_add_idea_994efc413e" formatted="false">Gʻoya qoʻshish</string>
+    <string name="l10n_sign_in_to_share_ideas_83913a035c" formatted="false">Gʻoyalar ulashish uchun kiring</string>
+    <string name="l10n_every_registered_dealer_can_suggest_improv_ef09bd29a8" formatted="false">Har bir roʻyxatdan oʻtgan diler Pro boʻlmasa ham taklif yozishi va ovoz berishi mumkin.</string>
+    <string name="l10n_could_not_load_ideas_c1358509bf" formatted="false">Gʻoyalarni yuklab boʻlmadi</string>
+    <string name="l10n_try_again_cef2fe093b" formatted="false">Qayta urinib koʻring</string>
+    <string name="l10n_no_ideas_yet_d72eae7cde" formatted="false">Hali gʻoyalar yoʻq</string>
+    <string name="l10n_be_the_first_to_suggest_what_would_make_th_3e84deaee0" formatted="false">Ilovani dilerlik ishingiz uchun foydaliroq qiladigan gʻoyani birinchi boʻlib taklif qiling.</string>
+    <string name="l10n_add_idea_e1649cc0ef" formatted="false">Gʻoya qoʻshish</string>
+    <string name="l10n_help_decide_what_we_build_next_e7871bf0a8" formatted="false">Keyingi funksiyani tanlashda yordam bering</string>
+    <string name="l10n_post_one_clear_idea_then_vote_on_requests__357cdcf905" formatted="false">Bitta aniq gʻoya yozing, keyin boshqa dilerlar soʻrovlariga ovoz bering.</string>
+    <string name="l10n_mine_d42af7968b" formatted="false">Mening</string>
+    <string name="l10n_remove_vote_b212f50d67" formatted="false">Ovozni olib tashlash</string>
+    <string name="l10n_vote_64f8729141" formatted="false">Ovoz berish</string>
+    <string name="l10n_delete_this_idea_13119ab9f6" formatted="false">Bu gʻoya oʻchirilsinmi?</string>
+    <string name="l10n_your_idea_will_be_removed_from_the_board_c_76a3ed3908" formatted="false">Gʻoyangiz doskadan olib tashlanadi. Bajarilgan gʻoyalar ko‘rinib turadi.</string>
+    <string name="l10n_developer_added_this_509753d3f0" formatted="false">Dasturchi qoʻshdi</string>
+    <string name="l10n_mark_done_0911cce79b" formatted="false">Bajarildi deb belgilash</string>
+    <string name="l10n_planned_9cbe42aaff" formatted="false">Rejada</string>
+    <string name="l10n_in_progress_f61eadaf15" formatted="false">Jarayonda</string>
+    <string name="l10n_shipped_dec6e32908" formatted="false">Chiqarildi</string>
+    <string name="l10n_closed_88d86b7721" formatted="false">Yopiq</string>
+    <string name="l10n_new_idea_a94746e76a" formatted="false">Yangi gʻoya</string>
+    <string name="l10n_short_title_d1c3c0e37d" formatted="false">Qisqa sarlavha</string>
+    <string name="l10n_example_add_home_screen_widgets_4f14115430" formatted="false">Masalan: bosh ekranga vidjetlar qoʻshish</string>
+    <string name="l10n_4_to_120_characters_7c0daf019b" formatted="false">4 dan 120 tagacha belgi</string>
+    <string name="l10n_details_dc3decbb93" formatted="false">Tafsilotlar</string>
+    <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">Bu dilerlik ishingizga qanday yordam berishini tushuntiring.</string>
+    <string name="l10n_submit_2dacf65959" formatted="false">Yuborish</string>
 </resources>

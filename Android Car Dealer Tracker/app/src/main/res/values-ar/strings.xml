@@ -899,4 +899,37 @@
     <string name="l10n_no_loss_making_vehicle_sales_in_this_month_531acae4ba" formatted="false">لا توجد مبيعات مركبات خاسرة في هذا الشهر.</string>
     <string name="l10n_open_the_finance_snapshot_used_for_pdf_exp_74c9de7d2b" formatted="false">افتح لقطة المالية المستخدمة لتصدير PDF</string>
     <string name="l10n_realized_sales_profit_bb21f32e6e" formatted="false">ربح المبيعات المحقق</string>
+    <string name="l10n_ideas_voting_71b73b7de3" formatted="false">الأفكار والتصويت</string>
+    <string name="l10n_suggest_features_and_vote_on_requests_from_92183a931f" formatted="false">اقترح ميزات وصوّت لطلبات التجار الآخرين</string>
+    <string name="l10n_tell_us_what_to_build_next_2bee7e0189" formatted="false">أخبرنا بما تريد إضافته بعد ذلك</string>
+    <string name="l10n_add_ideas_vote_for_requests_and_help_prior_cd98a96cbe" formatted="false">أضف أفكارك، وصوّت للطلبات، وساعدنا في تحديد أولويات التحديثات.</string>
+    <string name="l10n_open_ideas_c9cbf406c8" formatted="false">فتح الأفكار</string>
+    <string name="l10n_add_idea_994efc413e" formatted="false">إضافة فكرة</string>
+    <string name="l10n_sign_in_to_share_ideas_83913a035c" formatted="false">سجّل الدخول لمشاركة الأفكار</string>
+    <string name="l10n_every_registered_dealer_can_suggest_improv_ef09bd29a8" formatted="false">يمكن لكل تاجر مسجل اقتراح التحسينات والتصويت حتى بدون Pro.</string>
+    <string name="l10n_could_not_load_ideas_c1358509bf" formatted="false">تعذر تحميل الأفكار</string>
+    <string name="l10n_try_again_cef2fe093b" formatted="false">حاول مرة أخرى</string>
+    <string name="l10n_no_ideas_yet_d72eae7cde" formatted="false">لا توجد أفكار بعد</string>
+    <string name="l10n_be_the_first_to_suggest_what_would_make_th_3e84deaee0" formatted="false">كن أول من يقترح ما يجعل التطبيق أفضل لوكالتك.</string>
+    <string name="l10n_add_idea_e1649cc0ef" formatted="false">إضافة فكرة</string>
+    <string name="l10n_help_decide_what_we_build_next_e7871bf0a8" formatted="false">ساعدنا في اختيار ما سنبنيه بعد ذلك</string>
+    <string name="l10n_post_one_clear_idea_then_vote_on_requests__357cdcf905" formatted="false">انشر فكرة واضحة واحدة، ثم صوّت لطلبات التجار الآخرين.</string>
+    <string name="l10n_mine_d42af7968b" formatted="false">لي</string>
+    <string name="l10n_remove_vote_b212f50d67" formatted="false">إزالة التصويت</string>
+    <string name="l10n_vote_64f8729141" formatted="false">تصويت</string>
+    <string name="l10n_delete_this_idea_13119ab9f6" formatted="false">حذف هذه الفكرة؟</string>
+    <string name="l10n_your_idea_will_be_removed_from_the_board_c_76a3ed3908" formatted="false">ستتم إزالة فكرتك من اللوحة. تبقى الأفكار المكتملة مرئية.</string>
+    <string name="l10n_developer_added_this_509753d3f0" formatted="false">أضافه المطوّر</string>
+    <string name="l10n_mark_done_0911cce79b" formatted="false">تحديد كمنجز</string>
+    <string name="l10n_planned_9cbe42aaff" formatted="false">مخطط</string>
+    <string name="l10n_in_progress_f61eadaf15" formatted="false">قيد التنفيذ</string>
+    <string name="l10n_shipped_dec6e32908" formatted="false">تم الإطلاق</string>
+    <string name="l10n_closed_88d86b7721" formatted="false">مغلق</string>
+    <string name="l10n_new_idea_a94746e76a" formatted="false">فكرة جديدة</string>
+    <string name="l10n_short_title_d1c3c0e37d" formatted="false">عنوان قصير</string>
+    <string name="l10n_example_add_home_screen_widgets_4f14115430" formatted="false">مثال: إضافة ودجات للشاشة الرئيسية</string>
+    <string name="l10n_4_to_120_characters_7c0daf019b" formatted="false">من 4 إلى 120 حرفًا</string>
+    <string name="l10n_details_dc3decbb93" formatted="false">التفاصيل</string>
+    <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">اشرح لماذا سيساعد ذلك وكالتك.</string>
+    <string name="l10n_submit_2dacf65959" formatted="false">إرسال</string>
 </resources>

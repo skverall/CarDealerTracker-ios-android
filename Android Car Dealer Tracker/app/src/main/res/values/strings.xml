@@ -912,4 +912,37 @@
     <string name="l10n_type_delete_and_re_enter_your_account_emai_2a7b026525" formatted="false">Type DELETE and re-enter your account email to continue.</string>
     <string name="l10n_confirmation_3424edc235" formatted="false">Confirmation</string>
     <string name="l10n_deleting_e16cac651b" formatted="false">Deleting...</string>
+    <string name="l10n_ideas_voting_71b73b7de3" formatted="false">Ideas &amp; Voting</string>
+    <string name="l10n_suggest_features_and_vote_on_requests_from_92183a931f" formatted="false">Suggest features and vote on requests from other dealers</string>
+    <string name="l10n_tell_us_what_to_build_next_2bee7e0189" formatted="false">Tell us what to build next</string>
+    <string name="l10n_add_ideas_vote_for_requests_and_help_prior_cd98a96cbe" formatted="false">Add ideas, vote for requests, and help prioritize updates.</string>
+    <string name="l10n_open_ideas_c9cbf406c8" formatted="false">Open Ideas</string>
+    <string name="l10n_add_idea_994efc413e" formatted="false">Add idea</string>
+    <string name="l10n_sign_in_to_share_ideas_83913a035c" formatted="false">Sign in to share ideas</string>
+    <string name="l10n_every_registered_dealer_can_suggest_improv_ef09bd29a8" formatted="false">Every registered dealer can suggest improvements and vote, even without Pro.</string>
+    <string name="l10n_could_not_load_ideas_c1358509bf" formatted="false">Could not load ideas</string>
+    <string name="l10n_try_again_cef2fe093b" formatted="false">Try Again</string>
+    <string name="l10n_no_ideas_yet_d72eae7cde" formatted="false">No ideas yet</string>
+    <string name="l10n_be_the_first_to_suggest_what_would_make_th_3e84deaee0" formatted="false">Be the first to suggest what would make the app better for your dealership.</string>
+    <string name="l10n_add_idea_e1649cc0ef" formatted="false">Add Idea</string>
+    <string name="l10n_help_decide_what_we_build_next_e7871bf0a8" formatted="false">Help decide what we build next</string>
+    <string name="l10n_post_one_clear_idea_then_vote_on_requests__357cdcf905" formatted="false">Post one clear idea, then vote on requests from other dealers.</string>
+    <string name="l10n_mine_d42af7968b" formatted="false">Mine</string>
+    <string name="l10n_remove_vote_b212f50d67" formatted="false">Remove vote</string>
+    <string name="l10n_vote_64f8729141" formatted="false">Vote</string>
+    <string name="l10n_delete_this_idea_13119ab9f6" formatted="false">Delete this idea?</string>
+    <string name="l10n_your_idea_will_be_removed_from_the_board_c_76a3ed3908" formatted="false">Your idea will be removed from the board. Completed ideas stay visible.</string>
+    <string name="l10n_developer_added_this_509753d3f0" formatted="false">Developer added this</string>
+    <string name="l10n_mark_done_0911cce79b" formatted="false">Mark done</string>
+    <string name="l10n_planned_9cbe42aaff" formatted="false">Planned</string>
+    <string name="l10n_in_progress_f61eadaf15" formatted="false">In Progress</string>
+    <string name="l10n_shipped_dec6e32908" formatted="false">Shipped</string>
+    <string name="l10n_closed_88d86b7721" formatted="false">Closed</string>
+    <string name="l10n_new_idea_a94746e76a" formatted="false">New Idea</string>
+    <string name="l10n_short_title_d1c3c0e37d" formatted="false">Short title</string>
+    <string name="l10n_example_add_home_screen_widgets_4f14115430" formatted="false">Example: Add home screen widgets</string>
+    <string name="l10n_4_to_120_characters_7c0daf019b" formatted="false">4 to 120 characters</string>
+    <string name="l10n_details_dc3decbb93" formatted="false">Details</string>
+    <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">Explain why this would help your dealership.</string>
+    <string name="l10n_submit_2dacf65959" formatted="false">Submit</string>
 </resources>

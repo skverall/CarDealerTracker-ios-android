@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="l10n_ideas_voting_71b73b7de3" formatted="false">Идеи и голосование</string>
+    <string name="l10n_suggest_features_and_vote_on_requests_from_92183a931f" formatted="false">Предлагайте функции и голосуйте за запросы других дилеров</string>
+    <string name="l10n_tell_us_what_to_build_next_2bee7e0189" formatted="false">Подскажите, что добавить дальше</string>
+    <string name="l10n_new_6403f2b7eb" formatted="false">Новое</string>
+    <string name="l10n_add_ideas_vote_for_requests_and_help_prior_cd98a96cbe" formatted="false">Добавляйте идеи, голосуйте за запросы и помогайте выбирать приоритеты обновлений.</string>
+    <string name="l10n_open_ideas_c9cbf406c8" formatted="false">Открыть идеи</string>
+    <string name="l10n_add_idea_994efc413e" formatted="false">Добавить идею</string>
+    <string name="l10n_sign_in_to_share_ideas_83913a035c" formatted="false">Войдите, чтобы делиться идеями</string>
+    <string name="l10n_every_registered_dealer_can_suggest_improv_ef09bd29a8" formatted="false">Каждый зарегистрированный дилер может предлагать улучшения и голосовать, даже без Pro.</string>
+    <string name="l10n_could_not_load_ideas_c1358509bf" formatted="false">Не удалось загрузить идеи</string>
+    <string name="l10n_try_again_cef2fe093b" formatted="false">Попробовать снова</string>
+    <string name="l10n_no_ideas_yet_d72eae7cde" formatted="false">Идей пока нет</string>
+    <string name="l10n_be_the_first_to_suggest_what_would_make_th_3e84deaee0" formatted="false">Станьте первым, кто предложит, что сделает приложение полезнее для вашего дилерства.</string>
+    <string name="l10n_add_idea_e1649cc0ef" formatted="false">Добавить идею</string>
+    <string name="l10n_help_decide_what_we_build_next_e7871bf0a8" formatted="false">Помогите выбрать, что мы сделаем дальше</string>
+    <string name="l10n_post_one_clear_idea_then_vote_on_requests__357cdcf905" formatted="false">Опишите одну понятную идею и голосуйте за предложения других дилеров.</string>
+    <string name="l10n_mine_d42af7968b" formatted="false">Моя</string>
+    <string name="l10n_remove_vote_b212f50d67" formatted="false">Убрать голос</string>
+    <string name="l10n_vote_64f8729141" formatted="false">Голосовать</string>
+    <string name="l10n_delete_this_idea_13119ab9f6" formatted="false">Удалить эту идею?</string>
+    <string name="l10n_your_idea_will_be_removed_from_the_board_c_76a3ed3908" formatted="false">Ваша идея исчезнет с доски. Выполненные идеи остаются видимыми.</string>
+    <string name="l10n_developer_added_this_509753d3f0" formatted="false">Разработчик добавил</string>
+    <string name="l10n_mark_done_0911cce79b" formatted="false">Отметить готово</string>
+    <string name="l10n_planned_9cbe42aaff" formatted="false">В плане</string>
+    <string name="l10n_in_progress_f61eadaf15" formatted="false">В работе</string>
+    <string name="l10n_shipped_dec6e32908" formatted="false">Готово</string>
+    <string name="l10n_closed_88d86b7721" formatted="false">Закрыто</string>
+    <string name="l10n_open_cf9b77061f" formatted="false">Открыто</string>
+    <string name="l10n_new_idea_a94746e76a" formatted="false">Новая идея</string>
+    <string name="l10n_short_title_d1c3c0e37d" formatted="false">Короткий заголовок</string>
+    <string name="l10n_example_add_home_screen_widgets_4f14115430" formatted="false">Например: добавить виджеты на главный экран</string>
+    <string name="l10n_4_to_120_characters_7c0daf019b" formatted="false">От 4 до 120 символов</string>
+    <string name="l10n_details_dc3decbb93" formatted="false">Подробности</string>
+    <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">Объясните, почему это поможет вашему дилерству.</string>
+    <string name="l10n_submit_2dacf65959" formatted="false">Отправить</string>
+</resources>

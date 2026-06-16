@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
@@ -50,6 +51,7 @@ import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.MonitorHeart
@@ -133,6 +135,7 @@ fun SettingsScreen(
     onNavigateToReferralStats: () -> Unit = {},
     onNavigateToChangePassword: () -> Unit = {},
     onNavigateToUserGuide: () -> Unit = {},
+    onNavigateToFeedbackBoard: () -> Unit = {},
     onNavigateToPaywall: () -> Unit = {},
     onSignedOut: () -> Unit = {},
     permissionState: PermissionAccessState = PermissionAccessState(),
@@ -142,6 +145,12 @@ fun SettingsScreen(
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     val context = LocalContext.current
+    val feedbackPromptPrefs = remember(context) {
+        context.getSharedPreferences("ezcar24_feedback", Context.MODE_PRIVATE)
+    }
+    var showFeedbackPrompt by remember {
+        mutableStateOf(!feedbackPromptPrefs.getBoolean("board_prompt_dismissed", false))
+    }
     val activeRole = permissionState.role
         .ifBlank { uiState.activeOrganization?.role.orEmpty() }
         .lowercase(Locale.US)
@@ -305,6 +314,22 @@ fun SettingsScreen(
                 )
             }
 
+            if (showFeedbackPrompt) {
+                item {
+                    FeedbackDiscoveryCard(
+                        onOpen = {
+                            feedbackPromptPrefs.edit().putBoolean("board_prompt_dismissed", true).apply()
+                            showFeedbackPrompt = false
+                            onNavigateToFeedbackBoard()
+                        },
+                        onDismiss = {
+                            feedbackPromptPrefs.edit().putBoolean("board_prompt_dismissed", true).apply()
+                            showFeedbackPrompt = false
+                        }
+                    )
+                }
+            }
+
             item {
                 SettingsSection(title = "General") {
                     SettingsRow(
@@ -461,6 +486,14 @@ fun SettingsScreen(
 
             item {
                 SettingsSection(title = "Support") {
+                    SettingsRow(
+                        title = "Ideas & Voting",
+                        subtitle = "Suggest features and vote on requests from other dealers",
+                        icon = Icons.Default.Lightbulb,
+                        color = EzcarOrange,
+                        onClick = onNavigateToFeedbackBoard
+                    )
+                    SectionDivider()
                     SettingsRow(
                         title = "Contact Developer",
                         subtitle = "Email support for sync or account issues",
@@ -1002,6 +1035,89 @@ private fun ReferralCard(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(localizedUiString("View referral stats"))
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeedbackDiscoveryCard(
+    onOpen: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(22.dp),
+        shadowElevation = 8.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(EzcarOrange.copy(alpha = 0.12f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lightbulb,
+                        contentDescription = null,
+                        tint = EzcarOrange
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = localizedUiString("Tell us what to build next"),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Surface(
+                            color = EzcarOrange,
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                text = localizedUiString("New"),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(5.dp))
+                    Text(
+                        text = localizedUiString("Add ideas, vote for requests, and help prioritize updates."),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = localizedUiString("Dismiss"),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Button(
+                onClick = onOpen,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(localizedUiString("Open Ideas"))
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }

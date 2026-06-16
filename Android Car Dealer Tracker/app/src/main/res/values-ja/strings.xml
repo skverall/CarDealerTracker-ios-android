@@ -899,4 +899,37 @@
     <string name="l10n_no_loss_making_vehicle_sales_in_this_month_531acae4ba" formatted="false">この月に赤字の車両販売はありません。</string>
     <string name="l10n_open_the_finance_snapshot_used_for_pdf_exp_74c9de7d2b" formatted="false">PDF出力に使う財務スナップショットを開く</string>
     <string name="l10n_realized_sales_profit_bb21f32e6e" formatted="false">実現販売利益</string>
+    <string name="l10n_ideas_voting_71b73b7de3" formatted="false">アイデアと投票</string>
+    <string name="l10n_suggest_features_and_vote_on_requests_from_92183a931f" formatted="false">機能を提案し、他の販売店の要望に投票できます</string>
+    <string name="l10n_tell_us_what_to_build_next_2bee7e0189" formatted="false">次に作る機能を教えてください</string>
+    <string name="l10n_add_ideas_vote_for_requests_and_help_prior_cd98a96cbe" formatted="false">アイデアを追加し、要望に投票して、更新の優先順位決めに参加できます。</string>
+    <string name="l10n_open_ideas_c9cbf406c8" formatted="false">アイデアを開く</string>
+    <string name="l10n_add_idea_994efc413e" formatted="false">アイデアを追加</string>
+    <string name="l10n_sign_in_to_share_ideas_83913a035c" formatted="false">サインインしてアイデアを共有</string>
+    <string name="l10n_every_registered_dealer_can_suggest_improv_ef09bd29a8" formatted="false">登録済みの販売店なら、Proでなくても改善案の投稿と投票ができます。</string>
+    <string name="l10n_could_not_load_ideas_c1358509bf" formatted="false">アイデアを読み込めませんでした</string>
+    <string name="l10n_try_again_cef2fe093b" formatted="false">もう一度試す</string>
+    <string name="l10n_no_ideas_yet_d72eae7cde" formatted="false">まだアイデアがありません</string>
+    <string name="l10n_be_the_first_to_suggest_what_would_make_th_3e84deaee0" formatted="false">あなたの販売店にもっと役立つ改善案を最初に投稿しましょう。</string>
+    <string name="l10n_add_idea_e1649cc0ef" formatted="false">アイデアを追加</string>
+    <string name="l10n_help_decide_what_we_build_next_e7871bf0a8" formatted="false">次に作る機能を一緒に決めましょう</string>
+    <string name="l10n_post_one_clear_idea_then_vote_on_requests__357cdcf905" formatted="false">わかりやすいアイデアを投稿し、他の販売店の要望に投票できます。</string>
+    <string name="l10n_mine_d42af7968b" formatted="false">自分</string>
+    <string name="l10n_remove_vote_b212f50d67" formatted="false">投票を取り消す</string>
+    <string name="l10n_vote_64f8729141" formatted="false">投票</string>
+    <string name="l10n_delete_this_idea_13119ab9f6" formatted="false">このアイデアを削除しますか？</string>
+    <string name="l10n_your_idea_will_be_removed_from_the_board_c_76a3ed3908" formatted="false">あなたのアイデアはボードから削除されます。完了済みのアイデアは表示されたままです。</string>
+    <string name="l10n_developer_added_this_509753d3f0" formatted="false">開発者が追加済み</string>
+    <string name="l10n_mark_done_0911cce79b" formatted="false">完了にする</string>
+    <string name="l10n_planned_9cbe42aaff" formatted="false">計画中</string>
+    <string name="l10n_in_progress_f61eadaf15" formatted="false">進行中</string>
+    <string name="l10n_shipped_dec6e32908" formatted="false">リリース済み</string>
+    <string name="l10n_closed_88d86b7721" formatted="false">終了</string>
+    <string name="l10n_new_idea_a94746e76a" formatted="false">新しいアイデア</string>
+    <string name="l10n_short_title_d1c3c0e37d" formatted="false">短いタイトル</string>
+    <string name="l10n_example_add_home_screen_widgets_4f14115430" formatted="false">例: ホーム画面ウィジェットを追加</string>
+    <string name="l10n_4_to_120_characters_7c0daf019b" formatted="false">4〜120文字</string>
+    <string name="l10n_details_dc3decbb93" formatted="false">詳細</string>
+    <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">それが販売店にどう役立つか説明してください。</string>
+    <string name="l10n_submit_2dacf65959" formatted="false">送信</string>
 </resources>
