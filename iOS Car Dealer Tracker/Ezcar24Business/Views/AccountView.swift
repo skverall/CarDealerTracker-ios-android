@@ -142,7 +142,10 @@ struct AccountView: View {
             .onChange(of: inventoryStaleThreshold) { _, _ in
                 guard notificationsEnabled else { return }
                 Task {
-                    await LocalNotificationManager.shared.refreshAll(context: viewContext)
+                    await LocalNotificationManager.shared.refreshAll(
+                        context: viewContext,
+                        shouldScheduleFeedbackNudge: shouldShowFeedbackBoardPrompt
+                    )
                 }
             }
             .alert("notifications".localizedString, isPresented: $showNotificationSettingsAlert) {
@@ -1168,7 +1171,10 @@ struct AccountView: View {
         if isEnabled {
             let granted = await LocalNotificationManager.shared.requestAuthorization()
             if granted {
-                await LocalNotificationManager.shared.refreshAll(context: viewContext)
+                await LocalNotificationManager.shared.refreshAll(
+                    context: viewContext,
+                    shouldScheduleFeedbackNudge: shouldShowFeedbackBoardPrompt
+                )
             } else {
                 await MainActor.run {
                     notificationsEnabled = false
@@ -1278,8 +1284,14 @@ struct FeedbackBoardView: View {
                 await loadFeedback()
             }
         }
+        .onAppear {
+            if isSignedIn {
+                LocalNotificationManager.shared.recordFeedbackBoardOpened()
+            }
+        }
         .onChange(of: sessionStore.status) { _, _ in
             if isSignedIn {
+                LocalNotificationManager.shared.recordFeedbackBoardOpened()
                 Task { await loadFeedback() }
             }
         }

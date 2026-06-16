@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.data.repository.AppFeedbackRequest
 import com.ezcar24.business.data.repository.FeedbackRepository
+import com.ezcar24.business.notification.NotificationPreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
 import javax.inject.Inject
@@ -26,12 +27,14 @@ data class FeedbackBoardUiState(
 
 @HiltViewModel
 class FeedbackBoardViewModel @Inject constructor(
-    private val repository: FeedbackRepository
+    private val repository: FeedbackRepository,
+    private val notificationPreferences: NotificationPreferences
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FeedbackBoardUiState())
     val uiState: StateFlow<FeedbackBoardUiState> = _uiState.asStateFlow()
 
     init {
+        notificationPreferences.recordFeedbackBoardOpened()
         load()
     }
 

@@ -11,6 +11,7 @@ import com.ezcar24.business.data.repository.AuthRepository
 import com.ezcar24.business.data.repository.PermissionRepository
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
+import com.ezcar24.business.notification.NotificationScheduler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,6 +31,7 @@ class MainViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val cloudSyncManager: CloudSyncManager,
     private val permissionRepository: PermissionRepository,
+    private val notificationScheduler: NotificationScheduler,
     private val subscriptionManager: SubscriptionManager
 ) : ViewModel(), DefaultLifecycleObserver {
 
@@ -91,6 +93,7 @@ class MainViewModel @Inject constructor(
                         }
                         _startDestination.value = "home"
                         startPeriodicSync()
+                        notificationScheduler.refreshAll(shouldScheduleFeedbackNudge = true)
                     } else {
                         _startDestination.value = "login"
                     }
@@ -116,6 +119,7 @@ class MainViewModel @Inject constructor(
         _isGuestMode.value = true
         subscriptionManager.logOut()
         permissionRepository.reset()
+        notificationScheduler.cancelFeedbackBoardNudge()
         stopPeriodicSync()
         _startDestination.value = "home"
         _isLoading.value = false
@@ -127,6 +131,7 @@ class MainViewModel @Inject constructor(
         permissionRepository.reset()
         accountRepository.clearSessionState()
         cloudSyncManager.resetSyncState()
+        notificationScheduler.cancelFeedbackBoardNudge()
         currentDealerId = null
         CloudSyncEnvironment.currentDealerId = null
         stopPeriodicSync()
@@ -156,6 +161,7 @@ class MainViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 cloudSyncManager.manualSync(dealerId)
+                notificationScheduler.refreshAll(shouldScheduleFeedbackNudge = true)
             } catch (e: Exception) {
                 Log.e(MAIN_VIEW_MODEL_TAG, "foreground sync failed: ${e.message}", e)
             }

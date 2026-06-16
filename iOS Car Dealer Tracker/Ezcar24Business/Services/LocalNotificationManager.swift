@@ -3,12 +3,19 @@ import Foundation
 import UIKit
 import UserNotifications
 
+extension Notification.Name {
+    static let openFeedbackBoardFromNotification = Notification.Name("openFeedbackBoardFromNotification")
+}
+
 enum NotificationPreference {
     static let enabledKey = "notificationsEnabled"
     static let inventoryStaleThresholdKey = "inventoryStaleThresholdDays"
     static let inventoryDigestLastSignatureKey = "inventoryDigestLastSignature"
     static let inventoryDigestLastSnapshotDayKey = "inventoryDigestLastSnapshotDay"
+    static let feedbackNudgeLastOpenedKey = "feedbackNudgeLastOpenedAt"
+    static let feedbackNudgeNextTriggerKey = "feedbackNudgeNextTriggerAt"
     static let defaultInventoryStaleThreshold = 40
+    static let feedbackNudgeIntervalDays = 4
 
     static var isEnabled: Bool {
         UserDefaults.standard.bool(forKey: enabledKey)
@@ -55,6 +62,30 @@ enum NotificationPreference {
         setInventoryDigestLastSignature(nil)
         setInventoryDigestLastSnapshotDay(nil)
     }
+
+    static var feedbackNudgeLastOpenedAt: Date? {
+        UserDefaults.standard.object(forKey: feedbackNudgeLastOpenedKey) as? Date
+    }
+
+    static var feedbackNudgeNextTriggerAt: Date? {
+        UserDefaults.standard.object(forKey: feedbackNudgeNextTriggerKey) as? Date
+    }
+
+    static func setFeedbackNudgeLastOpenedAt(_ value: Date?) {
+        if let value {
+            UserDefaults.standard.set(value, forKey: feedbackNudgeLastOpenedKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: feedbackNudgeLastOpenedKey)
+        }
+    }
+
+    static func setFeedbackNudgeNextTriggerAt(_ value: Date?) {
+        if let value {
+            UserDefaults.standard.set(value, forKey: feedbackNudgeNextTriggerKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: feedbackNudgeNextTriggerKey)
+        }
+    }
 }
 
 final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate {
@@ -85,7 +116,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         }
     }
 
-    func refreshAll(context: NSManagedObjectContext) async {
+    func refreshAll(context: NSManagedObjectContext, shouldScheduleFeedbackNudge: Bool = true) async {
         guard NotificationPreference.isEnabled else {
             await clearAll()
             return
@@ -145,6 +176,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         guard !staleVehicles.isEmpty else {
             NotificationPreference.clearInventoryDigestSnapshot()
             await scheduleDailyExpenseReminder()
+            await scheduleFeedbackBoardNudgeIfNeeded(now: now, shouldSchedule: shouldScheduleFeedbackNudge)
             return
         }
 
@@ -155,6 +187,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         rememberInventoryDigestSnapshot(signature: digestSignature, date: now)
         
         await scheduleDailyExpenseReminder()
+        await scheduleFeedbackBoardNudgeIfNeeded(now: now, shouldSchedule: shouldScheduleFeedbackNudge)
     }
 
     func clearAll() async {
@@ -162,6 +195,14 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         center.removeAllDeliveredNotifications()
         try? await center.setBadgeCount(0)
         NotificationPreference.clearInventoryDigestSnapshot()
+        NotificationPreference.setFeedbackNudgeNextTriggerAt(nil)
+    }
+
+    @MainActor
+    func recordFeedbackBoardOpened() {
+        NotificationPreference.setFeedbackNudgeLastOpenedAt(Date())
+        NotificationPreference.setFeedbackNudgeNextTriggerAt(nil)
+        center.removePendingNotificationRequests(withIdentifiers: [NotificationIdentifier.feedbackBoardNudge])
     }
 
     @MainActor
@@ -177,6 +218,21 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         [.banner, .sound, .badge]
+    }
+
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let request = response.notification.request
+        let destination = request.content.userInfo["destination"] as? String
+        guard request.identifier == NotificationIdentifier.feedbackBoardNudge ||
+                destination == NotificationDestination.feedbackBoard else { return }
+
+        await MainActor.run {
+            recordFeedbackBoardOpened()
+            NotificationCenter.default.post(name: .openFeedbackBoardFromNotification, object: nil)
+        }
     }
 
     // MARK: - Scheduling
@@ -199,6 +255,40 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         
         let trigger = UNCalendarNotificationTrigger(dateMatching: dateComponents, repeats: true)
         
+        let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        try? await center.add(request)
+    }
+
+    private func scheduleFeedbackBoardNudgeIfNeeded(now: Date, shouldSchedule: Bool) async {
+        guard shouldSchedule else {
+            center.removePendingNotificationRequests(withIdentifiers: [NotificationIdentifier.feedbackBoardNudge])
+            NotificationPreference.setFeedbackNudgeNextTriggerAt(nil)
+            return
+        }
+
+        await scheduleFeedbackBoardNudge(now: now)
+    }
+
+    private func scheduleFeedbackBoardNudge(now: Date) async {
+        let triggerDate = nextFeedbackNudgeDate(now: now)
+        NotificationPreference.setFeedbackNudgeNextTriggerAt(triggerDate)
+
+        let content = UNMutableNotificationContent()
+        let title = await MainActor.run { "feedback_board_prompt_title".localizedString }
+        let body = await MainActor.run { "feedback_board_prompt_subtitle".localizedString }
+
+        content.title = title
+        content.body = body
+        content.sound = .default
+        content.userInfo = ["destination": NotificationDestination.feedbackBoard]
+
+        let trigger = UNCalendarNotificationTrigger(
+            dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate),
+            repeats: false
+        )
+
+        let identifier = NotificationIdentifier.feedbackBoardNudge
+        center.removePendingNotificationRequests(withIdentifiers: [identifier])
         let request = UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
         try? await center.add(request)
     }
@@ -359,6 +449,35 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
         return Calendar.current.date(byAdding: .day, value: 1, to: todayAtNine) ?? now.addingTimeInterval(3600)
     }
 
+    private func nextFeedbackNudgeDate(now: Date) -> Date {
+        let calendar = Calendar.current
+        let minimumFromLastOpen = NotificationPreference.feedbackNudgeLastOpenedAt.flatMap {
+            calendar.date(byAdding: .day, value: NotificationPreference.feedbackNudgeIntervalDays, to: $0)
+        }
+
+        if let storedDate = NotificationPreference.feedbackNudgeNextTriggerAt,
+           storedDate > now,
+           minimumFromLastOpen.map({ storedDate >= $0 }) ?? true {
+            return storedDate
+        }
+
+        let defaultTarget = calendar.date(byAdding: .day, value: NotificationPreference.feedbackNudgeIntervalDays, to: now) ?? now.addingTimeInterval(4 * 24 * 60 * 60)
+        let target = max(minimumFromLastOpen ?? defaultTarget, now)
+        return feedbackNudgeDeliveryDate(onOrAfter: target, now: now)
+    }
+
+    private func feedbackNudgeDeliveryDate(onOrAfter date: Date, now: Date) -> Date {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        components.hour = 10
+        components.minute = 30
+
+        let candidate = Calendar.current.date(from: components) ?? date
+        if candidate > now {
+            return candidate
+        }
+        return Calendar.current.date(byAdding: .day, value: 1, to: candidate) ?? now.addingTimeInterval(3600)
+    }
+
     private func clearAllPending() async {
         let requests = await center.pendingNotificationRequests()
         let ids = requests
@@ -372,6 +491,7 @@ enum NotificationIdentifier {
     static let prefix = "ezcar24.notification"
     static let dailyReminder = "\(prefix).dailyReminder"
     static let inventoryDigest = "\(prefix).inventory.digest"
+    static let feedbackBoardNudge = "\(prefix).feedback.board.nudge"
 
     static func clientReminder(id: UUID) -> String {
         "\(prefix).client.\(id.uuidString)"
@@ -381,4 +501,8 @@ enum NotificationIdentifier {
         "\(prefix).debt.\(id.uuidString)"
     }
     
+}
+
+enum NotificationDestination {
+    static let feedbackBoard = "feedback_board"
 }

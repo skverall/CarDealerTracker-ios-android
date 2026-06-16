@@ -42,6 +42,11 @@ class NotificationReceiver : BroadcastReceiver() {
         val title = intent.getStringExtra(NotificationScheduler.EXTRA_TITLE) ?: ""
         val body = intent.getStringExtra(NotificationScheduler.EXTRA_BODY) ?: ""
 
+        if (type == NotificationScheduler.TYPE_FEEDBACK_NUDGE) {
+            notificationHelper.showFeedbackBoardNudgeNotification()
+            return
+        }
+
         if (idString == null) {
             Log.e(tag, "Notification ID is null")
             return

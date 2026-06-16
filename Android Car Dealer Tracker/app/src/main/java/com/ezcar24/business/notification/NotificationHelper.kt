@@ -24,11 +24,13 @@ class NotificationHelper @Inject constructor(
     companion object {
         const val CHANNEL_CLIENT_REMINDERS = "client_reminders"
         const val CHANNEL_DEBT_DEADLINES = "debt_deadlines"
+        const val CHANNEL_FEEDBACK = "feedback"
         
         private const val NOTIFICATION_PREFIX = "ezcar24.notification"
         
         fun clientReminderId(id: UUID): Int = "client.${id}".hashCode()
         fun debtDueId(id: UUID): Int = "debt.${id}".hashCode()
+        fun feedbackNudgeId(): Int = "feedback.board.nudge".hashCode()
     }
 
     init {
@@ -53,8 +55,17 @@ class NotificationHelper @Inject constructor(
                 description = "Notifications for upcoming debt payments and collections"
             }
 
+            val feedbackChannel = NotificationChannel(
+                CHANNEL_FEEDBACK,
+                "Ideas & Voting",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Occasional reminders to share product ideas"
+            }
+
             notificationManager.createNotificationChannel(clientChannel)
             notificationManager.createNotificationChannel(debtChannel)
+            notificationManager.createNotificationChannel(feedbackChannel)
         }
     }
 
@@ -109,6 +120,28 @@ class NotificationHelper @Inject constructor(
             .build()
 
         notificationManager.notify(debtDueId(id), notification)
+    }
+
+    fun showFeedbackBoardNudgeNotification() {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(MainActivity.EXTRA_NAVIGATE_ROUTE, MainActivity.ROUTE_FEEDBACK_BOARD)
+        }
+        val pendingIntent = PendingIntent.getActivity(
+            context, feedbackNudgeId(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_FEEDBACK)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle(context.localizedUiString("Tell us what to build next"))
+            .setContentText(context.localizedUiString("Suggest features and vote on requests from other dealers"))
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .setContentIntent(pendingIntent)
+            .build()
+
+        notificationManager.notify(feedbackNudgeId(), notification)
     }
 
     fun cancelNotification(notificationId: Int) {

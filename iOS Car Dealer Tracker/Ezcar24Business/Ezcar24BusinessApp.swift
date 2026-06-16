@@ -121,7 +121,10 @@ struct Ezcar24BusinessApp: App {
                 .task {
                     guard !AppRuntime.isRunningTests else { return }
                     await remoteConfig.checkForUpdate()
-                    await LocalNotificationManager.shared.refreshAll(context: persistenceController.container.viewContext)
+                    await LocalNotificationManager.shared.refreshAll(
+                        context: persistenceController.container.viewContext,
+                        shouldScheduleFeedbackNudge: shouldScheduleFeedbackNudge
+                    )
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
@@ -130,9 +133,21 @@ struct Ezcar24BusinessApp: App {
 
                         Task {
                             await remoteConfig.checkForUpdate()
-                            await LocalNotificationManager.shared.refreshAll(context: persistenceController.container.viewContext)
+                            await LocalNotificationManager.shared.refreshAll(
+                                context: persistenceController.container.viewContext,
+                                shouldScheduleFeedbackNudge: shouldScheduleFeedbackNudge
+                            )
                             await sessionStore.refreshPermissionsIfPossible()
                         }
+                    }
+                }
+                .onChange(of: sessionStore.status) { _, _ in
+                    guard !AppRuntime.isRunningTests else { return }
+                    Task {
+                        await LocalNotificationManager.shared.refreshAll(
+                            context: persistenceController.container.viewContext,
+                            shouldScheduleFeedbackNudge: shouldScheduleFeedbackNudge
+                        )
                     }
                 }
                 .onAppear {
@@ -148,5 +163,11 @@ struct Ezcar24BusinessApp: App {
                         .environmentObject(regionSettings)
                 }
         }
+    }
+
+    private var shouldScheduleFeedbackNudge: Bool {
+        guard !appSessionState.isGuestMode, !sessionStore.showPasswordReset else { return false }
+        if case .signedIn = sessionStore.status { return true }
+        return false
     }
 }

@@ -333,6 +333,15 @@ supabase gen types typescript          # Generate TS types
 - Inventory digest: groups stale vehicles (above configurable threshold), deduplicates by signature
 - Refreshed on app launch and `scenePhase == .active`
 
+### Ideas & Voting Reminders
+- Ideas & Voting is available to signed-in users on both iOS and Android; it lets dealers submit feedback requests, vote, delete their own requests, and lets admin emails mark requests as shipped/done.
+- The periodic Ideas reminder is local-only, not a Supabase server push. Do not add server push infrastructure for this reminder unless explicitly requested.
+- Reminder cadence: schedule one soft nudge every 4 days, only when notifications are enabled and the user is signed in. Opening the Ideas board records `lastOpened` and resets the next reminder.
+- iOS implementation lives in `LocalNotificationManager.swift`, `Ezcar24BusinessApp.swift`, `AuthGateView.swift`, and `AccountView.swift`. Notification taps post `.openFeedbackBoardFromNotification` and present `FeedbackBoardView`.
+- Android implementation lives in `notification/NotificationScheduler.kt`, `NotificationHelper.kt`, `NotificationPreferences.kt`, `NotificationReceiver.kt`, `MainActivity.kt`, `MainViewModel.kt`, and `FeedbackBoardViewModel.kt`. Notification taps pass `MainActivity.EXTRA_NAVIGATE_ROUTE = MainActivity.ROUTE_FEEDBACK_BOARD`.
+- Keep this reminder non-intrusive: no repeating alarm every few days. Use one pending notification/alarm, preserve the stored next trigger, and reschedule only when needed.
+- Verification: run an iOS simulator build, run Android `./gradlew assembleDebug`, and run `git diff --check`.
+
 ### Network Monitoring
 - `NetworkMonitor` — `NWPathMonitor` wrapped in `ObservableObject`
 - `isConnected` published property, injected as `@EnvironmentObject`

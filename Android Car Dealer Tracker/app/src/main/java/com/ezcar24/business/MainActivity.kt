@@ -43,6 +43,11 @@ import kotlinx.coroutines.launch
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    companion object {
+        const val EXTRA_NAVIGATE_ROUTE = "navigate_route"
+        const val ROUTE_FEEDBACK_BOARD = "feedback_board"
+    }
+
     @Inject
     lateinit var authRepository: AuthRepository
 
@@ -51,6 +56,7 @@ class MainActivity : ComponentActivity() {
 
     // Track if we received a password recovery deep-link
     private val showPasswordReset = MutableStateFlow(false)
+    private val pendingNavigationRoute = MutableStateFlow<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -100,12 +106,22 @@ class MainActivity : ComponentActivity() {
                         val isGuestMode by viewModel.isGuestMode.collectAsState()
                         val permissionState by viewModel.permissionState.collectAsState()
                         val passwordResetMode by showPasswordReset.collectAsState()
+                        val pendingRoute by pendingNavigationRoute.collectAsState()
 
                         // Navigate to password reset if deep-link detected
                         LaunchedEffect(passwordResetMode, startDestination) {
                             if (passwordResetMode && startDestination != null) {
                                 navController.navigate("password_reset") {
                                     popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+
+                        LaunchedEffect(pendingRoute, startDestination, isLoading) {
+                            if (pendingRoute == ROUTE_FEEDBACK_BOARD && !isLoading && startDestination == "home") {
+                                pendingNavigationRoute.value = null
+                                navController.navigate(ROUTE_FEEDBACK_BOARD) {
+                                    launchSingleTop = true
                                 }
                             }
                         }
@@ -359,6 +375,11 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIntent(intent: Intent?) {
+        val route = intent?.getStringExtra(EXTRA_NAVIGATE_ROUTE)
+        if (route == ROUTE_FEEDBACK_BOARD) {
+            pendingNavigationRoute.value = ROUTE_FEEDBACK_BOARD
+        }
+
         val uri = intent?.data ?: return
         lifecycleScope.launch {
             if (authRepository.handleDeepLink(uri) == AuthDeepLinkResult.PASSWORD_RESET) {

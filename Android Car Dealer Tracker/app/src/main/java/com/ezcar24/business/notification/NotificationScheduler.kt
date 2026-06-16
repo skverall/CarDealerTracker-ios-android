@@ -11,11 +11,12 @@ import com.ezcar24.business.data.local.ClientReminderDao
 import com.ezcar24.business.data.local.Debt
 import com.ezcar24.business.data.local.DebtDao
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.math.BigDecimal
 import java.text.NumberFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -41,9 +42,10 @@ class NotificationScheduler @Inject constructor(
         
         const val TYPE_CLIENT_REMINDER = "client_reminder"
         const val TYPE_DEBT_DUE = "debt_due"
+        const val TYPE_FEEDBACK_NUDGE = "feedback_nudge"
     }
 
-    suspend fun refreshAll() = withContext(Dispatchers.IO) {
+    suspend fun refreshAll(shouldScheduleFeedbackNudge: Boolean = true) = withContext(Dispatchers.IO) {
         if (!notificationPreferences.isEnabled) {
             cancelAll()
             return@withContext
@@ -63,6 +65,12 @@ class NotificationScheduler @Inject constructor(
         val debts = debtDao.getUpcomingDebts(now)
         for (debt in debts) {
             scheduleDebtDue(debt)
+        }
+
+        if (shouldScheduleFeedbackNudge) {
+            scheduleFeedbackBoardNudge(now.time)
+        } else {
+            cancelFeedbackBoardNudge()
         }
 
         Log.d(tag, "Scheduled ${reminders.size} reminders and ${debts.size} debt notifications")
@@ -88,6 +96,26 @@ class NotificationScheduler @Inject constructor(
         )
 
         scheduleExactAlarm(dueDate.time, pendingIntent)
+    }
+
+    private fun scheduleFeedbackBoardNudge(nowMillis: Long) {
+        val triggerAtMillis = nextFeedbackNudgeTime(nowMillis)
+        notificationPreferences.feedbackNudgeNextTriggerAt = triggerAtMillis
+
+        val intent = Intent(context, NotificationReceiver::class.java).apply {
+            action = ACTION_SHOW_NOTIFICATION
+            putExtra(EXTRA_NOTIFICATION_TYPE, TYPE_FEEDBACK_NUDGE)
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            NotificationHelper.feedbackNudgeId(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        alarmManager.cancel(pendingIntent)
+        scheduleInexactAlarm(triggerAtMillis, pendingIntent)
     }
 
     private fun scheduleDebtDue(debt: Debt) {
@@ -152,8 +180,65 @@ class NotificationScheduler @Inject constructor(
         }
     }
 
+    private fun scheduleInexactAlarm(triggerAtMillis: Long, pendingIntent: PendingIntent) {
+        alarmManager.setAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            triggerAtMillis,
+            pendingIntent
+        )
+    }
+
+    private fun nextFeedbackNudgeTime(nowMillis: Long): Long {
+        val intervalMillis = TimeUnit.DAYS.toMillis(NotificationPreferences.FEEDBACK_NUDGE_INTERVAL_DAYS.toLong())
+        val minimumFromLastOpen = notificationPreferences.feedbackNudgeLastOpenedAt?.plus(intervalMillis)
+        val storedTrigger = notificationPreferences.feedbackNudgeNextTriggerAt
+
+        if (storedTrigger != null &&
+            storedTrigger > nowMillis &&
+            (minimumFromLastOpen == null || storedTrigger >= minimumFromLastOpen)
+        ) {
+            return storedTrigger
+        }
+
+        val defaultTarget = nowMillis + intervalMillis
+        val target = maxOf(minimumFromLastOpen ?: defaultTarget, nowMillis)
+        return feedbackNudgeDeliveryTime(onOrAfter = target, nowMillis = nowMillis)
+    }
+
+    private fun feedbackNudgeDeliveryTime(onOrAfter: Long, nowMillis: Long): Long {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = onOrAfter
+            set(Calendar.HOUR_OF_DAY, 10)
+            set(Calendar.MINUTE, 30)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+
+        if (calendar.timeInMillis <= nowMillis) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1)
+        }
+
+        return calendar.timeInMillis
+    }
+
+    fun cancelFeedbackBoardNudge() {
+        val intent = Intent(context, NotificationReceiver::class.java).apply {
+            action = ACTION_SHOW_NOTIFICATION
+            putExtra(EXTRA_NOTIFICATION_TYPE, TYPE_FEEDBACK_NUDGE)
+        }
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            NotificationHelper.feedbackNudgeId(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
+        notificationPreferences.feedbackNudgeNextTriggerAt = null
+    }
+
     fun cancelAll() {
         // Note: We can't enumerate all pending intents, but new schedules will replace old ones
         Log.d(tag, "Cancel all notifications requested")
+        cancelFeedbackBoardNudge()
     }
 }

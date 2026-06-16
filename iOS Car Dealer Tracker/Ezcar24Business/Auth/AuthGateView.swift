@@ -16,6 +16,7 @@ struct AuthGateView: View {
     @State private var periodicSyncTask: Task<Void, Never>?
     @State private var initialSyncUserId: UUID?
     @State private var lastAutoSyncAt: Date?
+    @State private var showingFeedbackBoardFromNotification = false
 
     private let periodicSyncInterval: TimeInterval = 5 * 60
     private let minimumAutoSyncInterval: TimeInterval = 20
@@ -94,6 +95,25 @@ struct AuthGateView: View {
                 lastAutoSyncAt = nil
             }
             refreshPeriodicSync()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openFeedbackBoardFromNotification)) { _ in
+            guard case .signedIn = sessionStore.status else {
+                appSessionState.isGuestMode = false
+                return
+            }
+            showingFeedbackBoardFromNotification = true
+        }
+        .sheet(isPresented: $showingFeedbackBoardFromNotification) {
+            NavigationStack {
+                FeedbackBoardView()
+                    .toolbar {
+                        ToolbarItem(placement: .navigationBarLeading) {
+                            Button("close".localizedString) {
+                                showingFeedbackBoardFromNotification = false
+                            }
+                        }
+                    }
+            }
         }
     }
 

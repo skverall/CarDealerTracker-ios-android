@@ -218,9 +218,7 @@ class SettingsViewModel @Inject constructor(
                 )
             }
 
-            if (enabled) {
-                notificationScheduler.refreshAll()
-            }
+            notificationScheduler.refreshAll(shouldScheduleFeedbackNudge = enabled && _uiState.value.currentUser != null)
         }
     }
 
@@ -251,7 +249,7 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isBackupLoading = true, errorMessage = null, statusMessage = null) }
             try {
                 cloudSyncManager.manualSync(dealerId, force = true)
-                notificationScheduler.refreshAll()
+                notificationScheduler.refreshAll(shouldScheduleFeedbackNudge = _uiState.value.currentUser != null)
                 _uiState.update {
                     it.copy(
                         isBackupLoading = false,
