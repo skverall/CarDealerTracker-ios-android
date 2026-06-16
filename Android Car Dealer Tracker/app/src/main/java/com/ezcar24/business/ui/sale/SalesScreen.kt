@@ -683,7 +683,7 @@ fun SalesInsightsStrip(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            localizedUiString("Net Profit").uppercase(Locale.getDefault()),
+                            localizedUiString("Sales Profit").uppercase(Locale.getDefault()),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontWeight = FontWeight.Bold
@@ -920,7 +920,7 @@ private fun buildSaleMetrics(
         if (canViewProfit) {
             add(
                 SaleMetric(
-                    title = "Net Profit",
+                    title = "Sales Profit",
                     amount = item.netProfit,
                     color = if (item.netProfit >= BigDecimal.ZERO) EzcarSuccess else EzcarDanger,
                     isBold = true

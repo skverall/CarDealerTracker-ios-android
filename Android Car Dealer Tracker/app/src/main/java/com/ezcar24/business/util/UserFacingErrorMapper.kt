@@ -18,6 +18,7 @@ enum class UserFacingErrorContext {
     SWITCH_BUSINESS,
     CREATE_BUSINESS,
     ACCEPT_TEAM_INVITE,
+    DELETE_ACCOUNT,
     SIGN_OUT,
     LOAD_TEAM,
     INVITE_TEAM_MEMBER,
@@ -155,6 +156,9 @@ object UserFacingErrorMapper {
 
             UserFacingErrorContext.ACCEPT_TEAM_INVITE ->
                 "We couldn't apply that invite right now. Please try again."
+
+            UserFacingErrorContext.DELETE_ACCOUNT ->
+                "We couldn't delete your account right now. Please try again."
 
             UserFacingErrorContext.SIGN_OUT ->
                 "We couldn't sign you out right now. Please try again."

@@ -476,7 +476,7 @@ private fun PlanSelection(
         offers.forEach { offer ->
             PlanCard(
                 offer = offer,
-                selected = selectedOffer?.productDetails?.productId == offer.productDetails.productId,
+                selected = selectedOffer?.productId == offer.productId,
                 onClick = { onSelect(offer) }
             )
         }
@@ -734,16 +734,20 @@ private fun SuccessState(onDismiss: () -> Unit) {
 
 private fun planName(offer: SubscriptionOffer): String {
     return when (offer.period) {
+        "weekly" -> "Weekly"
         "monthly" -> "Monthly"
         "yearly" -> "Yearly"
+        "quarterly" -> "Quarterly"
         else -> offer.period.replaceFirstChar { it.uppercase() }
     }
 }
 
 private fun billingLine(offer: SubscriptionOffer): String {
     return when (offer.period) {
+        "weekly" -> "Billed weekly"
         "monthly" -> "Billed monthly"
         "yearly" -> "Billed yearly"
+        "quarterly" -> "Billed quarterly"
         else -> "Billed automatically"
     }
 }

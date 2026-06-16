@@ -68,6 +68,11 @@ private data class FunctionErrorPayload(
     val error: String? = null
 )
 
+@Serializable
+private data class DeleteAccountResponse(
+    val success: Boolean = false
+)
+
 @Singleton
 class AuthRepository @Inject constructor(
     @ApplicationContext context: Context,
@@ -170,6 +175,57 @@ class AuthRepository @Inject constructor(
 
     suspend fun signOut() {
         client.auth.signOut()
+    }
+
+    suspend fun deleteAccount() = withContext(Dispatchers.IO) {
+        val accessToken = client.auth.currentAccessTokenOrNull()
+        if (accessToken.isNullOrBlank()) {
+            throw IllegalStateException("Please sign in again and try again.")
+        }
+
+        val connection = (URL("${BuildConfig.SUPABASE_URL}/functions/v1/delete_account").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doInput = true
+            doOutput = true
+            connectTimeout = 15_000
+            readTimeout = 30_000
+            setRequestProperty("Authorization", "Bearer $accessToken")
+            setRequestProperty("Content-Type", "application/json")
+        }
+
+        try {
+            connection.outputStream.bufferedWriter().use { writer ->
+                writer.write("{}")
+            }
+
+            val statusCode = connection.responseCode
+            val responseBody = (if (statusCode in 200..299) connection.inputStream else connection.errorStream)
+                ?.bufferedReader()
+                ?.use { it.readText() }
+                .orEmpty()
+
+            if (statusCode !in 200..299) {
+                throw IllegalStateException(parseFunctionError(responseBody))
+            }
+
+            val response = runCatching {
+                json.decodeFromString<DeleteAccountResponse>(responseBody)
+            }.getOrElse {
+                DeleteAccountResponse(success = responseBody.contains("\"success\":true"))
+            }
+
+            if (!response.success) {
+                throw IllegalStateException("Account deletion did not complete.")
+            }
+
+            try {
+                client.auth.signOut()
+            } catch (e: Exception) {
+                Log.w(TAG, "delete_account succeeded but local sign out failed", e)
+            }
+        } finally {
+            connection.disconnect()
+        }
     }
 
     fun getCurrentUser() = client.auth.currentUserOrNull()

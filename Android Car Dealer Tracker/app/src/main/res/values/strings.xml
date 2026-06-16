@@ -899,4 +899,17 @@
     <string name="l10n_no_loss_making_vehicle_sales_in_this_month_531acae4ba" formatted="false">No loss-making vehicle sales in this month.</string>
     <string name="l10n_open_the_finance_snapshot_used_for_pdf_exp_74c9de7d2b" formatted="false">Open the finance snapshot used for PDF export</string>
     <string name="l10n_realized_sales_profit_bb21f32e6e" formatted="false">Realized sales profit</string>
+    <string name="l10n_sales_profit_668d2b49c9" formatted="false">Sales Profit</string>
+    <string name="l10n_vehicles_sold_e1b0e92bdf" formatted="false">Vehicles Sold</string>
+    <string name="l10n_ai_insights_center_1627b77d25" formatted="false">AI Insights Center</string>
+    <string name="l10n_deep_dive_into_your_business_performance_ecb97cddbc" formatted="false">Deep dive into your business performance.</string>
+    <string name="l10n_vat_refund_9f2f9d1a74" formatted="false">VAT Refund %</string>
+    <string name="l10n_vat_refund_amount_s_6c97ec0dbd" formatted="false">VAT Refund Amount: %s</string>
+    <string name="l10n_new_walk_in_client_26bf1f002f" formatted="false">New / Walk-in Client</string>
+    <string name="l10n_no_contact_info_87d92b4f2d" formatted="false">No contact info</string>
+    <string name="l10n_permanently_remove_your_account_and_cloud__f76f931103" formatted="false">Permanently remove your account and cloud data</string>
+    <string name="l10n_this_will_permanently_delete_your_account__2a7d65a9a6" formatted="false">This will permanently delete your account and all cloud data.</string>
+    <string name="l10n_type_delete_and_re_enter_your_account_emai_2a7b026525" formatted="false">Type DELETE and re-enter your account email to continue.</string>
+    <string name="l10n_confirmation_3424edc235" formatted="false">Confirmation</string>
+    <string name="l10n_deleting_e16cac651b" formatted="false">Deleting...</string>
 </resources>

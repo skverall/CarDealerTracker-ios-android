@@ -6,6 +6,8 @@ import androidx.room.withTransaction
 import com.ezcar24.business.data.images.ImageStore
 import com.ezcar24.business.data.local.ActiveDatabaseProvider
 import com.ezcar24.business.data.local.*
+import com.ezcar24.business.data.repository.DealDeskJurisdictionType
+import com.ezcar24.business.data.repository.DealDeskSnapshot
 import com.ezcar24.business.util.DateUtils
 import com.ezcar24.business.util.toUUID
 import io.github.jan.supabase.SupabaseClient
@@ -1445,7 +1447,15 @@ class CloudSyncManager @Inject constructor(
                 createdAt = createdAt,
                 updatedAt = remoteUpdated,
                 deletedAt = null,
-                vehicleId = vehicleId
+                vehicleId = vehicleId,
+                leadStage = remoteLeadStage(remote.leadStage),
+                leadSource = remoteLeadSource(remote.leadSource),
+                assignedUserId = remote.assignedUserId?.toUUID(),
+                estimatedValue = remote.estimatedValue,
+                priority = remote.priority,
+                leadCreatedAt = remote.leadCreatedAt?.let { DateUtils.parseDateAndTime(it) },
+                lastContactAt = remote.lastContactAt?.let { DateUtils.parseDateAndTime(it) },
+                nextFollowUpAt = remote.nextFollowUpAt?.let { DateUtils.parseDateAndTime(it) }
             )
             db.clientDao().upsert(newClient)
         }
@@ -1581,6 +1591,8 @@ class CloudSyncManager @Inject constructor(
                 deletedAt = null,
                 vehicleId = vehicleId,
                 accountId = accountId,
+                vatRefundPercent = remote.vatRefundPercent,
+                vatRefundAmount = remote.vatRefundAmount,
                 dealDeskPayload = remote.dealDeskPayload?.let {
                     json.encodeToString(JsonElement.serializer(), it)
                 },
@@ -3462,12 +3474,33 @@ fun Client.toRemote(dealerId: String) = RemoteClient(
     vehicleId = vehicleId?.toString(),
     createdAt = DateUtils.formatDateAndTime(createdAt),
     updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
-    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
+    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) },
+    leadStage = leadStage.name,
+    leadSource = leadSource?.name,
+    assignedUserId = assignedUserId?.toString(),
+    estimatedValue = estimatedValue,
+    priority = priority,
+    leadCreatedAt = leadCreatedAt?.let { DateUtils.formatDateAndTime(it) },
+    lastContactAt = lastContactAt?.let { DateUtils.formatDateAndTime(it) },
+    nextFollowUpAt = nextFollowUpAt?.let { DateUtils.formatDateAndTime(it) }
 )
+
+internal fun remoteLeadStage(value: String?): LeadStage {
+    return value?.let { raw ->
+        runCatching { LeadStage.valueOf(raw) }.getOrNull()
+    } ?: LeadStage.new
+}
+
+internal fun remoteLeadSource(value: String?): LeadSource? {
+    return value?.let { raw ->
+        runCatching { LeadSource.valueOf(raw) }.getOrNull()
+    }
+}
 
 fun Sale.toRemote(dealerId: String): RemoteSale? {
     val vehicleId = vehicleId ?: return null
     val dateValue = date ?: Date()
+    val snapshot = decodeDealDeskSnapshot()
     return RemoteSale(
         id = id.toString(),
         dealerId = dealerId,
@@ -3481,15 +3514,38 @@ fun Sale.toRemote(dealerId: String): RemoteSale? {
         paymentMethod = paymentMethod,
         accountId = accountId?.toString(),
         notes = null,
+        vatRefundPercent = vatRefundPercent,
+        vatRefundAmount = vatRefundAmount,
         dealDeskPayload = dealDeskPayload?.let {
             runCatching { remoteModelJson.decodeFromString(JsonElement.serializer(), it) }.getOrNull()
         },
         dealDeskTemplateCode = dealDeskTemplateCode,
         dealDeskTemplateVersion = dealDeskTemplateVersion,
-        createdAt = DateUtils.formatDateAndTime(Date()),
+        jurisdictionType = snapshot?.jurisdictionType?.remoteValue(),
+        jurisdictionCode = snapshot?.jurisdictionCode,
+        outTheDoorTotal = snapshot?.totals?.outTheDoorTotal,
+        cashReceivedNow = snapshot?.totals?.cashReceivedNow,
+        amountFinanced = snapshot?.totals?.amountFinanced,
+        monthlyPaymentEstimate = snapshot?.totals?.monthlyPaymentEstimate,
+        createdAt = DateUtils.formatDateAndTime(createdAt ?: Date()),
         updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
         deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
     )
+}
+
+private fun Sale.decodeDealDeskSnapshot(): DealDeskSnapshot? {
+    val payload = dealDeskPayload ?: return null
+    return runCatching {
+        remoteModelJson.decodeFromString<DealDeskSnapshot>(payload)
+    }.getOrNull()
+}
+
+private fun DealDeskJurisdictionType.remoteValue(): String {
+    return when (this) {
+        DealDeskJurisdictionType.STATE -> "state"
+        DealDeskJurisdictionType.PROVINCE -> "province"
+        DealDeskJurisdictionType.GENERIC -> "generic"
+    }
 }
 
 fun Vehicle.toRemote(dealerId: String) = RemoteVehicle(

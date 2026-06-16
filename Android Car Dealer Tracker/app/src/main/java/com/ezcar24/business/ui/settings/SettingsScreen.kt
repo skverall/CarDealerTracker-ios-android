@@ -25,8 +25,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountBalance
@@ -90,6 +93,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -166,6 +171,7 @@ fun SettingsScreen(
     }
     var showCreateBusinessDialog by remember { mutableStateOf(false) }
     var showJoinTeamDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountDialog by remember { mutableStateOf(false) }
     var pendingShare by remember { mutableStateOf(false) }
 
     val notificationPermissionLauncher = rememberLauncherForActivityResult(
@@ -443,17 +449,11 @@ fun SettingsScreen(
                         SectionDivider()
                         SettingsRow(
                             title = "Delete Account & Data",
-                            subtitle = "Request permanent removal of your account and all data",
+                            subtitle = "Permanently remove your account and cloud data",
                             icon = Icons.Default.DeleteForever,
                             color = EzcarDanger,
-                            onClick = {
-                                context.startActivity(
-                                    Intent(
-                                        Intent.ACTION_VIEW,
-                                        Uri.parse("https://www.ezcar24.com/en/delete-account")
-                                    )
-                                )
-                            }
+                            isLoading = uiState.isDeletingAccount,
+                            onClick = { showDeleteAccountDialog = true }
                         )
                     }
                 }
@@ -585,6 +585,18 @@ fun SettingsScreen(
             onJoin = {
                 showJoinTeamDialog = false
                 viewModel.joinTeamByCode(it)
+            }
+        )
+    }
+
+    if (showDeleteAccountDialog) {
+        DeleteAccountDialog(
+            email = uiState.currentUser?.email.orEmpty(),
+            isDeleting = uiState.isDeletingAccount,
+            onDismiss = { showDeleteAccountDialog = false },
+            onDelete = {
+                showDeleteAccountDialog = false
+                viewModel.deleteAccount()
             }
         )
     }
@@ -1320,6 +1332,108 @@ private fun JoinTeamByCodeDialog(
                 Text(localizedUiString("Cancel"))
             }
         }
+    )
+}
+
+@Composable
+private fun DeleteAccountDialog(
+    email: String,
+    isDeleting: Boolean,
+    onDismiss: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var confirmationText by remember { mutableStateOf("") }
+    var emailConfirmation by remember { mutableStateOf("") }
+    val normalizedEmail = email.trim().lowercase(Locale.US)
+    val canDelete = normalizedEmail.isNotBlank() &&
+        confirmationText.trim().uppercase(Locale.US) == "DELETE" &&
+        emailConfirmation.trim().lowercase(Locale.US) == normalizedEmail
+
+    AlertDialog(
+        onDismissRequest = { if (!isDeleting) onDismiss() },
+        title = { Text(localizedUiString("Delete Account & Data")) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Text(
+                    text = localizedUiString("This will permanently delete your account and all cloud data."),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = EzcarDanger
+                )
+                Text(
+                    text = localizedUiString("Type DELETE and re-enter your account email to continue."),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DeleteConfirmationFields(
+                        confirmationText = confirmationText,
+                        onConfirmationTextChange = { confirmationText = it },
+                        email = email,
+                        emailConfirmation = emailConfirmation,
+                        onEmailConfirmationChange = { emailConfirmation = it },
+                        isDeleting = isDeleting,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDelete,
+                enabled = canDelete && !isDeleting,
+                colors = ButtonDefaults.buttonColors(containerColor = EzcarDanger)
+            ) {
+                if (isDeleting) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text(localizedUiString(if (isDeleting) "Deleting..." else "Delete Account"))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isDeleting) {
+                Text(localizedUiString("Cancel"))
+            }
+        }
+    )
+}
+
+@Composable
+private fun DeleteConfirmationFields(
+    confirmationText: String,
+    onConfirmationTextChange: (String) -> Unit,
+    email: String,
+    emailConfirmation: String,
+    onEmailConfirmationChange: (String) -> Unit,
+    isDeleting: Boolean,
+    modifier: Modifier
+) {
+    OutlinedTextField(
+        value = confirmationText,
+        onValueChange = onConfirmationTextChange,
+        label = { Text(localizedUiString("Confirmation")) },
+        placeholder = { Text("DELETE") },
+        enabled = !isDeleting,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+        modifier = modifier
+    )
+    OutlinedTextField(
+        value = emailConfirmation,
+        onValueChange = onEmailConfirmationChange,
+        label = { Text(localizedUiString("Email")) },
+        placeholder = { Text(email) },
+        enabled = !isDeleting,
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+        modifier = modifier
     )
 }
 

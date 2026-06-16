@@ -1058,14 +1058,15 @@ fun StatusSelector(selectedStatus: String, onStatusSelected: (String) -> Unit) {
         "new" to "New",
         "engaged" to "Engaged",
         "negotiation" to "Negotiation",
-        "purchased" to "Purchased",
+        "sold" to "Sold",
         "lost" to "Lost"
     )
+    val normalizedSelectedStatus = if (selectedStatus == "purchased") "sold" else selectedStatus
     
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items(statuses) { (key, label) ->
             FilterChip(
-                selected = selectedStatus == key,
+                selected = normalizedSelectedStatus == key,
                 onClick = { onStatusSelected(key) },
                 label = { Text(localizedUiString(label)) },
                 colors = FilterChipDefaults.filterChipColors(

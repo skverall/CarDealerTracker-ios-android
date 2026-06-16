@@ -83,18 +83,28 @@ class ClientDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isSaving = true, errorMessage = null, saveCompleted = false) }
             val now = Date()
             val id = if (clientIdString != null && clientIdString != "new") UUID.fromString(clientIdString) else UUID.randomUUID()
+            val normalizedName = name.trim()
+            val normalizedPhone = phone.trim().takeIf { it.isNotBlank() }
+            val normalizedEmail = email.trim().takeIf { it.isNotBlank() }
+            val normalizedNotes = notes.trim().takeIf { it.isNotBlank() }
+            val normalizedRequestDetails = requestDetails.trim().takeIf { it.isNotBlank() }
+            val normalizedStatus = when (status) {
+                "purchased" -> "sold"
+                null -> "new"
+                else -> status
+            }
             
             val currentClient = if (clientIdString != null && clientIdString != "new") clientDao.getById(id) else null
 
             val client = currentClient?.copy(
-                name = name,
-                phone = phone,
-                email = email,
-                notes = notes,
-                requestDetails = requestDetails.ifBlank { null },
+                name = normalizedName,
+                phone = normalizedPhone,
+                email = normalizedEmail,
+                notes = normalizedNotes,
+                requestDetails = normalizedRequestDetails,
                 preferredDate = preferredDate,
                 vehicleId = vehicleId,
-                status = status,
+                status = normalizedStatus,
                 leadStage = leadStage,
                 leadSource = leadSource,
                 estimatedValue = estimatedValue,
@@ -102,13 +112,13 @@ class ClientDetailViewModel @Inject constructor(
                 updatedAt = now
             ) ?: Client(
                 id = id,
-                name = name,
-                phone = phone,
-                email = email,
-                notes = notes,
-                requestDetails = requestDetails.ifBlank { null },
+                name = normalizedName,
+                phone = normalizedPhone,
+                email = normalizedEmail,
+                notes = normalizedNotes,
+                requestDetails = normalizedRequestDetails,
                 preferredDate = preferredDate,
-                status = status ?: "new",
+                status = normalizedStatus,
                 leadStage = leadStage,
                 leadSource = leadSource,
                 estimatedValue = estimatedValue,
@@ -120,24 +130,14 @@ class ClientDetailViewModel @Inject constructor(
                 vehicleId = vehicleId
             )
 
-            try {
-                cloudSyncManager.upsertClient(client)
-                _uiState.update {
-                    it.copy(
-                        client = client,
-                        isSaving = false,
-                        saveCompleted = true,
-                        errorMessage = null
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e(CLIENT_DETAIL_TAG, "saveClient failed", e)
-                _uiState.update {
-                    it.copy(
-                        isSaving = false,
-                        errorMessage = UserFacingErrorMapper.map(e, UserFacingErrorContext.SAVE_CLIENT)
-                    )
-                }
+            val syncError = upsertClientLocalFirst(client, UserFacingErrorContext.SAVE_CLIENT)
+            _uiState.update {
+                it.copy(
+                    client = client,
+                    isSaving = false,
+                    saveCompleted = true,
+                    errorMessage = syncError
+                )
             }
         }
     }
@@ -363,11 +363,12 @@ class ClientDetailViewModel @Inject constructor(
                     .minOrNull()
 
                 if (client.nextFollowUpAt != nextFollowUpAt) {
-                    cloudSyncManager.upsertClient(
+                    upsertClientLocalFirst(
                         client.copy(
                             nextFollowUpAt = nextFollowUpAt,
                             updatedAt = Date()
-                        )
+                        ),
+                        UserFacingErrorContext.UPDATE_CLIENT
                     )
                 }
             }
@@ -377,14 +378,25 @@ class ClientDetailViewModel @Inject constructor(
     }
 
     private suspend fun persistClientUpdate(client: Client) {
-        try {
+        val syncError = upsertClientLocalFirst(client, UserFacingErrorContext.UPDATE_CLIENT)
+        reloadClient(client.id)
+        if (syncError != null) {
+            _uiState.update { it.copy(errorMessage = syncError) }
+        }
+    }
+
+    private suspend fun upsertClientLocalFirst(
+        client: Client,
+        context: UserFacingErrorContext
+    ): String? {
+        clientDao.upsert(client)
+        return try {
             cloudSyncManager.upsertClient(client)
-            reloadClient(client.id)
+            null
         } catch (e: Exception) {
-            Log.e(CLIENT_DETAIL_TAG, "persistClientUpdate failed", e)
-            _uiState.update {
-                it.copy(errorMessage = UserFacingErrorMapper.map(e, UserFacingErrorContext.UPDATE_CLIENT))
-            }
+            Log.e(CLIENT_DETAIL_TAG, "upsertClientLocalFirst failed", e)
+            clientDao.upsert(client)
+            UserFacingErrorMapper.map(e, context)
         }
     }
 }

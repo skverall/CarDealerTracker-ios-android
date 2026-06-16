@@ -222,8 +222,8 @@ fun ClientGroupedList(
     onCallClick: (Client) -> Unit,
     onWhatsAppClick: (Client) -> Unit
 ) {
-    val grouped = clients.groupBy { it.status ?: "new" }
-    val statusOrder = listOf("new", "engaged", "negotiation", "purchased", "lost")
+    val grouped = clients.groupBy { clientStatusGroupKey(it.status) }
+    val statusOrder = listOf("new", "engaged", "negotiation", "sold", "lost")
 
     LazyColumn(
         contentPadding = PaddingValues(bottom = 80.dp)
@@ -285,11 +285,11 @@ fun ClientRow(
         System.currentTimeMillis() - it.time < 24 * 60 * 60 * 1000 
     } ?: false
     
-    val statusColor = when(client.status) {
+    val statusColor = when(clientStatusGroupKey(client.status)) {
         "new" -> EzcarGreen
         "engaged" -> EzcarBlueBright
         "negotiation" -> EzcarOrange
-        "purchased" -> EzcarGreen
+        "sold" -> EzcarGreen
         "lost" -> Color.Gray
         else -> EzcarGreen
     }
@@ -520,23 +520,31 @@ private fun DateFilterType.labelSource(): String {
 }
 
 private fun clientStatusLabelSource(status: String?): String {
-    return when (status) {
+    return when (clientStatusGroupKey(status)) {
         "new" -> "New"
         "engaged" -> "Engaged"
         "negotiation" -> "Negotiation"
-        "purchased" -> "Purchased"
+        "sold" -> "Sold"
         "lost" -> "Lost"
         else -> "New"
     }
 }
 
 private fun clientStatusSectionLabelSource(status: String): String {
-    return when (status) {
+    return when (clientStatusGroupKey(status)) {
         "new" -> "New Leads"
         "engaged" -> "Engaged"
         "negotiation" -> "Negotiation"
-        "purchased" -> "Purchased"
+        "sold" -> "Sold"
         "lost" -> "Lost"
+        else -> status
+    }
+}
+
+private fun clientStatusGroupKey(status: String?): String {
+    return when (status) {
+        "purchased" -> "sold"
+        null -> "new"
         else -> status
     }
 }

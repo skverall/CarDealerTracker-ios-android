@@ -524,14 +524,7 @@ struct AccountView: View {
 
             Spacer()
 
-            Text("manage".localizedString)
-                .font(.subheadline.weight(.bold))
-                .foregroundColor(.black)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(Color.white)
-                .clipShape(Capsule())
-                .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
+            ProManageCallToAction(title: "manage".localizedString)
         }
         .padding(20)
         .background(
@@ -551,6 +544,83 @@ struct AccountView: View {
                 .stroke(LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0.0), .white.opacity(0.1)], startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.15), radius: 15, x: 0, y: 8)
+    }
+
+    private struct ProManageCallToAction: View {
+        let title: String
+        @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        @State private var isAnimating = false
+
+        var body: some View {
+            HStack(spacing: 7) {
+                Text(title)
+                    .font(.subheadline.weight(.heavy))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .heavy))
+            }
+            .foregroundColor(ColorTheme.primary)
+            .padding(.horizontal, 17)
+            .padding(.vertical, 10)
+            .background(
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.white,
+                                ColorTheme.warning.opacity(0.55),
+                                Color.white
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+            .overlay(shimmerOverlay.clipShape(Capsule()))
+            .overlay(
+                Capsule()
+                    .stroke(ColorTheme.accent.opacity(0.35), lineWidth: 1)
+            )
+            .shadow(
+                color: ColorTheme.accent.opacity(canAnimate && isAnimating ? 0.42 : 0.22),
+                radius: canAnimate && isAnimating ? 16 : 8,
+                x: 0,
+                y: 5
+            )
+            .scaleEffect(canAnimate && isAnimating ? 1.045 : 1)
+            .onAppear {
+                isAnimating = true
+            }
+            .animation(canAnimate ? .easeInOut(duration: 1.15).repeatForever(autoreverses: true) : .snappy(duration: 0.2), value: isAnimating)
+        }
+
+        private var canAnimate: Bool {
+            !reduceMotion
+        }
+
+        @ViewBuilder
+        private var shimmerOverlay: some View {
+            if canAnimate {
+                GeometryReader { proxy in
+                    LinearGradient(
+                        colors: [
+                            Color.clear,
+                            Color.white.opacity(0.80),
+                            Color.clear
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                    .frame(width: max(32, proxy.size.width * 0.35), height: proxy.size.height * 1.7)
+                    .rotationEffect(.degrees(18))
+                    .offset(x: isAnimating ? proxy.size.width * 1.2 : -proxy.size.width * 0.55)
+                    .animation(.linear(duration: 1.9).repeatForever(autoreverses: false), value: isAnimating)
+                }
+                .allowsHitTesting(false)
+            }
+        }
     }
 
     private func openSubscriptionDestination() {

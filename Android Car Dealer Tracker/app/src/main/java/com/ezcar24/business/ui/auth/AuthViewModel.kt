@@ -3,6 +3,7 @@ package com.ezcar24.business.ui.auth
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.repository.AuthDeepLinkResult
 import com.ezcar24.business.data.repository.AccountRepository
 import com.ezcar24.business.data.repository.AuthRepository
@@ -60,7 +61,8 @@ data class AuthUiState(
 class AuthViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val authRepository: AuthRepository,
-    private val cloudSyncManager: CloudSyncManager
+    private val cloudSyncManager: CloudSyncManager,
+    private val subscriptionManager: SubscriptionManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -151,6 +153,7 @@ class AuthViewModel @Inject constructor(
                 authRepository.applyPendingPostAuthActions(
                     teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                 )
+                subscriptionManager.logIn(authRepository.getDealerId())
                 triggerSync()
                 _uiState.value = currentState.copy(
                     password = "",
@@ -190,6 +193,7 @@ class AuthViewModel @Inject constructor(
                         authRepository.applyPendingPostAuthActions(
                             teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                         )
+                        subscriptionManager.logIn(authRepository.getDealerId())
                         triggerSync()
                         _uiState.value = currentState.copy(
                             password = "",
@@ -238,6 +242,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun startGuestMode() {
+        subscriptionManager.logOut()
         _uiState.value = AuthUiState(
             isGuestMode = true,
             isSuccess = true
@@ -298,6 +303,7 @@ class AuthViewModel @Inject constructor(
             try {
                 authRepository.updatePassword(_uiState.value.newPassword)
                 authRepository.signOut()
+                subscriptionManager.logOut()
                 _uiState.value = AuthUiState(
                     message = "Password updated successfully. Please sign in with your new password."
                 )
@@ -315,6 +321,7 @@ class AuthViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 authRepository.signOut()
+                subscriptionManager.logOut()
             } catch (_: Exception) {
             }
             _uiState.value = AuthUiState(

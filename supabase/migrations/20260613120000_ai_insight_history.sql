@@ -30,3 +30,5 @@ ALTER TABLE public.ai_insight_reports ENABLE ROW LEVEL SECURITY;
 
 REVOKE ALL ON TABLE public.ai_insight_reports FROM anon, authenticated;
 GRANT ALL ON TABLE public.ai_insight_reports TO service_role;
+
+NOTIFY pgrst, 'reload schema';

@@ -55,7 +55,7 @@ struct AnalyticsHubView: View {
 
     @State private var selectedRange: DashboardTimeRange = .month
     @State private var showingAIInsightsPaywall = false
-    @State private var pendingAIRegenerationRange: DashboardTimeRange?
+    @State private var confirmingAIRegenerationRange: DashboardTimeRange?
     @Namespace private var namespace
 
     init() {
@@ -178,6 +178,7 @@ struct AnalyticsHubView: View {
             }
         }
         .onChange(of: selectedRange) { _, newValue in
+            confirmingAIRegenerationRange = nil
             financeViewModel.fetchFinancialData(range: newValue)
             if subscriptionManager.isProAccessActive {
                 prepareAIInsights(for: newValue)
@@ -190,25 +191,6 @@ struct AnalyticsHubView: View {
         }
         .sheet(isPresented: $showingAIInsightsPaywall) {
             PaywallView(source: .aiInsights)
-        }
-        .confirmationDialog(
-            "ai_insights_regenerate_title".localizedString,
-            isPresented: Binding(
-                get: { pendingAIRegenerationRange != nil },
-                set: { if !$0 { pendingAIRegenerationRange = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("ai_insights_regenerate_confirm".localizedString) {
-                let range = pendingAIRegenerationRange ?? selectedRange
-                pendingAIRegenerationRange = nil
-                generateAIInsights(range: range, forceRefresh: true)
-            }
-            Button("cancel".localizedString, role: .cancel) {
-                pendingAIRegenerationRange = nil
-            }
-        } message: {
-            Text("ai_insights_regenerate_message".localizedString)
         }
     }
 
@@ -226,20 +208,32 @@ struct AnalyticsHubView: View {
     }
 
     private func performAIInsightsAction() {
-        guard subscriptionManager.isProAccessActive else {
+        let decision = AIInsightsActionPolicy.decision(
+            isLoading: aiInsightsViewModel.isLoading(for: selectedRange),
+            isCheckingAccess: subscriptionManager.isCheckingStatus,
+            hasProAccess: subscriptionManager.isProAccessActive,
+            isSignedIn: isSignedIn,
+            hasResponse: aiInsightsViewModel.response(for: selectedRange) != nil,
+            usage: aiInsightsViewModel.usage(for: selectedRange)
+        )
+
+        switch decision {
+        case .showPaywall:
             showingAIInsightsPaywall = true
-            return
+        case .confirmRegeneration:
+            confirmingAIRegenerationRange = selectedRange
+        case .generate(let forceRefresh):
+            confirmingAIRegenerationRange = nil
+            generateAIInsights(range: selectedRange, forceRefresh: forceRefresh)
+        case .ignore:
+            break
         }
+    }
 
-        guard isSignedIn else { return }
-
-        let hasResponse = aiInsightsViewModel.response(for: selectedRange) != nil
-        if hasResponse {
-            pendingAIRegenerationRange = selectedRange
-            return
-        }
-
-        generateAIInsights(range: selectedRange, forceRefresh: false)
+    private func confirmAIRegeneration() {
+        let range = confirmingAIRegenerationRange ?? selectedRange
+        confirmingAIRegenerationRange = nil
+        generateAIInsights(range: range, forceRefresh: true)
     }
 
     private func prepareAIInsights(for range: DashboardTimeRange) {
@@ -309,9 +303,7 @@ struct AnalyticsHubView: View {
             profit: canViewFinance ? financeViewModel.periodSalesProfit.asCurrencyCompact() : "—",
             spend: canViewFinance ? financeViewModel.totalExpenses.asCurrencyCompact() : "—",
             agingCount: canViewInventory ? inventoryViewModel.burningVehicles.count : nil,
-            conversionRate: canViewCRM ? crmViewModel.conversionRate : nil,
-            hasProAccess: subscriptionManager.isProAccessActive,
-            action: performAIInsightsAction
+            conversionRate: canViewCRM ? crmViewModel.conversionRate : nil
         )
     }
 
@@ -336,11 +328,16 @@ struct AnalyticsHubView: View {
             isCheckingAccess: subscriptionManager.isCheckingStatus,
             history: history,
             selectedReportId: selectedReportId,
-            usage: usage
+            usage: usage,
+            isConfirmingRegeneration: confirmingAIRegenerationRange == selectedRange
         ) {
             performAIInsightsAction()
         } onSelectReport: { report in
             aiInsightsViewModel.selectReport(report, range: selectedRange)
+        } onConfirmRegeneration: {
+            confirmAIRegeneration()
+        } onCancelRegeneration: {
+            confirmingAIRegenerationRange = nil
         }
     }
 
@@ -539,8 +536,6 @@ private struct AnalyticsPulseCard: View {
     let spend: String
     let agingCount: Int?
     let conversionRate: Double?
-    let hasProAccess: Bool
-    let action: () -> Void
 
     private let hairline = Color.white.opacity(0.14)
 
@@ -615,15 +610,6 @@ private struct AnalyticsPulseCard: View {
                     )
                 }
             }
-
-            Button(action: action) {
-                Text(hasProAccess ? "analytics_ask_ai".localizedString : "ai_insights_unlock".localizedString)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundColor(Color(red: 0.07, green: 0.16, blue: 0.34))
-                    .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.hapticScale)
         }
         .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1414,6 +1400,109 @@ private struct AnalyticsRestrictedCard: View {
     }
 }
 
+enum AIInsightsActionDecision: Equatable {
+    case showPaywall
+    case confirmRegeneration
+    case generate(forceRefresh: Bool)
+    case ignore
+}
+
+struct AIInsightsActionPolicy {
+    static func decision(
+        isLoading: Bool,
+        isCheckingAccess: Bool,
+        hasProAccess: Bool,
+        isSignedIn: Bool,
+        hasResponse: Bool,
+        usage: AIInsightsUsage?
+    ) -> AIInsightsActionDecision {
+        guard !isLoading, !isCheckingAccess else { return .ignore }
+        guard hasProAccess else { return .showPaywall }
+        guard isSignedIn else { return .ignore }
+        guard usage?.remaining != 0 else { return .ignore }
+        return hasResponse ? .confirmRegeneration : .generate(forceRefresh: false)
+    }
+
+    static func titleKey(
+        isLoading: Bool,
+        isCheckingAccess: Bool,
+        hasProAccess: Bool,
+        isSignedIn: Bool,
+        hasResponse: Bool,
+        usage: AIInsightsUsage?
+    ) -> String {
+        if isLoading { return "ai_insights_generating" }
+        if isCheckingAccess { return "ai_insights_checking" }
+        if !hasProAccess { return "ai_insights_unlock" }
+        if !isSignedIn { return "ai_insights_sign_in_cta" }
+        if usage?.remaining == 0 { return "ai_insights_limit_reached_button" }
+        if hasResponse { return "ai_insights_generate_new" }
+        return "ai_insights_generate"
+    }
+
+    static func isEnabled(
+        isLoading: Bool,
+        isCheckingAccess: Bool,
+        hasProAccess: Bool,
+        isSignedIn: Bool,
+        usage: AIInsightsUsage?
+    ) -> Bool {
+        if isLoading || isCheckingAccess { return false }
+        if !hasProAccess { return true }
+        if usage?.remaining == 0 { return false }
+        return isSignedIn
+    }
+}
+
+struct AIInsightsLanguagePolicy {
+    static let promptVersion = 3
+
+    static func normalizedCode(_ value: String?) -> String {
+        let code = (value ?? "en")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+            .split { $0 == "-" || $0 == "_" }
+            .first
+            .map(String.init) ?? "en"
+        let allowed: Set<String> = ["en", "ru", "ar", "ja", "ko", "uz"]
+        return allowed.contains(code) ? code : "en"
+    }
+
+    static func cacheKey(dealerId: String, language: String, rangeRawValue: String) -> String {
+        "ai_insights_cache_v\(promptVersion)_\(dealerId)_\(normalizedCode(language))_\(rangeRawValue)"
+    }
+
+    static func reports(_ reports: [AIInsightsReport], matching language: String) -> [AIInsightsReport] {
+        let currentLanguage = normalizedCode(language)
+        return reports.filter { report in
+            guard let reportLanguage = report.language else { return false }
+            return normalizedCode(reportLanguage) == currentLanguage
+        }
+    }
+}
+
+struct AIInsightsUsagePolicy {
+    static let defaultDailyLimit = 15
+
+    static func nextUTCResetDate(after date: Date) -> Date {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? TimeZone.current
+        let startOfDay = calendar.startOfDay(for: date)
+        return calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? date
+    }
+
+    static func usage(used: Int, limit: Int = defaultDailyLimit, now: Date) -> AIInsightsUsage {
+        let safeLimit = max(1, limit)
+        let safeUsed = max(0, used)
+        return AIInsightsUsage(
+            used: safeUsed,
+            limit: safeLimit,
+            remaining: max(0, safeLimit - safeUsed),
+            resetsAt: ISO8601DateFormatter().string(from: nextUTCResetDate(after: now))
+        )
+    }
+}
+
 private struct AIInsightsPremiumCard: View {
     let periodTitle: String
     let response: AIInsightsResponse?
@@ -1426,8 +1515,11 @@ private struct AIInsightsPremiumCard: View {
     let history: [AIInsightsReport]
     let selectedReportId: String?
     let usage: AIInsightsUsage?
+    let isConfirmingRegeneration: Bool
     let action: () -> Void
     let onSelectReport: (AIInsightsReport) -> Void
+    let onConfirmRegeneration: () -> Void
+    let onCancelRegeneration: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -1442,6 +1534,17 @@ private struct AIInsightsPremiumCard: View {
 
             if let usage, hasProAccess {
                 AIInsightsUsageBar(usage: usage)
+            }
+
+            if isLoading && response != nil {
+                AIInsightsRegeneratingBanner()
+            }
+
+            if isConfirmingRegeneration && response != nil && !isLoading {
+                AIInsightsRegenerationPrompt(
+                    onConfirm: onConfirmRegeneration,
+                    onCancel: onCancelRegeneration
+                )
             }
 
             Group {
@@ -1491,12 +1594,14 @@ private struct AIInsightsPremiumCard: View {
                 AIInsightsErrorMessage(message: errorMessage)
             }
 
-            AIInsightsActionButton(
-                title: buttonTitle,
-                isLoading: isLoading,
-                isEnabled: isActionEnabled,
-                action: action
-            )
+            if !isConfirmingRegeneration {
+                AIInsightsActionButton(
+                    title: buttonTitle,
+                    isLoading: isLoading,
+                    isEnabled: isActionEnabled,
+                    action: action
+                )
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1506,20 +1611,24 @@ private struct AIInsightsPremiumCard: View {
     }
 
     private var buttonTitle: String {
-        if isLoading { return "ai_insights_generating".localizedString }
-        if isCheckingAccess { return "ai_insights_checking".localizedString }
-        if !hasProAccess { return "ai_insights_unlock".localizedString }
-        if !isSignedIn { return "ai_insights_sign_in_cta".localizedString }
-        if usage?.remaining == 0 { return "ai_insights_limit_reached_button".localizedString }
-        if response != nil { return "ai_insights_generate_new".localizedString }
-        return "ai_insights_generate".localizedString
+        AIInsightsActionPolicy.titleKey(
+            isLoading: isLoading,
+            isCheckingAccess: isCheckingAccess,
+            hasProAccess: hasProAccess,
+            isSignedIn: isSignedIn,
+            hasResponse: response != nil,
+            usage: usage
+        ).localizedString
     }
 
     private var isActionEnabled: Bool {
-        if isLoading || isCheckingAccess { return false }
-        if !hasProAccess { return true }
-        if usage?.remaining == 0 { return false }
-        return isSignedIn
+        AIInsightsActionPolicy.isEnabled(
+            isLoading: isLoading,
+            isCheckingAccess: isCheckingAccess,
+            hasProAccess: hasProAccess,
+            isSignedIn: isSignedIn,
+            usage: usage
+        )
     }
 }
 
@@ -1533,9 +1642,17 @@ private struct AIInsightsUsageBar: View {
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(usage.remaining > 0 ? ColorTheme.primary : ColorTheme.warning)
 
-                Text(String(format: "ai_insights_usage_format".localizedString, usage.used, usage.limit))
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(ColorTheme.primaryText)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(format: "ai_insights_usage_format".localizedString, usage.used, usage.limit))
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(ColorTheme.primaryText)
+
+                    if let resetDate = usage.resetDate {
+                        Text(String(format: "ai_insights_usage_reset_format".localizedString, Self.resetFormatter.string(from: resetDate)))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+                }
 
                 Spacer(minLength: 8)
 
@@ -1559,6 +1676,92 @@ private struct AIInsightsUsageBar: View {
         .padding(12)
         .background(ColorTheme.secondaryBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private static let resetFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .none
+        formatter.timeStyle = .short
+        return formatter
+    }()
+}
+
+private struct AIInsightsRegeneratingBanner: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            ProgressView()
+                .controlSize(.small)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("ai_insights_regenerating_title".localizedString)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(ColorTheme.primaryText)
+
+                Text("ai_insights_regenerating_message".localizedString)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ColorTheme.primary.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+private struct AIInsightsRegenerationPrompt: View {
+    let onConfirm: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(ColorTheme.accent)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("ai_insights_regenerate_title".localizedString)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(ColorTheme.primaryText)
+
+                    Text("ai_insights_regenerate_message".localizedString)
+                        .font(.system(size: 12, weight: .medium))
+                        .lineSpacing(2)
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            HStack(spacing: 10) {
+                Button(action: onCancel) {
+                    Text("ai_insights_regenerate_keep".localizedString)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.hapticScale)
+
+                Button(action: onConfirm) {
+                    Text("ai_insights_regenerate_confirm".localizedString)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                        .background(ColorTheme.primary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.hapticScale)
+            }
+        }
+        .padding(14)
+        .background(ColorTheme.accent.opacity(0.09))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(ColorTheme.accent.opacity(0.18), lineWidth: 1)
+        )
     }
 }
 
@@ -1646,24 +1849,68 @@ private struct AIInsightsHeader: View {
     let isCheckingAccess: Bool
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
+            Image(systemName: statusIcon)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundColor(.white)
+                .frame(width: 44, height: 44)
+                .background(
+                    LinearGradient(
+                        colors: [statusColor, ColorTheme.primary],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                )
+                .shadow(color: statusColor.opacity(0.24), radius: 10, x: 0, y: 5)
+
             VStack(alignment: .leading, spacing: 4) {
                 Text("ai_insights_title".localizedString)
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.system(size: 19, weight: .heavy, design: .rounded))
                     .foregroundColor(ColorTheme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
 
                 Text(String(format: "analytics_period".localizedString, periodTitle))
-                    .font(.system(size: 13))
+                    .font(.system(size: 13, weight: .medium))
                     .foregroundColor(ColorTheme.secondaryText)
+                    .lineLimit(1)
             }
 
             Spacer(minLength: 12)
 
-            Text(statusTitle)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(ColorTheme.secondaryText)
-                .lineLimit(1)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 7, height: 7)
+
+                Text(statusTitle)
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .foregroundColor(statusColor)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(statusColor.opacity(0.11), in: Capsule())
+            .overlay(Capsule().stroke(statusColor.opacity(0.16), lineWidth: 1))
         }
+    }
+
+    private var statusIcon: String {
+        if isCheckingAccess { return "hourglass" }
+        if !hasProAccess { return "lock.fill" }
+        if isLoading { return "sparkles" }
+        if hasResponse { return "checkmark.seal.fill" }
+        return "sparkles"
+    }
+
+    private var statusColor: Color {
+        if isCheckingAccess { return ColorTheme.warning }
+        if !hasProAccess { return ColorTheme.accent }
+        if isLoading { return ColorTheme.secondary }
+        if hasResponse { return ColorTheme.success }
+        return ColorTheme.primary
     }
 
     private var statusTitle: String {
@@ -1694,6 +1941,12 @@ private struct AIInsightsSummaryPanel: View {
             .foregroundColor(ColorTheme.primaryText)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(ColorTheme.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(ColorTheme.primary.opacity(0.10), lineWidth: 1)
+            )
     }
 }
 
@@ -1864,24 +2117,90 @@ private struct AIInsightsActionButton: View {
     let isEnabled: Bool
     let action: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isAnimating = false
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 9) {
                 if isLoading {
                     ProgressView()
                         .tint(.white)
+                } else {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 15, weight: .heavy))
                 }
 
                 Text(title)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
             }
             .foregroundColor(.white)
-            .frame(maxWidth: .infinity, minHeight: 50)
-            .background(ColorTheme.primary, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .frame(maxWidth: .infinity, minHeight: 54)
+            .background(buttonBackground)
+            .overlay(buttonShine)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(isEnabled ? 0.26 : 0.08), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .shadow(
+                color: ColorTheme.secondary.opacity(canAnimate && isAnimating ? 0.42 : 0.22),
+                radius: canAnimate && isAnimating ? 18 : 10,
+                x: 0,
+                y: 7
+            )
+            .scaleEffect(canAnimate && isAnimating ? 1.012 : 1)
         }
         .buttonStyle(.hapticScale)
         .disabled(isLoading || !isEnabled)
         .opacity(isEnabled ? 1 : 0.55)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(.isButton)
+        .onAppear {
+            isAnimating = true
+        }
+        .animation(canAnimate ? .easeInOut(duration: 1.35).repeatForever(autoreverses: true) : .snappy(duration: 0.2), value: isAnimating)
+    }
+
+    private var canAnimate: Bool {
+        isEnabled && !isLoading && !reduceMotion
+    }
+
+    private var buttonBackground: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(
+                LinearGradient(
+                    colors: isEnabled
+                        ? [ColorTheme.secondary, ColorTheme.primary, ColorTheme.accent]
+                        : [ColorTheme.tertiaryText.opacity(0.38), ColorTheme.tertiaryText.opacity(0.24)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
+    }
+
+    @ViewBuilder
+    private var buttonShine: some View {
+        if canAnimate {
+            GeometryReader { proxy in
+                LinearGradient(
+                    colors: [
+                        Color.clear,
+                        Color.white.opacity(0.48),
+                        Color.clear
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .frame(width: max(44, proxy.size.width * 0.30), height: proxy.size.height * 1.6)
+                .rotationEffect(.degrees(18))
+                .offset(x: isAnimating ? proxy.size.width * 1.15 : -proxy.size.width * 0.50)
+                .animation(.linear(duration: 2.15).repeatForever(autoreverses: false), value: isAnimating)
+            }
+            .allowsHitTesting(false)
+        }
     }
 }
 
@@ -1923,11 +2242,32 @@ struct AIInsightsUsage: Codable, Equatable {
         guard limit > 0 else { return 0 }
         return min(1, max(0, CGFloat(used) / CGFloat(limit)))
     }
+
+    var resetDate: Date? {
+        guard let resetsAt else { return nil }
+        if let date = Self.fractionalFormatter.date(from: resetsAt) {
+            return date
+        }
+        return Self.plainFormatter.date(from: resetsAt)
+    }
+
+    private static let fractionalFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let plainFormatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 }
 
 struct AIInsightsReport: Codable, Equatable, Identifiable {
     let id: String
     let period: String
+    let language: String?
     let summary: String
     let insights: [String]
     let recommendations: [String]
@@ -2133,6 +2473,26 @@ private final class AIInsightsViewModel: ObservableObject {
         usageByRange[range]
     }
 
+    private func setLoading(_ isLoading: Bool, for range: DashboardTimeRange) {
+        var updated = loadingRanges
+        if isLoading {
+            updated.insert(range)
+        } else {
+            updated.remove(range)
+        }
+        loadingRanges = updated
+    }
+
+    private func setHistoryLoading(_ isLoading: Bool, for range: DashboardTimeRange) {
+        var updated = historyLoadingRanges
+        if isLoading {
+            updated.insert(range)
+        } else {
+            updated.remove(range)
+        }
+        historyLoadingRanges = updated
+    }
+
     func selectReport(_ report: AIInsightsReport, range: DashboardTimeRange) {
         responses[range] = report.response
         generatedDates[range] = report.createdDate
@@ -2173,14 +2533,15 @@ private final class AIInsightsViewModel: ObservableObject {
     func loadHistory(range: DashboardTimeRange, isProAccessActive: Bool) async {
         guard isProAccessActive else { return }
         guard !historyLoadingRanges.contains(range) else { return }
-        historyLoadingRanges.insert(range)
+        setHistoryLoading(true, for: range)
 
         do {
+            let metadata = makeMetadata(range: range)
             let envelope: AIInsightsHistoryEnvelope = try await client.functions.invoke(
                 "ai-insights",
-                options: FunctionInvokeOptions(body: AIInsightsHistoryRequest(metadata: makeMetadata(range: range)))
+                options: FunctionInvokeOptions(body: AIInsightsHistoryRequest(metadata: metadata))
             )
-            histories[range] = envelope.reports
+            histories[range] = AIInsightsLanguagePolicy.reports(envelope.reports, matching: metadata.language)
             if let usage = envelope.usage {
                 usageByRange[range] = usage
             }
@@ -2195,7 +2556,7 @@ private final class AIInsightsViewModel: ObservableObject {
             }
         }
 
-        historyLoadingRanges.remove(range)
+        setHistoryLoading(false, for: range)
     }
 
     func generate(range: DashboardTimeRange, forceRefresh: Bool = false, isProAccessActive: Bool) async {
@@ -2204,7 +2565,7 @@ private final class AIInsightsViewModel: ObservableObject {
             return
         }
         guard !loadingRanges.contains(range) else { return }
-        loadingRanges.insert(range)
+        setLoading(true, for: range)
         errorMessages[range] = nil
 
         do {
@@ -2218,7 +2579,7 @@ private final class AIInsightsViewModel: ObservableObject {
                 generatedDates[range] = cached.generatedAt
                 selectedReportIds[range] = cached.response.reportId
                 errorMessages[range] = nil
-                loadingRanges.remove(range)
+                setLoading(false, for: range)
                 return
             }
 
@@ -2235,7 +2596,7 @@ private final class AIInsightsViewModel: ObservableObject {
                 usageByRange[range] = usage
             }
             if let history = result.history {
-                histories[range] = history
+                histories[range] = AIInsightsLanguagePolicy.reports(history, matching: request.metadata.language)
             }
             errorMessages[range] = nil
             saveCachedEntry(entry, for: range)
@@ -2246,7 +2607,7 @@ private final class AIInsightsViewModel: ObservableObject {
             errorMessages[range] = "AI insights failed: \(Self.userFacingErrorMessage(from: error))"
         }
 
-        loadingRanges.remove(range)
+        setLoading(false, for: range)
     }
 
     private func makeRequest(range: DashboardTimeRange) throws -> AIInsightsRequest {
@@ -2273,8 +2634,8 @@ private final class AIInsightsViewModel: ObservableObject {
     private func makeMetadata(range: DashboardTimeRange) -> AIInsightMetadata {
         let regionSettings = RegionSettingsManager.shared
         return AIInsightMetadata(
-            language: regionSettings.selectedLanguage.rawValue,
-            promptVersion: 2,
+            language: AIInsightsLanguagePolicy.normalizedCode(regionSettings.selectedLanguage.rawValue),
+            promptVersion: AIInsightsLanguagePolicy.promptVersion,
             currencyCode: regionSettings.selectedRegion.currencyCode,
             region: regionSettings.selectedRegion.rawValue,
             period: range.rawValue,
@@ -2382,7 +2743,11 @@ private final class AIInsightsViewModel: ObservableObject {
 
     private func cacheKey(for range: DashboardTimeRange) -> String {
         let dealerId = CloudSyncEnvironment.currentDealerId?.uuidString ?? "local"
-        return "ai_insights_cache_v2_\(dealerId)_\(range.rawValue)"
+        return AIInsightsLanguagePolicy.cacheKey(
+            dealerId: dealerId,
+            language: RegionSettingsManager.shared.selectedLanguage.rawValue,
+            rangeRawValue: range.rawValue
+        )
     }
 
     private static func fingerprint(for request: AIInsightsRequest) throws -> String {

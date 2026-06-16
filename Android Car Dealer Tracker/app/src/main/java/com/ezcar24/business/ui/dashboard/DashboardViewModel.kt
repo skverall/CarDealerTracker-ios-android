@@ -8,12 +8,18 @@ import com.ezcar24.business.data.repository.OrganizationMembership
 import com.ezcar24.business.data.local.Expense
 import com.ezcar24.business.data.local.ExpenseDao
 import com.ezcar24.business.data.local.FinancialAccountDao
+import com.ezcar24.business.data.local.HoldingCostSettingsDao
+import com.ezcar24.business.data.local.PartSaleDao
+import com.ezcar24.business.data.local.PartSaleLineItemDao
+import com.ezcar24.business.data.local.Sale
 import com.ezcar24.business.data.local.SaleDao
 import com.ezcar24.business.data.local.VehicleDao
+import com.ezcar24.business.data.local.VehicleInventoryStats
 import com.ezcar24.business.data.local.VehicleInventoryStatsDao
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
+import com.ezcar24.business.util.calculator.DashboardMetricsCalculator
 import com.ezcar24.business.util.UserFacingErrorContext
 import com.ezcar24.business.util.UserFacingErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -84,6 +90,9 @@ class DashboardViewModel @Inject constructor(
     private val financialAccountDao: FinancialAccountDao,
     private val expenseDao: ExpenseDao,
     private val saleDao: SaleDao,
+    private val partSaleDao: PartSaleDao,
+    private val partSaleLineItemDao: PartSaleLineItemDao,
+    private val holdingCostSettingsDao: HoldingCostSettingsDao,
     private val clientDao: com.ezcar24.business.data.local.ClientDao,
     private val clientInteractionDao: com.ezcar24.business.data.local.ClientInteractionDao,
     private val vehicleInventoryStatsDao: VehicleInventoryStatsDao,
@@ -162,13 +171,41 @@ class DashboardViewModel @Inject constructor(
         dataJob = viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             
-            kotlinx.coroutines.flow.combine(
+            val coreDataFlow = kotlinx.coroutines.flow.combine(
                 vehicleDao.getAllActive(),
                 financialAccountDao.getAll(),
                 saleDao.getAll(),
                 expenseDao.getAll(),
                 vehicleInventoryStatsDao.getAllFlow()
             ) { vehicles, accounts, sales, allExpenses, inventoryStats ->
+                DashboardCoreData(
+                    vehicles = vehicles,
+                    accounts = accounts,
+                    sales = sales,
+                    allExpenses = allExpenses,
+                    inventoryStats = inventoryStats
+                )
+            }
+
+            val partSalesFlow = kotlinx.coroutines.flow.combine(
+                partSaleDao.getAllActive(),
+                partSaleLineItemDao.getAllActive()
+            ) { partSales, partSaleLineItems ->
+                partSales to partSaleLineItems
+            }
+
+            kotlinx.coroutines.flow.combine(
+                coreDataFlow,
+                partSalesFlow,
+                holdingCostSettingsDao.getSettings()
+            ) { coreData, partSaleData, holdingCostSettings ->
+                val vehicles = coreData.vehicles
+                val accounts = coreData.accounts
+                val sales = coreData.sales
+                val allExpenses = coreData.allExpenses
+                val inventoryStats = coreData.inventoryStats
+                val partSales = partSaleData.first
+                val partSaleLineItems = partSaleData.second
                 val selectedRange = _uiState.value.selectedRange
                 val rangeStartDate = selectedRange.getStartDate()
 
@@ -198,25 +235,21 @@ class DashboardViewModel @Inject constructor(
                     .filter { it.accountType.lowercase() == "bank" }
                     .sumOf { it.balance }
                 
-                // Total Assets = Cash + Bank + Vehicle Value (matching iOS)
                 val totalAssets = totalCash + totalBank + totalVehicleValue
                 
-                // Calculate Revenue (Total Sales Income) - ALWAYS ALL TIME (matching iOS)
-                val totalRevenue = sales
-                    .mapNotNull { it.amount }
-                    .fold(BigDecimal.ZERO) { acc, amount -> acc.add(amount) }
-                
-                // Calculate Net Profit - ALWAYS ALL TIME (matching iOS)
-                // Profit = Sum of (sale amount - vehicle cost - vehicle expenses) for each sale
-                val netProfit = sales.fold(BigDecimal.ZERO) { acc, sale ->
-                    val saleAmount = sale.amount ?: BigDecimal.ZERO
-                    val vehicle = sale.vehicleId?.let { vid -> vehicles.find { it.id == vid } }
-                    val vehicleCost = vehicle?.purchasePrice ?: BigDecimal.ZERO
-                    val vehicleExpenses = vehicle?.let { v ->
-                        allExpenses.filter { it.vehicleId == v.id }.sumOf { it.amount }
-                    } ?: BigDecimal.ZERO
-                    acc.add(saleAmount.subtract(vehicleCost).subtract(vehicleExpenses))
-                }
+                val totalRevenue = DashboardMetricsCalculator.calculateTotalRevenue(
+                    sales = sales,
+                    partSales = partSales
+                )
+
+                val netProfit = DashboardMetricsCalculator.calculateSalesProfit(
+                    sales = sales,
+                    vehicles = vehicles,
+                    allExpenses = allExpenses,
+                    partSales = partSales,
+                    partSaleLineItems = partSaleLineItems,
+                    holdingCostSettings = holdingCostSettings
+                )
                 
                 // Sold count - count vehicles with status="sold" (matching iOS logic)
                 val soldCount = vehicles.count { it.status == "sold" }
@@ -389,6 +422,7 @@ class DashboardViewModel @Inject constructor(
                 _uiState.update { currentState ->
                     currentState.copy(
                         totalAssets = totalAssets,
+                        totalVehicleValue = totalVehicleValue,
                         totalCash = totalCash,
                         totalBank = totalBank,
                         totalRevenue = totalRevenue,
@@ -560,11 +594,20 @@ private fun formatDashboardVehicleTitle(vehicle: Vehicle): String {
     return title.ifBlank { vehicle.vin }
 }
 
+private data class DashboardCoreData(
+    val vehicles: List<Vehicle>,
+    val accounts: List<com.ezcar24.business.data.local.FinancialAccount>,
+    val sales: List<Sale>,
+    val allExpenses: List<Expense>,
+    val inventoryStats: List<VehicleInventoryStats>
+)
+
 data class DashboardUiState(
     val selectedRange: DashboardTimeRange = DashboardTimeRange.ONE_WEEK,
     val organizations: List<OrganizationMembership> = emptyList(),
     val activeOrganization: OrganizationMembership? = null,
     val totalAssets: BigDecimal = BigDecimal.ZERO,
+    val totalVehicleValue: BigDecimal = BigDecimal.ZERO,
     val totalCash: BigDecimal = BigDecimal.ZERO,
     val totalBank: BigDecimal = BigDecimal.ZERO,
     val totalRevenue: BigDecimal = BigDecimal.ZERO,

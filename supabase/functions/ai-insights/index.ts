@@ -74,12 +74,14 @@ type AIInsightsUsage = {
 type AIInsightReportPayload = AIInsightsResponse & {
   id: string
   period: string
+  language: string | null
   createdAt: string
 }
 
 type AIInsightReportRow = {
   id: string
   period: string
+  language: string | null
   summary: string
   insights: unknown
   recommendations: unknown
@@ -154,7 +156,7 @@ serve(async (req) => {
     if (mode === "history") {
       const organizationId = await resolveAuthorizedOrganizationId(admin, user.id, metadata.organizationId)
       const usage = await loadUsage(admin, user.id)
-      const reports = await loadHistory(admin, organizationId, metadata.period)
+      const reports = await loadHistory(admin, organizationId, metadata.period, metadata.language)
       return jsonResponse({ reports, usage }, 200)
     }
 
@@ -174,7 +176,7 @@ serve(async (req) => {
       if (!forceRefresh) {
         const existingReport = await findExistingReport(admin, organizationId, payload.metadata.period, fingerprint)
         if (existingReport) {
-          const reports = await loadHistory(admin, organizationId, payload.metadata.period)
+          const reports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language)
           return jsonResponse({
             ...existingReport,
             reportId: existingReport.id,
@@ -194,7 +196,7 @@ serve(async (req) => {
         )
       }
 
-      const previousReports = await loadHistory(admin, organizationId, payload.metadata.period)
+      const previousReports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language)
       const parsed = await requestDeepSeekInsights(deepSeekApiKey, payload, previousReports.slice(0, 5))
       const report = await saveReport(admin, {
         organizationId,
@@ -204,7 +206,7 @@ serve(async (req) => {
         response: parsed,
       })
       const nextUsage = await loadUsage(admin, user.id)
-      const reports = await loadHistory(admin, organizationId, payload.metadata.period)
+      const reports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language)
 
       return jsonResponse({
         ...parsed,
@@ -476,7 +478,7 @@ async function findExistingReport(
 ) {
   const { data, error } = await admin
     .from("ai_insight_reports")
-    .select("id, period, summary, insights, recommendations, created_at")
+    .select("id, period, language, summary, insights, recommendations, created_at")
     .eq("organization_id", organizationId)
     .eq("period", period)
     .eq("fingerprint", fingerprint)
@@ -488,18 +490,26 @@ async function findExistingReport(
   return data ? reportPayload(data as AIInsightReportRow) : null
 }
 
-async function loadHistory(admin: SupabaseClient | null, organizationId: string, period: string) {
+async function loadHistory(
+  admin: SupabaseClient | null,
+  organizationId: string,
+  period: string,
+  language: string,
+) {
   if (!admin) {
     throw new HttpError("AI history storage is not configured", 500)
   }
 
-  const { data, error } = await admin
+  const query = admin
     .from("ai_insight_reports")
-    .select("id, period, summary, insights, recommendations, created_at")
+    .select("id, period, language, summary, insights, recommendations, created_at")
     .eq("organization_id", organizationId)
     .eq("period", period)
+    .eq("language", normalizeLanguageCode(language))
     .order("created_at", { ascending: false })
     .limit(historyLimit)
+
+  const { data, error } = await query
 
   if (error) throw error
   return (data ?? []).map((row) => reportPayload(row as AIInsightReportRow))
@@ -538,7 +548,7 @@ async function saveReport(
       },
       request_metadata: payload.metadata,
     })
-    .select("id, period, summary, insights, recommendations, created_at")
+    .select("id, period, language, summary, insights, recommendations, created_at")
     .single()
 
   if (error) throw error
@@ -549,6 +559,7 @@ function reportPayload(row: AIInsightReportRow): AIInsightReportPayload {
   return {
     id: row.id,
     period: row.period,
+    language: row.language,
     summary: row.summary,
     insights: normalizeStringList(row.insights),
     recommendations: normalizeStringList(row.recommendations),

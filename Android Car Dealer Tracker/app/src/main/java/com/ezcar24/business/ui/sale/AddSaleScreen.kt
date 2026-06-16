@@ -20,6 +20,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.repository.DealDeskLine
@@ -56,11 +57,15 @@ fun AddSaleScreen(
     var amountStr by remember { mutableStateOf("") }
     var buyerName by remember { mutableStateOf("") }
     var buyerPhone by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var vatRefundPercentStr by remember { mutableStateOf("") }
     var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
+    var selectedClient by remember { mutableStateOf<Client?>(null) }
     var selectedAccount by remember { mutableStateOf<FinancialAccount?>(null) }
     var paymentMethod by remember { mutableStateOf("Cash") }
     var date by remember { mutableStateOf(Date()) }
     var paymentMenuExpanded by remember { mutableStateOf(false) }
+    var clientMenuExpanded by remember { mutableStateOf(false) }
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var useDealDesk by remember { mutableStateOf(false) }
 
@@ -169,8 +174,11 @@ fun AddSaleScreen(
                     val vehicle = selectedVehicle!!
                     val activeDealDeskSettings = uiState.dealDeskSettings?.takeIf { it.isEnabled }
                     val saleAmount = amountStr.toBigDecimalOrNull()
+                    val vatRefundPercent = optionalDecimalFromSaleInput(vatRefundPercentStr)
+                        ?.takeIf { it > BigDecimal.ZERO }
+                    val vatRefundAmount = calculateVatRefundAmount(saleAmount ?: BigDecimal.ZERO, vatRefundPercent)
                     val totalCost = uiState.vehicleCosts[vehicle.id] ?: vehicle.purchasePrice
-                    val estimatedProfit = saleEstimatedProfit(saleAmount, totalCost)
+                    val estimatedProfit = saleEstimatedProfit(saleAmount, totalCost).add(vatRefundAmount)
 
                     Card(
                         colors = CardDefaults.cardColors(containerColor = EzcarBackgroundLight),
@@ -229,6 +237,7 @@ fun AddSaleScreen(
                             vehicle = vehicle,
                             settings = activeDealDeskSettings,
                             accounts = uiState.accounts,
+                            clients = uiState.clients,
                             dateFormatter = dateFormatter,
                             onPickDate = { currentDate, onDateSelected ->
                                 val calendar = Calendar.getInstance()
@@ -257,6 +266,7 @@ fun AddSaleScreen(
                                     account = request.account,
                                     accountDepositAmount = request.accountDepositAmount,
                                     notes = request.notes,
+                                    selectedClient = request.client,
                                     dealDeskSnapshot = request.snapshot
                                 )
                                 onSave()
@@ -282,6 +292,29 @@ fun AddSaleScreen(
                             canViewFinancials = uiState.canViewFinancials,
                             formatCurrency = regionSettingsManager::formatCurrency
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = vatRefundPercentStr,
+                            onValueChange = { vatRefundPercentStr = sanitizeSaleDecimalInput(it) },
+                            label = { Text(localizedUiString("VAT Refund %")) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            suffix = { Text("%") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (vatRefundAmount > BigDecimal.ZERO) {
+                            Text(
+                                text = localizedUiString("VAT Refund Amount: %s", regionSettingsManager.formatCurrency(vatRefundAmount)),
+                                style = MaterialTheme.typography.bodySmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = EzcarSuccess,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 6.dp)
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(12.dp))
 
@@ -375,6 +408,52 @@ fun AddSaleScreen(
                         Spacer(modifier = Modifier.height(20.dp))
                         SaleSectionTitle("Buyer Details")
 
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            SaleSelectorButton(
+                                icon = Icons.Default.Person,
+                                label = localizedUiString("Client"),
+                                value = selectedClient?.name ?: localizedUiString("New / Walk-in Client"),
+                                onClick = { clientMenuExpanded = true }
+                            )
+                            DropdownMenu(
+                                expanded = clientMenuExpanded,
+                                onDismissRequest = { clientMenuExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(localizedUiString("New / Walk-in Client")) },
+                                    onClick = {
+                                        selectedClient = null
+                                        clientMenuExpanded = false
+                                    }
+                                )
+                                uiState.clients.forEach { client ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(client.name)
+                                                Text(
+                                                    listOfNotNull(
+                                                        client.phone?.takeIf { it.isNotBlank() },
+                                                        client.email?.takeIf { it.isNotBlank() }
+                                                    ).joinToString(" · ").ifBlank { localizedUiString("No contact info") },
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                        },
+                                        onClick = {
+                                            selectedClient = client
+                                            buyerName = client.name
+                                            buyerPhone = client.phone.orEmpty()
+                                            clientMenuExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         OutlinedTextField(
                             value = buyerName,
                             onValueChange = { buyerName = it },
@@ -392,6 +471,17 @@ fun AddSaleScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedTextField(
+                            value = notes,
+                            onValueChange = { notes = it },
+                            label = { Text(localizedUiString("Notes")) },
+                            minLines = 2,
+                            maxLines = 4,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
                         Spacer(modifier = Modifier.height(24.dp))
 
                         val canSave = saleAmount != null && saleAmount > BigDecimal.ZERO && buyerName.isNotBlank()
@@ -406,7 +496,10 @@ fun AddSaleScreen(
                                         buyerName = buyerName,
                                         buyerPhone = buyerPhone,
                                         paymentMethod = paymentMethod,
-                                        account = selectedAccount
+                                        account = selectedAccount,
+                                        notes = notes,
+                                        selectedClient = selectedClient,
+                                        vatRefundPercent = vatRefundPercent
                                     )
                                     onSave()
                                 }
@@ -436,6 +529,7 @@ private data class DealDeskSaleRequest(
     val account: FinancialAccount?,
     val accountDepositAmount: BigDecimal,
     val notes: String,
+    val client: Client?,
     val snapshot: DealDeskSnapshot
 )
 
@@ -529,6 +623,7 @@ private fun DealDeskSaleContent(
     vehicle: Vehicle,
     settings: DealDeskSettings,
     accounts: List<FinancialAccount>,
+    clients: List<Client>,
     dateFormatter: SimpleDateFormat,
     onPickDate: (Date, (Date) -> Unit) -> Unit,
     formatCurrency: (BigDecimal) -> String,
@@ -543,6 +638,7 @@ private fun DealDeskSaleContent(
     }
     var buyerName by remember(vehicle.id) { mutableStateOf("") }
     var buyerPhone by remember(vehicle.id) { mutableStateOf("") }
+    var selectedClient by remember(vehicle.id) { mutableStateOf<Client?>(null) }
     var notes by remember(vehicle.id) { mutableStateOf("") }
     var saleDate by remember(vehicle.id) { mutableStateOf(Date()) }
     var selectedAccount by remember(vehicle.id) { mutableStateOf<FinancialAccount?>(null) }
@@ -568,6 +664,7 @@ private fun DealDeskSaleContent(
         mutableStateOf(settings.seededFeeLines.map { initialSaleDecimalText(it.value) })
     }
     var paymentMenuExpanded by remember { mutableStateOf(false) }
+    var clientMenuExpanded by remember { mutableStateOf(false) }
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var jurisdictionMenuExpanded by remember { mutableStateOf(false) }
 
@@ -676,6 +773,52 @@ private fun DealDeskSaleContent(
                 value = dateFormatter.format(saleDate),
                 onClick = { onPickDate(saleDate) { saleDate = it } }
             )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Box(modifier = Modifier.fillMaxWidth()) {
+                SaleSelectorButton(
+                    icon = Icons.Default.Person,
+                    label = localizedUiString("Client"),
+                    value = selectedClient?.name ?: localizedUiString("New / Walk-in Client"),
+                    onClick = { clientMenuExpanded = true }
+                )
+                DropdownMenu(
+                    expanded = clientMenuExpanded,
+                    onDismissRequest = { clientMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(localizedUiString("New / Walk-in Client")) },
+                        onClick = {
+                            selectedClient = null
+                            clientMenuExpanded = false
+                        }
+                    )
+                    clients.forEach { client ->
+                        DropdownMenuItem(
+                            text = {
+                                Column {
+                                    Text(client.name)
+                                    Text(
+                                        listOfNotNull(
+                                            client.phone?.takeIf { it.isNotBlank() },
+                                            client.email?.takeIf { it.isNotBlank() }
+                                        ).joinToString(" · ").ifBlank { localizedUiString("No contact info") },
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.Gray
+                                    )
+                                }
+                            },
+                            onClick = {
+                                selectedClient = client
+                                buyerName = client.name
+                                buyerPhone = client.phone.orEmpty()
+                                clientMenuExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -874,6 +1017,7 @@ private fun DealDeskSaleContent(
                         account = selectedAccount,
                         accountDepositAmount = dueToday,
                         notes = notes.trim(),
+                        client = selectedClient,
                         snapshot = snapshot
                     )
                 )
@@ -1219,6 +1363,13 @@ private fun decimalFromSaleInput(value: String): BigDecimal {
 
 private fun optionalDecimalFromSaleInput(value: String): BigDecimal? {
     return value.toBigDecimalOrNull()
+}
+
+private fun calculateVatRefundAmount(saleAmount: BigDecimal, percent: BigDecimal?): BigDecimal {
+    if (saleAmount <= BigDecimal.ZERO || percent == null || percent <= BigDecimal.ZERO) {
+        return BigDecimal.ZERO
+    }
+    return saleAmount.multiply(percent).divide(BigDecimal("100"), 2, RoundingMode.HALF_UP)
 }
 
 private fun DealDeskLine.resolvedSaleAmount(salePrice: BigDecimal): BigDecimal {

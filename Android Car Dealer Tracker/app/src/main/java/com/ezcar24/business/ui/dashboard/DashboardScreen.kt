@@ -196,6 +196,10 @@ fun DashboardScreen(
                 )
             }
 
+            item {
+                AIInsightsEntryCard(onClick = onNavigateToInventoryAnalytics)
+            }
+
             // --- Today's Expenses ---
             item {
                 TodaysExpensesSection(
@@ -738,7 +742,7 @@ fun FinancialOverviewSection(
                 onClick = onNavigateToSales
             )
             PerformanceCard(
-                title = localizedUiString("Net Profit"),
+                title = localizedUiString("Sales Profit"),
                 amount = uiState.netProfit,
                 icon = Icons.Default.MonetizationOn,
                 color = netProfitColor,
@@ -762,20 +766,104 @@ fun FinancialOverviewSection(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             OperationCard(
-                title = localizedUiString("Total Assets"),
-                valueStr = regionSettingsManager.formatCurrencyCompact(uiState.totalAssets),
+                title = localizedUiString("Inventory"),
+                valueStr = regionSettingsManager.formatCurrencyCompact(uiState.totalVehicleValue),
                 icon = Icons.Default.DirectionsCar,
                 color = EzcarBlueBright,
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToAssets
             )
             OperationCard(
-                title = localizedUiString("Sold"),
+                title = localizedUiString("Vehicles Sold"),
                 valueStr = uiState.soldCount.toString(),
                 icon = Icons.Default.CheckCircle,
                 color = EzcarBlueLight,
                 modifier = Modifier.weight(1f),
                 onClick = onNavigateToSold
+            )
+        }
+    }
+}
+
+@Composable
+private fun AIInsightsEntryCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color.Gray.copy(alpha = 0.08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 88.dp)
+                .padding(horizontal = 16.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .background(
+                        brush = Brush.linearGradient(listOf(EzcarPurple, EzcarNavy)),
+                        shape = CircleShape
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    text = localizedUiString("AI"),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Black,
+                    color = EzcarNavy,
+                    modifier = Modifier
+                        .background(EzcarNavy.copy(alpha = 0.10f), CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+                Text(
+                    text = localizedUiString("AI Insights Center"),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = localizedUiString("Deep dive into your business performance."),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Text(
+                text = localizedUiString("Open"),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                modifier = Modifier
+                    .background(
+                        brush = Brush.linearGradient(listOf(EzcarPurple, EzcarNavy)),
+                        shape = CircleShape
+                    )
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                maxLines = 1
             )
         }
     }

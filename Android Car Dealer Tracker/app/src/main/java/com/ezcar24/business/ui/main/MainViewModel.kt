@@ -1,9 +1,11 @@
 package com.ezcar24.business.ui.main
 
+import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.repository.AccountRepository
 import com.ezcar24.business.data.repository.AuthRepository
 import com.ezcar24.business.data.repository.PermissionRepository
@@ -20,12 +22,15 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+private const val MAIN_VIEW_MODEL_TAG = "MainViewModel"
+
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val authRepository: AuthRepository,
     private val cloudSyncManager: CloudSyncManager,
-    private val permissionRepository: PermissionRepository
+    private val permissionRepository: PermissionRepository,
+    private val subscriptionManager: SubscriptionManager
 ) : ViewModel(), DefaultLifecycleObserver {
 
     private val _startDestination = MutableStateFlow<String?>(null)
@@ -63,37 +68,42 @@ class MainViewModel @Inject constructor(
 
     private fun checkSession() {
         viewModelScope.launch {
-            authRepository.awaitInitialization()
-            val user = authRepository.getCurrentUser()
-            if (user != null) {
-                authRepository.applyPendingPostAuthActions()
-                val dealerId = accountRepository.bootstrapActiveOrganization()
-                if (dealerId != null) {
-                    try {
+            try {
+                authRepository.awaitInitialization()
+                val user = authRepository.getCurrentUser()
+                if (user != null) {
+                    subscriptionManager.logIn(user.id)
+                    authRepository.applyPendingPostAuthActions()
+                    val dealerId = accountRepository.bootstrapActiveOrganization()
+                    if (dealerId != null) {
                         currentDealerId = dealerId
                         CloudSyncEnvironment.currentDealerId = dealerId
                         cloudSyncManager.refreshLastSyncForCurrentOrg()
-                        // Initial sync after bootstrap (matching iOS)
                         launch {
-                            cloudSyncManager.syncAfterLogin(
-                                dealerId = dealerId,
-                                forceRefresh = cloudSyncManager.lastSyncAt == null
-                            )
+                            try {
+                                cloudSyncManager.syncAfterLogin(
+                                    dealerId = dealerId,
+                                    forceRefresh = cloudSyncManager.lastSyncAt == null
+                                )
+                            } catch (e: Exception) {
+                                Log.e(MAIN_VIEW_MODEL_TAG, "syncAfterLogin failed: ${e.message}", e)
+                            }
                         }
                         _startDestination.value = "home"
-                        // Start periodic sync
                         startPeriodicSync()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
+                    } else {
                         _startDestination.value = "login"
                     }
                 } else {
+                    subscriptionManager.logOut()
                     _startDestination.value = "login"
                 }
-            } else {
+            } catch (e: Exception) {
+                Log.e(MAIN_VIEW_MODEL_TAG, "checkSession failed: ${e.message}", e)
                 _startDestination.value = "login"
+            } finally {
+                _isLoading.value = false
             }
-            _isLoading.value = false
         }
     }
 
@@ -104,6 +114,7 @@ class MainViewModel @Inject constructor(
 
     fun onGuestMode() {
         _isGuestMode.value = true
+        subscriptionManager.logOut()
         permissionRepository.reset()
         stopPeriodicSync()
         _startDestination.value = "home"
@@ -112,6 +123,7 @@ class MainViewModel @Inject constructor(
 
     fun onSignedOut() {
         _isGuestMode.value = false
+        subscriptionManager.logOut()
         permissionRepository.reset()
         accountRepository.clearSessionState()
         cloudSyncManager.resetSyncState()
@@ -142,7 +154,11 @@ class MainViewModel @Inject constructor(
         val dealerId = currentDealerId ?: return
 
         viewModelScope.launch {
-            cloudSyncManager.manualSync(dealerId)
+            try {
+                cloudSyncManager.manualSync(dealerId)
+            } catch (e: Exception) {
+                Log.e(MAIN_VIEW_MODEL_TAG, "foreground sync failed: ${e.message}", e)
+            }
         }
     }
 
@@ -158,7 +174,11 @@ class MainViewModel @Inject constructor(
                 delay(periodicSyncIntervalMs)
                 if (!isActive) break
                 if (_isGuestMode.value) continue
-                cloudSyncManager.manualSync(dealerId)
+                try {
+                    cloudSyncManager.manualSync(dealerId)
+                } catch (e: Exception) {
+                    Log.e(MAIN_VIEW_MODEL_TAG, "periodic sync failed: ${e.message}", e)
+                }
             }
         }
     }
@@ -181,7 +201,11 @@ class MainViewModel @Inject constructor(
 
     fun refreshPermissions() {
         viewModelScope.launch {
-            permissionRepository.refresh()
+            try {
+                permissionRepository.refresh()
+            } catch (e: Exception) {
+                Log.e(MAIN_VIEW_MODEL_TAG, "refreshPermissions failed: ${e.message}", e)
+            }
         }
     }
 

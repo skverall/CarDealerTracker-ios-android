@@ -1,11 +1,14 @@
 package com.ezcar24.business.ui.sale
 
-import com.ezcar24.business.data.local.Vehicle
-import org.junit.Assert.assertEquals
-import org.junit.Test
 import java.math.BigDecimal
 import java.util.Date
 import java.util.UUID
+import org.junit.Assert.assertEquals
+import org.junit.Test
+
+import com.ezcar24.business.data.local.Client
+import com.ezcar24.business.data.local.LeadStage
+import com.ezcar24.business.data.local.Vehicle
 
 class SaleBalanceChangeTest {
     @Test
@@ -66,6 +69,41 @@ class SaleBalanceChangeTest {
         assertEquals("Purchased NO-TITLE-VIN", saleClientPurchaseNote(vehicle))
     }
 
+    @Test
+    fun `selected sale client keeps existing contact details`() {
+        val now = Date(1_700_000_000_000)
+        val saleDate = Date(1_700_086_400_000)
+        val vehicle = testSaleVehicle(
+            year = 2024,
+            make = "Toyota",
+            model = "Camry",
+            vin = "JTDBCMFE7R3000001"
+        )
+        val client = testSaleClient(
+            name = "Original Client",
+            phone = "+15550000001",
+            notes = "Existing note",
+            createdAt = now
+        )
+
+        val updated = saleClientForVehicleSale(
+            selectedClient = client,
+            buyerName = "Different Buyer",
+            buyerPhone = "+15559999999",
+            vehicle = vehicle,
+            now = now,
+            saleDate = saleDate
+        )
+
+        assertEquals("Original Client", updated.name)
+        assertEquals("+15550000001", updated.phone)
+        assertEquals("Existing note", updated.notes)
+        assertEquals("sold", updated.status)
+        assertEquals(vehicle.id, updated.vehicleId)
+        assertEquals(LeadStage.closed_won, updated.leadStage)
+        assertEquals(saleDate, updated.lastContactAt)
+    }
+
     private fun testSaleVehicle(
         year: Int?,
         make: String?,
@@ -95,6 +133,28 @@ class SaleBalanceChangeTest {
             askingPrice = null,
             reportURL = null,
             photoUrl = null
+        )
+    }
+
+    private fun testSaleClient(
+        name: String,
+        phone: String,
+        notes: String,
+        createdAt: Date
+    ): Client {
+        return Client(
+            id = UUID.randomUUID(),
+            name = name,
+            phone = phone,
+            email = null,
+            notes = notes,
+            requestDetails = null,
+            preferredDate = null,
+            status = "new",
+            createdAt = createdAt,
+            updatedAt = createdAt,
+            deletedAt = null,
+            vehicleId = null
         )
     }
 }

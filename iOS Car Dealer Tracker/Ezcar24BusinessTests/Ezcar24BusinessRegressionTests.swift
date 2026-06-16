@@ -121,6 +121,138 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertFalse(formatted.contains(".00"))
     }
 
+    func testAIInsightsActionRequiresInlineConfirmationBeforeReplacingReport() {
+        let usage = AIInsightsUsage(used: 2, limit: 15, remaining: 13, resetsAt: nil)
+
+        XCTAssertEqual(
+            AIInsightsActionPolicy.decision(
+                isLoading: false,
+                isCheckingAccess: false,
+                hasProAccess: true,
+                isSignedIn: true,
+                hasResponse: true,
+                usage: usage
+            ),
+            .confirmRegeneration
+        )
+        XCTAssertEqual(
+            AIInsightsActionPolicy.titleKey(
+                isLoading: false,
+                isCheckingAccess: false,
+                hasProAccess: true,
+                isSignedIn: true,
+                hasResponse: true,
+                usage: usage
+            ),
+            "ai_insights_generate_new"
+        )
+        XCTAssertTrue(
+            AIInsightsActionPolicy.isEnabled(
+                isLoading: false,
+                isCheckingAccess: false,
+                hasProAccess: true,
+                isSignedIn: true,
+                usage: usage
+            )
+        )
+    }
+
+    func testAIInsightsActionBlocksGenerationWhenDailyLimitIsReached() {
+        let usage = AIInsightsUsage(used: 15, limit: 15, remaining: 0, resetsAt: "2026-06-16T00:00:00Z")
+
+        XCTAssertEqual(
+            AIInsightsActionPolicy.decision(
+                isLoading: false,
+                isCheckingAccess: false,
+                hasProAccess: true,
+                isSignedIn: true,
+                hasResponse: false,
+                usage: usage
+            ),
+            .ignore
+        )
+        XCTAssertEqual(
+            AIInsightsActionPolicy.titleKey(
+                isLoading: false,
+                isCheckingAccess: false,
+                hasProAccess: true,
+                isSignedIn: true,
+                hasResponse: false,
+                usage: usage
+            ),
+            "ai_insights_limit_reached_button"
+        )
+        XCTAssertFalse(
+            AIInsightsActionPolicy.isEnabled(
+                isLoading: false,
+                isCheckingAccess: false,
+                hasProAccess: true,
+                isSignedIn: true,
+                usage: usage
+            )
+        )
+    }
+
+    func testAIInsightsDailyUsageResetsAtNextUTCMidnight() throws {
+        let now = try XCTUnwrap(ISO8601DateFormatter().date(from: "2026-06-15T20:45:00Z"))
+
+        let usage = AIInsightsUsagePolicy.usage(used: 15, now: now)
+
+        XCTAssertEqual(usage.used, 15)
+        XCTAssertEqual(usage.limit, 15)
+        XCTAssertEqual(usage.remaining, 0)
+        XCTAssertEqual(usage.resetsAt, "2026-06-16T00:00:00Z")
+        XCTAssertEqual(usage.resetDate, ISO8601DateFormatter().date(from: "2026-06-16T00:00:00Z"))
+    }
+
+    func testAIInsightsCacheAndHistoryAreLanguageScoped() {
+        XCTAssertEqual(AIInsightsLanguagePolicy.promptVersion, 3)
+        XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("en_US"), "en")
+        XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("ru-RU"), "ru")
+        XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("unsupported"), "en")
+        XCTAssertEqual(
+            AIInsightsLanguagePolicy.cacheKey(
+                dealerId: "dealer-1",
+                language: "en_US",
+                rangeRawValue: DashboardTimeRange.week.rawValue
+            ),
+            "ai_insights_cache_v3_dealer-1_en_week"
+        )
+
+        let reports = [
+            AIInsightsReport(
+                id: "ru-report",
+                period: DashboardTimeRange.week.rawValue,
+                language: "ru",
+                summary: "Русский отчёт",
+                insights: ["Русский инсайт"],
+                recommendations: ["Русская рекомендация"],
+                createdAt: "2026-06-15T12:00:00Z"
+            ),
+            AIInsightsReport(
+                id: "en-report",
+                period: DashboardTimeRange.week.rawValue,
+                language: "en",
+                summary: "English report",
+                insights: ["English insight"],
+                recommendations: ["English recommendation"],
+                createdAt: "2026-06-15T13:00:00Z"
+            ),
+            AIInsightsReport(
+                id: "legacy-report",
+                period: DashboardTimeRange.week.rawValue,
+                language: nil,
+                summary: "Legacy report",
+                insights: ["Unknown language"],
+                recommendations: ["Unknown language"],
+                createdAt: "2026-06-15T14:00:00Z"
+            )
+        ]
+
+        XCTAssertEqual(AIInsightsLanguagePolicy.reports(reports, matching: "en").map(\.id), ["en-report"])
+        XCTAssertEqual(AIInsightsLanguagePolicy.reports(reports, matching: "ru").map(\.id), ["ru-report"])
+    }
+
     func testEmailReminderBannerHidesForISO8601ConfirmationString() {
         XCTAssertFalse(
             SessionStore.shouldShowEmailReminderBanner(

@@ -3,32 +3,31 @@ package com.ezcar24.business.data.billing
 import android.app.Activity
 import android.content.Context
 import android.util.Log
-import com.android.billingclient.api.AcknowledgePurchaseParams
-import com.android.billingclient.api.BillingClient
-import com.android.billingclient.api.BillingClientStateListener
-import com.android.billingclient.api.BillingFlowParams
-import com.android.billingclient.api.BillingResult
-import com.android.billingclient.api.ProductDetails
-import com.android.billingclient.api.PurchasesUpdatedListener
-import com.android.billingclient.api.QueryProductDetailsParams
-import com.android.billingclient.api.QueryPurchasesParams
-import com.android.billingclient.api.acknowledgePurchase
-import com.android.billingclient.api.queryProductDetails
-import com.android.billingclient.api.queryPurchasesAsync
 import com.ezcar24.business.BuildConfig
+import com.revenuecat.purchases.CustomerInfo
+import com.revenuecat.purchases.LogLevel
+import com.revenuecat.purchases.PackageType
+import com.revenuecat.purchases.PurchaseParams
+import com.revenuecat.purchases.Purchases
+import com.revenuecat.purchases.PurchasesConfiguration
+import com.revenuecat.purchases.PurchasesError
+import com.revenuecat.purchases.Package as RevenueCatPackage
+import com.revenuecat.purchases.getCustomerInfoWith
+import com.revenuecat.purchases.getOfferingsWith
+import com.revenuecat.purchases.interfaces.PurchaseCallback
+import com.revenuecat.purchases.logInWith
+import com.revenuecat.purchases.logOutWith
+import com.revenuecat.purchases.models.StoreTransaction
+import com.revenuecat.purchases.restorePurchasesWith
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
-import dagger.hilt.EntryPoint
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
@@ -37,9 +36,8 @@ interface SubscriptionManagerEntryPoint {
 }
 
 data class SubscriptionOffer(
-    val productDetails: ProductDetails,
-    val offerToken: String,
-    val pricingPhase: String,
+    val revenueCatPackage: RevenueCatPackage,
+    val productId: String,
     val price: String,
     val period: String,
     val hasFreeTrial: Boolean
@@ -49,8 +47,6 @@ data class SubscriptionOffer(
 class SubscriptionManager @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-
     private val _isProAccessActive = MutableStateFlow(false)
     val isProAccessActive: StateFlow<Boolean> = _isProAccessActive.asStateFlow()
 
@@ -66,185 +62,239 @@ class SubscriptionManager @Inject constructor(
     private val _isBillingReady = MutableStateFlow(false)
     val isBillingReady: StateFlow<Boolean> = _isBillingReady.asStateFlow()
 
-    private var billingClient: BillingClient? = null
+    private val revenueCatApiKey = BuildConfig.REVENUECAT_ANDROID_API_KEY.trim()
 
     companion object {
         private const val TAG = "SubscriptionManager"
-        const val PRODUCT_MONTHLY = "ezcar24_monthly"
-        const val PRODUCT_YEARLY = "ezcar24_yearly"
-        private val SUBSCRIPTION_IDS = listOf(PRODUCT_MONTHLY, PRODUCT_YEARLY)
+        private val WEEKLY_PRODUCT_IDS = setOf(
+            "com.ezcar24.business.weekly",
+            "ezcar24_weekly",
+            "weekly"
+        )
+        private val MONTHLY_PRODUCT_IDS = setOf(
+            "com.ezcar24.business.monthly",
+            "ezcar24_monthly",
+            "monthly"
+        )
+        private val YEARLY_PRODUCT_IDS = setOf(
+            "com.ezcar24.business.yearly",
+            "ezcar24_yearly",
+            "yearly"
+        )
+        private val QUARTERLY_PRODUCT_IDS = setOf(
+            "com.ezcar24.business.quarterly",
+            "ezcar24_quarterly",
+            "quarterly"
+        )
+
+        internal fun billingPeriod(packageType: PackageType, productId: String): String? {
+            val normalizedProductId = productId.substringBefore(":")
+            return when (packageType) {
+                PackageType.WEEKLY -> "weekly"
+                PackageType.MONTHLY -> "monthly"
+                PackageType.ANNUAL -> "yearly"
+                PackageType.THREE_MONTH -> "quarterly"
+                else -> when (normalizedProductId) {
+                    in WEEKLY_PRODUCT_IDS -> "weekly"
+                    in MONTHLY_PRODUCT_IDS -> "monthly"
+                    in YEARLY_PRODUCT_IDS -> "yearly"
+                    in QUARTERLY_PRODUCT_IDS -> "quarterly"
+                    else -> null
+                }
+            }
+        }
     }
 
     init {
         if (BuildConfig.DEBUG) {
             _isProAccessActive.value = true
             _isCheckingStatus.value = false
-            Log.d(TAG, "Debug build — Pro access granted automatically")
         }
-        initialize()
+        initializeRevenueCat()
     }
 
-    private fun initialize() {
-        val purchasesUpdatedListener = PurchasesUpdatedListener { billingResult, purchases ->
-            when (billingResult.responseCode) {
-                BillingClient.BillingResponseCode.OK -> {
-                    purchases?.forEach { purchase ->
-                        acknowledgePurchase(purchase)
-                    }
-                    checkProAccess()
-                }
-                BillingClient.BillingResponseCode.USER_CANCELED -> {
-                    Log.d(TAG, "User canceled the purchase")
-                }
-                else -> {
-                    Log.e(TAG, "Purchase error: ${billingResult.debugMessage}")
-                }
-            }
-        }
-
-        billingClient = BillingClient.newBuilder(context)
-            .setListener(purchasesUpdatedListener)
-            .enablePendingPurchases()
-            .build()
-
-        billingClient?.startConnection(object : BillingClientStateListener {
-            override fun onBillingSetupFinished(billingResult: BillingResult) {
-                if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                    Log.d(TAG, "Billing client ready")
-                    _isBillingReady.value = true
-                    queryProducts()
-                    checkProAccess()
-                } else {
-                    Log.e(TAG, "Billing setup failed: ${billingResult.debugMessage}")
-                    _isCheckingStatus.value = false
-                }
-            }
-
-            override fun onBillingServiceDisconnected() {
-                Log.w(TAG, "Billing service disconnected")
-                _isBillingReady.value = false
-            }
-        })
-    }
-
-    fun queryProducts() {
-        val client = billingClient ?: return
-        scope.launch(Dispatchers.IO) {
-            _isLoading.value = true
-            try {
-                val productList = SUBSCRIPTION_IDS.map { id ->
-                    QueryProductDetailsParams.Product.newBuilder()
-                        .setProductId(id)
-                        .setProductType(BillingClient.ProductType.SUBS)
-                        .build()
-                }
-
-                val params = QueryProductDetailsParams.newBuilder()
-                    .setProductList(productList)
-                    .build()
-
-                val result = client.queryProductDetails(params)
-
-                if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                    val offers = result.productDetailsList?.mapNotNull { details ->
-                        val basePlan = details.subscriptionOfferDetails?.firstOrNull() ?: return@mapNotNull null
-                        val pricingPhase = basePlan.pricingPhases.pricingPhaseList.firstOrNull()
-
-                        SubscriptionOffer(
-                            productDetails = details,
-                            offerToken = basePlan.offerToken,
-                            pricingPhase = pricingPhase?.billingPeriod ?: "",
-                            price = pricingPhase?.formattedPrice ?: "",
-                            period = when (details.productId) {
-                                PRODUCT_MONTHLY -> "monthly"
-                                PRODUCT_YEARLY -> "yearly"
-                                else -> "unknown"
-                            },
-                            hasFreeTrial = basePlan.pricingPhases.pricingPhaseList.size > 1
-                        )
-                    }?.sortedBy { offer ->
-                        when (offer.period) {
-                            "monthly" -> 0
-                            "yearly" -> 1
-                            else -> 2
-                        }
-                    } ?: emptyList()
-
-                    _offerings.value = offers
-                } else {
-                    Log.e(TAG, "Query products failed: ${result.billingResult.debugMessage}")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error querying products", e)
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    fun checkProAccess() {
-        val client = billingClient ?: run {
+    private fun initializeRevenueCat() {
+        if (revenueCatApiKey.isBlank()) {
+            _isBillingReady.value = false
             _isCheckingStatus.value = false
+            Log.w(TAG, "RevenueCat Android API key is missing")
             return
         }
-        scope.launch(Dispatchers.IO) {
-            _isCheckingStatus.value = true
-            try {
-                val params = QueryPurchasesParams.newBuilder()
-                    .setProductType(BillingClient.ProductType.SUBS)
-                    .build()
 
-                val result = client.queryPurchasesAsync(params)
-                val hasActive = result.purchasesList.any { purchase ->
-                    purchase.purchaseState == com.android.billingclient.api.Purchase.PurchaseState.PURCHASED &&
-                        purchase.isAcknowledged
-                }
-                _isProAccessActive.value = if (BuildConfig.DEBUG) true else hasActive
-            } catch (e: Exception) {
-                Log.e(TAG, "Error checking pro access", e)
-            } finally {
-                _isCheckingStatus.value = false
-            }
+        if (!Purchases.isConfigured) {
+            Purchases.logLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.ERROR
+            Purchases.configure(
+                PurchasesConfiguration.Builder(context, revenueCatApiKey).build()
+            )
         }
-    }
 
-    fun launchBillingFlow(activity: Activity, offer: SubscriptionOffer) {
-        val client = billingClient ?: return
-        val productDetailsParams = BillingFlowParams.ProductDetailsParams.newBuilder()
-            .setProductDetails(offer.productDetails)
-            .setOfferToken(offer.offerToken)
-            .build()
-
-        val billingFlowParams = BillingFlowParams.newBuilder()
-            .setProductDetailsParamsList(listOf(productDetailsParams))
-            .build()
-
-        val billingResult = client.launchBillingFlow(activity, billingFlowParams)
-        if (billingResult.responseCode != BillingClient.BillingResponseCode.OK) {
-            Log.e(TAG, "Billing flow launch failed: ${billingResult.debugMessage}")
-        }
-    }
-
-    fun restorePurchases() {
+        _isBillingReady.value = true
+        queryProducts()
         checkProAccess()
     }
 
-    private fun acknowledgePurchase(purchase: com.android.billingclient.api.Purchase) {
-        val client = billingClient ?: return
-        if (purchase.purchaseState != com.android.billingclient.api.Purchase.PurchaseState.PURCHASED) return
-        if (purchase.isAcknowledged) return
-
-        scope.launch(Dispatchers.IO) {
-            val params = AcknowledgePurchaseParams.newBuilder()
-                .setPurchaseToken(purchase.purchaseToken)
-                .build()
-            val result = client.acknowledgePurchase(params)
-            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
-                Log.d(TAG, "Purchase acknowledged")
-                checkProAccess()
-            } else {
-                Log.e(TAG, "Acknowledge failed: ${result.debugMessage}")
-            }
+    fun queryProducts() {
+        if (!canUseRevenueCat()) {
+            _isLoading.value = false
+            _offerings.value = emptyList()
+            return
         }
+
+        _isLoading.value = true
+        Purchases.sharedInstance.getOfferingsWith(
+            onError = { error ->
+                Log.e(TAG, "RevenueCat offerings failed: ${error.message}")
+                _isLoading.value = false
+            },
+            onSuccess = { offerings ->
+                val packages = offerings.current?.availablePackages.orEmpty()
+                _offerings.value = packages
+                    .mapNotNull(::subscriptionOfferFromPackage)
+                    .sortedBy { offer ->
+                        when (offer.period) {
+                            "weekly" -> 0
+                            "monthly" -> 1
+                            "yearly" -> 2
+                            "quarterly" -> 3
+                            else -> 4
+                        }
+                    }
+                _isLoading.value = false
+            }
+        )
     }
+
+    fun checkProAccess() {
+        if (!canUseRevenueCat()) {
+            _isCheckingStatus.value = false
+            _isProAccessActive.value = BuildConfig.DEBUG
+            return
+        }
+
+        _isCheckingStatus.value = true
+        Purchases.sharedInstance.getCustomerInfoWith(
+            onError = { error ->
+                Log.e(TAG, "RevenueCat customer info failed: ${error.message}")
+                _isCheckingStatus.value = false
+                _isProAccessActive.value = BuildConfig.DEBUG
+            },
+            onSuccess = { customerInfo ->
+                updateProStatus(customerInfo)
+                _isCheckingStatus.value = false
+            }
+        )
+    }
+
+    fun launchBillingFlow(activity: Activity, offer: SubscriptionOffer) {
+        if (!canUseRevenueCat()) {
+            Log.e(TAG, "Cannot launch purchase flow: RevenueCat is not configured")
+            return
+        }
+
+        _isLoading.value = true
+        Purchases.sharedInstance.purchase(
+            PurchaseParams.Builder(activity, offer.revenueCatPackage).build(),
+            object : PurchaseCallback {
+                override fun onError(error: PurchasesError, userCancelled: Boolean) {
+                    if (!userCancelled) {
+                        Log.e(TAG, "RevenueCat purchase failed: ${error.message}")
+                    }
+                    _isLoading.value = false
+                }
+
+                override fun onCompleted(
+                    storeTransaction: StoreTransaction,
+                    customerInfo: CustomerInfo
+                ) {
+                    updateProStatus(customerInfo)
+                    _isLoading.value = false
+                }
+            }
+        )
+    }
+
+    fun restorePurchases() {
+        if (!canUseRevenueCat()) {
+            _isLoading.value = false
+            _isProAccessActive.value = BuildConfig.DEBUG
+            return
+        }
+
+        _isLoading.value = true
+        Purchases.sharedInstance.restorePurchasesWith(
+            onError = { error ->
+                Log.e(TAG, "RevenueCat restore failed: ${error.message}")
+                _isLoading.value = false
+            },
+            onSuccess = { customerInfo ->
+                updateProStatus(customerInfo)
+                _isLoading.value = false
+            }
+        )
+    }
+
+    fun logIn(userId: String?) {
+        val normalizedUserId = userId?.trim().orEmpty()
+        if (!canUseRevenueCat() || normalizedUserId.isBlank()) {
+            checkProAccess()
+            return
+        }
+
+        _isCheckingStatus.value = true
+        Purchases.sharedInstance.logInWith(
+            appUserID = normalizedUserId,
+            onError = { error ->
+                Log.e(TAG, "RevenueCat login failed: ${error.message}")
+                _isCheckingStatus.value = false
+                _isProAccessActive.value = BuildConfig.DEBUG
+            },
+            onSuccess = { customerInfo, _ ->
+                updateProStatus(customerInfo)
+                _isCheckingStatus.value = false
+            }
+        )
+    }
+
+    fun logOut() {
+        if (!canUseRevenueCat()) {
+            _isProAccessActive.value = BuildConfig.DEBUG
+            _offerings.value = emptyList()
+            _isCheckingStatus.value = false
+            return
+        }
+
+        _isCheckingStatus.value = true
+        Purchases.sharedInstance.logOutWith(
+            onError = { error ->
+                Log.e(TAG, "RevenueCat logout failed: ${error.message}")
+                _isCheckingStatus.value = false
+            },
+            onSuccess = { customerInfo ->
+                updateProStatus(customerInfo)
+                _isCheckingStatus.value = false
+            }
+        )
+    }
+
+    private fun canUseRevenueCat(): Boolean {
+        return revenueCatApiKey.isNotBlank() && Purchases.isConfigured
+    }
+
+    private fun updateProStatus(customerInfo: CustomerInfo) {
+        _isProAccessActive.value = customerInfo.entitlements.active.isNotEmpty()
+    }
+
+    private fun subscriptionOfferFromPackage(packageToMap: RevenueCatPackage): SubscriptionOffer? {
+        val productId = packageToMap.product.id
+        val period = billingPeriod(packageToMap.packageType, productId) ?: return null
+
+        return SubscriptionOffer(
+            revenueCatPackage = packageToMap,
+            productId = productId,
+            price = packageToMap.product.price.formatted,
+            period = period,
+            hasFreeTrial = packageToMap.product.subscriptionOptions?.freeTrial != null
+        )
+    }
+
 }

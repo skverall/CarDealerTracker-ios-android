@@ -51,6 +51,7 @@ data class SettingsUiState(
     val isSavingProfile: Boolean = false,
     val isSwitchingOrganization: Boolean = false,
     val isSigningOut: Boolean = false,
+    val isDeletingAccount: Boolean = false,
     val signedOut: Boolean = false,
     val profileSaved: Boolean = false,
     val diagnosticsResult: String? = null,
@@ -459,11 +460,8 @@ class SettingsViewModel @Inject constructor(
             _uiState.update { it.copy(isSigningOut = true, errorMessage = null) }
             try {
                 authRepository.signOut()
-                withContext(Dispatchers.IO) {
-                    accountRepository.clearLocalData()
-                }
-                accountRepository.clearSessionState()
-                cloudSyncManager.resetSyncState()
+                subscriptionManager.logOut()
+                clearLocalSessionState()
                 _uiState.update { it.copy(isSigningOut = false, signedOut = true) }
             } catch (e: Exception) {
                 Log.e(SETTINGS_TAG, "signOut failed", e)
@@ -477,8 +475,50 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun deleteAccount() {
+        if (_uiState.value.isDeletingAccount) return
+
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isDeletingAccount = true,
+                    errorMessage = null,
+                    statusMessage = null
+                )
+            }
+            try {
+                authRepository.deleteAccount()
+                subscriptionManager.logOut()
+                clearLocalSessionState()
+                _uiState.update {
+                    it.copy(
+                        isDeletingAccount = false,
+                        signedOut = true,
+                        statusMessage = "Account deleted."
+                    )
+                }
+            } catch (e: Exception) {
+                Log.e(SETTINGS_TAG, "deleteAccount failed", e)
+                _uiState.update {
+                    it.copy(
+                        isDeletingAccount = false,
+                        errorMessage = UserFacingErrorMapper.map(e, UserFacingErrorContext.DELETE_ACCOUNT)
+                    )
+                }
+            }
+        }
+    }
+
     fun consumeSignedOut() {
         _uiState.update { it.copy(signedOut = false) }
+    }
+
+    private suspend fun clearLocalSessionState() {
+        withContext(Dispatchers.IO) {
+            accountRepository.clearLocalData()
+        }
+        accountRepository.clearSessionState()
+        cloudSyncManager.resetSyncState()
     }
 }
 

@@ -27,6 +27,10 @@ val supabaseAnonKey = providers.gradleProperty("SUPABASE_ANON_KEY")
     .orElse(providers.environmentVariable("SUPABASE_ANON_KEY"))
     .getOrElse("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imhhb3JkcGR4eXlyZWxpeXptaXJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNzIxNTAsImV4cCI6MjA3MDY0ODE1MH0.3cc_tkF4So5g0JbbPLEiKlZ_3JyaqW6u_cxV6rxKFQg")
 
+val revenueCatAndroidApiKey = providers.gradleProperty("REVENUECAT_ANDROID_API_KEY")
+    .orElse(providers.environmentVariable("REVENUECAT_ANDROID_API_KEY"))
+    .getOrElse((keystoreProperties["revenueCatAndroidApiKey"] as? String).orEmpty())
+
 val playStorePackageName = "com.ezcar24.business"
 
 val hasGoogleServicesFile = listOf(
@@ -43,6 +47,10 @@ if (enablesReleaseGoogleServices && !hasGoogleServicesFile) {
     throw GradleException("Missing google-services.json. Download it from Firebase Console and place it at Android Car Dealer Tracker/app/google-services.json before building release.")
 }
 
+if (enablesReleaseGoogleServices && revenueCatAndroidApiKey.isBlank()) {
+    throw GradleException("Missing REVENUECAT_ANDROID_API_KEY. Add the RevenueCat Android public SDK key as a Gradle property or environment variable before building release.")
+}
+
 if (enablesReleaseGoogleServices && hasGoogleServicesFile) {
     apply(plugin = "com.google.gms.google-services")
     apply(plugin = "com.google.firebase.crashlytics")
@@ -56,13 +64,14 @@ android {
         applicationId = "com.ezcar24.business"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2112
-        versionName = "2.1.12"
+        versionCode = 2114
+        versionName = "2.1.14"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField("String", "SUPABASE_URL", supabaseUrl.asBuildConfigString())
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseAnonKey.asBuildConfigString())
+        buildConfigField("String", "REVENUECAT_ANDROID_API_KEY", revenueCatAndroidApiKey.asBuildConfigString())
         buildConfigField("String", "PLAY_STORE_PACKAGE_NAME", playStorePackageName.asBuildConfigString())
         buildConfigField("boolean", "FIREBASE_ENABLED", enablesReleaseGoogleServices.toString())
     }
@@ -88,6 +97,9 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             buildConfigField("boolean", "CHECK_PLAY_STORE_VERSION", "true")
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -155,8 +167,8 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
 
-    // Billing
-    implementation(libs.billing.ktx)
+    // Subscriptions
+    implementation(libs.revenuecat.purchases)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

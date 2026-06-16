@@ -135,6 +135,8 @@ data class Sale(
     val deletedAt: Date? = null,
     val vehicleId: UUID?,
     val accountId: UUID?,
+    val vatRefundPercent: BigDecimal? = null,
+    val vatRefundAmount: BigDecimal? = null,
     val dealDeskPayload: String? = null,
     val dealDeskTemplateCode: String? = null,
     val dealDeskTemplateVersion: Int? = null

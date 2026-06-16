@@ -6,16 +6,19 @@ import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.data.local.ExpenseDao
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.data.local.FinancialAccountDao
+import com.ezcar24.business.data.local.HoldingCostSettingsDao
 import com.ezcar24.business.data.local.Sale
 import com.ezcar24.business.data.local.SaleDao
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.local.VehicleDao
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
+import com.ezcar24.business.util.calculator.HoldingCostCalculator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
 import java.util.Date
 import javax.inject.Inject
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -54,6 +57,7 @@ class SalesViewModel @Inject constructor(
     private val vehicleDao: VehicleDao,
     private val expenseDao: ExpenseDao,
     private val accountDao: FinancialAccountDao,
+    private val holdingCostSettingsDao: HoldingCostSettingsDao,
     private val cloudSyncManager: CloudSyncManager
 ) : ViewModel() {
 
@@ -109,17 +113,32 @@ class SalesViewModel @Inject constructor(
     }
 
     private suspend fun loadDataInternal() {
-        saleDao.getAll().collect { salesList ->
+        combine(
+            saleDao.getAll(),
+            holdingCostSettingsDao.getSettings()
+        ) { salesList, holdingCostSettings ->
             val items = salesList.map { sale ->
                 val vehicle = sale.vehicleId?.let { vehicleDao.getById(it) }
-                
+
+                val saleDate = sale.date ?: vehicle?.saleDate ?: Date()
                 val expensesList = sale.vehicleId?.let { expenseDao.getExpensesForVehicleSync(it) } ?: emptyList()
                 val totalExpenses = expensesList.sumOf { it.amount }
+                val holdingCost = if (vehicle != null && holdingCostSettings?.isEnabled == true) {
+                    HoldingCostCalculator.calculateAccumulatedHoldingCost(
+                        vehicle = vehicle.copy(saleDate = saleDate),
+                        settings = holdingCostSettings,
+                        allExpenses = expensesList,
+                        asOfDate = saleDate
+                    )
+                } else {
+                    BigDecimal.ZERO
+                }
 
                 val vehiclePurchasePrice = vehicle?.purchasePrice ?: BigDecimal.ZERO
-                val costPrice = vehiclePurchasePrice.add(totalExpenses)
+                val costPrice = vehiclePurchasePrice.add(totalExpenses).add(holdingCost)
                 val salePrice = sale.amount ?: BigDecimal.ZERO
-                val netProfit = salePrice.subtract(costPrice)
+                val vatRefund = sale.vatRefundAmount ?: BigDecimal.ZERO
+                val netProfit = salePrice.subtract(costPrice).add(vatRefund)
 
                 val profitMargin = if (salePrice > BigDecimal.ZERO) {
                     netProfit.toDouble() / salePrice.toDouble() * 100
@@ -135,14 +154,15 @@ class SalesViewModel @Inject constructor(
                     sale = sale,
                     vehicleName = vehicleName,
                     buyerName = sale.buyerName ?: "Unknown Buyer",
-                    saleDate = sale.date ?: Date(),
+                    saleDate = saleDate,
                     salePrice = salePrice,
                     costPrice = costPrice,
                     netProfit = netProfit,
                     profitMargin = profitMargin
                 )
             }
-
+            items
+        }.collect { items ->
             _uiState.update { it.copy(sales = items, isLoading = false) }
             applyFilter()
         }

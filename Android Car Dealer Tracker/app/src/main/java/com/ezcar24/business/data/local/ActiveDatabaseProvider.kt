@@ -2,6 +2,7 @@ package com.ezcar24.business.data.local
 
 import android.content.Context
 import androidx.room.Room
+import com.ezcar24.business.BuildConfig
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
@@ -26,12 +27,11 @@ class ActiveDatabaseProvider @Inject constructor(
         val key = storeKey(dealerId)
         synchronized(lock) {
             return databases.getOrPut(key) {
-                Room.databaseBuilder(
+                val builder = Room.databaseBuilder(
                     context,
                     AppDatabase::class.java,
                     databaseName(key)
                 )
-                    .fallbackToDestructiveMigration()
                     .addMigrations(
                         AppDatabase.MIGRATION_1_2,
                         AppDatabase.MIGRATION_2_3,
@@ -40,9 +40,15 @@ class ActiveDatabaseProvider @Inject constructor(
                         AppDatabase.MIGRATION_5_6,
                         AppDatabase.MIGRATION_6_7,
                         AppDatabase.MIGRATION_7_8,
-                        AppDatabase.MIGRATION_8_9
+                        AppDatabase.MIGRATION_8_9,
+                        AppDatabase.MIGRATION_9_10
                     )
-                    .build()
+
+                if (BuildConfig.DEBUG) {
+                    builder.fallbackToDestructiveMigration()
+                }
+
+                builder.build()
             }
         }
     }

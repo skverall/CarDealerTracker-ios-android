@@ -5,24 +5,13 @@ struct UserGuideView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 24) {
+            LazyVStack(alignment: .leading, spacing: 16) {
                 ForEach(sections) { section in
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text(section.title)
-                            .font(.headline)
-                            .foregroundColor(ColorTheme.primaryText)
-                        ForEach(section.items, id: \.self) { item in
-                            Text("- \(item)")
-                                .font(.subheadline)
-                                .foregroundColor(ColorTheme.secondaryText)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .padding(.horizontal, 16)
+                    GuideSectionCard(section: section)
                 }
-                .padding(.top, 12)
             }
-            .padding(.bottom, 24)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 16)
         }
         .background(ColorTheme.background.ignoresSafeArea())
         .navigationTitle("user_guide".localizedString)
@@ -43,123 +32,140 @@ struct UserGuideView: View {
     private var englishSections: [GuideSection] {
         [
             GuideSection(
-                title: "Quick Start",
+                title: "Getting Started",
                 items: [
                     "Sign in or create a dealer organization.",
-                    "Set region, currency, and language in Accounts > Region.",
-                    "Add your first vehicle from Vehicles.",
-                    "Invite teammates from Accounts > Team Management."
+                    "Open Account > Region & Language to choose your country, currency, language, and formats.",
+                    "Use the theme switch in Account if you prefer light or dark mode.",
+                    "Add your first vehicle from Vehicles, then create financial accounts if you want balances to update automatically.",
+                    "Turn the Parts tab on or off from Account depending on whether your dealership sells parts."
                 ]
             ),
             GuideSection(
                 title: "Navigation",
                 items: [
                     "Bottom tabs: Dashboard, Expenses, Vehicles, Parts, Sales, Clients.",
-                    "Use search in lists to filter by make/model, customer, or notes.",
-                    "Pull to refresh to force a sync when online."
+                    "Dashboard gives the fastest view of money, inventory, alerts, and shortcuts.",
+                    "Use search in lists to find vehicles, clients, notes, VINs, and records faster.",
+                    "Most detail screens open by tapping a row; go back with the iOS back button or swipe from the left edge."
                 ]
             ),
             GuideSection(
-                title: "Vehicles & Inventory",
+                title: "Vehicles & Photos",
                 items: [
-                    "Vehicles are the core inventory records.",
+                    "Vehicles are your main inventory records.",
                     "Statuses include on sale, reserved, in transit, under service, sold.",
-                    "Edit a vehicle to update pricing, mileage, notes, and status.",
+                    "Edit a vehicle to update price, mileage, purchase details, notes, and status.",
                     "Marking a vehicle as sold creates a sale record.",
-                    "Use the Share button to generate a public vehicle link."
-                ]
-            ),
-            GuideSection(
-                title: "Vehicle Photos",
-                items: [
-                    "Edit a vehicle and tap Add Photos to select multiple images.",
-                    "Review and upload in batch; optionally set the first photo as the cover.",
-                    "Long-press a thumbnail to set it as cover or delete it.",
-                    "Cover photo is used in lists and share links."
+                    "Add multiple photos, set a cover photo, and use Share to create a public vehicle link."
                 ]
             ),
             GuideSection(
                 title: "Holding Cost (Burning Inventory)",
                 items: [
-                    "Holding cost estimates daily carrying cost based on purchase price and expenses.",
-                    "Configure annual rate in Accounts > Holding Cost Settings.",
-                    "If you don't need it, you can turn it off in Accounts > Holding Cost Settings.",
+                    "Holding cost estimates the daily cost of keeping a vehicle in stock.",
+                    "Configure the annual rate in Account > Holding Cost Settings.",
+                    "You can turn holding cost off if your dealership does not use it.",
                     "Holding cost accrues until the sale date; after sale it stops.",
                     "Sales profit includes holding cost."
                 ]
             ),
             GuideSection(
-                title: "Expenses",
+                title: "Expenses & Financial Accounts",
                 items: [
-                    "Log expenses by category and link to a vehicle when applicable.",
-                    "Vehicle expenses impact profit and holding cost base."
+                    "Log vehicle, personal, and employee expenses by category.",
+                    "Link an expense to a vehicle when it belongs to that vehicle.",
+                    "Vehicle expenses affect vehicle profit and holding cost base.",
+                    "Owners and admins can manage cash, bank, and credit accounts from Account > Financial Accounts.",
+                    "When you choose an account for a sale or expense, the account balance updates."
                 ]
             ),
             GuideSection(
-                title: "Sales (Vehicles)",
+                title: "Sales & Debts",
                 items: [
-                    "Sales are created when a vehicle is marked sold.",
-                    "Sale account receives the funds and balance updates.",
-                    "Profit = sale price - (purchase + expenses + holding cost) + VAT refund."
+                    "Create a vehicle sale by marking the vehicle as sold or recording a sale.",
+                    "Select the receiving account so the money goes to the right balance.",
+                    "Profit includes sale price, purchase price, expenses, holding cost, and VAT refund when used.",
+                    "Use Debts to track money owed to you and money you owe.",
+                    "Record payments on debts to reduce the remaining balance."
                 ]
             ),
             GuideSection(
-                title: "Parts Inventory & Sales",
+                title: "Parts Inventory",
                 items: [
-                    "Track parts inventory, receive stock, and sell parts.",
-                    "Part sales track line items and cost of goods for profit."
+                    "Use Parts to track part stock, purchase cost, sale price, and available quantity.",
+                    "Receive stock when new parts arrive.",
+                    "Create part sales with line items so cost and profit stay clear.",
+                    "If your dealership does not sell parts, hide the Parts tab from Account."
                 ]
             ),
             GuideSection(
                 title: "Clients / CRM",
                 items: [
-                    "Store client details and link to sales and debts.",
+                    "Store leads and customers with phone numbers, notes, and status.",
+                    "Log interactions and reminders so follow-ups are not lost.",
+                    "Link clients to sales and debts when needed.",
                     "Search by name, phone, and notes."
                 ]
             ),
             GuideSection(
-                title: "Debts",
+                title: "Analytics & AI Insights",
                 items: [
-                    "Record money owed to you or that you owe.",
-                    "Mark payments to reduce outstanding balance."
-                ]
-            ),
-            GuideSection(
-                title: "Analytics & Alerts",
-                items: [
-                    "Inventory health uses aging, ROI, and holding cost.",
-                    "Burning inventory highlights slow-moving vehicles.",
-                    "Alerts trigger based on thresholds and recommendations."
-                ]
-            ),
-            GuideSection(
-                title: "Sync & Offline",
-                items: [
-                    "Local-first: changes save instantly and sync in background.",
-                    "Manual Sync is available in Accounts.",
-                    "Data Health and Deduplicate help clean up duplicates."
+                    "Open Analytics to review revenue, spend, profit, inventory health, and CRM performance by period.",
+                    "Use the period filter to switch between 1D, 1W, 1M, 3M, 6M, and All.",
+                    "AI Insights summarizes sales, expenses, and inventory for the selected period.",
+                    "AI reports are a Pro feature. If Pro is not active, the button opens the subscription screen.",
+                    "The daily AI limit is 15 reports. The card shows how many are used and when the limit resets.",
+                    "Generated reports are saved in history. If a report already exists, the app asks before generating a fresh one."
                 ]
             ),
             GuideSection(
                 title: "Team & Permissions",
                 items: [
-                    "Roles control access to costs, profit, and management tools.",
-                    "Owners can manage team members and permissions."
+                    "Owners and admins can invite team members from Account > Team Members.",
+                    "A teammate can join with Join Team by Code when an admin shares the code.",
+                    "Roles include owner, admin, sales, and viewer.",
+                    "Permissions control access to financials, costs, profit, inventory, leads, parts, and deletion."
                 ]
             ),
             GuideSection(
-                title: "Security & Legal",
+                title: "Sync, Offline & Data Health",
                 items: [
-                    "Change password in Accounts.",
-                    "Terms of Use and Privacy Policy are in Accounts."
+                    "The app is local-first: changes save on the phone first and sync in the background.",
+                    "Use Account > Sync Now when you want to manually push and pull updates.",
+                    "Use Account > Data Health to check sync status and possible data issues.",
+                    "Owners and admins can run Clean Up Duplicates if duplicate records appear.",
+                    "If you are offline, keep working; the app queues changes and syncs when the network is back."
+                ]
+            ),
+            GuideSection(
+                title: "Reports, Backups & Notifications",
+                items: [
+                    "Owners can export data from Account > Backup & Export.",
+                    "Email Reports lets eligible users configure monthly report delivery.",
+                    "Monthly reports can be previewed before sending or sharing.",
+                    "Notifications handle reminders, debt due dates, daily expense reminders, and inventory digest alerts.",
+                    "If notifications are disabled, open Account > Notifications to go to iOS settings."
+                ]
+            ),
+            GuideSection(
+                title: "Dealer Pro, Referral & Account",
+                items: [
+                    "Dealer Pro unlocks premium tools, including AI Insights.",
+                    "Use the Dealer Pro card in Account to manage your subscription.",
+                    "Invite Dealer shares your referral code; you get bonus Pro time when a referred dealer subscribes.",
+                    "View referral stats from Account to track invites.",
+                    "Change password, contact the developer, read Terms and Privacy Policy, or delete your account from Account."
                 ]
             ),
             GuideSection(
                 title: "Troubleshooting",
                 items: [
-                    "If photos or data do not appear, pull to refresh or run Sync Now.",
-                    "If a vehicle looks duplicated, run Deduplicate.",
-                    "Contact support from Accounts > Contact Developer."
+                    "If data or photos do not appear, pull to refresh or run Account > Sync Now.",
+                    "If duplicate records appear, ask an owner or admin to run Clean Up Duplicates.",
+                    "If AI is disabled, check that you are signed in, Pro is active, and the daily limit is not used up.",
+                    "If a team member cannot see a feature, check their role and permissions.",
+                    "Contact support from Account > Contact Developer."
                 ]
             )
         ]
@@ -171,120 +177,137 @@ struct UserGuideView: View {
                 title: "Быстрый старт",
                 items: [
                     "Войдите в аккаунт или создайте организацию дилера.",
-                    "Настройте регион, валюту и язык в разделе Accounts > Region.",
-                    "Добавьте первый автомобиль в разделе Vehicles.",
-                    "Пригласите команду через Accounts > Team Management."
+                    "Откройте Account > Region & Language и выберите страну, валюту, язык и форматы.",
+                    "Если нужно, переключите светлую или темную тему в Account.",
+                    "Добавьте первый автомобиль в Vehicles, затем создайте финансовые счета, если хотите видеть балансы.",
+                    "Включите или выключите вкладку Parts в Account, если ваш бизнес работает или не работает с запчастями."
                 ]
             ),
             GuideSection(
                 title: "Навигация",
                 items: [
                     "Нижние вкладки: Dashboard, Expenses, Vehicles, Parts, Sales, Clients.",
-                    "Используйте поиск в списках по марке, модели, клиенту или заметкам.",
-                    "Потяните список вниз для принудительной синхронизации."
+                    "Dashboard быстро показывает деньги, склад, предупреждения и важные действия.",
+                    "Используйте поиск, чтобы быстрее находить авто, клиентов, заметки, VIN и записи.",
+                    "Открывайте детали нажатием на строку; назад можно вернуться кнопкой iOS или свайпом слева."
                 ]
             ),
             GuideSection(
-                title: "Автомобили и склад",
+                title: "Автомобили и фото",
                 items: [
-                    "Автомобили — основные записи склада.",
+                    "Автомобили — главные записи вашего склада.",
                     "Статусы: в продаже, зарезервирован, в пути, на сервисе, продан.",
-                    "В режиме редактирования можно менять цены, пробег, заметки и статус.",
-                    "Статус «продан» создает запись продажи.",
-                    "Кнопка Share создаёт публичную ссылку на автомобиль."
-                ]
-            ),
-            GuideSection(
-                title: "Фотографии автомобиля",
-                items: [
-                    "В режиме редактирования нажмите Add Photos и выберите несколько фото.",
-                    "Проверьте и загрузите пакетно; при необходимости первое фото станет обложкой.",
-                    "Долгое нажатие на миниатюре позволяет сделать ее обложкой или удалить.",
-                    "Обложка используется в списках и при шеринге."
+                    "В редактировании можно менять цену, пробег, покупку, заметки и статус.",
+                    "Когда автомобиль отмечается как проданный, создается запись продажи.",
+                    "Добавляйте несколько фото, выбирайте обложку и используйте Share для публичной ссылки на авто."
                 ]
             ),
             GuideSection(
                 title: "Holding Cost (Burning Inventory)",
                 items: [
-                    "Holding cost — ежедневная стоимость простоя на основе цены покупки и расходов.",
-                    "Годовую ставку можно настроить в Accounts > Holding Cost Settings.",
-                    "Если функция не нужна, её можно отключить в Accounts > Holding Cost Settings.",
+                    "Holding cost показывает примерную ежедневную стоимость простоя автомобиля на складе.",
+                    "Годовую ставку можно настроить в Account > Holding Cost Settings.",
+                    "Если функция не нужна, ее можно отключить.",
                     "Начисление идет до даты продажи; после продажи останавливается.",
                     "Прибыль в Sales включает holding cost."
                 ]
             ),
             GuideSection(
-                title: "Расходы",
+                title: "Расходы и финансовые счета",
                 items: [
-                    "Добавляйте расходы по категориям и привязывайте к авто, когда нужно.",
-                    "Расходы по авто влияют на прибыль и базу для holding cost."
+                    "Добавляйте расходы по категориям: авто, личные, сотрудники.",
+                    "Привязывайте расход к автомобилю, если он относится к конкретной машине.",
+                    "Расходы по авто влияют на прибыль автомобиля и базу holding cost.",
+                    "Owner и Admin могут управлять cash, bank и credit счетами в Account > Financial Accounts.",
+                    "Если выбрать счет в продаже или расходе, баланс этого счета обновится."
                 ]
             ),
             GuideSection(
-                title: "Продажи (авто)",
+                title: "Продажи и долги",
                 items: [
-                    "Продажи создаются при переводе авто в статус «продан».",
-                    "Сумма продажи зачисляется на выбранный счет.",
-                    "Прибыль = цена продажи - (покупка + расходы + holding cost) + возврат НДС."
+                    "Продажу авто можно создать через статус «продан» или через запись продажи.",
+                    "Выберите счет получения денег, чтобы сумма попала в правильный баланс.",
+                    "Прибыль учитывает цену продажи, покупку, расходы, holding cost и возврат НДС, если он используется.",
+                    "В Debts фиксируйте деньги, которые должны вам, и деньги, которые должны вы.",
+                    "Отмечайте оплаты по долгам, чтобы уменьшать остаток."
                 ]
             ),
             GuideSection(
-                title: "Запчасти и продажи запчастей",
+                title: "Склад запчастей",
                 items: [
-                    "Ведите склад запчастей, приходуйте и продавайте их.",
-                    "Продажи запчастей учитывают себестоимость и прибыль."
+                    "В Parts можно вести склад запчастей: количество, себестоимость и цену продажи.",
+                    "Приходуйте новые запчасти, когда они поступают.",
+                    "Создавайте продажи запчастей с позициями, чтобы видеть себестоимость и прибыль.",
+                    "Если запчасти вам не нужны, скройте вкладку Parts в Account."
                 ]
             ),
             GuideSection(
                 title: "Клиенты / CRM",
                 items: [
-                    "Храните контакты клиентов и привязывайте к продажам и долгам.",
-                    "Поиск по имени, телефону и заметкам."
+                    "Храните лидов и клиентов с телефонами, заметками и статусом.",
+                    "Добавляйте взаимодействия и напоминания, чтобы не терять follow-up.",
+                    "Связывайте клиентов с продажами и долгами, когда это нужно.",
+                    "Ищите по имени, телефону и заметкам."
                 ]
             ),
             GuideSection(
-                title: "Долги",
+                title: "Analytics и AI Insights",
                 items: [
-                    "Фиксируйте долги вам и ваши долги.",
-                    "Отмечайте оплаты, чтобы уменьшать остаток."
-                ]
-            ),
-            GuideSection(
-                title: "Аналитика и алерты",
-                items: [
-                    "Здоровье склада учитывает старение, ROI и holding cost.",
-                    "Burning inventory показывает медленно продаваемые авто.",
-                    "Алерты формируются по порогам и рекомендациям."
-                ]
-            ),
-            GuideSection(
-                title: "Синхронизация и офлайн",
-                items: [
-                    "Local-first: изменения сохраняются сразу и синхронизируются в фоне.",
-                    "Ручная синхронизация доступна в Accounts.",
-                    "Data Health и Deduplicate помогают чистить дубликаты."
+                    "В Analytics можно смотреть revenue, spend, profit, здоровье склада и CRM по выбранному периоду.",
+                    "Фильтр периода переключает 1D, 1W, 1M, 3M, 6M и All.",
+                    "AI Insights делает краткий отчет по продажам, расходам и складу за выбранный период.",
+                    "AI reports — Pro-функция. Если Pro не активен, кнопка откроет экран подписки.",
+                    "Дневной лимит AI — 15 отчетов. Карточка показывает, сколько использовано и когда лимит обновится.",
+                    "Отчеты сохраняются в истории. Если отчет уже есть, приложение спросит подтверждение перед новой генерацией."
                 ]
             ),
             GuideSection(
                 title: "Команда и права",
                 items: [
-                    "Роли управляют доступом к стоимости, прибыли и управлению.",
-                    "Owner может управлять командой и правами."
+                    "Owner и Admin могут приглашать участников через Account > Team Members.",
+                    "Новый участник может войти через Join Team by Code, если админ дал код.",
+                    "Основные роли: owner, admin, sales и viewer.",
+                    "Права управляют доступом к финансам, себестоимости, прибыли, складу, лидам, запчастям и удалению."
                 ]
             ),
             GuideSection(
-                title: "Безопасность и правовые документы",
+                title: "Синхронизация и офлайн",
                 items: [
-                    "Смена пароля — в Accounts.",
-                    "Terms of Use и Privacy Policy — в Accounts."
+                    "Приложение local-first: изменения сначала сохраняются на телефоне, потом синхронизируются в фоне.",
+                    "Используйте Account > Sync Now, если хотите вручную отправить и получить обновления.",
+                    "Account > Data Health показывает состояние синхронизации и возможные проблемы данных.",
+                    "Owner и Admin могут запустить Clean Up Duplicates, если появились дубликаты.",
+                    "Если нет интернета, продолжайте работать: изменения встанут в очередь и синхронизируются позже."
+                ]
+            ),
+            GuideSection(
+                title: "Отчеты, backup и уведомления",
+                items: [
+                    "Owner может экспортировать данные через Account > Backup & Export.",
+                    "Email Reports позволяет настроить ежемесячную отправку отчетов для пользователей с доступом.",
+                    "Monthly reports можно предварительно посмотреть перед отправкой или шарингом.",
+                    "Уведомления помогают с напоминаниями, сроками долгов, ежедневным расходом и inventory digest.",
+                    "Если уведомления выключены, откройте Account > Notifications и перейдите в настройки iOS."
+                ]
+            ),
+            GuideSection(
+                title: "Dealer Pro, referral и аккаунт",
+                items: [
+                    "Dealer Pro открывает премиум-инструменты, включая AI Insights.",
+                    "Подпиской можно управлять через карточку Dealer Pro в Account.",
+                    "Invite Dealer делится вашим referral-кодом; вы получаете бонусное Pro-время, когда приглашенный дилер оформит подписку.",
+                    "Referral stats в Account показывает статистику приглашений.",
+                    "В Account также есть смена пароля, связь с разработчиком, Terms, Privacy Policy и удаление аккаунта."
                 ]
             ),
             GuideSection(
                 title: "Диагностика",
                 items: [
-                    "Если фото или данные не отображаются, обновите список или запустите Sync Now.",
-                    "Если видите дубликаты, запустите Deduplicate.",
-                    "Поддержка доступна через Accounts > Contact Developer."
+                    "Если данные или фото не появились, потяните список вниз или запустите Account > Sync Now.",
+                    "Если появились дубликаты, попросите Owner или Admin запустить Clean Up Duplicates.",
+                    "Если AI не работает, проверьте вход в аккаунт, активный Pro и дневной лимит.",
+                    "Если участник команды не видит раздел, проверьте его роль и права.",
+                    "Поддержка доступна через Account > Contact Developer."
                 ]
             )
         ]
@@ -296,123 +319,182 @@ struct UserGuideView: View {
                 title: "Tez boshlash",
                 items: [
                     "Hisobga kiring yoki diler tashkilotini yarating.",
-                    "Region, valyuta va tilni Hisob > Region bo'limida sozlang.",
-                    "Birinchi avtomobilingizni Avtomobillar bo'limidan qo'shing.",
-                    "Jamoa a'zolarini Hisob > Jamoani boshqarish orqali taklif qiling."
+                    "Account > Region & Language bo'limida mamlakat, valyuta, til va formatlarni tanlang.",
+                    "Kerak bo'lsa, Account bo'limida light yoki dark mavzuni almashtiring.",
+                    "Birinchi avtomobilni Vehicles bo'limidan qo'shing, keyin balanslarni ko'rish uchun moliyaviy hisoblar yarating.",
+                    "Dilerligingiz ehtiyot qismlar bilan ishlasa, Account bo'limida Parts tabini yoqing yoki o'chiring."
                 ]
             ),
             GuideSection(
                 title: "Navigatsiya",
                 items: [
                     "Pastki tablar: Boshqaruv paneli, Xarajatlar, Avtomobillar, Qismlar, Sotuvlar, Mijozlar.",
-                    "Ro'yxatlarda marka, model, mijoz yoki izoh bo'yicha qidiruvdan foydalaning.",
-                    "Onlayn bo'lganda majburiy sinxronlash uchun ro'yxatni pastga torting."
+                    "Dashboard pul, ombor, ogohlantirishlar va tezkor amallarni tez ko'rsatadi.",
+                    "Qidiruv orqali avtomobil, mijoz, izoh, VIN va yozuvlarni tezroq toping.",
+                    "Tafsilotlarni ochish uchun qatorga bosing; orqaga iOS tugmasi yoki chapdan surish bilan qayting."
                 ]
             ),
             GuideSection(
-                title: "Avtomobillar va zaxira",
+                title: "Avtomobillar va rasmlar",
                 items: [
-                    "Avtomobillar zaxiradagi asosiy yozuvlardir.",
+                    "Avtomobillar ombordagi asosiy yozuvlardir.",
                     "Holatlar: sotuvda, band qilingan, yo'lda, servisda, sotilgan.",
-                    "Tahrirlashda narx, probeg, izoh va holatni yangilashingiz mumkin.",
-                    "Avtomobilni sotilgan deb belgilash sotuv yozuvini yaratadi.",
-                    "Ulashish tugmasi avtomobil uchun ommaviy havola yaratadi."
-                ]
-            ),
-            GuideSection(
-                title: "Avtomobil fotosuratlari",
-                items: [
-                    "Avtomobilni tahrirlang va bir nechta rasm tanlash uchun Rasm qo'shish tugmasini bosing.",
-                    "Rasmlarni tekshiring va paket qilib yuklang; xohlasangiz birinchi rasm muqova bo'ladi.",
-                    "Miniatyurani uzoq bosib, uni muqova qilish yoki o'chirish mumkin.",
-                    "Muqova ro'yxatlarda va ulashish havolalarida ishlatiladi."
+                    "Tahrirlashda narx, probeg, xarid ma'lumotlari, izoh va holatni yangilash mumkin.",
+                    "Avtomobil sotilgan deb belgilanganda sotuv yozuvi yaratiladi.",
+                    "Bir nechta rasm qo'shing, muqova tanlang va Share orqali ommaviy havola yarating."
                 ]
             ),
             GuideSection(
                 title: "Saqlash xarajati",
                 items: [
-                    "Saqlash xarajati xarid narxi va xarajatlar asosida kunlik turib qolish qiymatini hisoblaydi.",
-                    "Yillik stavkani Hisob > Saqlash xarajati sozlamalari bo'limida sozlang.",
-                    "Kerak bo'lmasa, uni Hisob > Saqlash xarajati sozlamalari bo'limida o'chirishingiz mumkin.",
+                    "Holding cost avtomobil omborda turgan har kunning taxminiy qiymatini ko'rsatadi.",
+                    "Yillik stavkani Account > Holding Cost Settings bo'limida sozlang.",
+                    "Bu funksiya kerak bo'lmasa, uni o'chirib qo'yishingiz mumkin.",
                     "Hisoblash sotuv sanasigacha davom etadi; sotuvdan keyin to'xtaydi.",
-                    "Sotuv foydasi saqlash xarajatini ham hisobga oladi."
+                    "Sales foydasi holding costni ham hisobga oladi."
                 ]
             ),
             GuideSection(
-                title: "Xarajatlar",
+                title: "Xarajatlar va moliyaviy hisoblar",
                 items: [
-                    "Xarajatlarni kategoriya bo'yicha kiriting va kerak bo'lsa avtomobilga ulang.",
-                    "Avtomobil xarajatlari foyda va saqlash xarajati bazasiga ta'sir qiladi."
+                    "Xarajatlarni kategoriya bo'yicha kiriting: avtomobil, shaxsiy, xodim.",
+                    "Xarajat aniq avtomobilga tegishli bo'lsa, uni shu avtomobilga ulang.",
+                    "Avtomobil xarajatlari foyda va holding cost bazasiga ta'sir qiladi.",
+                    "Owner va Admin Account > Financial Accounts bo'limida cash, bank va credit hisoblarni boshqaradi.",
+                    "Sotuv yoki xarajatda hisob tanlansa, o'sha hisob balansi yangilanadi."
                 ]
             ),
             GuideSection(
-                title: "Sotuvlar (avtomobillar)",
+                title: "Sotuvlar va qarzlar",
                 items: [
-                    "Sotuvlar avtomobil sotilgan deb belgilanganda yaratiladi.",
-                    "Sotuv summasi tanlangan hisobga tushadi va balans yangilanadi.",
-                    "Foyda = sotuv narxi - (xarid + xarajatlar + saqlash xarajati) + QQS qaytimi."
+                    "Avtomobil sotuvini statusni sotilgan qilish yoki sotuv yozuvi yaratish orqali kiriting.",
+                    "Pul to'g'ri balansga tushishi uchun qabul qiluvchi hisobni tanlang.",
+                    "Foyda sotuv narxi, xarid narxi, xarajatlar, holding cost va QQS qaytimini hisobga oladi.",
+                    "Debts bo'limida sizga qarz bo'lgan va siz qarzdor bo'lgan summalarni kuzating.",
+                    "Qarz bo'yicha to'lovlarni kiriting, shunda qolgan balans kamayadi."
                 ]
             ),
             GuideSection(
-                title: "Qismlar zaxirasi va sotuvlar",
+                title: "Ehtiyot qismlar ombori",
                 items: [
-                    "Qismlar zaxirasini yuriting, kirim qiling va qismlarni soting.",
-                    "Qismlar sotuvi pozitsiyalar va tannarxni foyda uchun hisobga oladi."
+                    "Parts bo'limida qism nomi, miqdori, tannarxi va sotuv narxini kuzating.",
+                    "Yangi qismlar kelganda ularni omborga qabul qiling.",
+                    "Qismlar sotuvini pozitsiyalar bilan yarating, shunda tannarx va foyda aniq bo'ladi.",
+                    "Agar qismlar kerak bo'lmasa, Account bo'limida Parts tabini yashiring."
                 ]
             ),
             GuideSection(
                 title: "Mijozlar / CRM",
                 items: [
-                    "Mijoz ma'lumotlarini saqlang va ularni sotuvlar hamda qarzlarga ulang.",
-                    "Ism, telefon va izohlar bo'yicha qidiring."
+                    "Lid va mijozlarni telefon, izoh va status bilan saqlang.",
+                    "Follow-up yo'qolmasligi uchun muloqotlar va eslatmalar qo'shing.",
+                    "Kerak bo'lsa, mijozlarni sotuvlar va qarzlarga ulang.",
+                    "Ism, telefon va izoh bo'yicha qidiring."
                 ]
             ),
             GuideSection(
-                title: "Qarzlar",
+                title: "Analytics va AI Insights",
                 items: [
-                    "Sizga qarz yoki sizning qarzingiz bo'lgan summalarni yozib boring.",
-                    "Qolgan balansni kamaytirish uchun to'lovlarni belgilang."
-                ]
-            ),
-            GuideSection(
-                title: "Tahlil va ogohlantirishlar",
-                items: [
-                    "Zaxira holati eskirish, ROI va saqlash xarajatini hisobga oladi.",
-                    "Sekin sotilayotgan avtomobillar alohida ko'rsatiladi.",
-                    "Ogohlantirishlar chegaralar va tavsiyalar asosida yaratiladi."
-                ]
-            ),
-            GuideSection(
-                title: "Sinxronlash va oflayn",
-                items: [
-                    "Avval lokal saqlanadi: o'zgarishlar darhol yoziladi va fonda sinxronlanadi.",
-                    "Qo'lda sinxronlash Hisob bo'limida mavjud.",
-                    "Ma'lumotlar salomatligi va dublikatlarni tozalash vositalari tartibga keltirishga yordam beradi."
+                    "Analytics bo'limida tanlangan davr bo'yicha revenue, spend, profit, ombor holati va CRM ko'rsatkichlarini ko'ring.",
+                    "Davr filtri 1D, 1W, 1M, 3M, 6M va All oralig'ini almashtiradi.",
+                    "AI Insights tanlangan davr uchun sotuv, xarajat va omborni qisqa hisobot qiladi.",
+                    "AI reports Pro funksiyasi. Pro aktiv bo'lmasa, tugma obuna ekranini ochadi.",
+                    "Kunlik AI limiti 15 ta hisobot. Kartada nechta ishlatilgani va qachon yangilanishi ko'rsatiladi.",
+                    "Hisobotlar tarixda saqlanadi. Hisobot bor bo'lsa, yangi generatsiyadan oldin ilova tasdiq so'raydi."
                 ]
             ),
             GuideSection(
                 title: "Jamoa va ruxsatlar",
                 items: [
-                    "Rollar tannarx, foyda va boshqaruv vositalariga kirishni nazorat qiladi.",
-                    "Ega jamoa a'zolari va ruxsatlarni boshqarishi mumkin."
+                    "Owner va Admin Account > Team Members orqali jamoa a'zolarini taklif qiladi.",
+                    "Yangi a'zo admin bergan kod bilan Join Team by Code orqali qo'shiladi.",
+                    "Asosiy rollar: owner, admin, sales va viewer.",
+                    "Ruxsatlar moliya, tannarx, foyda, ombor, lidlar, qismlar va o'chirishga kirishni boshqaradi."
                 ]
             ),
             GuideSection(
-                title: "Xavfsizlik va huquqiy hujjatlar",
+                title: "Sinxronlash va oflayn",
                 items: [
-                    "Parolni Hisob bo'limida o'zgartiring.",
-                    "Foydalanish shartlari va Maxfiylik siyosati Hisob bo'limida joylashgan."
+                    "Ilova local-first: o'zgarishlar avval telefonda saqlanadi, keyin fonda sinxronlanadi.",
+                    "Yangilanishlarni qo'lda yuborish va olish uchun Account > Sync Now dan foydalaning.",
+                    "Account > Data Health sinxronlash holati va mumkin bo'lgan muammolarni ko'rsatadi.",
+                    "Dublikatlar paydo bo'lsa, Owner yoki Admin Clean Up Duplicates ishga tushirishi mumkin.",
+                    "Internet bo'lmasa ham ishlashda davom eting; o'zgarishlar navbatga yoziladi va keyin sinxronlanadi."
+                ]
+            ),
+            GuideSection(
+                title: "Hisobotlar, backup va bildirishnomalar",
+                items: [
+                    "Owner Account > Backup & Export orqali ma'lumotlarni eksport qiladi.",
+                    "Email Reports ruxsati bor foydalanuvchilarga oylik hisobot yuborishni sozlashga yordam beradi.",
+                    "Monthly reports yuborish yoki ulashishdan oldin ko'rib chiqilishi mumkin.",
+                    "Bildirishnomalar eslatmalar, qarz muddatlari, kundalik xarajat eslatmasi va inventory digest uchun ishlaydi.",
+                    "Bildirishnomalar o'chirilgan bo'lsa, Account > Notifications orqali iOS sozlamalariga o'ting."
+                ]
+            ),
+            GuideSection(
+                title: "Dealer Pro, referral va akkaunt",
+                items: [
+                    "Dealer Pro premium vositalarni, jumladan AI Insightsni ochadi.",
+                    "Obunani Account ichidagi Dealer Pro kartasi orqali boshqaring.",
+                    "Invite Dealer referral kodingizni ulashadi; taklif qilingan diler obuna bo'lsa, bonus Pro vaqti olasiz.",
+                    "Referral stats takliflar statistikasini ko'rsatadi.",
+                    "Account bo'limida parolni o'zgartirish, dasturchi bilan bog'lanish, Terms, Privacy Policy va akkauntni o'chirish mavjud."
                 ]
             ),
             GuideSection(
                 title: "Nosozliklarni bartaraf etish",
                 items: [
-                    "Agar rasmlar yoki ma'lumotlar ko'rinmasa, ro'yxatni yangilang yoki Hozir sinxronlashni ishga tushiring.",
-                    "Avtomobil dublikat ko'rinsa, dublikatlarni tozalashni ishga tushiring.",
-                    "Yordam uchun Hisob > Dasturchi bilan bog'lanish bo'limidan foydalaning."
+                    "Ma'lumot yoki rasm ko'rinmasa, ro'yxatni pastga torting yoki Account > Sync Now ni ishga tushiring.",
+                    "Dublikatlar ko'rinsa, Owner yoki Admin Clean Up Duplicates ishga tushirsin.",
+                    "AI ishlamasa, hisobga kirilganini, Pro aktivligini va kunlik limit tugamaganini tekshiring.",
+                    "Jamoa a'zosi biror bo'limni ko'rmasa, uning roli va ruxsatlarini tekshiring.",
+                    "Yordam uchun Account > Contact Developer dan foydalaning."
                 ]
             )
         ]
+    }
+}
+
+private struct GuideSectionCard: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    let section: GuideSection
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(section.title)
+                .font(.title3.weight(.bold))
+                .foregroundColor(ColorTheme.primaryText)
+                .fixedSize(horizontal: false, vertical: true)
+
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(Array(section.items.enumerated()), id: \.offset) { _, item in
+                    HStack(alignment: .top, spacing: 10) {
+                        Circle()
+                            .fill(ColorTheme.primary.opacity(0.65))
+                            .frame(width: 6, height: 6)
+                            .padding(.top, 8)
+
+                        Text(item)
+                            .font(.body)
+                            .lineSpacing(3)
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .accessibilityElement(children: .combine)
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.28 : 0.04), radius: 10, x: 0, y: 5)
     }
 }
 

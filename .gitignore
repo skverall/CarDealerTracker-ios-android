@@ -4,6 +4,9 @@ opencode.config.json
 **/*.xcuserstate
 *.bak
 *.bak_*
+build_log_*.txt
+**/build_log_*.txt
+**/.kotlin/errors/
 supabase/.temp/
 supabase/supabase/
 *.jks

@@ -17,6 +17,7 @@ import com.ezcar24.business.util.UserFacingErrorContext
 import com.ezcar24.business.util.UserFacingErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.util.Date
 import java.util.UUID
 import javax.inject.Inject
@@ -31,6 +32,7 @@ import kotlinx.coroutines.launch
 data class AddSaleUiState(
     val availableVehicles: List<Vehicle> = emptyList(),
     val accounts: List<FinancialAccount> = emptyList(),
+    val clients: List<Client> = emptyList(),
     val vehicleCosts: Map<UUID, BigDecimal> = emptyMap(),
     val canViewFinancials: Boolean = false,
     val dealDeskSettings: DealDeskSettings? = null,
@@ -81,8 +83,9 @@ class AddSaleViewModel @Inject constructor(
             combine(
                 vehicleDao.getAllActive(),
                 accountDao.getAll(),
+                clientDao.getAllActive(),
                 permissionRepository.state
-            ) { allVehicles, accounts, permissionState ->
+            ) { allVehicles, accounts, clients, permissionState ->
                 val available = allVehicles.filter { it.status != "sold" }
                 val canViewFinancials = permissionState.can(PermissionKey.VIEW_FINANCIALS)
                 val vehicleCosts = if (canViewFinancials) {
@@ -101,6 +104,7 @@ class AddSaleViewModel @Inject constructor(
                     it.copy(
                         availableVehicles = available,
                         accounts = accounts,
+                        clients = clients,
                         vehicleCosts = vehicleCosts,
                         canViewFinancials = canViewFinancials,
                         isLoading = false
@@ -165,11 +169,17 @@ class AddSaleViewModel @Inject constructor(
         account: FinancialAccount?,
         accountDepositAmount: BigDecimal = amount,
         notes: String? = null,
+        selectedClient: Client? = null,
+        vatRefundPercent: BigDecimal? = null,
         dealDeskSnapshot: DealDeskSnapshot? = null
     ) {
         viewModelScope.launch {
             val now = Date()
             val trimmedNotes = notes?.trim().orEmpty()
+            val normalizedVatPercent = vatRefundPercent?.takeIf { it > BigDecimal.ZERO }
+            val vatRefundAmount = normalizedVatPercent?.let { percent ->
+                amount.multiply(percent).divide(BigDecimal("100"), 2, RoundingMode.HALF_UP)
+            }
             val newSale = Sale(
                 id = UUID.randomUUID(),
                 vehicleId = vehicle.id,
@@ -179,6 +189,8 @@ class AddSaleViewModel @Inject constructor(
                 buyerPhone = buyerPhone,
                 paymentMethod = paymentMethod,
                 accountId = account?.id,
+                vatRefundPercent = normalizedVatPercent,
+                vatRefundAmount = vatRefundAmount,
                 createdAt = now,
                 updatedAt = now,
                 dealDeskPayload = dealDeskSnapshot?.toJsonString(),
@@ -201,21 +213,13 @@ class AddSaleViewModel @Inject constructor(
                 updatedAt = now
             )
 
-            val newClient = Client(
-                id = UUID.randomUUID(),
-                name = buyerName,
-                phone = buyerPhone,
-                email = null,
-                notes = saleClientPurchaseNote(vehicle),
-                requestDetails = null,
-                preferredDate = null,
-                status = "purchased",
-                createdAt = now,
-                updatedAt = now,
-                vehicleId = vehicle.id,
-                leadStage = LeadStage.closed_won,
-                leadCreatedAt = now,
-                lastContactAt = date
+            val clientForSale = saleClientForVehicleSale(
+                selectedClient = selectedClient,
+                buyerName = buyerName,
+                buyerPhone = buyerPhone,
+                vehicle = vehicle,
+                now = now,
+                saleDate = date
             )
 
             val closedWonInteraction = ClientInteraction(
@@ -225,7 +229,7 @@ class AddSaleViewModel @Inject constructor(
                 occurredAt = date,
                 stage = LeadStage.closed_won.name,
                 value = amount,
-                clientId = newClient.id,
+                clientId = clientForSale.id,
                 interactionType = "sale",
                 outcome = "closed_won",
                 createdAt = now,
@@ -234,7 +238,7 @@ class AddSaleViewModel @Inject constructor(
 
             upsertSaleSafely(newSale)
             upsertVehicleSafely(updatedVehicle)
-            upsertClientSafely(newClient)
+            upsertClientSafely(clientForSale)
             upsertClientInteractionSafely(closedWonInteraction)
 
             account?.let { acc ->
@@ -316,6 +320,39 @@ class AddSaleViewModel @Inject constructor(
             accountDao.upsert(account)
         }
     }
+}
+
+internal fun saleClientForVehicleSale(
+    selectedClient: Client?,
+    buyerName: String,
+    buyerPhone: String,
+    vehicle: Vehicle,
+    now: Date,
+    saleDate: Date
+): Client {
+    return selectedClient?.copy(
+        status = "sold",
+        updatedAt = now,
+        vehicleId = vehicle.id,
+        leadStage = LeadStage.closed_won,
+        leadCreatedAt = selectedClient.leadCreatedAt ?: selectedClient.createdAt,
+        lastContactAt = saleDate
+    ) ?: Client(
+        id = UUID.randomUUID(),
+        name = buyerName,
+        phone = buyerPhone,
+        email = null,
+        notes = null,
+        requestDetails = null,
+        preferredDate = null,
+        status = "sold",
+        createdAt = now,
+        updatedAt = now,
+        vehicleId = vehicle.id,
+        leadStage = LeadStage.closed_won,
+        leadCreatedAt = now,
+        lastContactAt = saleDate
+    )
 }
 
 internal fun saleClientPurchaseNote(vehicle: Vehicle): String {
