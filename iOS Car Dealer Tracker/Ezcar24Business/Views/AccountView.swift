@@ -20,7 +20,6 @@ struct AccountView: View {
     @State private var dedupState: DedupState = .idle
     @AppStorage(NotificationPreference.enabledKey) private var notificationsEnabled = false
     @AppStorage(NotificationPreference.inventoryStaleThresholdKey) private var inventoryStaleThreshold = NotificationPreference.defaultInventoryStaleThreshold
-    @AppStorage("app_feedback_board_prompt_dismissed") private var feedbackBoardPromptDismissed = false
     @State private var showNotificationSettingsAlert = false
     @State private var notificationAlertMessage = ""
     @State private var showMailError = false
@@ -57,15 +56,15 @@ struct AccountView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         accountHeader
-                        
-                        subscriptionCard
 
-                        referralCard
+                        subscriptionCard
 
                         if shouldShowFeedbackBoardPrompt {
                             feedbackBoardPromptCard
                         }
-                        
+
+                        referralCard
+
                         // MARK: - General Settings
                         generalSettingsSection
                         
@@ -380,63 +379,51 @@ struct AccountView: View {
     }
 
     private var shouldShowFeedbackBoardPrompt: Bool {
-        if feedbackBoardPromptDismissed { return false }
         if case .signedIn = sessionStore.status { return true }
         return false
     }
 
     private var feedbackBoardPromptCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(ColorTheme.accent.opacity(0.14))
-                        .frame(width: 48, height: 48)
+        NavigationLink {
+            FeedbackBoardView()
+        } label: {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(ColorTheme.accent.opacity(0.14))
+                            .frame(width: 48, height: 48)
 
-                    Image(systemName: "lightbulb.fill")
-                        .font(.title3.weight(.semibold))
-                        .foregroundColor(ColorTheme.accent)
-                }
-
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(spacing: 8) {
-                        Text("feedback_board_prompt_title".localizedString)
-                            .font(.headline.weight(.bold))
-                            .foregroundColor(ColorTheme.primaryText)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Text("new_badge".localizedString)
-                            .font(.caption2.weight(.bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(ColorTheme.accent)
-                            .clipShape(Capsule())
+                        Image(systemName: "lightbulb.fill")
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(ColorTheme.accent)
                     }
 
-                    Text("feedback_board_prompt_subtitle".localizedString)
-                        .font(.subheadline)
-                        .foregroundColor(ColorTheme.secondaryText)
-                        .fixedSize(horizontal: false, vertical: true)
+                    VStack(alignment: .leading, spacing: 5) {
+                        HStack(spacing: 8) {
+                            Text("feedback_board_prompt_title".localizedString)
+                                .font(.headline.weight(.bold))
+                                .foregroundColor(ColorTheme.primaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text("new_badge".localizedString)
+                                .font(.caption2.weight(.bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(ColorTheme.accent)
+                                .clipShape(Capsule())
+                        }
+
+                        Text("feedback_board_prompt_subtitle".localizedString)
+                            .font(.subheadline)
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer(minLength: 0)
                 }
 
-                Spacer(minLength: 0)
-
-                Button {
-                    feedbackBoardPromptDismissed = true
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(ColorTheme.tertiaryText)
-                        .frame(width: 44, height: 44)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("dismiss".localizedString)
-            }
-
-            NavigationLink {
-                FeedbackBoardView()
-            } label: {
                 HStack {
                     Text("feedback_board_open".localizedString)
                         .font(.subheadline.weight(.bold))
@@ -444,26 +431,21 @@ struct AccountView: View {
                     Image(systemName: "arrow.right")
                         .font(.subheadline.weight(.bold))
                 }
-                .foregroundColor(.white)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 13)
-                .background(ColorTheme.primary)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .foregroundColor(ColorTheme.primary)
             }
-            .buttonStyle(.hapticScale)
-            .simultaneousGesture(TapGesture().onEnded {
-                feedbackBoardPromptDismissed = true
-            })
+            .padding(18)
+            .background(ColorTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(ColorTheme.accent.opacity(0.22), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 5)
+            .contentShape(Rectangle())
         }
-        .padding(18)
-        .background(ColorTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(ColorTheme.accent.opacity(0.22), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 5)
+        .buttonStyle(.hapticScale)
     }
+
 
     @ViewBuilder
     private var accountHeader: some View {
@@ -1468,7 +1450,7 @@ struct FeedbackBoardView: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
+            .padding(.horizontal, 20)
             .padding(.vertical, 18)
             .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 720 : .infinity)
             .animation(.snappy(duration: 0.28, extraBounce: 0.04), value: requests)
@@ -1480,14 +1462,14 @@ struct FeedbackBoardView: View {
     }
 
     private var signInRequiredView: some View {
-        VStack(spacing: 18) {
+        VStack(spacing: 20) {
             ZStack {
                 Circle()
                     .fill(ColorTheme.primary.opacity(0.12))
-                    .frame(width: 76, height: 76)
+                    .frame(width: 84, height: 84)
 
                 Image(systemName: "person.crop.circle.badge.plus")
-                    .font(.system(size: 34, weight: .semibold))
+                    .font(.system(size: 36, weight: .semibold))
                     .foregroundColor(ColorTheme.primary)
             }
 
@@ -1497,7 +1479,7 @@ struct FeedbackBoardView: View {
                 .multilineTextAlignment(.center)
 
             Text("feedback_sign_in_message".localizedString)
-                .font(.body)
+                .font(.subheadline)
                 .foregroundColor(ColorTheme.secondaryText)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1510,14 +1492,22 @@ struct FeedbackBoardView: View {
                     .font(.headline.weight(.bold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
+                    .padding(.vertical, 15)
                     .background(ColorTheme.primary)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: ColorTheme.primary.opacity(0.30), radius: 10, x: 0, y: 4)
             }
             .buttonStyle(.hapticScale)
         }
-        .padding(24)
+        .padding(28)
         .frame(maxWidth: 420)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
     }
 
     @MainActor
@@ -1604,18 +1594,14 @@ private struct FeedbackBoardIntroCard: View {
     let openCount: Int
     let completedCount: Int
 
+    private let hairline = Color.gray.opacity(0.12)
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 13, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [ColorTheme.primary.opacity(0.16), ColorTheme.accent.opacity(0.14)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(ColorTheme.primary.opacity(0.12))
                         .frame(width: 44, height: 44)
 
                     Image(systemName: "lightbulb.max.fill")
@@ -1625,41 +1611,46 @@ private struct FeedbackBoardIntroCard: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text("feedback_board_intro_title".localizedString)
-                        .font(.subheadline.weight(.bold))
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(ColorTheme.primaryText)
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text("feedback_board_intro_subtitle".localizedString)
-                        .font(.caption)
+                        .font(.system(size: 13))
                         .foregroundColor(ColorTheme.secondaryText)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Spacer(minLength: 8)
             }
 
-            HStack(spacing: 8) {
+            HStack(spacing: 0) {
                 FeedbackBoardStatPill(
                     title: "feedback_status_open".localizedString,
                     value: openCount,
-                    systemImage: "flame.fill",
-                    tint: ColorTheme.primary
+                    dotColor: ColorTheme.primary
                 )
+
+                Rectangle()
+                    .fill(hairline)
+                    .frame(width: 1, height: 34)
 
                 FeedbackBoardStatPill(
                     title: "feedback_status_shipped".localizedString,
                     value: completedCount,
-                    systemImage: "checkmark.seal.fill",
-                    tint: ColorTheme.success
+                    dotColor: ColorTheme.success
                 )
             }
         }
-        .padding(14)
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(ColorTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(ColorTheme.primary.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(ColorTheme.primary.opacity(0.10), lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.035), radius: 7, x: 0, y: 3)
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
     }
 }
 
@@ -1668,25 +1659,27 @@ private struct FeedbackAddIdeaBar: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 17, weight: .semibold))
+            HStack(spacing: 12) {
+                Image(systemName: "plus")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(ColorTheme.primary)
+                    .frame(width: 32, height: 32)
+                    .background(Color.white)
+                    .clipShape(Circle())
 
                 Text("feedback_add_idea".localizedString)
-                    .font(.subheadline.weight(.bold))
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(.white)
 
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.bold))
-                    .opacity(0.85)
+                Spacer(minLength: 0)
             }
-            .foregroundColor(.white)
-            .padding(.horizontal, 15)
+            .padding(.leading, 6)
+            .padding(.trailing, 18)
             .padding(.vertical, 12)
-            .background(ColorTheme.accent)
+            .frame(maxWidth: .infinity)
+            .background(ColorTheme.primary)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .shadow(color: ColorTheme.accent.opacity(0.16), radius: 6, x: 0, y: 3)
+            .shadow(color: ColorTheme.primary.opacity(0.30), radius: 8, x: 0, y: 4)
         }
         .buttonStyle(.hapticScale)
     }
@@ -1699,63 +1692,63 @@ private struct FeedbackSectionHeader: View {
     let tint: Color
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.caption.weight(.bold))
-                .foregroundColor(tint)
+        HStack(spacing: 7) {
+            Circle()
+                .fill(tint)
+                .frame(width: 6, height: 6)
 
             Text(title)
-                .font(.caption.weight(.bold))
-                .foregroundColor(ColorTheme.primaryText)
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.8)
+                .foregroundColor(ColorTheme.secondaryText)
                 .textCase(.uppercase)
 
             Text(String(count))
                 .font(.caption2.weight(.heavy))
                 .monospacedDigit()
                 .foregroundColor(tint)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(tint.opacity(0.11))
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(tint.opacity(0.12))
                 .clipShape(Capsule())
 
             Rectangle()
                 .fill(Color.gray.opacity(0.12))
                 .frame(height: 1)
         }
-        .padding(.top, 4)
+        .padding(.top, 6)
     }
 }
 
 private struct FeedbackBoardStatPill: View {
     let title: String
     let value: Int
-    let systemImage: String
-    let tint: Color
+    let dotColor: Color
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: systemImage)
-                .font(.caption.weight(.bold))
+        VStack(spacing: 4) {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(dotColor)
+                    .frame(width: 6, height: 6)
 
-            Text(String(value))
-                .font(.caption.weight(.heavy))
-                .monospacedDigit()
+                Text(String(value))
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .foregroundColor(ColorTheme.primaryText)
+                    .contentTransition(.numericText(value: Double(value)))
+            }
 
             Text(title)
-                .font(.caption2.weight(.semibold))
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.5)
+                .textCase(.uppercase)
+                .foregroundColor(ColorTheme.secondaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.78)
         }
-        .foregroundColor(tint)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 7)
-        .padding(.horizontal, 9)
-        .background(tint.opacity(0.10))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(tint.opacity(0.14), lineWidth: 1)
-        )
+        .padding(.vertical, 10)
     }
 }
 
@@ -1770,9 +1763,14 @@ private struct FeedbackRequestCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: 10) {
-                voteButton
+            HStack(alignment: .top, spacing: 12) {
                 requestContent
+
+                if isCompleted {
+                    shippedSeal
+                } else {
+                    votePill
+                }
             }
 
             if isCompleted {
@@ -1781,68 +1779,80 @@ private struct FeedbackRequestCard: View {
                 actionRow
             }
         }
-        .padding(12)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(cardAccent.opacity(isCompleted ? 0.18 : 0.12), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(borderColor, lineWidth: 1)
         )
-        .overlay(alignment: .leading) {
-            RoundedRectangle(cornerRadius: 2, style: .continuous)
-                .fill(cardAccent)
-                .frame(width: 3)
-                .padding(.vertical, 14)
-                .opacity(isCompleted ? 0.55 : 0.85)
-        }
-        .shadow(color: Color.black.opacity(isCompleted ? 0.02 : 0.035), radius: 7, x: 0, y: 3)
-        .opacity(isCompleted ? 0.92 : 1)
+        .shadow(color: Color.black.opacity(isCompleted ? 0.03 : 0.04), radius: 8, x: 0, y: 4)
+        .opacity(isCompleted ? 0.95 : 1)
     }
 
     private var isCompleted: Bool {
         request.status == "shipped"
     }
 
-    private var cardAccent: Color {
-        isCompleted ? ColorTheme.success : ColorTheme.primary
+    private var borderColor: Color {
+        if isCompleted { return ColorTheme.success.opacity(0.22) }
+        return Color.gray.opacity(0.10)
     }
 
     private var cardBackground: some ShapeStyle {
-        isCompleted ? AnyShapeStyle(ColorTheme.success.opacity(0.045)) : AnyShapeStyle(ColorTheme.cardBackground)
+        isCompleted
+            ? AnyShapeStyle(ColorTheme.success.opacity(0.05))
+            : AnyShapeStyle(ColorTheme.cardBackground)
     }
 
     private var voteTint: Color {
-        if isCompleted { return ColorTheme.success }
-        return request.hasVoted ? ColorTheme.primary : ColorTheme.secondaryText
+        request.hasVoted ? ColorTheme.primary : ColorTheme.secondaryText
     }
 
-    private var voteButton: some View {
+    private var votePill: some View {
         Button(action: onVote) {
-            VStack(spacing: 4) {
+            HStack(spacing: 5) {
                 voteIcon
 
                 Text(String(request.voteCount))
-                    .font(.headline.weight(.heavy))
+                    .font(.subheadline.weight(.heavy))
                     .monospacedDigit()
-
-                Text(isCompleted ? "feedback_status_shipped".localizedString : "feedback_vote".localizedString)
-                    .font(.caption2.weight(.bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
+                    .contentTransition(.numericText(value: Double(request.voteCount)))
             }
             .foregroundColor(voteTint)
-            .frame(width: 50, height: 58)
-            .background(voteTint.opacity(isCompleted ? 0.08 : 0.11))
-            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(voteTint.opacity(request.hasVoted ? 0.13 : 0.09))
+            .clipShape(Capsule())
             .overlay(
-                RoundedRectangle(cornerRadius: 13, style: .continuous)
-                    .stroke(voteTint.opacity(0.12), lineWidth: 1)
+                Capsule()
+                    .stroke(voteTint.opacity(request.hasVoted ? 0.20 : 0.12), lineWidth: 1)
             )
         }
         .buttonStyle(.hapticScale)
-        .disabled(isTogglingVote || isCompleted)
-        .opacity(isCompleted ? 0.76 : 1)
+        .disabled(isTogglingVote)
         .accessibilityLabel(request.hasVoted ? "feedback_remove_vote".localizedString : "feedback_vote".localizedString)
+    }
+
+    private var shippedSeal: some View {
+        HStack(spacing: 5) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 13, weight: .bold))
+
+            Text(String(request.voteCount))
+                .font(.subheadline.weight(.heavy))
+                .monospacedDigit()
+        }
+        .foregroundColor(ColorTheme.success)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(ColorTheme.success.opacity(0.12))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(ColorTheme.success.opacity(0.20), lineWidth: 1)
+        )
     }
 
     @ViewBuilder
@@ -1851,22 +1861,23 @@ private struct FeedbackRequestCard: View {
             ProgressView()
                 .controlSize(.small)
         } else {
-            Image(systemName: isCompleted ? "checkmark.seal.fill" : (request.hasVoted ? "hand.thumbsup.fill" : "hand.thumbsup"))
-                .font(.system(size: 16, weight: .bold))
+            Image(systemName: request.hasVoted ? "hand.thumbsup.fill" : "hand.thumbsup")
+                .font(.system(size: 13, weight: .bold))
         }
     }
 
     private var requestContent: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 FeedbackStatusBadge(status: request.status)
                 if request.isMine {
                     mineBadge
                 }
+                Spacer(minLength: 0)
             }
 
             Text(request.title)
-                .font(.subheadline.weight(.bold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundColor(ColorTheme.primaryText)
                 .fixedSize(horizontal: false, vertical: true)
                 .lineSpacing(1)
@@ -1876,20 +1887,22 @@ private struct FeedbackRequestCard: View {
                     .font(.footnote)
                     .foregroundColor(ColorTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(3)
             }
 
             Label(request.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
                 .font(.caption2.weight(.medium))
                 .foregroundColor(ColorTheme.tertiaryText)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder
     private var actionRow: some View {
         Divider()
-            .opacity(0.45)
+            .opacity(0.35)
 
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Spacer(minLength: 0)
 
             if request.canAdmin {
@@ -1953,13 +1966,18 @@ private struct FeedbackRequestCard: View {
     }
 
     private var mineBadge: some View {
-        Text("feedback_mine_badge".localizedString)
-            .font(.caption2.weight(.bold))
-            .foregroundColor(ColorTheme.primary)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(ColorTheme.primary.opacity(0.10))
-            .clipShape(Capsule())
+        HStack(spacing: 4) {
+            Circle()
+                .fill(ColorTheme.accent)
+                .frame(width: 5, height: 5)
+
+            Text("feedback_mine_badge".localizedString)
+                .font(.system(size: 10, weight: .semibold))
+                .tracking(0.4)
+                .foregroundColor(ColorTheme.accent)
+                .textCase(.uppercase)
+                .lineLimit(1)
+        }
     }
 }
 
@@ -1967,13 +1985,18 @@ private struct FeedbackStatusBadge: View {
     let status: String
 
     var body: some View {
-        Text(title)
-            .font(.caption2.weight(.bold))
-            .foregroundColor(color)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(color.opacity(0.12))
-            .clipShape(Capsule())
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 6, height: 6)
+
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .tracking(0.6)
+                .foregroundColor(color)
+                .textCase(.uppercase)
+                .lineLimit(1)
+        }
     }
 
     private var title: String {
@@ -2006,10 +2029,15 @@ private struct FeedbackStateCard: View {
     let action: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 34, weight: .semibold))
-                .foregroundColor(color)
+        VStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(color.opacity(0.12))
+                    .frame(width: 64, height: 64)
+                Image(systemName: icon)
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(color)
+            }
 
             Text(title)
                 .font(.headline.weight(.bold))
@@ -2023,20 +2051,36 @@ private struct FeedbackStateCard: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             Button(action: action) {
-                Text(actionTitle)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(color)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(color.opacity(0.12))
-                    .clipShape(Capsule())
+                HStack(spacing: 7) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 13, weight: .bold))
+                    Text(actionTitle)
+                        .font(.subheadline.weight(.semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 11)
+                .background(
+                    LinearGradient(
+                        colors: [color, color.opacity(0.82)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .clipShape(Capsule())
+                .shadow(color: color.opacity(0.28), radius: 8, x: 0, y: 4)
             }
             .buttonStyle(.hapticScale)
         }
         .frame(maxWidth: .infinity)
-        .padding(22)
+        .padding(24)
         .background(ColorTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
     }
 }
 
@@ -2097,6 +2141,7 @@ private struct FeedbackComposerSheet: View {
                     .frame(width: 44, height: 44)
                     .background(ColorTheme.cardBackground)
                     .clipShape(Circle())
+                    .overlay(Circle().stroke(Color.gray.opacity(0.10), lineWidth: 1))
                     .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 4)
             }
             .buttonStyle(.hapticScale)
@@ -2105,19 +2150,19 @@ private struct FeedbackComposerSheet: View {
             Spacer()
 
             Text("feedback_new_idea_title".localizedString)
-                .font(.title3.weight(.bold))
+                .font(.headline.weight(.bold))
                 .foregroundColor(ColorTheme.primaryText)
 
             Spacer()
 
             ZStack {
                 Circle()
-                    .fill(ColorTheme.accent.opacity(0.12))
+                    .fill(ColorTheme.primary.opacity(0.12))
                     .frame(width: 44, height: 44)
 
                 Image(systemName: "lightbulb.max.fill")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(ColorTheme.accent)
+                    .foregroundColor(ColorTheme.primary)
             }
         }
         .padding(.bottom, 2)
@@ -2126,19 +2171,13 @@ private struct FeedbackComposerSheet: View {
     private var composerHero: some View {
         HStack(spacing: 14) {
             ZStack {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [ColorTheme.accent.opacity(0.18), ColorTheme.primary.opacity(0.12)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 54, height: 54)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(ColorTheme.primary.opacity(0.12))
+                    .frame(width: 50, height: 50)
 
                 Image(systemName: "sparkles")
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(ColorTheme.accent)
+                    .foregroundColor(ColorTheme.primary)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -2151,13 +2190,16 @@ private struct FeedbackComposerSheet: View {
                     .foregroundColor(ColorTheme.secondaryText)
                     .fixedSize(horizontal: false, vertical: true)
             }
+
+            Spacer(minLength: 0)
         }
-        .padding(16)
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(ColorTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(Color.gray.opacity(0.08), lineWidth: 1)
+                .stroke(ColorTheme.primary.opacity(0.10), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 5)
     }
@@ -2270,7 +2312,7 @@ private struct FeedbackComposerSheet: View {
                 .frame(minHeight: 56)
                 .background(submitBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .shadow(color: canSubmit ? ColorTheme.accent.opacity(0.24) : .clear, radius: 10, x: 0, y: 5)
+                .shadow(color: canSubmit ? ColorTheme.primary.opacity(0.28) : .clear, radius: 12, x: 0, y: 6)
             }
             .buttonStyle(.hapticScale)
             .disabled(!canSubmit || isSubmitting)
@@ -2289,11 +2331,7 @@ private struct FeedbackComposerSheet: View {
     @ViewBuilder
     private var submitBackground: some View {
         if canSubmit {
-            LinearGradient(
-                colors: [ColorTheme.accent, ColorTheme.primary],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
+            ColorTheme.primary
         } else {
             ColorTheme.secondaryText.opacity(0.14)
         }
@@ -2346,11 +2384,11 @@ private struct FeedbackComposerStepPill: View {
                 .font(.caption.weight(.bold))
 
             Text(title)
-                .font(.caption.weight(.bold))
+                .font(.caption.weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
         }
-        .foregroundColor(isActive ? tint : ColorTheme.secondaryText)
+        .foregroundColor(isActive ? tint : ColorTheme.tertiaryText)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 9)
         .padding(.horizontal, 10)
@@ -2358,7 +2396,7 @@ private struct FeedbackComposerStepPill: View {
         .clipShape(Capsule())
         .overlay(
             Capsule()
-                .stroke(isActive ? tint.opacity(0.22) : Color.gray.opacity(0.08), lineWidth: 1)
+                .stroke(isActive ? tint.opacity(0.22) : Color.gray.opacity(0.10), lineWidth: 1)
         )
     }
 }
