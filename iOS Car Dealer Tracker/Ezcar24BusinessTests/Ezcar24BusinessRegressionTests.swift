@@ -231,6 +231,14 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
             ),
             "ai_insights_cache_v3_dealer-1_en_week"
         )
+        XCTAssertEqual(
+            AIInsightsLanguagePolicy.cacheKey(
+                dealerId: "dealer-1",
+                language: "hi-IN",
+                rangeRawValue: DashboardTimeRange.month.rawValue
+            ),
+            "ai_insights_cache_v3_dealer-1_hi_month"
+        )
 
         let reports = [
             AIInsightsReport(
