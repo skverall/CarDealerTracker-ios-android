@@ -15,7 +15,7 @@ const systemPrompt = [
   "You are a financial analyst for a car dealership business.",
   "Analyze the dealer data and return only valid JSON with this exact shape: {summary: string, insights: string[], recommendations: string[]}.",
   "The language rule is mandatory: write every user-facing value in summary, insights, and recommendations only in outputLanguage.name.",
-  "Follow outputLanguage.instruction exactly. For Hindi, use Hindi in Devanagari script, not English sentences or Latin transliteration.",
+  "Follow outputLanguage.instruction exactly, including script and transliteration rules.",
   "Brand names, vehicle model names, numbers, currency symbols, and currency codes may remain unchanged.",
   "Do not answer in any language other than outputLanguage.name.",
   "If previousReports use another language, use them only as context and rewrite the final answer in outputLanguage.name.",
@@ -27,8 +27,85 @@ const languageRepairPrompt = [
   "Return only valid JSON with this exact shape: {summary: string, insights: string[], recommendations: string[]}.",
   "Rewrite every user-facing value into outputLanguage.name and follow outputLanguage.instruction exactly.",
   "Preserve the business meaning, numbers, currency symbols, currency codes, brand names, and vehicle model names.",
-  "For Hindi, use Hindi in Devanagari script, not English sentences or Latin transliteration.",
+  "For Latin-script languages, translate into the actual requested language, not merely Latin letters.",
+  "Never keep English prose unless outputLanguage.code is en.",
 ].join(" ")
+
+const languageVerifierPrompt = [
+  "You are a strict language verifier for business reports.",
+  "Return only valid JSON with this exact shape: {matches: boolean, detectedLanguage: string, confidence: number}.",
+  "matches must be true only when all user-facing business prose is written in outputLanguage.name and follows outputLanguage.instruction.",
+  "Ignore brand names, vehicle model names, numbers, currency symbols, currency codes, URLs, and short technical product names.",
+  "For Latin-script languages, identify the actual language, not only the script.",
+  "English prose must not match Uzbek, Hindi, Russian, Arabic, Japanese, Korean, or any other non-English outputLanguage.",
+].join(" ")
+
+const languageHistoryVerifierPrompt = [
+  "You are a strict language verifier for saved business reports.",
+  "Return only valid JSON with this exact shape: {acceptedIds: string[]}.",
+  "Include only report ids whose user-facing business prose is written in outputLanguage.name and follows outputLanguage.instruction.",
+  "Ignore brand names, vehicle model names, numbers, currency symbols, currency codes, URLs, and short technical product names.",
+  "For Latin-script languages, identify the actual language, not only the script.",
+].join(" ")
+
+const languageSpecs: Record<string, LanguageSpec> = {
+  en: {
+    code: "en",
+    name: "English",
+    semanticValidation: true,
+  },
+  ru: {
+    code: "ru",
+    name: "Russian",
+    scriptInstruction: "Use Cyrillic script.",
+    scriptPattern: /[\u0400-\u04FF]/u,
+    minScriptCharacters: 12,
+    minScriptRatio: 0.15,
+    semanticValidation: true,
+  },
+  ar: {
+    code: "ar",
+    name: "Arabic",
+    scriptInstruction: "Use Arabic script.",
+    scriptPattern: /[\u0600-\u06FF]/u,
+    minScriptCharacters: 12,
+    minScriptRatio: 0.15,
+    semanticValidation: true,
+  },
+  ja: {
+    code: "ja",
+    name: "Japanese",
+    scriptInstruction: "Use Japanese script.",
+    scriptPattern: /[\u3040-\u30FF\u3400-\u9FFF]/u,
+    minScriptCharacters: 12,
+    minScriptRatio: 0.15,
+    semanticValidation: true,
+  },
+  ko: {
+    code: "ko",
+    name: "Korean",
+    scriptInstruction: "Use Hangul script.",
+    scriptPattern: /[\uAC00-\uD7AF\u1100-\u11FF\u3130-\u318F]/u,
+    minScriptCharacters: 12,
+    minScriptRatio: 0.15,
+    semanticValidation: true,
+  },
+  uz: {
+    code: "uz",
+    name: "Uzbek",
+    scriptInstruction: "Use modern Uzbek Latin prose. Do not use English or Russian sentences.",
+    semanticValidation: true,
+  },
+  hi: {
+    code: "hi",
+    name: "Hindi",
+    scriptInstruction: "Use Hindi in Devanagari script. Do not use English sentences or Latin transliteration.",
+    scriptPattern: /[\u0900-\u097F]/u,
+    minScriptCharacters: 18,
+    minScriptRatio: 0.15,
+    semanticValidation: true,
+  },
+}
 
 type DealerDataPayload = {
   mode?: unknown
@@ -66,6 +143,26 @@ type OutputLanguageInstruction = {
   code: string
   name: string
   instruction: string
+}
+
+type LanguageSpec = {
+  code: string
+  name: string
+  scriptInstruction?: string
+  scriptPattern?: RegExp
+  minScriptCharacters?: number
+  minScriptRatio?: number
+  semanticValidation: boolean
+}
+
+type LanguageVerificationResponse = {
+  matches: boolean
+  detectedLanguage: string
+  confidence: number
+}
+
+type LanguageHistoryVerificationResponse = {
+  acceptedIds: string[]
 }
 
 type AIInsightsResponse = {
@@ -162,15 +259,15 @@ serve(async (req) => {
     const body = await req.json() as DealerDataPayload
     const mode = body.mode === "history" ? "history" : "generate"
     const metadata = normalizeMetadata(body.metadata)
+    const deepSeekApiKey = Deno.env.get("DEEPSEEK_API_KEY")
 
     if (mode === "history") {
       const organizationId = await resolveAuthorizedOrganizationId(admin, user.id, metadata.organizationId)
       const usage = await loadUsage(admin, user.id)
-      const reports = await loadHistory(admin, organizationId, metadata.period, metadata.language)
+      const reports = await loadHistory(admin, organizationId, metadata.period, metadata.language, deepSeekApiKey)
       return jsonResponse({ reports, usage }, 200)
     }
 
-    const deepSeekApiKey = Deno.env.get("DEEPSEEK_API_KEY")
     if (!deepSeekApiKey) {
       throw new HttpError("DeepSeek API key is not configured", 500)
     }
@@ -191,8 +288,9 @@ serve(async (req) => {
           fingerprint,
           payload.metadata.language,
         )
-        if (existingReport && responseMatchesLanguage(existingReport, payload.metadata.language)) {
-          const reports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language)
+        const outputLanguage = outputLanguageInstruction(payload.metadata.language)
+        if (existingReport && await responseMatchesLanguage(deepSeekApiKey, existingReport, outputLanguage)) {
+          const reports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language, deepSeekApiKey)
           return jsonResponse({
             ...existingReport,
             reportId: existingReport.id,
@@ -212,7 +310,7 @@ serve(async (req) => {
         )
       }
 
-      const previousReports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language)
+      const previousReports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language, deepSeekApiKey)
       const parsed = await requestDeepSeekInsights(deepSeekApiKey, payload, previousReports.slice(0, 5))
       const report = await saveReport(admin, {
         organizationId,
@@ -222,7 +320,7 @@ serve(async (req) => {
         response: parsed,
       })
       const nextUsage = await loadUsage(admin, user.id)
-      const reports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language)
+      const reports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language, deepSeekApiKey)
 
       return jsonResponse({
         ...parsed,
@@ -265,6 +363,15 @@ async function requestDeepSeekJSON(
   deepSeekApiKey: string,
   messages: Array<{ role: "system" | "user"; content: string }>,
 ) {
+  return parseAIInsights(await requestDeepSeekContent(deepSeekApiKey, messages, 900, 0.2))
+}
+
+async function requestDeepSeekContent(
+  deepSeekApiKey: string,
+  messages: Array<{ role: "system" | "user"; content: string }>,
+  maxTokens: number,
+  temperature: number,
+) {
   const deepSeekResponse = await fetch(deepSeekEndpoint, {
     method: "POST",
     headers: {
@@ -275,8 +382,8 @@ async function requestDeepSeekJSON(
       model: deepSeekModel,
       thinking: { type: "disabled" },
       response_format: { type: "json_object" },
-      temperature: 0.2,
-      max_tokens: 900,
+      temperature,
+      max_tokens: maxTokens,
       messages,
     }),
   })
@@ -293,7 +400,7 @@ async function requestDeepSeekJSON(
     throw new HttpError("AI provider returned an empty response", 502)
   }
 
-  return parseAIInsights(content)
+  return content
 }
 
 async function ensureResponseLanguage(
@@ -301,7 +408,7 @@ async function ensureResponseLanguage(
   response: AIInsightsResponse,
   outputLanguage: OutputLanguageInstruction,
 ) {
-  if (responseMatchesLanguage(response, outputLanguage.code)) {
+  if (await responseMatchesLanguage(deepSeekApiKey, response, outputLanguage)) {
     return response
   }
 
@@ -319,7 +426,7 @@ async function ensureResponseLanguage(
     ],
   )
 
-  if (responseMatchesLanguage(repaired, outputLanguage.code)) {
+  if (await responseMatchesLanguage(deepSeekApiKey, repaired, outputLanguage)) {
     return repaired
   }
 
@@ -361,60 +468,175 @@ function normalizeMetadata(value: unknown): NormalizedMetadata {
 
 function normalizeLanguageCode(value: unknown) {
   const code = cleanString(value, "en").toLowerCase().split(/[-_]/)[0]
-  const allowed = new Set(["en", "ru", "ar", "ja", "ko", "uz", "hi"])
-  return allowed.has(code) ? code : "en"
+  return languageSpecs[code] ? code : "en"
 }
 
 function outputLanguageInstruction(code: string): OutputLanguageInstruction {
-  const languages: Record<string, string> = {
-    en: "English",
-    ru: "Russian",
-    ar: "Arabic",
-    ja: "Japanese",
-    ko: "Korean",
-    uz: "Uzbek",
-    hi: "Hindi",
-  }
-  const normalized = normalizeLanguageCode(code)
-  const name = languages[normalized] ?? "English"
+  const spec = languageSpecFor(code)
 
   return {
-    code: normalized,
-    name,
-    instruction: `Answer only in ${name}.${languageScriptInstruction(normalized)}`,
+    code: spec.code,
+    name: spec.name,
+    instruction: `Answer only in ${spec.name}.${spec.scriptInstruction ? ` ${spec.scriptInstruction}` : ""}`,
   }
 }
 
-function languageScriptInstruction(code: string) {
-  const scripts: Record<string, string> = {
-    ar: " Use Arabic script.",
-    hi: " Use Hindi in Devanagari script. Do not use English sentences or Latin transliteration.",
-    ja: " Use Japanese script.",
-    ru: " Use Cyrillic script.",
-  }
-  return scripts[code] ?? ""
+function languageSpecFor(code: string) {
+  return languageSpecs[normalizeLanguageCode(code)] ?? languageSpecs.en
 }
 
-function responseMatchesLanguage(response: AIInsightsResponse, languageCode: string) {
-  const code = normalizeLanguageCode(languageCode)
-  const scriptRules: Record<string, { pattern: RegExp; minCharacters: number; minRatio: number }> = {
-    ar: { pattern: /[\u0600-\u06FF]/u, minCharacters: 12, minRatio: 0.15 },
-    hi: { pattern: /[\u0900-\u097F]/u, minCharacters: 18, minRatio: 0.15 },
-    ja: { pattern: /[\u3040-\u30FF\u3400-\u9FFF]/u, minCharacters: 12, minRatio: 0.15 },
-    ru: { pattern: /[\u0400-\u04FF]/u, minCharacters: 12, minRatio: 0.15 },
+async function responseMatchesLanguage(
+  deepSeekApiKey: string,
+  response: AIInsightsResponse,
+  outputLanguage: OutputLanguageInstruction,
+) {
+  const spec = languageSpecFor(outputLanguage.code)
+  if (!responseMatchesScript(response, spec)) {
+    return false
   }
-  const rule = scriptRules[code]
-  if (!rule) return true
+  if (!spec.semanticValidation) {
+    return true
+  }
+  return await verifyResponseLanguage(deepSeekApiKey, response, outputLanguage)
+}
 
-  const text = [
+function responseMatchesStaticLanguage(response: AIInsightsResponse, languageCode: string) {
+  return responseMatchesScript(response, languageSpecFor(languageCode))
+}
+
+function responseMatchesScript(response: AIInsightsResponse, spec: LanguageSpec) {
+  if (!spec.scriptPattern) return true
+
+  const text = responseTextForLanguageValidation(response)
+  const letters = countLetters(text)
+  if (letters === 0) return false
+  const scriptCharacters = countMatchingCharacters(text, spec.scriptPattern)
+  const minCharacters = spec.minScriptCharacters ?? 12
+  const minRatio = spec.minScriptRatio ?? 0.15
+  return scriptCharacters >= minCharacters || scriptCharacters / letters >= minRatio
+}
+
+async function verifyResponseLanguage(
+  deepSeekApiKey: string,
+  response: AIInsightsResponse,
+  outputLanguage: OutputLanguageInstruction,
+) {
+  const content = await requestDeepSeekContent(
+    deepSeekApiKey,
+    [
+      { role: "system", content: languageVerifierPrompt },
+      {
+        role: "user",
+        content: JSON.stringify({
+          outputLanguage,
+          reportText: responseTextForLanguageValidation(response),
+        }),
+      },
+    ],
+    220,
+    0,
+  )
+  const verification = parseLanguageVerification(content)
+  return verification.matches && verification.confidence >= 0.7
+}
+
+function parseLanguageVerification(content: string): LanguageVerificationResponse {
+  const cleaned = content
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim()
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch {
+    throw new HttpError("AI provider returned invalid language verification JSON", 502)
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    throw new HttpError("AI provider returned invalid language verification shape", 502)
+  }
+
+  const object = parsed as Record<string, unknown>
+  return {
+    matches: object.matches === true,
+    detectedLanguage: typeof object.detectedLanguage === "string" ? object.detectedLanguage.trim() : "unknown",
+    confidence: typeof object.confidence === "number" && Number.isFinite(object.confidence)
+      ? Math.max(0, Math.min(1, object.confidence))
+      : 0,
+  }
+}
+
+async function filterReportsBySemanticLanguage(
+  reports: AIInsightReportPayload[],
+  language: string,
+  deepSeekApiKey?: string,
+) {
+  if (reports.length === 0) return reports
+  const outputLanguage = outputLanguageInstruction(language)
+  const spec = languageSpecFor(outputLanguage.code)
+  if (!deepSeekApiKey || spec.scriptPattern || !spec.semanticValidation) {
+    return reports
+  }
+
+  const content = await requestDeepSeekContent(
+    deepSeekApiKey,
+    [
+      { role: "system", content: languageHistoryVerifierPrompt },
+      {
+        role: "user",
+        content: JSON.stringify({
+          outputLanguage,
+          reports: reports.map((report) => ({
+            id: report.id,
+            text: responseTextForLanguageValidation(report),
+          })),
+        }),
+      },
+    ],
+    600,
+    0,
+  )
+  const verification = parseLanguageHistoryVerification(content)
+  const acceptedIds = new Set(verification.acceptedIds)
+  return reports.filter((report) => acceptedIds.has(report.id))
+}
+
+function parseLanguageHistoryVerification(content: string): LanguageHistoryVerificationResponse {
+  const cleaned = content
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim()
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(cleaned)
+  } catch {
+    throw new HttpError("AI provider returned invalid language history verification JSON", 502)
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    throw new HttpError("AI provider returned invalid language history verification shape", 502)
+  }
+
+  const object = parsed as Record<string, unknown>
+  return {
+    acceptedIds: Array.isArray(object.acceptedIds)
+      ? object.acceptedIds.filter((id): id is string => typeof id === "string")
+      : [],
+  }
+}
+
+function responseTextForLanguageValidation(response: AIInsightsResponse) {
+  return [
     response.summary,
     ...response.insights,
     ...response.recommendations,
   ].join(" ")
-  const letters = countLetters(text)
-  if (letters === 0) return false
-  const scriptCharacters = countMatchingCharacters(text, rule.pattern)
-  return scriptCharacters >= rule.minCharacters || scriptCharacters / letters >= rule.minRatio
 }
 
 function countLetters(text: string) {
@@ -608,6 +830,7 @@ async function loadHistory(
   organizationId: string,
   period: string,
   language: string,
+  deepSeekApiKey?: string,
 ) {
   if (!admin) {
     throw new HttpError("AI history storage is not configured", 500)
@@ -625,9 +848,10 @@ async function loadHistory(
   const { data, error } = await query
 
   if (error) throw error
-  return (data ?? [])
+  const reports = (data ?? [])
     .map((row) => reportPayload(row as AIInsightReportRow))
-    .filter((report) => responseMatchesLanguage(report, language))
+    .filter((report) => responseMatchesStaticLanguage(report, language))
+  return await filterReportsBySemanticLanguage(reports, language, deepSeekApiKey)
 }
 
 async function saveReport(

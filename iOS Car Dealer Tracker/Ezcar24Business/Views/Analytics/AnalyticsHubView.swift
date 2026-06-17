@@ -1464,7 +1464,7 @@ struct AIInsightsActionPolicy {
 }
 
 struct AIInsightsLanguagePolicy {
-    static let promptVersion = 4
+    static let promptVersion = 5
 
     static func normalizedCode(_ value: String?) -> String {
         let code = (value ?? "en")
