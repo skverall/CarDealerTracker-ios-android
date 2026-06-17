@@ -59,7 +59,7 @@ struct VehicleSelectionSheet: View {
         HStack {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(ColorTheme.secondaryText)
-            TextField("Search Make, Model, Inventory ID, VIN...", text: $searchText)
+            TextField("Search Make, Model, Inventory ID, VIN...".localizedString, text: $searchText)
                 .foregroundColor(ColorTheme.primaryText)
             if !searchText.isEmpty {
                 Button {
@@ -83,7 +83,7 @@ struct VehicleSelectionSheet: View {
             Image(systemName: "car.circle")
                 .font(.system(size: 48))
                 .foregroundColor(ColorTheme.tertiaryText)
-            Text("No vehicles found")
+            Text("No vehicles found".localizedString)
                 .font(.headline)
                 .foregroundColor(ColorTheme.secondaryText)
         }

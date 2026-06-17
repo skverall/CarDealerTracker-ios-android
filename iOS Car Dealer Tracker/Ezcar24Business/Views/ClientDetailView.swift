@@ -110,7 +110,7 @@ struct ClientDetailView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showPreferredDatePicker) {
                 VStack {
-                    DatePicker("Preferred Date", selection: $preferredDate, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("Preferred Date".localizedString, selection: $preferredDate, displayedComponents: [.date, .hourAndMinute])
                         .datePickerStyle(.graphical)
                         .padding()
                     
@@ -133,7 +133,7 @@ struct ClientDetailView: View {
                                 showInteractionDatePicker = false
                             }
                     } else {
-                        Text("Error: Interaction not found")
+                        Text("Error: Interaction not found".localizedString)
                     }
                     
                     Button("done".localizedString) {
@@ -152,7 +152,7 @@ struct ClientDetailView: View {
                             .datePickerStyle(.graphical)
                             .padding()
                     } else {
-                        Text("Error: Reminder not found")
+                        Text("Error: Reminder not found".localizedString)
                     }
                     
                     Button("done".localizedString) {
@@ -171,8 +171,8 @@ struct ClientDetailView: View {
                     vehicles: Array(vehicles)
                 )
             }
-            .alert("Notifications", isPresented: $showNotificationSettingsAlert) {
-                Button("Open Settings") {
+            .alert("Notifications".localizedString, isPresented: $showNotificationSettingsAlert) {
+                Button("Open Settings".localizedString) {
                     LocalNotificationManager.shared.openSystemSettings()
                 }
                 Button("cancel".localizedString, role: .cancel) { }
@@ -322,7 +322,7 @@ struct ClientDetailView: View {
                     Image(systemName: "phone.fill")
                         .foregroundColor(ColorTheme.secondaryText)
                         .frame(width: 24)
-                    TextField("Phone Number", text: $phone)
+                    TextField("Phone Number".localizedString, text: $phone)
                         .keyboardType(.phonePad)
                 }
                 .padding(16)
@@ -710,7 +710,7 @@ struct ClientDetailView: View {
         crmCard(title: "Deal History", icon: "clock.arrow.circlepath") {
             let interactions = client?.sortedInteractions ?? []
             if interactions.isEmpty {
-                Text("Add the first interaction to build history.")
+                Text("Add the first interaction to build history.".localizedString)
                     .font(.footnote)
                     .foregroundColor(ColorTheme.secondaryText)
             } else {
@@ -727,7 +727,7 @@ struct ClientDetailView: View {
         crmCard(title: "Reminders", icon: "bell.badge.fill") {
             let reminders = client?.sortedReminders ?? []
             if reminders.isEmpty {
-                Text("Create a reminder to stay on track.")
+                Text("Create a reminder to stay on track.".localizedString)
                     .font(.footnote)
                     .foregroundColor(ColorTheme.secondaryText)
             } else {
@@ -893,7 +893,7 @@ struct ClientDetailView: View {
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
-                TextField("Title", text: draft.title)
+                TextField("Title".localizedString, text: draft.title)
                     .font(.headline)
                 Spacer()
                 if canDeleteRecords {
@@ -906,7 +906,7 @@ struct ClientDetailView: View {
             
             Divider()
 
-            Picker("Stage", selection: draft.stage) {
+            Picker("Stage".localizedString, selection: draft.stage) {
                 ForEach(InteractionStage.allCases) { stage in
                     Text(stage.label).tag(stage)
                 }
@@ -928,10 +928,10 @@ struct ClientDetailView: View {
             }
             .buttonStyle(.plain)
             
-            TextField("Deal Value (Optional)", text: amountBinding)
+            TextField("Deal Value (Optional)".localizedString, text: amountBinding)
                 .keyboardType(.decimalPad)
             
-            TextField("Notes", text: draft.notes, axis: .vertical)
+            TextField("Notes".localizedString, text: draft.notes, axis: .vertical)
                 .lineLimit(2...4)
         }
         .padding()
@@ -943,7 +943,7 @@ struct ClientDetailView: View {
     private func reminderEditor(draft: Binding<ReminderDraft>, onDelete: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                TextField("Task", text: draft.title)
+                TextField("Task".localizedString, text: draft.title)
                     .font(.headline)
                 Spacer()
                 if canDeleteRecords {
@@ -971,7 +971,7 @@ struct ClientDetailView: View {
             }
             .buttonStyle(.plain)
             
-            TextField("Notes", text: draft.notes, axis: .vertical)
+            TextField("Notes".localizedString, text: draft.notes, axis: .vertical)
                 .lineLimit(2...3)
             
             Toggle("Completed", isOn: draft.isCompleted)

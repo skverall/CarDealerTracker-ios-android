@@ -62,7 +62,7 @@ struct AddFinancialAccountView: View {
                     .padding(.bottom, 12)
                     .background(ColorTheme.background)
             }
-            .alert("Account Error", isPresented: Binding(get: {
+            .alert("Account Error".localizedString, isPresented: Binding(get: {
                 errorMessage != nil
             }, set: { _ in
                 errorMessage = nil
@@ -89,7 +89,7 @@ struct AddFinancialAccountView: View {
 
             Spacer()
 
-            Text("New Account")
+            Text("New Account".localizedString)
                 .font(.headline)
                 .foregroundColor(ColorTheme.primaryText)
 
@@ -105,7 +105,7 @@ struct AddFinancialAccountView: View {
 
     private var typeSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Account Type")
+            Text("Account Type".localizedString)
                 .font(.caption2)
                 .fontWeight(.bold)
                 .foregroundColor(ColorTheme.secondaryText)
@@ -113,7 +113,7 @@ struct AddFinancialAccountView: View {
                 .padding(.horizontal, 20)
 
             VStack(spacing: 0) {
-                Picker("Account Type", selection: $kind) {
+                Picker("Account Type".localizedString, selection: $kind) {
                     Text(FinancialAccountKind.cash.localizedTitle).tag(FinancialAccountKind.cash)
                     Text(FinancialAccountKind.bank.localizedTitle).tag(FinancialAccountKind.bank)
                     Text(FinancialAccountKind.creditCard.localizedTitle).tag(FinancialAccountKind.creditCard)
@@ -143,7 +143,7 @@ struct AddFinancialAccountView: View {
                         .foregroundColor(ColorTheme.secondaryText)
                         .frame(width: 24)
 
-                    TextField("e.g. HSBC Business", text: $name)
+                    TextField("e.g. HSBC Business".localizedString, text: $name)
                         .font(.body)
                 }
                 .padding(16)
@@ -157,7 +157,7 @@ struct AddFinancialAccountView: View {
 
     private var balanceSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Starting Balance")
+            Text("Starting Balance".localizedString)
                 .font(.caption2)
                 .fontWeight(.bold)
                 .foregroundColor(ColorTheme.secondaryText)

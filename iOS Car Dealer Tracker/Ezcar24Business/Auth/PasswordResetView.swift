@@ -33,11 +33,11 @@ struct PasswordResetView: View {
                             .font(.system(size: 60))
                             .foregroundColor(.blue)
                         
-                        Text("Reset Password")
+                        Text("Reset Password".localizedString)
                             .font(.title)
                             .fontWeight(.bold)
                         
-                        Text("Create a new password to regain access. You'll sign in again after saving.")
+                        Text("Create a new password to regain access. You'll sign in again after saving.".localizedString)
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
@@ -46,17 +46,17 @@ struct PasswordResetView: View {
                     // Password fields
                     VStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("New Password")
+                            Text("New Password".localizedString)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                             
                             HStack {
                                 if showNewPassword {
-                                    TextField("At least 6 characters", text: $newPassword)
+                                    TextField("At least 6 characters".localizedString, text: $newPassword)
                                         .textContentType(.newPassword)
                                         .focused($focusedField, equals: .newPassword)
                                 } else {
-                                    SecureField("At least 6 characters", text: $newPassword)
+                                    SecureField("At least 6 characters".localizedString, text: $newPassword)
                                         .textContentType(.newPassword)
                                         .focused($focusedField, equals: .newPassword)
                                 }
@@ -72,17 +72,17 @@ struct PasswordResetView: View {
                         }
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("Confirm Password")
+                            Text("Confirm Password".localizedString)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                             
                             HStack {
                                 if showConfirmPassword {
-                                    TextField("Re-enter password", text: $confirmPassword)
+                                    TextField("Re-enter password".localizedString, text: $confirmPassword)
                                         .textContentType(.newPassword)
                                         .focused($focusedField, equals: .confirmPassword)
                                 } else {
-                                    SecureField("Re-enter password", text: $confirmPassword)
+                                    SecureField("Re-enter password".localizedString, text: $confirmPassword)
                                         .textContentType(.newPassword)
                                         .focused($focusedField, equals: .confirmPassword)
                                 }
@@ -97,7 +97,7 @@ struct PasswordResetView: View {
                             .cornerRadius(10)
                             
                             if !confirmPassword.isEmpty && newPassword != confirmPassword {
-                                Text("Passwords do not match")
+                                Text("Passwords do not match".localizedString)
                                     .font(.caption)
                                     .foregroundColor(.red)
                             }
@@ -143,7 +143,7 @@ struct PasswordResetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Cancel") {
+                    Button("Cancel".localizedString) {
                         Task {
                             await sessionStore.cancelPasswordRecoveryFlow()
                         }
@@ -152,17 +152,17 @@ struct PasswordResetView: View {
                 
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Done") {
+                    Button("Done".localizedString) {
                         focusedField = nil
                     }
                 }
             }
-            .alert("Password Updated", isPresented: $showSuccess) {
-                Button("OK") {
+            .alert("Password Updated".localizedString, isPresented: $showSuccess) {
+                Button("OK".localizedString) {
                     sessionStore.dismissPasswordResetUI()
                 }
             } message: {
-                Text("Your password has been updated. Please sign in with your new password to continue.")
+                Text("Your password has been updated. Please sign in with your new password to continue.".localizedString)
             }
         }
     }

@@ -304,7 +304,7 @@ struct TeamManagementView: View {
         StackCompat {
             contentBody
                 .background(ColorTheme.background)
-                .navigationTitle("Team Management")
+                .navigationTitle("Team Management".localizedString)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
                         Button {
@@ -335,15 +335,15 @@ struct TeamManagementView: View {
                         await viewModel.fetchTeam(organizationId: newOrgId)
                     }
                 }
-                .alert("Error", isPresented: listErrorBinding) {
-                    Button("OK", role: .cancel) {
+                .alert("Error".localizedString, isPresented: listErrorBinding) {
+                    Button("OK".localizedString, role: .cancel) {
                         viewModel.listErrorMessage = nil
                     }
                 } message: {
                     Text(viewModel.listErrorMessage ?? "Something went wrong.".localizedString)
                 }
                 .alert("Notice".localizedString, isPresented: inviteInfoBinding) {
-                    Button("OK", role: .cancel) {
+                    Button("OK".localizedString, role: .cancel) {
                         inviteInfoMessage = nil
                     }
                 } message: {
@@ -636,14 +636,14 @@ struct InviteMemberSheet: View {
         NavigationView {
             Form {
                 Section(header: Text("team_details_section_title".localizedString)) {
-                    TextField("Email", text: $email)
+                    TextField("Email".localizedString, text: $email)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .autocapitalization(.none)
 
-                    Picker("Invite Method", selection: $createAccount) {
-                        Text("Create Account Now").tag(true)
-                        Text("Invite with Code").tag(false)
+                    Picker("Invite Method".localizedString, selection: $createAccount) {
+                        Text("Create Account Now".localizedString).tag(true)
+                        Text("Invite with Code".localizedString).tag(false)
                     }
                     .pickerStyle(.segmented)
                     
@@ -657,7 +657,7 @@ struct InviteMemberSheet: View {
                         .foregroundColor(.secondary)
 
                     if !createAccount {
-                        Text("An invite code will be generated. The member can enter it on the login screen.")
+                        Text("An invite code will be generated. The member can enter it on the login screen.".localizedString)
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
@@ -954,7 +954,7 @@ struct CredentialsSheet: View {
         NavigationView {
             VStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Email")
+                    Text("Email".localizedString)
                         .font(.caption)
                         .foregroundColor(.secondary)
                     HStack {
@@ -970,7 +970,7 @@ struct CredentialsSheet: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Password")
+                    Text("Password".localizedString)
                         .font(.caption)
                         .foregroundColor(.secondary)
                     HStack {
@@ -985,7 +985,7 @@ struct CredentialsSheet: View {
                     }
                 }
                 
-                Text("This password is shown once. Share it securely and ask the member to change it after signing in.")
+                Text("This password is shown once. Share it securely and ask the member to change it after signing in.".localizedString)
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -994,10 +994,10 @@ struct CredentialsSheet: View {
                 Spacer()
             }
             .padding()
-            .navigationTitle("Login Credentials")
+            .navigationTitle("Login Credentials".localizedString)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done".localizedString) { dismiss() }
                 }
             }
         }
@@ -1013,7 +1013,7 @@ struct InviteCodeSheet: View {
         NavigationView {
             VStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Email")
+                    Text("Email".localizedString)
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Text(invite.email)
@@ -1022,7 +1022,7 @@ struct InviteCodeSheet: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Invite Code")
+                    Text("Invite Code".localizedString)
                         .font(.caption)
                         .foregroundColor(.secondary)
                     HStack {
@@ -1038,7 +1038,7 @@ struct InviteCodeSheet: View {
                     }
                 }
 
-                Text("Share this code with the member. They can enter it on the login screen after installing the app.")
+                Text("Share this code with the member. They can enter it on the login screen after installing the app.".localizedString)
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -1047,10 +1047,10 @@ struct InviteCodeSheet: View {
                 Spacer()
             }
             .padding()
-            .navigationTitle("Team Invite Code")
+            .navigationTitle("Team Invite Code".localizedString)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
+                    Button("Done".localizedString) { dismiss() }
                 }
             }
         }

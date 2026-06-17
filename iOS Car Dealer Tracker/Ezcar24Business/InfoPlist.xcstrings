@@ -15,6 +15,12 @@
             "state" : "translated",
             "value" : "Car Dealer Tracker"
           }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Car Dealer Tracker"
+          }
         }
       }
     },
@@ -25,6 +31,12 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
+            "value" : "Ezcar24Business"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
             "value" : "Ezcar24Business"
           }
         }
@@ -44,6 +56,12 @@
             "state" : "translated",
             "value" : "We need access to your camera to let you take photos of your vehicles."
           }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपको अपनी कारों की तस्वीरें लेने देने के लिए हमें आपके कैमरे की access चाहिए।"
+          }
         }
       }
     },
@@ -60,6 +78,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "We need access to your photo library to let you upload vehicle images."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "आपको कार की तस्वीरें upload करने देने के लिए हमें आपकी photo library की access चाहिए।"
           }
         }
       }

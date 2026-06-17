@@ -93,7 +93,7 @@ struct ExpenseDetailSheet: View {
 
                         ZStack(alignment: .topLeading) {
                             if commentDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                Text("Add a note (what was this expense for?)")
+                                Text("Add a note (what was this expense for?)".localizedString)
                                     .font(.body)
                                     .foregroundColor(ColorTheme.secondaryText.opacity(0.6))
                                     .padding(.horizontal, 16)
@@ -116,7 +116,7 @@ struct ExpenseDetailSheet: View {
                             .font(.caption)
                             .foregroundColor(ColorTheme.danger)
                     } else if showSavedToast {
-                        Text("Saved")
+                        Text("Saved".localizedString)
                             .font(.caption)
                             .foregroundColor(ColorTheme.success)
                     }
@@ -141,7 +141,7 @@ struct ExpenseDetailSheet: View {
                         ProgressView()
                         .frame(maxWidth: .infinity)
                     } else {
-                        Text("Save Comment")
+                        Text("Save Comment".localizedString)
                             .font(.headline)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 4)

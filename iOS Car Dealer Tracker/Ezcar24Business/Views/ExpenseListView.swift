@@ -731,7 +731,7 @@ struct ExpenseListView: View {
                                 }
                             }
                         }
-                        .navigationTitle("Assign Vehicle")
+                        .navigationTitle("Assign Vehicle".localizedString)
                         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("close".localizedString) { showVehicleSheet = false } } }
                     }
                 }
@@ -773,7 +773,7 @@ struct ExpenseListView: View {
                                 }
                             }
                         }
-                        .navigationTitle("Assign User")
+                        .navigationTitle("Assign User".localizedString)
                         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("close".localizedString) { showUserSheet = false } } }
                     }
                 }
@@ -798,10 +798,10 @@ struct ExpenseListView: View {
                 }
                 ToolbarItem(placement: .navigationBarLeading) {
                     Menu {
-                        Button("Date ↓") { viewModel.sortOption = .dateDesc; viewModel.fetchExpenses() }
-                        Button("Date ↑") { viewModel.sortOption = .dateAsc; viewModel.fetchExpenses() }
-                        Button("Amount ↓") { viewModel.sortOption = .amountDesc; viewModel.fetchExpenses() }
-                        Button("Amount ↑") { viewModel.sortOption = .amountAsc; viewModel.fetchExpenses() }
+                        Button("Date ↓".localizedString) { viewModel.sortOption = .dateDesc; viewModel.fetchExpenses() }
+                        Button("Date ↑".localizedString) { viewModel.sortOption = .dateAsc; viewModel.fetchExpenses() }
+                        Button("Amount ↓".localizedString) { viewModel.sortOption = .amountDesc; viewModel.fetchExpenses() }
+                        Button("Amount ↑".localizedString) { viewModel.sortOption = .amountAsc; viewModel.fetchExpenses() }
                     } label: {
                         Image(systemName: "arrow.up.arrow.down.circle")
                     }
@@ -811,7 +811,7 @@ struct ExpenseListView: View {
                         Image(systemName: "square.and.arrow.down")
                     }
                     .help("Import CSV")
-                    .accessibilityLabel("Import expenses from CSV")
+                    .accessibilityLabel("Import expenses from CSV".localizedString)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -828,7 +828,7 @@ struct ExpenseListView: View {
                         Image(systemName: "square.and.arrow.up")
                     }
                     .help("Export CSV")
-                    .accessibilityLabel("Export expenses as CSV")
+                    .accessibilityLabel("Export expenses as CSV".localizedString)
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if permissionService.can(.viewExpenses) {

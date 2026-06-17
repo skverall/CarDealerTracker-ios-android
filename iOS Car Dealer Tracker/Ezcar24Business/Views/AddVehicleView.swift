@@ -78,7 +78,7 @@ struct AddVehicleView: View {
                     
                     VStack(spacing: 20) {
                         // Basic Info
-                        GroupBox(label: Label("vehicle_details", systemImage: "car.fill")) {
+                        GroupBox(label: Label("vehicle_details".localizedString, systemImage: "car.fill")) {
                             VStack(spacing: 12) {
                                 CustomTextField(title: "vin", text: $vin, icon: "number")
                                     .textInputAutocapitalization(.characters)
@@ -100,24 +100,24 @@ struct AddVehicleView: View {
                         }
                         
                         // Financials
-                        GroupBox(label: Label("purchase_and_status", systemImage: "dollarsign.circle.fill")) {
+                        GroupBox(label: Label("purchase_and_status".localizedString, systemImage: "dollarsign.circle.fill")) {
                             VStack(spacing: 12) {
                                 CustomTextField(title: "purchase_price", text: $purchasePrice, icon: "banknote")
                                     .keyboardType(.decimalPad)
 
-                                Picker("paid_from", selection: $selectedAccount) {
+                                Picker("paid_from".localizedString, selection: $selectedAccount) {
                                     ForEach(accounts) { account in
                                         Text(account.displayTitle).tag(account as FinancialAccount?)
                                     }
                                 }
                                 .pickerStyle(.menu)
 
-                                DatePicker("purchase_date", selection: $purchaseDate, displayedComponents: .date)
+                                DatePicker("purchase_date".localizedString, selection: $purchaseDate, displayedComponents: .date)
                                     .padding(.vertical, 4)
                                 
                                 Divider()
                                 
-                                Picker("status", selection: $status) {
+                                Picker("status".localizedString, selection: $status) {
                                     ForEach(statusOrder, id: \.self) { key in
                                         Text(localizedStatus(key)).tag(key)
                                     }
@@ -129,18 +129,18 @@ struct AddVehicleView: View {
                         }
                         
                         if status == "sold" {
-                            GroupBox(label: Label("sale_details", systemImage: "checkmark.circle.fill")) {
+                            GroupBox(label: Label("sale_details".localizedString, systemImage: "checkmark.circle.fill")) {
                                 VStack(spacing: 12) {
                                     CustomTextField(title: "sale_price", text: $salePrice, icon: "banknote.fill")
                                         .keyboardType(.decimalPad)
-                                    DatePicker("sale_date", selection: $saleDate, displayedComponents: .date)
+                                    DatePicker("sale_date".localizedString, selection: $saleDate, displayedComponents: .date)
                                 }
                                 .padding(.vertical, 8)
                             }
                         }
                         
                         
-                        GroupBox(label: Label("notes", systemImage: "note.text")) {
+                        GroupBox(label: Label("notes".localizedString, systemImage: "note.text")) {
                             TextEditor(text: $notes)
                                 .frame(minHeight: 80)
                                 .padding(4)
@@ -153,15 +153,15 @@ struct AddVehicleView: View {
                 .padding(.vertical)
             }
             .background(ColorTheme.secondaryBackground)
-            .navigationTitle("add_vehicle_title")
+            .navigationTitle("add_vehicle_title".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("cancel") { dismiss() }
+                    Button("cancel".localizedString) { dismiss() }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("save") { saveVehicle() }
+                    Button("save".localizedString) { saveVehicle() }
                         .disabled(!isFormValid || isCompressing)
                         .fontWeight(.semibold)
                 }
@@ -206,7 +206,7 @@ struct AddVehicleView: View {
                                 Image(systemName: "camera.fill")
                                     .font(.system(size: 30))
                                     .foregroundColor(ColorTheme.primary)
-                                Text("add_photo")
+                                Text("add_photo".localizedString)
                                     .font(.caption)
                                     .foregroundColor(ColorTheme.secondaryText)
                             }

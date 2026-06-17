@@ -52,11 +52,11 @@ struct DataHealthView: View {
 
     private var diagnosticsControls: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Sync Diagnostics")
+            Text("Sync Diagnostics".localizedString)
                 .font(.headline)
                 .foregroundColor(ColorTheme.primaryText)
 
-            Text("Run a quick check to compare local data, remote data, and queued changes.")
+            Text("Run a quick check to compare local data, remote data, and queued changes.".localizedString)
                 .font(.footnote)
                 .foregroundColor(ColorTheme.secondaryText)
 
@@ -114,7 +114,7 @@ struct DataHealthView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "square.and.arrow.up")
-                            Text("Share Report")
+                            Text("Share Report".localizedString)
                                 .fontWeight(.semibold)
                         }
                         .frame(maxWidth: .infinity)
@@ -133,7 +133,7 @@ struct DataHealthView: View {
     private func summaryCard(_ report: SyncDiagnosticsReport) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Summary")
+                Text("Summary".localizedString)
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
@@ -157,18 +157,18 @@ struct DataHealthView: View {
             }
 
             if let remoteError = report.remoteFetchError {
-                Text("Remote check failed: \(remoteError)")
+                    Text(String(format: "Remote check failed: %@".localizedString, remoteError))
                     .font(.footnote)
                     .foregroundColor(ColorTheme.warning)
             }
 
             if let lastFailureMessage = report.lastFailureMessage {
-                Text("Last issue: \(lastFailureMessage)")
+                    Text(String(format: "Last issue: %@".localizedString, lastFailureMessage))
                     .font(.footnote)
                     .foregroundColor(report.health == .blocked ? ColorTheme.danger : ColorTheme.warning)
 
                 if let lastFailureAt = report.lastFailureAt {
-                    Text("Issue detected at \(formattedDate(lastFailureAt) ?? "—")")
+                    Text(String(format: "Issue detected at %@".localizedString, formattedDate(lastFailureAt) ?? "—"))
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                 }
@@ -180,7 +180,7 @@ struct DataHealthView: View {
 
     private func queueCard(_ report: SyncDiagnosticsReport) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Offline Queue")
+            Text("Offline Queue".localizedString)
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
@@ -208,7 +208,7 @@ struct DataHealthView: View {
 
     private func countsCard(_ report: SyncDiagnosticsReport) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Entity Counts")
+            Text("Entity Counts".localizedString)
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
@@ -218,15 +218,15 @@ struct DataHealthView: View {
                         .font(.footnote)
                         .foregroundColor(ColorTheme.primaryText)
                     Spacer()
-                    Text("Local \(item.localCount)")
+                        Text(String(format: "Local %@".localizedString, "\(item.localCount)"))
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                     if let remote = item.remoteCount {
-                        Text("Remote \(remote)")
+                        Text(String(format: "Remote %@".localizedString, "\(remote)"))
                             .font(.caption)
                             .foregroundColor(ColorTheme.secondaryText)
                     } else {
-                        Text("Remote —")
+                        Text(String(format: "Remote %@".localizedString, "—"))
                             .font(.caption)
                             .foregroundColor(ColorTheme.tertiaryText)
                     }

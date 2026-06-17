@@ -82,7 +82,7 @@ struct BackupCenterView: View {
                                     }
                                 } label: {
                                     HStack {
-                                        Text("Generate PDF Report")
+                                        Text("Generate PDF Report".localizedString)
                                             .fontWeight(.semibold)
                                         Spacer()
                                         if isProcessing {
@@ -122,10 +122,10 @@ struct BackupCenterView: View {
                                         }
                                         
                                         VStack(alignment: .leading, spacing: 2) {
-                                            Text("Build JSON Archive")
+                                            Text("Build JSON Archive".localizedString)
                                                 .foregroundColor(ColorTheme.primaryText)
                                                 .font(.body)
-                                            Text("Includes CSVs + PDF Report")
+                                            Text("Includes CSVs + PDF Report".localizedString)
                                                 .font(.caption)
                                                 .foregroundColor(ColorTheme.secondaryText)
                                         }
@@ -146,7 +146,7 @@ struct BackupCenterView: View {
                                 if sessionStore.isSignedIn {
                                     HStack(spacing: 6) {
                                         Image(systemName: "cloud.fill")
-                                        Text("Automatically uploads to Supabase cloud storage (bucket: dealer-backups).")
+                                        Text("Automatically uploads to Supabase cloud storage (bucket: dealer-backups).".localizedString)
                                     }
                                     .font(.caption2)
                                     .foregroundColor(ColorTheme.tertiaryText)
@@ -159,7 +159,7 @@ struct BackupCenterView: View {
                     .padding(16)
                 }
             }
-            .navigationTitle("Backup & Export")
+            .navigationTitle("Backup & Export".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { attachCloudManagerIfNeeded() }
             .sheet(isPresented: .constant(shareURL != nil), onDismiss: { shareURL = nil }) {
@@ -181,12 +181,12 @@ struct BackupCenterView: View {
                 .foregroundStyle(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .padding(.bottom, 4)
             
-            Text("Data Management")
+            Text("Data Management".localizedString)
                 .font(.title3)
                 .fontWeight(.bold)
                 .foregroundColor(ColorTheme.primaryText)
             
-            Text("Create local backups, generate PDF reports, or archive your entire dataset to the cloud.")
+            Text("Create local backups, generate PDF reports, or archive your entire dataset to the cloud.".localizedString)
                 .font(.subheadline)
                 .foregroundColor(ColorTheme.secondaryText)
                 .multilineTextAlignment(.center)

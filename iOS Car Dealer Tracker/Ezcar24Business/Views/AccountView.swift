@@ -103,7 +103,7 @@ struct AccountView: View {
                     .environmentObject(sessionStore)
             }
             .alert("invite_dealer".localizedString, isPresented: inviteAlertBinding) {
-                Button("OK") {
+                Button("OK".localizedString) {
                     inviteAlertMessage = nil
                 }
             } message: {
@@ -169,7 +169,7 @@ struct AccountView: View {
                 Button("copy_email".localizedString) {
                     UIPasteboard.general.string = "aydmaxx@gmail.com"
                 }
-                Button("OK", role: .cancel) { }
+                Button("OK".localizedString, role: .cancel) { }
             } message: {
                 Text(String(format: "mail_error_message".localizedString, "aydmaxx@gmail.com"))
             }
@@ -821,7 +821,7 @@ struct AccountView: View {
                 showingJoinTeamByCodeSheet = true
             } label: {
                 HStack {
-                    Text("Join Team by Code")
+                    Text("Join Team by Code".localizedString)
                         .font(.subheadline)
                         .foregroundColor(ColorTheme.primaryText)
                     Spacer()
@@ -2528,13 +2528,13 @@ struct JoinTeamByCodeSheet: View {
         NavigationStack {
             Form {
                 Section("How to join") {
-                    Text("1. Ask team admin for the Team Invite Code.")
-                    Text("2. Enter code below and tap Join Team.")
-                    Text("3. Switch organization from the app switcher.")
+                    Text("1. Ask team admin for the Team Invite Code.".localizedString)
+                    Text("2. Enter code below and tap Join Team.".localizedString)
+                    Text("3. Switch organization from the app switcher.".localizedString)
                 }
 
                 Section("Invite Code") {
-                    TextField("Enter Team Invite Code", text: $inviteCode)
+                    TextField("Enter Team Invite Code".localizedString, text: $inviteCode)
                         .textInputAutocapitalization(.characters)
                         .autocorrectionDisabled(true)
                         .keyboardType(.asciiCapable)
@@ -2556,15 +2556,15 @@ struct JoinTeamByCodeSheet: View {
                             ProgressView()
                                 .controlSize(.small)
                         }
-                        Text("Join Team")
+                        Text("Join Team".localizedString)
                     }
                 }
                 .disabled(inviteCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSubmitting)
             }
-            .navigationTitle("Join Team")
+            .navigationTitle("Join Team".localizedString)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("Cancel".localizedString) {
                         dismiss()
                     }
                 }
@@ -2769,7 +2769,7 @@ struct DeleteAccountView: View {
         }
         .navigationTitle("delete_account".localizedString)
         .alert("account_deleted_title".localizedString, isPresented: $showSuccess) {
-            Button("OK") { dismiss() }
+            Button("OK".localizedString) { dismiss() }
         } message: { Text("account_deleted_message".localizedString) }
     }
     
@@ -2858,7 +2858,7 @@ private struct AccountOrgSwitcher: View {
                 List {
                     Section {
                         if sessionStore.organizations.isEmpty {
-                            Text("No organizations yet")
+                            Text("No organizations yet".localizedString)
                                 .foregroundColor(ColorTheme.secondaryText)
                         } else {
                             ForEach(sessionStore.organizations) { org in
@@ -2900,7 +2900,7 @@ private struct AccountOrgSwitcher: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title3)
-                                Text("Create Business")
+                                Text("Create Business".localizedString)
                             }
                             .foregroundColor(ColorTheme.primary)
                             .font(.body.weight(.medium))
@@ -2909,11 +2909,11 @@ private struct AccountOrgSwitcher: View {
                         .disabled(!isSignedIn)
                     }
                 }
-                .navigationTitle("Select Business")
+                .navigationTitle("Select Business".localizedString)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") {
+                        Button("Close".localizedString) {
                             showingOrgSheet = false
                         }
                     }
@@ -2925,13 +2925,13 @@ private struct AccountOrgSwitcher: View {
         .sheet(isPresented: $showingCreateSheet) {
             NavigationView {
                 Form {
-                    Section(header: Text("Business Name")) {
-                        TextField("Enter business name", text: $newOrgName)
+                    Section(header: Text("Business Name".localizedString)) {
+                        TextField("Enter business name".localizedString, text: $newOrgName)
                             .autocapitalization(.words)
                     }
 
-                    Section(header: Text("Business Region")) {
-                        Picker("Business Region", selection: $newOrgBusinessRegion) {
+                    Section(header: Text("Business Region".localizedString)) {
+                        Picker("Business Region".localizedString, selection: $newOrgBusinessRegion) {
                             ForEach(DealDeskBusinessRegionCode.allCases) { region in
                                 Text(region.displayName).tag(region)
                             }
@@ -2967,10 +2967,10 @@ private struct AccountOrgSwitcher: View {
                     }
                     .disabled(newOrgName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
                 }
-                .navigationTitle("Create Business")
+                .navigationTitle("Create Business".localizedString)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
+                        Button("Cancel".localizedString) {
                             showingCreateSheet = false
                             newOrgName = ""
                             newOrgBusinessRegion = .generic
@@ -3152,7 +3152,7 @@ struct AccountUserProfileView: View {
             if let user = users.first {
                 EditProfileView(user: user)
             } else {
-                Text("User profile not found locally. Please wait for sync.")
+                Text("User profile not found locally. Please wait for sync.".localizedString)
             }
         }
     }

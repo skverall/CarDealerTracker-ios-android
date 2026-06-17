@@ -45,7 +45,7 @@ struct EditAccountView: View {
         NavigationStack {
             List {
                 Section("Account Details") {
-                    Picker("Account Type", selection: $editedKind) {
+                    Picker("Account Type".localizedString, selection: $editedKind) {
                         ForEach(FinancialAccountKind.allCases) { kind in
                             Text(kind.localizedTitle).tag(kind)
                         }
@@ -54,13 +54,13 @@ struct EditAccountView: View {
                     TextField(editedKind == .cash ? "Account Name (optional)" : "Account Name", text: $editedName)
 
                     HStack {
-                        Text("Balance")
+                        Text("Balance".localizedString)
                         Spacer()
                         Text((account.balance?.decimalValue ?? 0).asCurrency())
                             .foregroundColor(ColorTheme.primaryText)
                     }
                     
-                    Button("Save Changes") {
+                    Button("Save Changes".localizedString) {
                         let error = viewModel.updateAccount(account, kind: editedKind, name: editedName)
                         if let error {
                             errorMessage = error
@@ -75,7 +75,7 @@ struct EditAccountView: View {
                         ContentUnavailableView(
                             "No Transactions",
                             systemImage: "arrow.up.arrow.down.circle",
-                            description: Text("Add a deposit or withdrawal to track cash flow.")
+                            description: Text("Add a deposit or withdrawal to track cash flow.".localizedString)
                         )
                     } else {
                         ForEach(transactionsViewModel.transactions, id: \.objectID) { transaction in
@@ -87,7 +87,7 @@ struct EditAccountView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("Account Transactions")
+            .navigationTitle("Account Transactions".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -110,7 +110,7 @@ struct EditAccountView: View {
                 }
                 .presentationDetents([.medium, .large])
             }
-            .alert("Account Error", isPresented: Binding(get: {
+            .alert("Account Error".localizedString, isPresented: Binding(get: {
                 errorMessage != nil
             }, set: { _ in
                 errorMessage = nil

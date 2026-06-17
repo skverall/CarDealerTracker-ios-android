@@ -15,7 +15,7 @@ struct DaysSincePurchaseView: View {
                 .font(.caption2)
                 .foregroundColor(foregroundColor)
             
-            Text("\(days) days")
+            Text(String(format: "%lld days".localizedString, Int64(days)))
                 .font(.caption2)
                 .fontWeight(.bold)
                 .foregroundColor(foregroundColor)

@@ -692,7 +692,7 @@ struct VehicleDetailView: View {
                 }
             }
             .alert(photoOrderAlertText, isPresented: photoOrderAlertBinding) {
-                Button("OK", role: .cancel, action: dismissPhotoOrderAlert)
+                Button("OK".localizedString, role: .cancel, action: dismissPhotoOrderAlert)
             }
             .onAppear(perform: handleViewAppear)
             .onChange(of: accounts.count) { _, _ in
@@ -1088,7 +1088,7 @@ struct VehicleDetailView: View {
                         Text("status".localizedString)
                             .foregroundColor(ColorTheme.primaryText)
                         Spacer()
-                        Picker("Status", selection: $editStatus) {
+                        Picker("Status".localizedString, selection: $editStatus) {
                             Text("status_owned".localizedString).tag("owned")
                             Text("on_sale".localizedString).tag("on_sale")
                             Text("in_transit".localizedString).tag("in_transit")
@@ -1131,7 +1131,7 @@ struct VehicleDetailView: View {
                         Divider().padding(.leading)
                         
                         HStack {
-                            Text("Payment Method")
+                            Text("Payment Method".localizedString)
                                 .foregroundColor(ColorTheme.primaryText)
                             Spacer()
                             Picker("", selection: $editPaymentMethod) {
@@ -1245,7 +1245,7 @@ struct VehicleDetailView: View {
                     Text("make".localizedString)
                         .foregroundColor(ColorTheme.secondaryText)
                     Spacer()
-                    TextField("Make", text: $editMake)
+                    TextField("Make".localizedString, text: $editMake)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 200)
                 }
@@ -1254,7 +1254,7 @@ struct VehicleDetailView: View {
                     Text("model".localizedString)
                         .foregroundColor(ColorTheme.secondaryText)
                     Spacer()
-                    TextField("Model", text: $editModel)
+                    TextField("Model".localizedString, text: $editModel)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 200)
                 }
@@ -1263,7 +1263,7 @@ struct VehicleDetailView: View {
                     Text("year".localizedString)
                         .foregroundColor(ColorTheme.secondaryText)
                     Spacer()
-                    TextField("Year", text: $editYear)
+                    TextField("Year".localizedString, text: $editYear)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 100)
@@ -1347,7 +1347,7 @@ struct VehicleDetailView: View {
                     Text("status".localizedString)
                         .foregroundColor(ColorTheme.secondaryText)
                     Spacer()
-                    Picker("Status", selection: $editStatus) {
+                    Picker("Status".localizedString, selection: $editStatus) {
                         Text("status_owned".localizedString).tag("owned")
                         Text("on_sale".localizedString).tag("on_sale")
                         Text("in_transit".localizedString).tag("in_transit")
@@ -1390,11 +1390,11 @@ struct VehicleDetailView: View {
                             .font(.caption)
                             .foregroundColor(ColorTheme.secondaryText)
                         
-                        TextField("Buyer Name", text: $editBuyerName)
-                        TextField("Buyer Phone", text: $editBuyerPhone)
+                        TextField("Buyer Name".localizedString, text: $editBuyerName)
+                        TextField("Buyer Phone".localizedString, text: $editBuyerPhone)
                             .keyboardType(.phonePad)
                         
-                        Picker("Payment Method", selection: $editPaymentMethod) {
+                        Picker("Payment Method".localizedString, selection: $editPaymentMethod) {
                             ForEach(paymentMethods, id: \.self) { method in
                                 Text(method).tag(method)
                             }
@@ -1405,7 +1405,7 @@ struct VehicleDetailView: View {
                             Text("deposit_to".localizedString)
                                 .foregroundColor(ColorTheme.secondaryText)
                             Spacer()
-                            Picker("Account", selection: $selectedAccount) {
+                            Picker("Account".localizedString, selection: $selectedAccount) {
                                 Text("select_account".localizedString).tag(nil as FinancialAccount?)
                                 ForEach(accounts) { account in
                                     Text(account.displayTitle).tag(account as FinancialAccount?)
@@ -1484,7 +1484,7 @@ struct VehicleDetailView: View {
             VStack(alignment: .leading, spacing: 8) {
                 if let inventoryID = vehicle.inventoryIDValue {
                     HStack {
-                        Text("Inventory ID:")
+                        Text("Inventory ID:".localizedString)
                             .foregroundColor(ColorTheme.secondaryText)
                         Text(inventoryID)
                             .fontWeight(.medium)
@@ -1493,7 +1493,7 @@ struct VehicleDetailView: View {
                 }
 
                 HStack {
-                    Text("VIN:")
+                    Text("VIN:".localizedString)
                         .foregroundColor(ColorTheme.secondaryText)
                     Text(vehicle.vin ?? "")
                         .fontWeight(.medium)
@@ -2489,13 +2489,13 @@ private struct VehicleShareComposerSheet: View {
                     Toggle("Verification badge", isOn: $configuration.includeVerificationBadge)
                     Toggle("Phone number", isOn: $configuration.includeContactPhone)
                     if configuration.includeContactPhone && !draft.hasValidPhone {
-                        Text("We'll ask for a phone number before sharing.")
+                        Text("We'll ask for a phone number before sharing.".localizedString)
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
                     Toggle("Email", isOn: $configuration.includeContactEmail)
                     if configuration.includeContactEmail && !draft.hasValidEmail {
-                        Text("We'll ask for an email before sharing.")
+                        Text("We'll ask for an email before sharing.".localizedString)
                             .font(.footnote)
                             .foregroundColor(.secondary)
                     }
@@ -2503,7 +2503,7 @@ private struct VehicleShareComposerSheet: View {
 
                 if draft.hasPhotoOptions {
                     Section("Photos") {
-                        Text("Tap the photos you want to include. The cover photo is still used for the card preview when available.")
+                        Text("Tap the photos you want to include. The cover photo is still used for the card preview when available.".localizedString)
                             .font(.footnote)
                             .foregroundColor(.secondary)
 
@@ -2550,23 +2550,23 @@ private struct VehicleShareComposerSheet: View {
                 }
 
                 Section("File Export") {
-                    Button("Save as PDF") {
+                    Button("Save as PDF".localizedString) {
                         onExportPDF()
                     }
                     .disabled(isPreparingShare || !configuration.canShare(draft: draft))
                 }
             }
-            .navigationTitle("Customize Share")
+            .navigationTitle("Customize Share".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("Cancel".localizedString) {
                         onCancel()
                     }
                     .disabled(isPreparingShare)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Share") {
+                    Button("Share".localizedString) {
                         onShare()
                     }
                     .disabled(isPreparingShare || !configuration.canShare(draft: draft))
@@ -2781,7 +2781,7 @@ struct ShareContactCaptureSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Add your contact details to share listings professionally and receive more leads.")
+                    Text("Add your contact details to share listings professionally and receive more leads.".localizedString)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -2809,17 +2809,17 @@ struct ShareContactCaptureSheet: View {
                     }
                 }
             }
-            .navigationTitle("Complete Contact Info")
+            .navigationTitle("Complete Contact Info".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
+                    Button("Cancel".localizedString) {
                         onCancel()
                     }
                     .disabled(isSaving)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save & Share") {
+                    Button("Save & Share".localizedString) {
                         onSave()
                     }
                     .disabled(isSaving)

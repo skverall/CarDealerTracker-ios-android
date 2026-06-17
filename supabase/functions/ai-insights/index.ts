@@ -299,7 +299,7 @@ function normalizeMetadata(value: unknown): NormalizedMetadata {
 
 function normalizeLanguageCode(value: unknown) {
   const code = cleanString(value, "en").toLowerCase().split(/[-_]/)[0]
-  const allowed = new Set(["en", "ru", "ar", "ja", "ko", "uz"])
+  const allowed = new Set(["en", "ru", "ar", "ja", "ko", "uz", "hi"])
   return allowed.has(code) ? code : "en"
 }
 
@@ -311,6 +311,7 @@ function outputLanguageInstruction(code: string): OutputLanguageInstruction {
     ja: "Japanese",
     ko: "Korean",
     uz: "Uzbek",
+    hi: "Hindi",
   }
   const normalized = normalizeLanguageCode(code)
   const name = languages[normalized] ?? "English"

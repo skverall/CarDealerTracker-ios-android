@@ -33,7 +33,7 @@ struct AddSaleView: View {
                  headerView
                  
                  // Picker
-                 Picker("Sale Type", selection: $saleType) {
+                 Picker("Sale Type".localizedString, selection: $saleType) {
                      ForEach(SaleType.allCases, id: \.self) { type in
                          Text(type.title).tag(type)
                      }
@@ -309,7 +309,7 @@ private struct VehicleSaleForm: View {
         }
         .sheet(isPresented: $showDatePicker) {
             VStack {
-                DatePicker("Select Date", selection: $date, displayedComponents: .date)
+                DatePicker("Select Date".localizedString, selection: $date, displayedComponents: .date)
                     .datePickerStyle(.graphical)
                     .padding()
                     .onChange(of: date) { old, new in
@@ -467,7 +467,7 @@ private struct VehicleSaleForm: View {
             Button {
                 showDealDesk = true
             } label: {
-                Label("Open Deal Desk", systemImage: "arrow.up.right.square")
+                Label("Open Deal Desk".localizedString, systemImage: "arrow.up.right.square")
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(.white)
                     .padding(.horizontal, 14)
@@ -591,7 +591,7 @@ private struct VehicleSaleForm: View {
                     
                     Spacer()
                     
-                    Picker("Payment", selection: $paymentMethod) {
+                    Picker("Payment".localizedString, selection: $paymentMethod) {
                         ForEach(paymentMethods, id: \.self) { method in
                             Text(String(localized: String.LocalizationValue(method))).tag(method)
                         }
@@ -681,7 +681,7 @@ private struct VehicleSaleForm: View {
                     
                     Spacer()
                     
-                    Picker("Account", selection: $selectedAccount) {
+                    Picker("Account".localizedString, selection: $selectedAccount) {
                         Text("none".localizedString).tag(nil as FinancialAccount?)
                         ForEach(accounts) { account in
                             Text(account.displayTitle).tag(account as FinancialAccount?)
@@ -821,7 +821,7 @@ private struct VehicleSaleForm: View {
         NavigationStack {
             List {
                 if clients.isEmpty {
-                    Text("No clients found in CRM.")
+                    Text("No clients found in CRM.".localizedString)
                         .foregroundColor(.secondary)
                 } else {
                     ForEach(clients) { client in
@@ -1256,7 +1256,7 @@ private struct DealDeskSaleView: View {
                             dealDeskSection(title: "Price", isExpanded: $isPriceExpanded) {
                                 VStack(spacing: 14) {
                                     if settings.defaultTemplateCode != .generic {
-                                        Picker("Jurisdiction", selection: $jurisdictionCode) {
+                                        Picker("Jurisdiction".localizedString, selection: $jurisdictionCode) {
                                             ForEach(jurisdictionOptions) { option in
                                                 Text(option.title).tag(option.code)
                                             }
@@ -1274,19 +1274,19 @@ private struct DealDeskSaleView: View {
                                     HStack(spacing: 12) {
                                         Text(regionSettings.selectedRegion.currencySymbol)
                                             .foregroundColor(ColorTheme.secondaryText)
-                                        TextField("Vehicle sale price", text: $salePriceText)
+                                        TextField("Vehicle sale price".localizedString, text: $salePriceText)
                                             .keyboardType(.decimalPad)
                                             .onChange(of: salePriceText) { _, newValue in
                                                 salePriceText = sanitizedDecimalInput(newValue)
                                             }
                                     }
 
-                                    DatePicker("Sale date", selection: $date, displayedComponents: .date)
+                                    DatePicker("Sale date".localizedString, selection: $date, displayedComponents: .date)
 
-                                    TextField("Buyer name", text: $buyerName)
-                                    TextField("Buyer phone", text: $buyerPhone)
+                                    TextField("Buyer name".localizedString, text: $buyerName)
+                                    TextField("Buyer phone".localizedString, text: $buyerPhone)
                                         .keyboardType(.phonePad)
-                                    TextField("Notes", text: $notes, axis: .vertical)
+                                    TextField("Notes".localizedString, text: $notes, axis: .vertical)
                                         .lineLimit(2...4)
                                 }
                             }
@@ -1319,14 +1319,14 @@ private struct DealDeskSaleView: View {
 
                             dealDeskSection(title: "Payments", isExpanded: $isPaymentsExpanded) {
                                 VStack(spacing: 14) {
-                                    Picker("Payment method", selection: $paymentMethodCode) {
+                                    Picker("Payment method".localizedString, selection: $paymentMethodCode) {
                                         ForEach(paymentMethodOptions, id: \.0) { option in
                                             Text(option.1).tag(option.0)
                                         }
                                     }
                                     .pickerStyle(.menu)
 
-                                    Picker("Deposit to", selection: $selectedAccount) {
+                                    Picker("Deposit to".localizedString, selection: $selectedAccount) {
                                         Text("none".localizedString).tag(nil as FinancialAccount?)
                                         ForEach(accounts) { account in
                                             Text(account.displayTitle).tag(account as FinancialAccount?)
@@ -1338,7 +1338,7 @@ private struct DealDeskSaleView: View {
                                         HStack(spacing: 12) {
                                             Text(regionSettings.selectedRegion.currencySymbol)
                                                 .foregroundColor(ColorTheme.secondaryText)
-                                            TextField("Down payment", text: $downPaymentText)
+                                            TextField("Down payment".localizedString, text: $downPaymentText)
                                                 .keyboardType(.decimalPad)
                                                 .onChange(of: downPaymentText) { _, newValue in
                                                     downPaymentText = sanitizedDecimalInput(newValue)
@@ -1346,19 +1346,19 @@ private struct DealDeskSaleView: View {
                                         }
 
                                         HStack(spacing: 12) {
-                                            TextField("APR %", text: $aprText)
+                                            TextField("APR %".localizedString, text: $aprText)
                                                 .keyboardType(.decimalPad)
                                                 .onChange(of: aprText) { _, newValue in
                                                     aprText = sanitizedDecimalInput(newValue)
                                                 }
-                                            TextField("Term months", text: $termMonthsText)
+                                            TextField("Term months".localizedString, text: $termMonthsText)
                                                 .keyboardType(.numberPad)
                                                 .onChange(of: termMonthsText) { _, newValue in
                                                     termMonthsText = newValue.filter(\.isNumber)
                                                 }
                                         }
                                     } else {
-                                        Text("Full customer total is collected today.")
+                                        Text("Full customer total is collected today.".localizedString)
                                             .font(.subheadline)
                                             .foregroundColor(ColorTheme.secondaryText)
                                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1376,7 +1376,7 @@ private struct DealDeskSaleView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") {
+                    Button("Close".localizedString) {
                         dismiss()
                     }
                 }
@@ -1421,7 +1421,7 @@ private struct DealDeskSaleView: View {
                     onSave(request)
                     dismiss()
                 } label: {
-                    Text("Save Deal Desk Sale")
+                    Text("Save Deal Desk Sale".localizedString)
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -1528,11 +1528,11 @@ struct DealDeskSettingsView: View {
                         .disabled(!canEdit || isSaving)
                 }
             } footer: {
-                Text("Existing dealers stay off until someone turns this on. Old sales stay untouched.")
+                Text("Existing dealers stay off until someone turns this on. Old sales stay untouched.".localizedString)
             }
 
             Section("Default template") {
-                Picker("Business Region", selection: $settings.businessRegionCode) {
+                Picker("Business Region".localizedString, selection: $settings.businessRegionCode) {
                     ForEach(DealDeskBusinessRegionCode.allCases) { region in
                         Text(region.displayName.localizedString).tag(region)
                     }
@@ -1544,7 +1544,7 @@ struct DealDeskSettingsView: View {
                     feeLines = DealDeskTemplateCatalog.defaultFeeLines(for: newValue.defaultTemplateCode, appRegion: regionSettings.selectedRegion)
                 }
 
-                Picker("Template", selection: $settings.defaultTemplateCode) {
+                Picker("Template".localizedString, selection: $settings.defaultTemplateCode) {
                     ForEach(DealDeskTemplateCode.allCases) { template in
                         Text(template.displayName.localizedString).tag(template)
                     }
@@ -1556,7 +1556,7 @@ struct DealDeskSettingsView: View {
                 }
 
                 if !canEdit {
-                    Text("Only owner or admin can change these settings.")
+                    Text("Only owner or admin can change these settings.".localizedString)
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                 }

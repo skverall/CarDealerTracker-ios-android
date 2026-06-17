@@ -30,7 +30,7 @@ struct iPadRootView: View {
                         Button {
                             showProfileSheet = true
                         } label: {
-                            Label("Account", systemImage: "person.crop.circle")
+                            Label("Account".localizedString, systemImage: "person.crop.circle")
                         }
                     }
                 }
@@ -42,7 +42,9 @@ struct iPadRootView: View {
                 if let selectedTab {
                     viewForTab(selectedTab)
                 } else {
-                    ContentUnavailableView("Select a Menu Item", systemImage: "sidebar.left")
+                    ContentUnavailableView {
+                        Label("Select a Menu Item".localizedString, systemImage: "sidebar.left")
+                    }
                 }
             }
         }

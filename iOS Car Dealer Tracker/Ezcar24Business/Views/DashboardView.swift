@@ -437,7 +437,7 @@ private extension DashboardView {
 
                     // 2. Performance & Profit
                     VStack(spacing: 12) {
-                        Text("Performance & Profit")
+                        Text("Performance & Profit".localizedString)
                             .font(.title3.weight(.bold))
                             .foregroundColor(ColorTheme.primaryText)
                             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1672,7 +1672,7 @@ struct OrganizationSwitcherView: View {
                 List {
                     Section {
                         if sessionStore.organizations.isEmpty {
-                            Text("No organizations yet")
+                            Text("No organizations yet".localizedString)
                                 .foregroundColor(ColorTheme.secondaryText)
                         } else {
                             ForEach(sessionStore.organizations) { org in
@@ -1715,7 +1715,7 @@ struct OrganizationSwitcherView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.title3)
-                                Text("Create Business")
+                                Text("Create Business".localizedString)
                             }
                             .foregroundColor(ColorTheme.primary)
                             .font(.body.weight(.medium))
@@ -1724,11 +1724,11 @@ struct OrganizationSwitcherView: View {
                         .disabled(!isSignedIn)
                     }
                 }
-                .navigationTitle("Select Business")
+                .navigationTitle("Select Business".localizedString)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") {
+                        Button("Close".localizedString) {
                             showingOrgSheet = false
                         }
                     }
@@ -1740,13 +1740,13 @@ struct OrganizationSwitcherView: View {
         .sheet(isPresented: $showingCreateSheet) {
             NavigationView {
                 Form {
-                    Section(header: Text("Business Name")) {
-                        TextField("Enter business name", text: $newOrgName)
+                    Section(header: Text("Business Name".localizedString)) {
+                        TextField("Enter business name".localizedString, text: $newOrgName)
                             .autocapitalization(.words)
                     }
 
-                    Section(header: Text("Business Region")) {
-                        Picker("Business Region", selection: $newOrgBusinessRegion) {
+                    Section(header: Text("Business Region".localizedString)) {
+                        Picker("Business Region".localizedString, selection: $newOrgBusinessRegion) {
                             ForEach(DealDeskBusinessRegionCode.allCases) { region in
                                 Text(region.displayName).tag(region)
                             }
@@ -1782,10 +1782,10 @@ struct OrganizationSwitcherView: View {
                     }
                     .disabled(newOrgName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isCreating)
                 }
-                .navigationTitle("Create Business")
+                .navigationTitle("Create Business".localizedString)
                 .toolbar {
                     ToolbarItem(placement: .cancellationAction) {
-                        Button("Cancel") {
+                        Button("Cancel".localizedString) {
                             showingCreateSheet = false
                             newOrgName = ""
                             newOrgBusinessRegion = .generic

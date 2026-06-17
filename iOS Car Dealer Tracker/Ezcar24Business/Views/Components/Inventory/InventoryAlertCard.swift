@@ -242,12 +242,12 @@ struct InventoryAlertBanner: View {
                     .foregroundColor(.white)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(count) Active Alert\(count == 1 ? "" : "s")")
+                    Text(String(format: "%lld Active Alert%@".localizedString, Int64(count), count == 1 ? "" : "s"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.white)
                     
-                    Text("Tap to review inventory alerts")
+                    Text("Tap to review inventory alerts".localizedString)
                         .font(.caption)
                         .foregroundColor(.white.opacity(0.8))
                 }

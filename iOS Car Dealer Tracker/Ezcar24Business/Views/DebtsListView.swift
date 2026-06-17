@@ -150,12 +150,12 @@ struct EmptyDebtsView: View {
                 .font(.system(size: 60))
                 .foregroundColor(ColorTheme.secondaryText.opacity(0.3))
 
-            Text("No Debts Yet")
+            Text("No Debts Yet".localizedString)
                 .font(.title3)
                 .fontWeight(.semibold)
                 .foregroundColor(ColorTheme.primaryText)
 
-            Text("Track money you owe or that is owed to you.")
+            Text("Track money you owe or that is owed to you.".localizedString)
                 .font(.subheadline)
                 .foregroundColor(ColorTheme.secondaryText)
                 .multilineTextAlignment(.center)

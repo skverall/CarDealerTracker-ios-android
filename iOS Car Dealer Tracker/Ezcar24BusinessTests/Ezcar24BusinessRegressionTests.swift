@@ -65,6 +65,10 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertTrue(AppLanguage.selectableLanguages.contains(.japanese))
         XCTAssertTrue(AppLanguage.allCases.contains(.uzbek))
         XCTAssertTrue(AppLanguage.selectableLanguages.contains(.uzbek))
+        XCTAssertTrue(AppLanguage.allCases.contains(.hindi))
+        XCTAssertTrue(AppLanguage.selectableLanguages.contains(.hindi))
+        XCTAssertFalse(AppLanguage.hindi.isRTL)
+        XCTAssertTrue(AppLanguage.arabic.isRTL)
         XCTAssertTrue(formatted.contains("¥"))
         XCTAssertFalse(formatted.contains("¥ "))
         XCTAssertFalse(formatted.contains(".00"))
@@ -101,6 +105,14 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual("guest_preview_followups".localizedString, "Keyingi aloqalar")
         XCTAssertEqual("guest_preview_row_oil_filters".localizedString, "Yogʻ filtrlari")
         XCTAssertEqual("guest_preview_units".localizedString, "dona")
+
+        manager.selectedLanguage = .hindi
+        XCTAssertEqual("Continue".localizedString, "जारी रखें")
+        XCTAssertEqual("Weekly".localizedString, "साप्ताहिक")
+        XCTAssertEqual("Billed yearly".localizedString, "सालाना बिलिंग")
+        XCTAssertEqual("Best value".localizedString, "सबसे बेहतर डील")
+        XCTAssertEqual("Save Deal Desk Sale".localizedString, "Deal Desk सेल सेव करें")
+        XCTAssertEqual("search_client".localizedString, "ग्राहक खोजें")
     }
 
     func testUzbekistanRegionUsesUZSFormatting() {
@@ -209,6 +221,7 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual(AIInsightsLanguagePolicy.promptVersion, 3)
         XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("en_US"), "en")
         XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("ru-RU"), "ru")
+        XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("hi_IN"), "hi")
         XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("unsupported"), "en")
         XCTAssertEqual(
             AIInsightsLanguagePolicy.cacheKey(
@@ -228,6 +241,15 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
                 insights: ["Русский инсайт"],
                 recommendations: ["Русская рекомендация"],
                 createdAt: "2026-06-15T12:00:00Z"
+            ),
+            AIInsightsReport(
+                id: "hi-report",
+                period: DashboardTimeRange.week.rawValue,
+                language: "hi",
+                summary: "हिंदी रिपोर्ट",
+                insights: ["हिंदी इनसाइट"],
+                recommendations: ["हिंदी सुझाव"],
+                createdAt: "2026-06-15T12:30:00Z"
             ),
             AIInsightsReport(
                 id: "en-report",
@@ -251,6 +273,7 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
 
         XCTAssertEqual(AIInsightsLanguagePolicy.reports(reports, matching: "en").map(\.id), ["en-report"])
         XCTAssertEqual(AIInsightsLanguagePolicy.reports(reports, matching: "ru").map(\.id), ["ru-report"])
+        XCTAssertEqual(AIInsightsLanguagePolicy.reports(reports, matching: "hi-IN").map(\.id), ["hi-report"])
     }
 
     func testEmailReminderBannerHidesForISO8601ConfirmationString() {

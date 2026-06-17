@@ -84,7 +84,7 @@ struct FinancialAccountsView: View {
                     Button {
                         viewModel.createDefaultAccounts()
                     } label: {
-                        Text("Create Cash + Bank")
+                        Text("Create Cash + Bank".localizedString)
                             .font(.headline)
                             .foregroundColor(.white)
                             .padding()
@@ -142,7 +142,7 @@ struct FinancialAccountsView: View {
             } header: {
                 Text(group.kind.localizedTitle)
             } footer: {
-                Text("Tap an account to view transactions.")
+                Text("Tap an account to view transactions.".localizedString)
             }
         }
     }
@@ -181,7 +181,7 @@ struct FinancialAccountsView: View {
                         .font(.headline)
                         .foregroundColor(ColorTheme.primaryText)
 
-                    Text("Current Balance")
+                    Text("Current Balance".localizedString)
                         .font(.caption2)
                         .foregroundColor(ColorTheme.secondaryText)
                 }

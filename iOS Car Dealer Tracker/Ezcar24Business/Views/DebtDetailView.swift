@@ -29,7 +29,11 @@ struct DebtDetailView: View {
 
             Section {
                 if paymentItems.isEmpty {
-                    ContentUnavailableView("No Payments", systemImage: "creditcard", description: Text("Record a payment to reduce the balance."))
+                    ContentUnavailableView {
+                        Label("No Payments".localizedString, systemImage: "creditcard")
+                    } description: {
+                        Text("Record a payment to reduce the balance.".localizedString)
+                    }
                 } else {
                     ForEach(paymentItems, id: \.objectID) { payment in
                         DebtPaymentRow(payment: payment, direction: debt.directionEnum)
@@ -38,7 +42,7 @@ struct DebtDetailView: View {
                     .deleteDisabled(!canDeleteRecords)
                 }
             } header: {
-                Text("Payments")
+                Text("Payments".localizedString)
             }
         }
         .listStyle(.insetGrouped)
@@ -64,7 +68,7 @@ struct DebtDetailView: View {
                 }
             }
         }
-        .alert("Delete Debt", isPresented: $showDeleteAlert) {
+        .alert("Delete Debt".localizedString, isPresented: $showDeleteAlert) {
             Button("cancel".localizedString, role: .cancel) {}
             Button("delete".localizedString, role: .destructive) {
                 guard canDeleteRecords else { return }
@@ -72,7 +76,7 @@ struct DebtDetailView: View {
                 dismiss()
             }
         } message: {
-            Text("This will remove the debt and all its payments.")
+            Text("This will remove the debt and all its payments.".localizedString)
         }
         .sheet(isPresented: $showAddPayment) {
             AddDebtPaymentView(debt: debt)
@@ -127,7 +131,7 @@ private struct DebtSummaryCard: View {
                     }
 
                     if let dueText = dueDateText {
-                        Text("Due \(dueText)")
+                        Text(String(format: "Due %@".localizedString, dueText))
                             .font(.caption)
                             .foregroundColor(ColorTheme.secondaryText)
                     }
@@ -139,11 +143,11 @@ private struct DebtSummaryCard: View {
             }
 
             HStack(spacing: 0) {
-                FinancialColumn(title: "Total", amount: debt.totalAmountDecimal, color: ColorTheme.secondaryText)
+                FinancialColumn(title: "total".localizedString, amount: debt.totalAmountDecimal, color: ColorTheme.secondaryText)
                 Divider().frame(height: 40)
-                FinancialColumn(title: "Paid", amount: debt.totalPaid, color: ColorTheme.primaryText)
+                FinancialColumn(title: "paid".localizedString, amount: debt.totalPaid, color: ColorTheme.primaryText)
                 Divider().frame(height: 40)
-                FinancialColumn(title: "Remaining", amount: debt.outstandingAmount, color: remainingColor, isBold: true)
+                FinancialColumn(title: "remaining".localizedString, amount: debt.outstandingAmount, color: remainingColor, isBold: true)
             }
             .padding(.vertical, 8)
             .background(ColorTheme.secondaryBackground.opacity(0.5))

@@ -59,7 +59,7 @@ struct EditProfileView: View {
                             }
                             
                             PhotosPicker(selection: $avatarItem, matching: .images) {
-                                Text("Change Photo")
+                                Text(LocalizedStringKey("Change Photo"))
                                     .font(.subheadline)
                                     .foregroundColor(.blue)
                             }
@@ -69,17 +69,17 @@ struct EditProfileView: View {
                     .padding(.vertical)
                 }
                 
-                Section(header: Text("Personal Information")) {
-                    TextField("First Name", text: $firstName)
-                    TextField("Last Name", text: $lastName)
-                    TextField("Email", text: $email)
+                Section(header: Text("Personal Information".localizedString)) {
+                    TextField("First Name".localizedString, text: $firstName)
+                    TextField("Last Name".localizedString, text: $lastName)
+                    TextField("Email".localizedString, text: $email)
                         .textContentType(.emailAddress)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
                     if let pendingEmail = sessionStore.pendingEmailChange {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Pending confirmation")
+                            Text("Pending confirmation".localizedString)
                                 .font(.caption.weight(.semibold))
                                 .foregroundColor(.orange)
                             Text("Check \(pendingEmail). Depending on your account security settings, you may need to confirm the change from both your current and new email addresses.")
@@ -88,7 +88,7 @@ struct EditProfileView: View {
                         }
                         .padding(.vertical, 2)
                     }
-                    TextField("Phone", text: $phone)
+                    TextField("Phone".localizedString, text: $phone)
                         .keyboardType(.phonePad)
                 }
                 
@@ -100,15 +100,15 @@ struct EditProfileView: View {
                     }
                 }
             }
-            .navigationTitle("Edit Profile")
+            .navigationTitle("Edit Profile".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel".localizedString) { dismiss() }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button("Save".localizedString) {
                         saveProfile()
                     }
                     .disabled(isLoading)
@@ -137,8 +137,8 @@ struct EditProfileView: View {
                 }
             }
             .disabled(isLoading)
-            .alert("Profile Updated", isPresented: $showSuccessAlert) {
-                Button("OK") {
+            .alert("Profile Updated".localizedString, isPresented: $showSuccessAlert) {
+                Button("OK".localizedString) {
                     dismiss()
                 }
             } message: {

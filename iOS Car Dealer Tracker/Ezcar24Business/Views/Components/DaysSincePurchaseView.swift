@@ -11,7 +11,7 @@ struct DaysSincePurchaseView: View {
                 .font(.caption2.weight(.medium))
                 .foregroundColor(ColorTheme.primary)
             
-            Text("\(days)d in stock")
+            Text(String(format: "%lldd in stock".localizedString, Int64(days)))
                 .font(.caption2.weight(.semibold))
                 .foregroundColor(ColorTheme.primaryText)
                 .monospacedDigit()

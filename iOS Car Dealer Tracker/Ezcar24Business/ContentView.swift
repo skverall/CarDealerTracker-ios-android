@@ -234,19 +234,19 @@ struct ContentView: View {
                     }
                     .ignoresSafeArea(.keyboard, edges: .bottom)
             }
-            .alert("VIN already exists", isPresented: Binding(
+            .alert("VIN already exists".localizedString, isPresented: Binding(
                 get: { cloudSyncManager.vinConflictVehicleId != nil },
                 set: { if !$0 { cloudSyncManager.vinConflictVehicleId = nil } }
             )) {
-                Button("Open Vehicles") {
+                Button("Open Vehicles".localizedString) {
                     selectedTab = .vehicles
                     cloudSyncManager.vinConflictVehicleId = nil
                 }
-                Button("OK", role: .cancel) {
+                Button("OK".localizedString, role: .cancel) {
                     cloudSyncManager.vinConflictVehicleId = nil
                 }
             } message: {
-                Text("This VIN is already in your inventory.")
+                Text("This VIN is already in your inventory.".localizedString)
             }
             // Hide system tab bar so we can show ours
             .onAppear {

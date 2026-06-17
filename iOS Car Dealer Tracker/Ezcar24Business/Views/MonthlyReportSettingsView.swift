@@ -28,7 +28,7 @@ struct MonthlyReportSettingsView: View {
             .padding(16)
         }
         .background(ColorTheme.background.ignoresSafeArea())
-        .navigationTitle("Email Reports")
+        .navigationTitle("Email Reports".localizedString)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: sessionStore.activeOrganizationId) {
             await viewModel.load(organizationId: sessionStore.activeOrganizationId)
@@ -48,11 +48,11 @@ struct MonthlyReportSettingsView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Monthly email reports")
+                        Text("Monthly email reports".localizedString)
                             .font(.headline)
                             .foregroundColor(ColorTheme.primaryText)
 
-                        Text("Preview and export the same finance snapshot that will back future email delivery.")
+                        Text("Preview and export the same finance snapshot that will back future email delivery.".localizedString)
                             .font(.subheadline)
                             .foregroundColor(ColorTheme.secondaryText)
                     }
@@ -67,9 +67,9 @@ struct MonthlyReportSettingsView: View {
                     }
                 )) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("Enable monthly report emails")
+                        Text("Enable monthly report emails".localizedString)
                             .foregroundColor(ColorTheme.primaryText)
-                        Text("Owner and admin recipients only")
+                        Text("Owner and admin recipients only".localizedString)
                             .font(.caption)
                             .foregroundColor(ColorTheme.secondaryText)
                     }
@@ -94,7 +94,7 @@ struct MonthlyReportSettingsView: View {
     private var deliveryCard: some View {
         card {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Delivery")
+                Text("Delivery".localizedString)
                     .font(.headline)
                     .foregroundColor(ColorTheme.primaryText)
 
@@ -108,11 +108,11 @@ struct MonthlyReportSettingsView: View {
     private var recipientsCard: some View {
         card {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Recipients")
+                Text("Recipients".localizedString)
                     .font(.headline)
                     .foregroundColor(ColorTheme.primaryText)
 
-                Text("All owner and admin members with a resolved email address.")
+                Text("All owner and admin members with a resolved email address.".localizedString)
                     .font(.subheadline)
                     .foregroundColor(ColorTheme.secondaryText)
 
@@ -121,7 +121,7 @@ struct MonthlyReportSettingsView: View {
                 }
 
                 if viewModel.recipients.isEmpty {
-                    Text("No recipients resolved yet.")
+                    Text("No recipients resolved yet.".localizedString)
                         .font(.subheadline)
                         .foregroundColor(ColorTheme.secondaryText)
                 } else {
@@ -145,7 +145,7 @@ struct MonthlyReportSettingsView: View {
     private var detailsCard: some View {
         card {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Report contents")
+                Text("Report contents".localizedString)
                     .font(.headline)
                     .foregroundColor(ColorTheme.primaryText)
 
@@ -159,7 +159,7 @@ struct MonthlyReportSettingsView: View {
     private var actionsCard: some View {
         card {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Actions")
+                Text("Actions".localizedString)
                     .font(.headline)
                     .foregroundColor(ColorTheme.primaryText)
 

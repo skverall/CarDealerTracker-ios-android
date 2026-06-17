@@ -214,7 +214,7 @@ struct InventoryAnalyticsView: View {
                 Spacer()
                 
                 Menu {
-                    Picker("Filter", selection: $viewModel.selectedFilter) {
+                    Picker("Filter".localizedString, selection: $viewModel.selectedFilter) {
                         ForEach(InventoryAnalyticsViewModel.FilterOption.allCases) { option in
                             Text(option.displayName).tag(option)
                         }
@@ -222,7 +222,7 @@ struct InventoryAnalyticsView: View {
                     
                     Divider()
                     
-                    Picker("Sort", selection: $viewModel.sortOption) {
+                    Picker("Sort".localizedString, selection: $viewModel.sortOption) {
                         ForEach(InventoryAnalyticsViewModel.SortOption.allCases) { option in
                             Text(option.displayName).tag(option)
                         }
@@ -257,7 +257,7 @@ struct InventoryAnalyticsView: View {
                 }
                 
                 if viewModel.filteredVehicles.count > 10 {
-                    Text("+ \(viewModel.filteredVehicles.count - 10) more vehicles")
+                    Text(String(format: "+ %lld more vehicles".localizedString, Int64(viewModel.filteredVehicles.count - 10)))
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                         .frame(maxWidth: .infinity, alignment: .center)

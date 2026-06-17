@@ -426,7 +426,7 @@ struct VehicleCard: View {
                         }
                         
                         if permissionService.canViewVehicleCost() {
-                            Label("\(viewModel.expenseCount(for: vehicle)) exp", systemImage: "wrench.and.screwdriver.fill")
+                            Label(String(format: "%lld exp".localizedString, Int64(viewModel.expenseCount(for: vehicle))), systemImage: "wrench.and.screwdriver.fill")
                                 .font(.caption2)
                                 .foregroundColor(ColorTheme.tertiaryText)
                         }
@@ -438,7 +438,7 @@ struct VehicleCard: View {
                             // Holding cost is now in the footer
                         }
                     } else if let date = vehicle.purchaseDate {
-                         Text("Added: \(date, formatter: dateFormatter)")
+                         Text(String(format: "Added: %@".localizedString, dateFormatter.string(from: date)))
                             .font(.caption2)
                             .foregroundColor(ColorTheme.tertiaryText)
                             .padding(.top, 2)
@@ -658,7 +658,7 @@ struct FilterChip: View {
 
 extension VehicleListView {
     private var displayModePicker: some View {
-        Picker("Display Mode", selection: $viewModel.displayMode) {
+        Picker("Display Mode".localizedString, selection: $viewModel.displayMode) {
             ForEach(VehicleViewModel.DisplayMode.allCases) { mode in
                 Text(mode.title).tag(mode)
             }
@@ -688,7 +688,7 @@ extension VehicleListView {
             
             // Sort Menu
             Menu {
-                Picker("Sort By", selection: $viewModel.sortOption) {
+                Picker("Sort By".localizedString, selection: $viewModel.sortOption) {
                     ForEach(VehicleViewModel.SortOption.allCases) { option in
                         Text(option.title).tag(option)
                     }
@@ -709,7 +709,7 @@ extension VehicleListView {
             // Filter Menu (Only visible in Inventory mode)
             if viewModel.displayMode == .inventory {
                 Menu {
-                    Picker("Filter By", selection: $viewModel.selectedStatus) {
+                    Picker("Filter By".localizedString, selection: $viewModel.selectedStatus) {
                         Text("all_inventory".localizedString).tag("all")
                         Divider()
                         Text("reserved".localizedString).tag("reserved")

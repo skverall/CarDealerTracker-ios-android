@@ -104,7 +104,7 @@ struct HoldingCostMiniIndicator: View {
                     .foregroundColor(accumulatedCost > 0 ? ColorTheme.warning : ColorTheme.secondaryText)
                 
                 if dailyCost > 0 {
-                    Text("\(dailyCost.asCurrency())/day")
+                    Text(String(format: "%@/day".localizedString, dailyCost.asCurrency()))
                         .font(.caption2)
                         .foregroundColor(ColorTheme.tertiaryText)
                 }

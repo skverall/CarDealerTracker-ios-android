@@ -232,7 +232,7 @@ private struct ContentContainerView: View {
 
 private struct EmailReminderBanner: View {
     var body: some View {
-        Text("Email is not verified yet. Please confirm your address to unlock all features.")
+        Text("Email is not verified yet. Please confirm your address to unlock all features.".localizedString)
             .font(.footnote)
             .fontWeight(.semibold)
             .foregroundStyle(.white)

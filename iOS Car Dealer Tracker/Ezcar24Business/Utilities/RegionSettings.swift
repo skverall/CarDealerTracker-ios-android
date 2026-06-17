@@ -132,9 +132,10 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     case japanese = "ja"
     case korean = "ko"
     case uzbek = "uz"
+    case hindi = "hi"
     
     static var selectableLanguages: [AppLanguage] {
-        [.english, .russian, .arabic, .japanese, .uzbek]
+        [.english, .russian, .arabic, .japanese, .uzbek, .hindi]
     }
 
     var id: String { rawValue }
@@ -148,6 +149,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
         case .japanese: return "日本語"
         case .korean: return "한국어"
         case .uzbek: return "Oʻzbekcha"
+        case .hindi: return "हिन्दी"
         }
     }
     
@@ -159,6 +161,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
         case .japanese: return "🇯🇵"
         case .korean: return "🇰🇷"
         case .uzbek: return "🇺🇿"
+        case .hindi: return "🇮🇳"
         }
     }
     

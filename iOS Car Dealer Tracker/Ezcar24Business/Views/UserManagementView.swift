@@ -36,11 +36,11 @@ struct UserManagementView: View {
                             .font(.system(size: 60))
                             .foregroundColor(ColorTheme.secondaryText)
                         
-                        Text("No users found")
+                        Text("No users found".localizedString)
                             .font(.headline)
                             .foregroundColor(ColorTheme.secondaryText)
                         
-                        Text("Add users to track who made each expense")
+                        Text("Add users to track who made each expense".localizedString)
                             .font(.subheadline)
                             .foregroundColor(ColorTheme.tertiaryText)
                             .multilineTextAlignment(.center)
@@ -62,7 +62,7 @@ struct UserManagementView: View {
                 }
             }
             .background(ColorTheme.secondaryBackground)
-            .navigationTitle("Users")
+            .navigationTitle("Users".localizedString)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: {
@@ -72,15 +72,15 @@ struct UserManagementView: View {
                     }
                 }
             }
-            .alert("Add User", isPresented: $showingAddUser) {
-                TextField("Name", text: $newUserName)
+            .alert("Add User".localizedString, isPresented: $showingAddUser) {
+                TextField("Name".localizedString, text: $newUserName)
                     .textInputAutocapitalization(.words)
 
                 Button("cancel".localizedString, role: .cancel) {
                     newUserName = ""
                 }
 
-                Button("Add") {
+                Button("Add".localizedString) {
                     if !newUserName.isEmpty {
                         let user = viewModel.addUser(name: newUserName)
                         if let dealerId = CloudSyncEnvironment.currentDealerId {
@@ -92,7 +92,7 @@ struct UserManagementView: View {
                     }
                 }
             } message: {
-                Text("Enter the user's name")
+                Text("Enter the user's name".localizedString)
             }
         }
     }
@@ -127,7 +127,7 @@ struct UserRow: View {
                         .font(.headline)
                         .foregroundColor(ColorTheme.primaryText)
                     
-                    Text("Member since \(user.createdAt ?? Date(), style: .date)")
+                    Text(String(format: "Member since %@".localizedString, (user.createdAt ?? Date()).formatted(date: .abbreviated, time: .omitted)))
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                 }
@@ -139,7 +139,7 @@ struct UserRow: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Total Expenses")
+                    Text("Total Expenses".localizedString)
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                     
@@ -152,7 +152,7 @@ struct UserRow: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("Expense Count")
+                    Text("Expense Count".localizedString)
                         .font(.caption)
                         .foregroundColor(ColorTheme.secondaryText)
                     

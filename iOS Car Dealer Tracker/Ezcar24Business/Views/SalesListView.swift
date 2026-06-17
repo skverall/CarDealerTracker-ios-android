@@ -107,7 +107,7 @@ struct SalesListView: View {
                 Section {
                     VStack(spacing: 12) {
                         if showNavigation, canViewFinancials {
-                            Picker("Section", selection: $selectedSection) {
+                            Picker("Section".localizedString, selection: $selectedSection) {
                                 ForEach(SalesSection.allCases) { section in
                                     Text(section.title).tag(section)
                                 }
@@ -118,7 +118,7 @@ struct SalesListView: View {
                         searchField
 
                         if activeSection == .debts {
-                            Picker("Debt Filter", selection: $debtViewModel.filter) {
+                            Picker("Debt Filter".localizedString, selection: $debtViewModel.filter) {
                                 ForEach(DebtViewModel.DebtFilter.allCases) { filter in
                                     Text(filter.title).tag(filter)
                                 }
@@ -127,7 +127,7 @@ struct SalesListView: View {
                         }
                         
                         if activeSection == .sales {
-                            Picker("Sales Filter", selection: $viewModel.filter) {
+                            Picker("Sales Filter".localizedString, selection: $viewModel.filter) {
                                 Text("all_filter".localizedString).tag(SalesViewModel.SaleTypeFilter.all)
                                 Text("vehicles".localizedString).tag(SalesViewModel.SaleTypeFilter.vehicles)
                                 Text("parts_filter".localizedString).tag(SalesViewModel.SaleTypeFilter.parts)

@@ -156,7 +156,7 @@ struct AddDebtPaymentView: View {
                         .foregroundColor(ColorTheme.tertiaryText)
                         .frame(width: 40)
 
-                    TextField("Amount", text: $amount)
+                    TextField("Amount".localizedString, text: $amount)
                         .keyboardType(.decimalPad)
                         .font(.headline)
                         .onChange(of: amount) { _, newValue in
@@ -274,7 +274,7 @@ struct AddDebtPaymentView: View {
                         .frame(width: 24)
                         .padding(.top, 4)
 
-                    TextField("Note (Optional)", text: $note, axis: .vertical)
+                    TextField("Note (Optional)".localizedString, text: $note, axis: .vertical)
                         .lineLimit(2...4)
                 }
                 .padding(16)
