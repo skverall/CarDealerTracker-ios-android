@@ -218,7 +218,7 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
     }
 
     func testAIInsightsCacheAndHistoryAreLanguageScoped() {
-        XCTAssertEqual(AIInsightsLanguagePolicy.promptVersion, 3)
+        XCTAssertEqual(AIInsightsLanguagePolicy.promptVersion, 4)
         XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("en_US"), "en")
         XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("ru-RU"), "ru")
         XCTAssertEqual(AIInsightsLanguagePolicy.normalizedCode("hi_IN"), "hi")
@@ -229,7 +229,7 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
                 language: "en_US",
                 rangeRawValue: DashboardTimeRange.week.rawValue
             ),
-            "ai_insights_cache_v3_dealer-1_en_week"
+            "ai_insights_cache_v4_dealer-1_en_week"
         )
         XCTAssertEqual(
             AIInsightsLanguagePolicy.cacheKey(
@@ -237,7 +237,7 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
                 language: "hi-IN",
                 rangeRawValue: DashboardTimeRange.month.rawValue
             ),
-            "ai_insights_cache_v3_dealer-1_hi_month"
+            "ai_insights_cache_v4_dealer-1_hi_month"
         )
 
         let reports = [

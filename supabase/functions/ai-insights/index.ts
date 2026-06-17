@@ -15,9 +15,19 @@ const systemPrompt = [
   "You are a financial analyst for a car dealership business.",
   "Analyze the dealer data and return only valid JSON with this exact shape: {summary: string, insights: string[], recommendations: string[]}.",
   "The language rule is mandatory: write every user-facing value in summary, insights, and recommendations only in outputLanguage.name.",
-  "Do not answer in Russian unless outputLanguage.code is ru.",
+  "Follow outputLanguage.instruction exactly. For Hindi, use Hindi in Devanagari script, not English sentences or Latin transliteration.",
+  "Brand names, vehicle model names, numbers, currency symbols, and currency codes may remain unchanged.",
+  "Do not answer in any language other than outputLanguage.name.",
   "If previousReports use another language, use them only as context and rewrite the final answer in outputLanguage.name.",
   "Keep summary to 2-3 sentences, insights to 3 concrete observations, and recommendations to 3 practical actions.",
+].join(" ")
+
+const languageRepairPrompt = [
+  "You are a strict business translation engine.",
+  "Return only valid JSON with this exact shape: {summary: string, insights: string[], recommendations: string[]}.",
+  "Rewrite every user-facing value into outputLanguage.name and follow outputLanguage.instruction exactly.",
+  "Preserve the business meaning, numbers, currency symbols, currency codes, brand names, and vehicle model names.",
+  "For Hindi, use Hindi in Devanagari script, not English sentences or Latin transliteration.",
 ].join(" ")
 
 type DealerDataPayload = {
@@ -174,8 +184,14 @@ serve(async (req) => {
       const usage = await loadUsage(admin, user.id)
 
       if (!forceRefresh) {
-        const existingReport = await findExistingReport(admin, organizationId, payload.metadata.period, fingerprint)
-        if (existingReport) {
+        const existingReport = await findExistingReport(
+          admin,
+          organizationId,
+          payload.metadata.period,
+          fingerprint,
+          payload.metadata.language,
+        )
+        if (existingReport && responseMatchesLanguage(existingReport, payload.metadata.language)) {
           const reports = await loadHistory(admin, organizationId, payload.metadata.period, payload.metadata.language)
           return jsonResponse({
             ...existingReport,
@@ -235,6 +251,20 @@ async function requestDeepSeekInsights(
     ? { ...payload, outputLanguage, previousReports }
     : { ...payload, outputLanguage }
 
+  const parsed = await requestDeepSeekJSON(
+    deepSeekApiKey,
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: JSON.stringify(promptPayload) },
+    ],
+  )
+  return ensureResponseLanguage(deepSeekApiKey, parsed, outputLanguage)
+}
+
+async function requestDeepSeekJSON(
+  deepSeekApiKey: string,
+  messages: Array<{ role: "system" | "user"; content: string }>,
+) {
   const deepSeekResponse = await fetch(deepSeekEndpoint, {
     method: "POST",
     headers: {
@@ -247,10 +277,7 @@ async function requestDeepSeekInsights(
       response_format: { type: "json_object" },
       temperature: 0.2,
       max_tokens: 900,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: JSON.stringify(promptPayload) },
-      ],
+      messages,
     }),
   })
 
@@ -267,6 +294,41 @@ async function requestDeepSeekInsights(
   }
 
   return parseAIInsights(content)
+}
+
+async function ensureResponseLanguage(
+  deepSeekApiKey: string,
+  response: AIInsightsResponse,
+  outputLanguage: OutputLanguageInstruction,
+) {
+  if (responseMatchesLanguage(response, outputLanguage.code)) {
+    return response
+  }
+
+  const repaired = await requestDeepSeekJSON(
+    deepSeekApiKey,
+    [
+      { role: "system", content: languageRepairPrompt },
+      {
+        role: "user",
+        content: JSON.stringify({
+          outputLanguage,
+          report: response,
+        }),
+      },
+    ],
+  )
+
+  if (responseMatchesLanguage(repaired, outputLanguage.code)) {
+    return repaired
+  }
+
+  console.error("DeepSeek ai-insights language mismatch", outputLanguage.code)
+  throw new HttpError(
+    "AI provider returned report in the wrong language. Please try again.",
+    502,
+    "AI_INSIGHTS_LANGUAGE_MISMATCH",
+  )
 }
 
 function normalizeDealerData(body: DealerDataPayload, metadata: NormalizedMetadata): NormalizedDealerData {
@@ -319,8 +381,56 @@ function outputLanguageInstruction(code: string): OutputLanguageInstruction {
   return {
     code: normalized,
     name,
-    instruction: `Answer only in ${name}.`,
+    instruction: `Answer only in ${name}.${languageScriptInstruction(normalized)}`,
   }
+}
+
+function languageScriptInstruction(code: string) {
+  const scripts: Record<string, string> = {
+    ar: " Use Arabic script.",
+    hi: " Use Hindi in Devanagari script. Do not use English sentences or Latin transliteration.",
+    ja: " Use Japanese script.",
+    ru: " Use Cyrillic script.",
+  }
+  return scripts[code] ?? ""
+}
+
+function responseMatchesLanguage(response: AIInsightsResponse, languageCode: string) {
+  const code = normalizeLanguageCode(languageCode)
+  const scriptRules: Record<string, { pattern: RegExp; minCharacters: number; minRatio: number }> = {
+    ar: { pattern: /[\u0600-\u06FF]/u, minCharacters: 12, minRatio: 0.15 },
+    hi: { pattern: /[\u0900-\u097F]/u, minCharacters: 18, minRatio: 0.15 },
+    ja: { pattern: /[\u3040-\u30FF\u3400-\u9FFF]/u, minCharacters: 12, minRatio: 0.15 },
+    ru: { pattern: /[\u0400-\u04FF]/u, minCharacters: 12, minRatio: 0.15 },
+  }
+  const rule = scriptRules[code]
+  if (!rule) return true
+
+  const text = [
+    response.summary,
+    ...response.insights,
+    ...response.recommendations,
+  ].join(" ")
+  const letters = countLetters(text)
+  if (letters === 0) return false
+  const scriptCharacters = countMatchingCharacters(text, rule.pattern)
+  return scriptCharacters >= rule.minCharacters || scriptCharacters / letters >= rule.minRatio
+}
+
+function countLetters(text: string) {
+  let count = 0
+  for (const character of text) {
+    if (/\p{L}/u.test(character)) count += 1
+  }
+  return count
+}
+
+function countMatchingCharacters(text: string, pattern: RegExp) {
+  let count = 0
+  for (const character of text) {
+    if (pattern.test(character)) count += 1
+  }
+  return count
 }
 
 function normalizePeriod(value: unknown) {
@@ -476,6 +586,7 @@ async function findExistingReport(
   organizationId: string,
   period: string,
   fingerprint: string,
+  language: string,
 ) {
   const { data, error } = await admin
     .from("ai_insight_reports")
@@ -483,6 +594,7 @@ async function findExistingReport(
     .eq("organization_id", organizationId)
     .eq("period", period)
     .eq("fingerprint", fingerprint)
+    .eq("language", normalizeLanguageCode(language))
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -513,7 +625,9 @@ async function loadHistory(
   const { data, error } = await query
 
   if (error) throw error
-  return (data ?? []).map((row) => reportPayload(row as AIInsightReportRow))
+  return (data ?? [])
+    .map((row) => reportPayload(row as AIInsightReportRow))
+    .filter((report) => responseMatchesLanguage(report, language))
 }
 
 async function saveReport(

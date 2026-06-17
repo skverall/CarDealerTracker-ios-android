@@ -240,7 +240,7 @@ struct AnalyticsHubView: View {
         aiInsightsViewModel.prepare(range: range)
         guard isSignedIn else { return }
         Task {
-            await aiInsightsViewModel.loadHistory(range: range, isProAccessActive: true)
+            await aiInsightsViewModel.loadHistoryIndex(preferredRange: range, isProAccessActive: true)
         }
     }
 
@@ -252,6 +252,15 @@ struct AnalyticsHubView: View {
                 isProAccessActive: true
             )
         }
+    }
+
+    private func selectAIInsightReport(_ report: AIInsightsReport) {
+        let reportRange = DashboardTimeRange(rawValue: report.period) ?? selectedRange
+        if selectedRange != reportRange {
+            selectedRange = reportRange
+            financeViewModel.fetchFinancialData(range: reportRange)
+        }
+        aiInsightsViewModel.selectReport(report, range: reportRange)
     }
 
     private var rangePicker: some View {
@@ -313,7 +322,7 @@ struct AnalyticsHubView: View {
         let isLoading = hasProAccess && aiInsightsViewModel.isLoading(for: selectedRange)
         let errorMessage = hasProAccess ? aiInsightsViewModel.errorMessage(for: selectedRange) : nil
         let generatedAt = hasProAccess ? aiInsightsViewModel.generatedAt(for: selectedRange) : nil
-        let history = hasProAccess ? aiInsightsViewModel.history(for: selectedRange) : []
+        let history = hasProAccess ? aiInsightsViewModel.historyIndex() : []
         let selectedReportId = hasProAccess ? aiInsightsViewModel.selectedReportId(for: selectedRange) : nil
         let usage = hasProAccess ? aiInsightsViewModel.usage(for: selectedRange) : nil
 
@@ -333,7 +342,7 @@ struct AnalyticsHubView: View {
         ) {
             performAIInsightsAction()
         } onSelectReport: { report in
-            aiInsightsViewModel.selectReport(report, range: selectedRange)
+            selectAIInsightReport(report)
         } onConfirmRegeneration: {
             confirmAIRegeneration()
         } onCancelRegeneration: {
@@ -1455,7 +1464,7 @@ struct AIInsightsActionPolicy {
 }
 
 struct AIInsightsLanguagePolicy {
-    static let promptVersion = 3
+    static let promptVersion = 4
 
     static func normalizedCode(_ value: String?) -> String {
         let code = (value ?? "en")
@@ -1547,6 +1556,14 @@ private struct AIInsightsPremiumCard: View {
                 )
             }
 
+            if !history.isEmpty {
+                AIInsightsHistorySection(
+                    reports: history,
+                    selectedReportId: selectedReportId,
+                    onSelectReport: onSelectReport
+                )
+            }
+
             Group {
                 if isLoading && response == nil {
                     AIInsightsLoadingPreview()
@@ -1565,27 +1582,11 @@ private struct AIInsightsPremiumCard: View {
                             items: response.recommendations
                         )
                     }
-
-                    if !history.isEmpty {
-                        AIInsightsHistorySection(
-                            reports: history,
-                            selectedReportId: selectedReportId,
-                            onSelectReport: onSelectReport
-                        )
-                    }
                 } else {
                     AIInsightsEmptyState(
                         isSignedIn: isSignedIn,
                         hasProAccess: hasProAccess
                     )
-
-                    if !history.isEmpty {
-                        AIInsightsHistorySection(
-                            reports: history,
-                            selectedReportId: selectedReportId,
-                            onSelectReport: onSelectReport
-                        )
-                    }
                 }
             }
             .transition(.opacity.combined(with: .move(edge: .top)))
@@ -1772,11 +1773,24 @@ private struct AIInsightsHistorySection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("ai_insights_history_title".localizedString)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundColor(ColorTheme.secondaryText)
-                .textCase(.uppercase)
-                .tracking(0.6)
+            HStack(spacing: 8) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(ColorTheme.primary)
+
+                Text("ai_insights_history_title".localizedString)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(ColorTheme.primaryText)
+
+                Spacer(minLength: 8)
+
+                Text("\(reports.count)")
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(ColorTheme.tertiaryText.opacity(0.12), in: Capsule())
+            }
 
             VStack(spacing: 8) {
                 ForEach(reports) { report in
@@ -1792,6 +1806,13 @@ private struct AIInsightsHistorySection: View {
                 }
             }
         }
+        .padding(14)
+        .background(ColorTheme.secondaryBackground.opacity(0.78))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(ColorTheme.primary.opacity(0.12), lineWidth: 1)
+        )
     }
 }
 
@@ -1807,17 +1828,15 @@ private struct AIInsightsHistoryRow: View {
                 .frame(width: 24, height: 24)
 
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Text(report.displayDate)
-                        .font(.system(size: 13, weight: .semibold))
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(report.periodDisplayTitle)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
                         .foregroundColor(ColorTheme.primaryText)
 
-                    Text(report.periodDisplayTitle)
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                    Text(report.displayDate)
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(ColorTheme.secondaryText)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(ColorTheme.tertiaryText.opacity(0.12), in: Capsule())
+                        .lineLimit(1)
                 }
 
                 Text(report.summary)
@@ -1837,6 +1856,7 @@ private struct AIInsightsHistoryRow: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .stroke(isSelected ? ColorTheme.primary.opacity(0.24) : ColorTheme.tertiaryText.opacity(0.10), lineWidth: 1)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
@@ -2292,9 +2312,14 @@ struct AIInsightsReport: Codable, Equatable, Identifiable {
         Self.date(from: createdAt)
     }
 
+    @MainActor
     var displayDate: String {
         guard let date = createdDate else { return createdAt }
-        return Self.displayFormatter.string(from: date)
+        let formatter = DateFormatter()
+        formatter.locale = RegionSettingsManager.shared.selectedLanguage.locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 
     private static func date(from string: String) -> Date? {
@@ -2316,12 +2341,6 @@ struct AIInsightsReport: Codable, Equatable, Identifiable {
         return formatter
     }()
 
-    private static let displayFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
-    }()
 }
 
 private struct AIInsightsRequest: Encodable {
@@ -2426,6 +2445,7 @@ private final class AIInsightsViewModel: ObservableObject {
     @Published private var errorMessages: [DashboardTimeRange: String] = [:]
     @Published private var loadingRanges: Set<DashboardTimeRange> = []
     @Published private var histories: [DashboardTimeRange: [AIInsightsReport]] = [:]
+    @Published private var allHistory: [AIInsightsReport] = []
     @Published private var selectedReportIds: [DashboardTimeRange: String] = [:]
     @Published private var usageByRange: [DashboardTimeRange: AIInsightsUsage] = [:]
     @Published private var historyLoadingRanges: Set<DashboardTimeRange> = []
@@ -2434,6 +2454,8 @@ private final class AIInsightsViewModel: ObservableObject {
     private let client: SupabaseClient
     private let userDefaults: UserDefaults
     private var fingerprints: [DashboardTimeRange: String] = [:]
+    private var loadedHistoryLanguage: String?
+    private var isLoadingHistoryIndex = false
 
     init(
         context: NSManagedObjectContext,
@@ -2463,6 +2485,10 @@ private final class AIInsightsViewModel: ObservableObject {
 
     func history(for range: DashboardTimeRange) -> [AIInsightsReport] {
         histories[range] ?? []
+    }
+
+    func historyIndex() -> [AIInsightsReport] {
+        Array(allHistory.prefix(12))
     }
 
     func selectedReportId(for range: DashboardTimeRange) -> String? {
@@ -2497,6 +2523,7 @@ private final class AIInsightsViewModel: ObservableObject {
         responses[range] = report.response
         generatedDates[range] = report.createdDate
         selectedReportIds[range] = report.id
+        mergeIntoHistoryIndex([report])
         errorMessages[range] = nil
     }
 
@@ -2513,6 +2540,9 @@ private final class AIInsightsViewModel: ObservableObject {
                 generatedDates[range] = cached.generatedAt
                 fingerprints[range] = fingerprint
                 selectedReportIds[range] = cached.response.reportId
+                errorMessages[range] = nil
+            } else if responses[range]?.reportId != nil {
+                fingerprints[range] = fingerprint
                 errorMessages[range] = nil
             } else {
                 responses[range] = nil
@@ -2541,7 +2571,9 @@ private final class AIInsightsViewModel: ObservableObject {
                 "ai-insights",
                 options: FunctionInvokeOptions(body: AIInsightsHistoryRequest(metadata: metadata))
             )
-            histories[range] = AIInsightsLanguagePolicy.reports(envelope.reports, matching: metadata.language)
+            let reports = AIInsightsLanguagePolicy.reports(envelope.reports, matching: metadata.language)
+            histories[range] = reports
+            mergeIntoHistoryIndex(reports)
             if let usage = envelope.usage {
                 usageByRange[range] = usage
             }
@@ -2552,11 +2584,46 @@ private final class AIInsightsViewModel: ObservableObject {
             }
         } catch {
             if responses[range] == nil {
-                errorMessages[range] = "AI insights failed: \(Self.userFacingErrorMessage(from: error))"
+                errorMessages[range] = Self.userFacingErrorMessage(from: error)
             }
         }
 
         setHistoryLoading(false, for: range)
+    }
+
+    func loadHistoryIndex(preferredRange: DashboardTimeRange, isProAccessActive: Bool) async {
+        guard isProAccessActive else { return }
+        guard !isLoadingHistoryIndex else { return }
+        let language = AIInsightsLanguagePolicy.normalizedCode(RegionSettingsManager.shared.selectedLanguage.rawValue)
+        if loadedHistoryLanguage == language, !allHistory.isEmpty {
+            return
+        }
+
+        isLoadingHistoryIndex = true
+        if loadedHistoryLanguage != language {
+            allHistory = []
+            histories = [:]
+            loadedHistoryLanguage = language
+        }
+
+        let ranges = [preferredRange] + DashboardTimeRange.allCases.filter { $0 != preferredRange }
+        for range in ranges {
+            await loadHistory(range: range, isProAccessActive: isProAccessActive)
+        }
+        isLoadingHistoryIndex = false
+    }
+
+    private func mergeIntoHistoryIndex(_ reports: [AIInsightsReport]) {
+        guard !reports.isEmpty else { return }
+        var byId = Dictionary(uniqueKeysWithValues: allHistory.map { ($0.id, $0) })
+        for report in reports {
+            byId[report.id] = report
+        }
+        allHistory = byId.values.sorted { lhs, rhs in
+            let lhsDate = lhs.createdDate ?? .distantPast
+            let rhsDate = rhs.createdDate ?? .distantPast
+            return lhsDate > rhsDate
+        }
     }
 
     func generate(range: DashboardTimeRange, forceRefresh: Bool = false, isProAccessActive: Bool) async {
@@ -2596,7 +2663,21 @@ private final class AIInsightsViewModel: ObservableObject {
                 usageByRange[range] = usage
             }
             if let history = result.history {
-                histories[range] = AIInsightsLanguagePolicy.reports(history, matching: request.metadata.language)
+                let reports = AIInsightsLanguagePolicy.reports(history, matching: request.metadata.language)
+                histories[range] = reports
+                mergeIntoHistoryIndex(reports)
+            } else if let reportId = result.reportId, let generatedAt = result.generatedAt {
+                mergeIntoHistoryIndex([
+                    AIInsightsReport(
+                        id: reportId,
+                        period: request.metadata.period,
+                        language: request.metadata.language,
+                        summary: result.summary,
+                        insights: result.insights,
+                        recommendations: result.recommendations,
+                        createdAt: generatedAt
+                    )
+                ])
             }
             errorMessages[range] = nil
             saveCachedEntry(entry, for: range)
@@ -2604,7 +2685,7 @@ private final class AIInsightsViewModel: ObservableObject {
             if let response = Self.errorResponse(from: error), let usage = response.usage {
                 usageByRange[range] = usage
             }
-            errorMessages[range] = "AI insights failed: \(Self.userFacingErrorMessage(from: error))"
+            errorMessages[range] = Self.userFacingErrorMessage(from: error)
         }
 
         setLoading(false, for: range)
@@ -2762,6 +2843,9 @@ private final class AIInsightsViewModel: ObservableObject {
         if let response = errorResponse(from: error) {
             if response.code == "AI_INSIGHTS_LIMIT_REACHED" {
                 return "ai_insights_limit_reached_error".localizedString
+            }
+            if response.code == "AI_INSIGHTS_LANGUAGE_MISMATCH" {
+                return "please_try_again".localizedString
             }
             let message = response.error.trimmingCharacters(in: .whitespacesAndNewlines)
             if !message.isEmpty {
