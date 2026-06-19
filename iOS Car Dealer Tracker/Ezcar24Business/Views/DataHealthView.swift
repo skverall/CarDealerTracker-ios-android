@@ -5,16 +5,22 @@ struct DataHealthView: View {
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var networkMonitor: NetworkMonitor
     @EnvironmentObject private var sessionStore: SessionStore
+    @ObservedObject private var permissionService = PermissionService.shared
     @State private var report: SyncDiagnosticsReport?
     @State private var isRunning = false
     @State private var isRefreshing = false
     @State private var errorMessage: String?
     @State private var copied = false
     @State private var shareText: String?
+    @State private var isSyncingNow = false
+    @State private var isDeduplicating = false
+    @State private var maintenanceMessage: String?
 
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
+                maintenanceControls
+
                 diagnosticsControls
 
                 if let errorMessage {
@@ -37,7 +43,7 @@ struct DataHealthView: View {
             .padding(16)
         }
         .background(ColorTheme.background.ignoresSafeArea())
-        .navigationTitle("data_health".localizedString)
+        .navigationTitle("Sync & Maintenance".localizedString)
         .sheet(isPresented: Binding(
             get: { shareText != nil },
             set: { if !$0 { shareText = nil } }
@@ -48,6 +54,83 @@ struct DataHealthView: View {
                 }
             }
         }
+    }
+
+    private var maintenanceControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Maintenance".localizedString)
+                .font(.headline)
+                .foregroundColor(ColorTheme.primaryText)
+
+            Text("Sync your data with the cloud or clean up duplicate records.".localizedString)
+                .font(.footnote)
+                .foregroundColor(ColorTheme.secondaryText)
+
+            Button {
+                Task { await runSyncNow() }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: isSyncingNow ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(isSyncingNow ? "Syncing...".localizedString : "sync_now".localizedString)
+                            .fontWeight(.semibold)
+                        Text(String(format: "last_sync".localizedString, lastSyncText))
+                            .font(.caption2)
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                    Spacer()
+                    if isSyncingNow {
+                        ProgressView().tint(.white)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 10)
+                .padding(.horizontal, 12)
+                .background(ColorTheme.primary.opacity(isSyncingNow ? 0.4 : 0.9))
+                .foregroundColor(.white)
+                .cornerRadius(12)
+            }
+            .disabled(isSyncingNow || cloudSyncManager.isSyncing)
+
+            if permissionService.can(.manageTeam) {
+                Button {
+                    Task { await runDeduplication() }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: isDeduplicating ? "hourglass" : "arrow.triangle.merge")
+                        Text(isDeduplicating ? "cleaning_duplicates".localizedString : "clean_up_duplicates".localizedString)
+                            .fontWeight(.semibold)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 12)
+                    .background(ColorTheme.purple.opacity(isDeduplicating ? 0.35 : 0.12))
+                    .foregroundColor(isDeduplicating ? .white : ColorTheme.purple)
+                    .cornerRadius(12)
+                }
+                .disabled(isDeduplicating)
+            }
+
+            if let maintenanceMessage {
+                Text(maintenanceMessage)
+                    .font(.footnote)
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(16)
+        .cardStyle()
+    }
+
+    private var lastSyncText: String {
+        if let date = cloudSyncManager.lastSyncAt {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            return formatter.string(from: date)
+        }
+        return "never".localizedString
     }
 
     private var diagnosticsControls: some View {
@@ -337,6 +420,37 @@ struct DataHealthView: View {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
         return "\(version) (\(build))"
+    }
+
+    @MainActor
+    private func runSyncNow() async {
+        guard case .signedIn(let user) = sessionStore.status else {
+            errorMessage = "diagnostics_sign_in_required".localizedString
+            return
+        }
+        errorMessage = nil
+        maintenanceMessage = nil
+        isSyncingNow = true
+        await cloudSyncManager.fullSync(user: user)
+        isSyncingNow = false
+    }
+
+    @MainActor
+    private func runDeduplication() async {
+        guard case .signedIn(let user) = sessionStore.status else {
+            errorMessage = "diagnostics_sign_in_required".localizedString
+            return
+        }
+        maintenanceMessage = nil
+        isDeduplicating = true
+        do {
+            let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+            try await cloudSyncManager.deduplicateData(dealerId: dealerId)
+            maintenanceMessage = "duplicates_removed".localizedString
+        } catch {
+            maintenanceMessage = error.localizedDescription
+        }
+        isDeduplicating = false
     }
 
     @MainActor

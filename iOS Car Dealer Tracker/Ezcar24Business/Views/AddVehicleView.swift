@@ -151,6 +151,7 @@ struct AddVehicleView: View {
                     .padding(.horizontal)
                 }
                 .padding(.vertical)
+                .adaptiveFormWidth()
             }
             .background(ColorTheme.secondaryBackground)
             .navigationTitle("add_vehicle_title".localizedString)

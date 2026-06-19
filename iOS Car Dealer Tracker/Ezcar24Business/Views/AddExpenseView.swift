@@ -162,38 +162,37 @@ struct AddExpenseView: View {
                 VStack(spacing: 0) {
                     // Custom Header
                     headerView
-                    
+
                     ScrollView {
                         VStack(spacing: 24) {
                             // Hero Amount Input
                             amountInputSection
-                            
+
                             // Category Selector
                             categorySelector
-                            
+
                             // Main Details Card
                             detailsCard
-                            
+
                             // Context Selectors (Vehicle, User, Account)
                             contextSection
 
                             receiptSection
-                            
-                            Spacer(minLength: 100) // Space for bottom button
                         }
                         .padding(.vertical, 20)
+                        .adaptiveFormWidth()
                     }
                     .scrollDismissesKeyboard(.interactively)
                 }
-                
-                // Floating Save Button
-                VStack {
-                    Spacer()
+                .safeAreaInset(edge: .bottom) {
                     saveButton
+                        .frame(maxWidth: 680)
+                        .frame(maxWidth: .infinity)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 20)
+                        .padding(.top, 6)
                 }
-                
+
                 // Toast Overlay
                 if showSavedToast {
                     savedToast

@@ -242,7 +242,7 @@ struct SalesListView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAddSaleSheet) {
+        .adaptiveFormPresentation(isPresented: $showAddSaleSheet) {
             AddSaleView()
         }
         .sheet(isPresented: $showAddDebtSheet) {

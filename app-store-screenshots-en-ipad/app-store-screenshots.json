@@ -1,0 +1,275 @@
+{
+  "schemaVersion": 2,
+  "appName": "Car Dealer Tracker",
+  "themeId": "dealer-pro",
+  "connectedCanvas": true,
+  "locales": [
+    "en"
+  ],
+  "locale": "en",
+  "device": "ipad",
+  "orientation": "portrait",
+  "appIcon": "/app-icon.png",
+  "slidesByDevice": {
+    "iphone": [],
+    "android": [],
+    "ipad": [
+      {
+        "id": "en-ipad-01-hero",
+        "layout": "hero",
+        "label": {
+          "en": "FOR CAR DEALERS"
+        },
+        "headline": {
+          "en": "See your whole\ndealership clearly"
+        },
+        "screenshot": "/screenshots/apple/ipad/{locale}/01.png",
+        "transforms": {
+          "caption": {
+            "x": 155,
+            "y": 190,
+            "width": 1755,
+            "height": 640,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 265,
+            "y": 885,
+            "width": 1535,
+            "height": 1994.8051948051948,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "en-ipad-02-expenses",
+        "layout": "device-bottom",
+        "label": {
+          "en": "EXPENSES"
+        },
+        "headline": {
+          "en": "Track every cost\nas it happens"
+        },
+        "screenshot": "/screenshots/apple/ipad/{locale}/02.png",
+        "inverted": true,
+        "transforms": {
+          "caption": {
+            "x": 175,
+            "y": 210,
+            "width": 1715,
+            "height": 600,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 302,
+            "y": 760,
+            "width": 1460,
+            "height": 1896.103896103896,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "en-ipad-03-inventory",
+        "layout": "two-devices",
+        "label": {
+          "en": "INVENTORY"
+        },
+        "headline": {
+          "en": "Manage every car\nfrom one desk"
+        },
+        "screenshot": "/screenshots/apple/ipad/{locale}/03.png",
+        "screenshotSecondary": "/screenshots/apple/ipad/{locale}/01.png",
+        "transforms": {
+          "caption": {
+            "x": 160,
+            "y": 190,
+            "width": 1745,
+            "height": 580,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "deviceSecondary": {
+            "x": -90,
+            "y": 990,
+            "width": 1180,
+            "height": 1532.4675324675325,
+            "rotation": -4,
+            "zIndex": 2
+          },
+          "device": {
+            "x": 825,
+            "y": 830,
+            "width": 1340,
+            "height": 1740.2597402597403,
+            "rotation": 4,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "en-ipad-04-parts",
+        "layout": "device-top",
+        "label": {
+          "en": "PARTS"
+        },
+        "headline": {
+          "en": "Keep stock\nunder control"
+        },
+        "screenshot": "/screenshots/apple/ipad/{locale}/04.png",
+        "transforms": {
+          "device": {
+            "x": 285,
+            "y": -120,
+            "width": 1495,
+            "height": 1941.5584415584415,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 170,
+            "y": 1885,
+            "width": 1725,
+            "height": 600,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "en-ipad-05-sales",
+        "layout": "device-bottom",
+        "label": {
+          "en": "SALES"
+        },
+        "headline": {
+          "en": "Know profit\non every deal"
+        },
+        "screenshot": "/screenshots/apple/ipad/{locale}/05.png",
+        "transforms": {
+          "caption": {
+            "x": 170,
+            "y": 210,
+            "width": 1725,
+            "height": 585,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 310,
+            "y": 760,
+            "width": 1445,
+            "height": 1876.6233766233765,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "en-ipad-06-clients",
+        "layout": "two-devices",
+        "label": {
+          "en": "CLIENTS"
+        },
+        "headline": {
+          "en": "Never lose\na hot lead"
+        },
+        "screenshot": "/screenshots/apple/ipad/{locale}/06.png",
+        "screenshotSecondary": "/screenshots/apple/ipad/{locale}/05.png",
+        "inverted": true,
+        "transforms": {
+          "caption": {
+            "x": 160,
+            "y": 185,
+            "width": 1745,
+            "height": 590,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "deviceSecondary": {
+            "x": -130,
+            "y": 990,
+            "width": 1160,
+            "height": 1506.4935064935066,
+            "rotation": -3,
+            "zIndex": 2
+          },
+          "device": {
+            "x": 835,
+            "y": 835,
+            "width": 1325,
+            "height": 1720.7792207792209,
+            "rotation": 3,
+            "zIndex": 3
+          }
+        }
+      },
+      {
+        "id": "en-ipad-07-settings",
+        "layout": "device-top",
+        "label": {
+          "en": "TEAM READY"
+        },
+        "headline": {
+          "en": "Set up the way\nyour team works"
+        },
+        "screenshot": "/screenshots/apple/ipad/{locale}/07.png",
+        "transforms": {
+          "device": {
+            "x": 300,
+            "y": -145,
+            "width": 1475,
+            "height": 1915.5844155844156,
+            "rotation": 0,
+            "zIndex": 3
+          },
+          "caption": {
+            "x": 165,
+            "y": 1875,
+            "width": 1735,
+            "height": 620,
+            "rotation": 0,
+            "zIndex": 4
+          }
+        }
+      },
+      {
+        "id": "en-ipad-08-fast-entry",
+        "layout": "device-bottom",
+        "label": {
+          "en": "FAST ENTRY"
+        },
+        "headline": {
+          "en": "Add clean records\nin seconds"
+        },
+        "screenshot": "/screenshots/apple/ipad/{locale}/08.png",
+        "inverted": true,
+        "transforms": {
+          "caption": {
+            "x": 165,
+            "y": 205,
+            "width": 1735,
+            "height": 585,
+            "rotation": 0,
+            "zIndex": 4
+          },
+          "device": {
+            "x": 315,
+            "y": 735,
+            "width": 1435,
+            "height": 1863.6363636363637,
+            "rotation": 0,
+            "zIndex": 3
+          }
+        }
+      }
+    ],
+    "android-7": [],
+    "android-10": [],
+    "feature-graphic": []
+  }
+}

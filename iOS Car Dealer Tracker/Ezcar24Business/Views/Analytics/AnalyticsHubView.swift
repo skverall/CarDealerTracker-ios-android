@@ -2166,12 +2166,11 @@ private struct AIInsightsActionButton: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .shadow(
-                color: ColorTheme.secondary.opacity(canAnimate && isAnimating ? 0.42 : 0.22),
-                radius: canAnimate && isAnimating ? 18 : 10,
+                color: ColorTheme.secondary.opacity(0.22),
+                radius: 10,
                 x: 0,
                 y: 7
             )
-            .scaleEffect(canAnimate && isAnimating ? 1.012 : 1)
         }
         .buttonStyle(.hapticScale)
         .disabled(isLoading || !isEnabled)
@@ -2181,7 +2180,6 @@ private struct AIInsightsActionButton: View {
         .onAppear {
             isAnimating = true
         }
-        .animation(canAnimate ? .easeInOut(duration: 1.35).repeatForever(autoreverses: true) : .snappy(duration: 0.2), value: isAnimating)
     }
 
     private var canAnimate: Bool {

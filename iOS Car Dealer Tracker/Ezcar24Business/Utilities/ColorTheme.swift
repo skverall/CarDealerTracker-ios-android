@@ -121,6 +121,41 @@ extension View {
             hideKeyboard()
         }
     }
+
+    /// Presents an add/edit form as a centered modal sheet. On iPad the sheet is sized to a
+    /// tall card so long forms aren't cramped; on iPhone it uses the standard large sheet.
+    /// This is the single place to tune form presentation across the app.
+    func adaptiveFormPresentation<FormContent: View>(
+        isPresented: Binding<Bool>,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping () -> FormContent
+    ) -> some View {
+        self.sheet(isPresented: isPresented, onDismiss: onDismiss) {
+            content().formSheetSizing()
+        }
+    }
+
+    /// Item-based variant of `adaptiveFormPresentation`.
+    func adaptiveFormPresentation<Item: Identifiable, FormContent: View>(
+        item: Binding<Item?>,
+        onDismiss: (() -> Void)? = nil,
+        @ViewBuilder content: @escaping (Item) -> FormContent
+    ) -> some View {
+        self.sheet(item: item, onDismiss: onDismiss) { item in
+            content(item).formSheetSizing()
+        }
+    }
+
+    /// Sizes a presented form sheet to the large centered card on both iPad and iPhone.
+    func formSheetSizing() -> some View {
+        self.presentationDetents([.large])
+    }
+
+    /// Hook for constraining form content width. Currently a passthrough so forms fill the
+    /// modal sheet; kept so call sites stay stable if a width cap is reintroduced later.
+    func adaptiveFormWidth(_ maxWidth: CGFloat = 680) -> some View {
+        self
+    }
 }
 
 // MARK: - Premium Button Styles

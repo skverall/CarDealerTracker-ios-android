@@ -54,41 +54,11 @@ struct AccountView: View {
                 ColorTheme.background.ignoresSafeArea()
                 
                 ScrollView {
-                    VStack(spacing: 24) {
-                        accountHeader
-
-                        subscriptionCard
-
-                        if shouldShowFeedbackBoardPrompt {
-                            feedbackBoardPromptCard
-                        }
-
-                        referralCard
-
-                        // MARK: - General Settings
-                        generalSettingsSection
-                        
-                        // MARK: - Management & Data
-                        managementDataSection
-                        
-                        // MARK: - Security
-                        securitySection
-                        
-                        // MARK: - Support
-                        supportSection
-                        
-                        // MARK: - Legal
-                        legalSection
-                        
-                        // MARK: - Sign Out
-                        signOutButton
-                        
-                        // MARK: - Version
-                        appVersionView
+                    if isPadLayout {
+                        iPadSettingsContent
+                    } else {
+                        phoneSettingsContent
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 20)
-                    .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 700 : .infinity)
                 }
             }
             .navigationTitle("account".localizedString)
@@ -178,8 +148,82 @@ struct AccountView: View {
         .environment(\.colorScheme, regionSettings.selectedTheme.colorScheme)
     }
     
-    private var generalSettingsSection: some View {
-        menuSection(title: "settings".localizedKey) {
+    private var isPadLayout: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
+    private var phoneSettingsContent: some View {
+        VStack(spacing: 24) {
+            accountHeader
+
+            subscriptionCard
+
+            if shouldShowFeedbackBoardPrompt {
+                feedbackBoardPromptCard
+            }
+
+            referralCard
+
+            appSettingsSection
+
+            businessSettingsSection
+
+            managementDataSection
+
+            securitySection
+
+            supportSection
+
+            legalSection
+
+            signOutButton
+
+            appVersionView
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 20)
+    }
+
+    private var iPadSettingsContent: some View {
+        VStack(spacing: 24) {
+            accountHeader
+
+            subscriptionCard
+
+            if shouldShowFeedbackBoardPrompt {
+                feedbackBoardPromptCard
+            }
+
+            referralCard
+
+            HStack(alignment: .top, spacing: 20) {
+                VStack(spacing: 24) {
+                    appSettingsSection
+                    managementDataSection
+                    supportSection
+                }
+
+                VStack(spacing: 24) {
+                    if showBusinessSettingsSection {
+                        businessSettingsSection
+                    }
+                    securitySection
+                    legalSection
+                }
+            }
+
+            signOutButton
+
+            appVersionView
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 24)
+        .frame(maxWidth: 960)
+        .frame(maxWidth: .infinity)
+    }
+
+    private var appSettingsSection: some View {
+        menuSection(title: LocalizedStringKey("App Settings")) {
             NavigationLink {
                 RegionLanguageSettingsView()
             } label: {
@@ -187,36 +231,62 @@ struct AccountView: View {
             }
 
             themeToggleRow
-            
+
             Divider().padding(.leading, 52)
             notificationsRow
-            
+
             partsToggleRow
+        }
+    }
 
-            if permissionService.can(.viewFinancials) {
-                Divider().padding(.leading, 52)
-                NavigationLink {
-                    HoldingCostSettingsView()
-                } label: {
-                    MenuRow(icon: "flame.fill", title: "holding_cost_settings".localizedKey, color: .orange)
-                }
-            }
+    private var showHoldingCostSetting: Bool {
+        permissionService.can(.viewFinancials)
+    }
 
-            if permissionService.can(.createSale) || permissionService.currentRole == "owner" || permissionService.currentRole == "admin" {
-                Divider().padding(.leading, 52)
-                NavigationLink {
-                    DealDeskSettingsView()
-                } label: {
-                    MenuRow(icon: "doc.text.magnifyingglass", title: LocalizedStringKey("Deal Desk"), color: .blue)
+    private var showDealDeskSetting: Bool {
+        permissionService.can(.createSale) || permissionService.currentRole == "owner" || permissionService.currentRole == "admin"
+    }
+
+    private var showFinancialAccountsSetting: Bool {
+        permissionService.currentRole == "owner" || permissionService.currentRole == "admin"
+    }
+
+    private var showBusinessSettingsSection: Bool {
+        showHoldingCostSetting || showDealDeskSetting || showFinancialAccountsSetting
+    }
+
+    @ViewBuilder
+    private var businessSettingsSection: some View {
+        if showBusinessSettingsSection {
+            menuSection(title: LocalizedStringKey("Business")) {
+                if showHoldingCostSetting {
+                    NavigationLink {
+                        HoldingCostSettingsView()
+                    } label: {
+                        MenuRow(icon: "flame.fill", title: "holding_cost_settings".localizedKey, color: .orange)
+                    }
                 }
-            }
-            
-            if permissionService.currentRole == "owner" || permissionService.currentRole == "admin" {
-                Divider().padding(.leading, 52)
-                NavigationLink {
-                    FinancialAccountsView()
-                } label: {
-                    MenuRow(icon: "banknote", title: "financial_accounts".localizedKey, color: .green)
+
+                if showDealDeskSetting {
+                    if showHoldingCostSetting {
+                        Divider().padding(.leading, 52)
+                    }
+                    NavigationLink {
+                        DealDeskSettingsView()
+                    } label: {
+                        MenuRow(icon: "doc.text.magnifyingglass", title: LocalizedStringKey("Deal Desk"), color: .blue)
+                    }
+                }
+
+                if showFinancialAccountsSetting {
+                    if showHoldingCostSetting || showDealDeskSetting {
+                        Divider().padding(.leading, 52)
+                    }
+                    NavigationLink {
+                        FinancialAccountsView()
+                    } label: {
+                        MenuRow(icon: "banknote", title: "financial_accounts".localizedKey, color: .green)
+                    }
                 }
             }
         }
@@ -235,20 +305,11 @@ struct AccountView: View {
                         Divider().padding(.leading, 52)
                     }
 
-                    if MonthlyReportSettingsViewModel.canAccess(role: permissionService.currentRole) {
-                        NavigationLink {
-                            MonthlyReportSettingsView()
-                        } label: {
-                            MenuRow(icon: "envelope.badge.fill", title: LocalizedStringKey("Email Reports"), color: .indigo)
-                        }
-                        Divider().padding(.leading, 52)
-                    }
-
                     if permissionService.currentRole == "owner" {
                         NavigationLink {
                             BackupCenterView()
                         } label: {
-                            MenuRow(icon: "externaldrive.badge.checkmark", title: "backup_export".localizedKey, color: .orange)
+                            MenuRow(icon: "externaldrive.badge.checkmark", title: LocalizedStringKey("Reports & Data Export"), color: .orange)
                         }
                         Divider().padding(.leading, 52)
                     }
@@ -256,32 +317,16 @@ struct AccountView: View {
                     NavigationLink {
                         DataHealthView()
                     } label: {
-                        MenuRow(icon: "stethoscope", title: "data_health".localizedKey, color: .teal)
+                        MenuRow(icon: "stethoscope", title: LocalizedStringKey("Sync & Maintenance"), color: .teal)
                     }
-                    Divider().padding(.leading, 52)
-
-                    if permissionService.can(.manageTeam) { // Admin/Owner
-                        Button {
-                            Task {
-                                await runDeduplication()
-                            }
-                        } label: {
-                            MenuRow(icon: "arrow.triangle.merge", title: "clean_up_duplicates".localizedKey, color: .purple)
-                        }
-                        Divider().padding(.leading, 52)
-                    }
-                    
-                    syncRow
                 }
             } else {
                 menuSection(title: "sync".localizedKey) {
                     NavigationLink {
                         DataHealthView()
                     } label: {
-                        MenuRow(icon: "stethoscope", title: "data_health".localizedKey, color: .teal)
+                        MenuRow(icon: "stethoscope", title: LocalizedStringKey("Sync & Maintenance"), color: .teal)
                     }
-                    Divider().padding(.leading, 52)
-                    syncRow
                 }
             }
         }

@@ -838,10 +838,10 @@ struct ExpenseListView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddExpense) {
+            .adaptiveFormPresentation(isPresented: $showingAddExpense) {
                 AddExpenseView(viewModel: viewModel)
             }
-            .sheet(isPresented: $showingEdit) {
+            .adaptiveFormPresentation(isPresented: $showingEdit) {
                 AddExpenseView(viewModel: viewModel, editingExpense: editingExpense)
             }
             .fileImporter(isPresented: $showImporter, allowedContentTypes: [.commaSeparatedText, .text]) { result in
@@ -1080,10 +1080,10 @@ struct DealerExpenseDashboardView: View {
                     .padding(.bottom, isPadLayout ? 28 : 90)
             }
 
-            .sheet(isPresented: $showingAddExpense) {
+            .adaptiveFormPresentation(isPresented: $showingAddExpense) {
                 AddExpenseView(viewModel: viewModel)
             }
-            .sheet(isPresented: Binding(get: { editingExpense != nil }, set: { if !$0 { editingExpense = nil } })) {
+            .adaptiveFormPresentation(isPresented: Binding(get: { editingExpense != nil }, set: { if !$0 { editingExpense = nil } })) {
                 if let expense = editingExpense {
                     AddExpenseView(viewModel: viewModel, editingExpense: expense)
                 }
@@ -1141,20 +1141,28 @@ struct DealerExpenseDashboardView: View {
                 iPadExpenseCategoryBreakdown(presentation: expensePresentation)
 
                 // Filter chips
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("filters".localizedString.uppercased())
                         .font(.caption.weight(.bold))
                         .foregroundColor(ColorTheme.secondaryText)
                         .tracking(1)
-                        .padding(.horizontal, 4)
 
-                    HStack(spacing: 8) {
-                        vehicleChip
-                        userChip
+                    VStack(spacing: 10) {
+                        HStack(spacing: 10) {
+                            vehicleChip.frame(maxWidth: .infinity)
+                            userChip.frame(maxWidth: .infinity)
+                        }
+                        categoryChip.frame(maxWidth: .infinity)
                     }
-                    categoryChip
                 }
-                .padding(.top, 2)
+                .padding(16)
+                .background(ColorTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(0.04), radius: 10, y: 5)
             }
             .padding(.horizontal, 20)
             .padding(.top, 12)
@@ -1541,12 +1549,14 @@ struct DealerExpenseDashboardView: View {
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
+                .lineLimit(1)
+            Spacer(minLength: 4)
             Image(systemName: "chevron.down")
                 .font(.caption2)
                 .opacity(0.8)
         }
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.vertical, 11)
         .background(isActive ? ColorTheme.primary : ColorTheme.cardBackground)
         .foregroundColor(isActive ? .white : ColorTheme.secondaryText)
         .clipShape(Capsule())

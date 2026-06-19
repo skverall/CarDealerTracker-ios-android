@@ -132,20 +132,19 @@ struct AddPartView: View {
                         if addInitialStock {
                             initialStockCard
                         }
-                        
-                        Spacer(minLength: 100)
                     }
                     .padding(.vertical, 20)
+                    .adaptiveFormWidth()
                 }
                 .scrollDismissesKeyboard(.interactively)
             }
-            
-            // Floating Save Button
-            VStack {
-                Spacer()
+            .safeAreaInset(edge: .bottom) {
                 saveButton
+                    .frame(maxWidth: 680)
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
+                    .padding(.top, 6)
             }
         }
         .alert("parts_add_part_error".localizedString, isPresented: $showError) {

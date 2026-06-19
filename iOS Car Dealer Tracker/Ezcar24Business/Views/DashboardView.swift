@@ -92,19 +92,17 @@ struct DashboardView: View {
         .sheet(isPresented: $showingSearch) {
             GlobalSearchView()
         }
-        .sheet(isPresented: $showingAddExpense) {
+        .adaptiveFormPresentation(isPresented: $showingAddExpense) {
             AddExpenseView(viewModel: expenseEntryViewModel)
                 .environment(\.managedObjectContext, viewContext)
-                .presentationDetents([.large])
         }
         .sheet(item: $selectedExpense) { expense in
             ExpenseDetailSheet(expense: expense)
                 .presentationDetents([.medium, .large])
         }
-        .sheet(item: $editingExpense) { expense in
+        .adaptiveFormPresentation(item: $editingExpense) { expense in
             AddExpenseView(viewModel: expenseEntryViewModel, editingExpense: expense)
                 .environment(\.managedObjectContext, viewContext)
-                .presentationDetents([.large])
         }
         .onChange(of: selectedRange) { _, newValue in
             viewModel.fetchFinancialData(range: newValue)
@@ -831,29 +829,29 @@ private struct AccountBalanceCard: View {
                              endPoint: .bottomTrailing
                          )
                      )
-                     .frame(width: 36, height: 36)
+                     .frame(width: 40, height: 40)
                      .shadow(color: color.opacity(0.32), radius: 5, x: 0, y: 2)
                  Image(systemName: icon)
-                     .font(.system(size: 16, weight: .bold))
+                     .font(.system(size: 18, weight: .bold))
                      .foregroundColor(.white)
             }
-            
-            VStack(alignment: .leading, spacing: 3) {
+
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.caption.weight(.medium))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundColor(ColorTheme.secondaryText)
                     .lineLimit(1)
-                
+
                 Text(amount.asCurrencyCompact())
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .font(.system(size: 23, weight: .bold, design: .rounded))
                     .foregroundColor(ColorTheme.primaryText)
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, minHeight: 108, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 16)
+        .frame(maxWidth: .infinity, minHeight: 116, alignment: .leading)
         .background(ColorTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
         .shadow(color: Color.black.opacity(0.035), radius: 7, x: 0, y: 3)

@@ -134,7 +134,7 @@ struct VehicleListView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingAddVehicle) {
+            .adaptiveFormPresentation(isPresented: $showingAddVehicle) {
                 AddVehicleView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingPaywall) {
@@ -1264,33 +1264,35 @@ extension VehicleListView {
     }
 
     private func iPadHeroMetric(title: String, value: String, icon: String, color: Color) -> some View {
-        HStack(spacing: 11) {
+        VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .bold))
+                .font(.system(size: 15, weight: .bold))
                 .foregroundColor(color)
-                .frame(width: 36, height: 36)
+                .frame(width: 34, height: 34)
                 .background(.white.opacity(0.92))
-                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.system(size: 26, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+
                 Text(title)
                     .font(.caption.weight(.heavy))
                     .foregroundColor(.white.opacity(0.92))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.6)
                     .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
-
-                Text(value)
-                    .font(.system(size: 24, weight: .black, design: .rounded))
-                    .foregroundColor(.white)
-                    .monospacedDigit()
-                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
             }
 
             Spacer(minLength: 0)
         }
-        .padding(13)
-        .frame(maxWidth: .infinity, minHeight: 74)
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         .background(.white.opacity(0.16))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
         .overlay(

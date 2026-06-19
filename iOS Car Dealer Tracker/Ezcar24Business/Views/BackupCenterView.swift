@@ -5,6 +5,7 @@ struct BackupCenterView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var sessionStore: SessionStore
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
+    @ObservedObject private var permissionService = PermissionService.shared
     @StateObject private var exporter: BackupExportManager
 
     @State private var startDate: Date = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
@@ -26,7 +27,43 @@ struct BackupCenterView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         headerSection
-                        
+
+                        // MARK: - Scheduled Reports
+                        if MonthlyReportSettingsViewModel.canAccess(role: permissionService.currentRole) {
+                            menuSection(title: "Scheduled Reports") {
+                                NavigationLink {
+                                    MonthlyReportSettingsView()
+                                } label: {
+                                    HStack(spacing: 16) {
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.indigo.opacity(0.1))
+                                                .frame(width: 36, height: 36)
+                                            Image(systemName: "envelope.badge.fill")
+                                                .foregroundColor(.indigo)
+                                                .font(.system(size: 16))
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("Email Reports".localizedString)
+                                                .foregroundColor(ColorTheme.primaryText)
+                                                .font(.body)
+                                            Text("Schedule automatic monthly report emails.".localizedString)
+                                                .font(.caption)
+                                                .foregroundColor(ColorTheme.secondaryText)
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
+                                            .font(.caption)
+                                            .foregroundColor(ColorTheme.tertiaryText)
+                                    }
+                                    .padding(16)
+                                }
+                            }
+                        }
+
                         // MARK: - Quick Exports
                         menuSection(title: "Quick Exports") {
                             ExportRow(
@@ -167,7 +204,7 @@ struct BackupCenterView: View {
                     .padding(16)
                 }
             }
-            .navigationTitle("Backup & Export".localizedString)
+            .navigationTitle("Reports & Data Export".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { attachCloudManagerIfNeeded() }
             .sheet(isPresented: Binding(

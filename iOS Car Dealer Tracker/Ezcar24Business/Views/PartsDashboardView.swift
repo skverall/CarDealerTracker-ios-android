@@ -70,7 +70,7 @@ struct PartsDashboardView: View {
                     menuActions
                 }
             }
-            .sheet(isPresented: $showAddPart) { NavigationStack { AddPartView() } }
+            .adaptiveFormPresentation(isPresented: $showAddPart) { NavigationStack { AddPartView() } }
             .sheet(isPresented: $showReceiveStock) { NavigationStack { ReceivePartStockView() } }
             .sheet(isPresented: $showAddSale) { NavigationStack { AddPartSaleView() } }
         }
