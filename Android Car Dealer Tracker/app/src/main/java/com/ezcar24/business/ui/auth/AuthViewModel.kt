@@ -190,6 +190,12 @@ class AuthViewModel @Inject constructor(
                     )
                 ) {
                     SignUpResult.AUTHENTICATED -> {
+                        viewModelScope.launch {
+                            authRepository.notifySignupCompleted(
+                                referralCode = currentState.referralCode.trim().ifBlank { null },
+                                teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
+                            )
+                        }
                         authRepository.applyPendingPostAuthActions(
                             teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                         )

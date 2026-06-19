@@ -1,5 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+import {
+  alertLine,
+  alertSection,
+  compactUserId,
+  countryLabel,
+  durationSince,
+  formatAmount,
+  sendAdminAlert,
+} from "../_shared/telegram_alerts.ts"
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? ""
 const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -47,6 +56,10 @@ serve(async (req) => {
     const periodType = event.period_type ?? event.periodType ?? ""
     const appUserId = event.app_user_id ?? event.appUserId ?? ""
     const eventId = event.id ?? event.event_id ?? event.eventId ?? null
+    const normalizedEventType = String(eventType).toUpperCase()
+    const normalizedPeriodType = String(periodType).toUpperCase()
+
+    await notifyRevenueCatEvent(event, normalizedEventType, normalizedPeriodType, appUserId)
 
     if (!isValidUuid(appUserId)) {
       return new Response(JSON.stringify({ ok: true, skipped: true }), {
@@ -61,8 +74,6 @@ serve(async (req) => {
       p_period_type: periodType
     }
 
-    const normalizedEventType = String(eventType).toUpperCase()
-    const normalizedPeriodType = String(periodType).toUpperCase()
     const eligibleEvent =
       (normalizedEventType === "INITIAL_PURCHASE" || normalizedEventType === "NON_RENEWING_PURCHASE")
       && normalizedPeriodType !== "TRIAL"
@@ -134,3 +145,148 @@ serve(async (req) => {
     })
   }
 })
+
+async function notifyRevenueCatEvent(
+  event: Record<string, unknown>,
+  eventType: string,
+  periodType: string,
+  appUserId: string
+) {
+  if (!shouldAlertRevenueCatEvent(event, eventType, periodType)) return
+
+  const price = event.price_in_purchased_currency ?? event.price
+  const currency = event.currency ?? event.currency_code
+  const user = await getAuthUserForAlert(appUserId)
+  const riskFlags = revenueCatRiskFlags(event, eventType, periodType, appUserId)
+  const risk = revenueCatRiskLabel(riskFlags)
+  const title = risk === "HIGH"
+    ? "Suspicious RevenueCat subscription"
+    : "RevenueCat subscription event"
+
+  await sendAdminAlert({
+    title,
+    lines: [
+      alertLine("Risk", risk),
+      alertLine("Flags", riskFlags),
+      alertSection("Event"),
+      alertLine("Event", eventType),
+      alertLine("Period", periodType),
+      alertLine("Product", event.product_id ?? event.productId),
+      alertLine("Entitlements", event.entitlement_ids ?? event.entitlementIds),
+      alertLine("Price", formatAmount(price, currency)),
+      alertLine("Store", event.store),
+      alertLine("Environment", event.environment),
+      alertLine("Country", countryLabel(event.country_code ?? event.countryCode)),
+      alertSection("User"),
+      alertLine("Email", user?.email),
+      alertLine("User ID", appUserId),
+      alertLine("Short ID", compactUserId(appUserId)),
+      alertLine("Account age", durationSince(user?.createdAt)),
+      alertLine("Created at", user?.createdAt),
+      alertSection("Trace"),
+      alertLine("Event ID", event.id ?? event.event_id ?? event.eventId),
+      alertLine("Reported at", new Date().toISOString()),
+    ],
+  })
+}
+
+type AuthAlertUser = {
+  email?: string
+  createdAt?: string
+}
+
+async function getAuthUserForAlert(userId: string): Promise<AuthAlertUser | null> {
+  if (!isValidUuid(userId) || !serviceRoleKey) return null
+
+  try {
+    const { data, error } = await supabase.auth.admin.getUserById(userId)
+    if (error || !data?.user) return null
+
+    return {
+      email: data.user.email ?? undefined,
+      createdAt: data.user.created_at ?? undefined,
+    }
+  } catch (error) {
+    console.warn("RevenueCat auth user lookup failed", error)
+    return null
+  }
+}
+
+function shouldAlertRevenueCatEvent(
+  event: Record<string, unknown>,
+  eventType: string,
+  periodType: string
+): boolean {
+  if (isSuspiciousRevenueCatEvent(event, eventType, periodType)) return true
+  return new Set([
+    "INITIAL_PURCHASE",
+    "NON_RENEWING_PURCHASE",
+    "PRODUCT_CHANGE",
+    "BILLING_ISSUE",
+    "CANCELLATION",
+    "UNCANCELLATION",
+    "EXPIRATION",
+    "TRANSFER",
+    "TEMPORARY_ENTITLEMENT_GRANT",
+  ]).has(eventType)
+}
+
+function isSuspiciousRevenueCatEvent(
+  event: Record<string, unknown>,
+  eventType: string,
+  periodType: string
+): boolean {
+  if (periodType === "TRIAL") return false
+  if (!["INITIAL_PURCHASE", "NON_RENEWING_PURCHASE", "PRODUCT_CHANGE"].includes(eventType)) {
+    return false
+  }
+
+  const price = numberValue(event.price_in_purchased_currency ?? event.price)
+  return price !== null && price <= 0
+}
+
+function revenueCatRiskFlags(
+  event: Record<string, unknown>,
+  eventType: string,
+  periodType: string,
+  appUserId: string
+): string[] {
+  const flags: string[] = []
+  if (isSuspiciousRevenueCatEvent(event, eventType, periodType)) {
+    flags.push("paid event with zero/non-positive price")
+  }
+  if (!isValidUuid(appUserId)) {
+    flags.push("app user id is not a Supabase UUID")
+  }
+  if (eventType === "TRANSFER") {
+    flags.push("subscription transferred between users")
+  }
+  if (eventType === "TEMPORARY_ENTITLEMENT_GRANT") {
+    flags.push("temporary entitlement grant")
+  }
+  if (String(event.environment ?? "").toUpperCase() === "SANDBOX") {
+    flags.push("sandbox event")
+  }
+  return flags
+}
+
+function revenueCatRiskLabel(flags: string[]): string {
+  if (flags.some((flag) =>
+    flag.includes("zero/non-positive")
+    || flag.includes("not a Supabase UUID")
+    || flag.includes("temporary entitlement")
+  )) {
+    return "HIGH"
+  }
+  if (flags.length > 0) return "WATCH"
+  return "INFO"
+}
+
+function numberValue(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string") {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+  return null
+}

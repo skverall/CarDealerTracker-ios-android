@@ -2,21 +2,28 @@ package com.ezcar24.business.data.repository
 
 import android.content.Context
 import android.net.Uri
+import android.os.Build
 import android.util.Log
+
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
+import java.util.TimeZone
+
 import javax.inject.Inject
 import javax.inject.Singleton
+
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.postgrest
+
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.withContext
+
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
@@ -24,7 +31,9 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+
 import com.ezcar24.business.BuildConfig
+import com.ezcar24.business.util.RegionSettingsManager
 
 private const val AUTH_PREFS = "ezcar24_auth"
 private const val PENDING_INVITE_TOKEN = "pendingInviteToken"
@@ -73,10 +82,30 @@ private data class DeleteAccountResponse(
     val success: Boolean = false
 )
 
+@Serializable
+private data class AdminSignupAlertRequest(
+    val event: String = "signup_completed",
+    val source: String = "android",
+    val platform: String = "Android",
+    @SerialName("referral_code_present") val referralCodePresent: Boolean,
+    @SerialName("team_invite_code_present") val teamInviteCodePresent: Boolean,
+    @SerialName("app_version") val appVersion: String,
+    @SerialName("app_build") val appBuild: String,
+    @SerialName("app_region") val appRegion: String,
+    @SerialName("app_language") val appLanguage: String,
+    @SerialName("currency_code") val currencyCode: String,
+    @SerialName("device_locale") val deviceLocale: String,
+    @SerialName("device_country_code") val deviceCountryCode: String?,
+    val timezone: String,
+    @SerialName("device_model") val deviceModel: String,
+    @SerialName("os_version") val osVersion: String
+)
+
 @Singleton
 class AuthRepository @Inject constructor(
     @ApplicationContext context: Context,
-    private val client: SupabaseClient
+    private val client: SupabaseClient,
+    private val regionSettingsManager: RegionSettingsManager
 ) {
     private val authPrefs = context.getSharedPreferences(AUTH_PREFS, Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
@@ -116,6 +145,60 @@ class AuthRepository @Inject constructor(
             SignUpResult.AUTHENTICATED
         } else {
             SignUpResult.EMAIL_CONFIRMATION_REQUIRED
+        }
+    }
+
+    suspend fun notifySignupCompleted(
+        referralCode: String?,
+        teamInviteCode: String?
+    ) = withContext(Dispatchers.IO) {
+        val accessToken = client.auth.currentAccessTokenOrNull()
+        if (accessToken.isNullOrBlank()) {
+            return@withContext
+        }
+
+        val regionState = regionSettingsManager.state.value
+        val request = AdminSignupAlertRequest(
+            referralCodePresent = !referralCode.isNullOrBlank(),
+            teamInviteCodePresent = !teamInviteCode.isNullOrBlank(),
+            appVersion = BuildConfig.VERSION_NAME,
+            appBuild = BuildConfig.VERSION_CODE.toString(),
+            appRegion = regionState.selectedRegion.displayName,
+            appLanguage = regionState.selectedLanguage.tag,
+            currencyCode = regionState.selectedRegion.currencyCode,
+            deviceLocale = Locale.getDefault().toLanguageTag(),
+            deviceCountryCode = Locale.getDefault().country.takeIf { it.isNotBlank() },
+            timezone = TimeZone.getDefault().id,
+            deviceModel = listOf(Build.MANUFACTURER, Build.MODEL)
+                .filter { it.isNotBlank() }
+                .joinToString(" "),
+            osVersion = "Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})"
+        )
+        val connection = (URL("${BuildConfig.SUPABASE_URL}/functions/v1/admin_alerts").openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            doInput = true
+            doOutput = true
+            connectTimeout = 5_000
+            readTimeout = 5_000
+            setRequestProperty("Authorization", "Bearer $accessToken")
+            setRequestProperty("apikey", BuildConfig.SUPABASE_ANON_KEY)
+            setRequestProperty("Content-Type", "application/json")
+        }
+
+        try {
+            connection.outputStream.bufferedWriter().use { writer ->
+                writer.write(json.encodeToString(request))
+            }
+
+            val statusCode = connection.responseCode
+            if (statusCode !in 200..299) {
+                val responseBody = connection.errorStream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                Log.w(TAG, "admin_alerts failed ($statusCode): ${parseFunctionError(responseBody)}")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "admin_alerts signup notification failed", e)
+        } finally {
+            connection.disconnect()
         }
     }
 

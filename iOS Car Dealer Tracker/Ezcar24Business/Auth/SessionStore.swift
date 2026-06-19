@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import UIKit
 
 struct ReferralStats: Equatable {
     let totalRewards: Int
@@ -64,6 +65,42 @@ private struct DeleteAccountPayload: Encodable {}
 
 private struct DeleteAccountResponse: Decodable {
     let success: Bool
+}
+
+private struct AdminSignupAlertPayload: Encodable {
+    let event = "signup_completed"
+    let source = "ios"
+    let platform = "iOS"
+    let referralCodePresent: Bool
+    let teamInviteCodePresent: Bool
+    let appVersion: String
+    let appBuild: String
+    let appRegion: String
+    let appLanguage: String
+    let currencyCode: String
+    let deviceLocale: String
+    let deviceCountryCode: String?
+    let timezone: String
+    let deviceModel: String
+    let osVersion: String
+
+    enum CodingKeys: String, CodingKey {
+        case event
+        case source
+        case platform
+        case referralCodePresent = "referral_code_present"
+        case teamInviteCodePresent = "team_invite_code_present"
+        case appVersion = "app_version"
+        case appBuild = "app_build"
+        case appRegion = "app_region"
+        case appLanguage = "app_language"
+        case currencyCode = "currency_code"
+        case deviceLocale = "device_locale"
+        case deviceCountryCode = "device_country_code"
+        case timezone
+        case deviceModel = "device_model"
+        case osVersion = "os_version"
+    }
 }
 
 private struct DealDeskSettingsUpsertParams: Encodable {
@@ -391,7 +428,7 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    func signUp(email: String, password: String, phone: String?, referralCode: String?) async throws {
+    func signUp(email: String, password: String, phone: String?, referralCode: String?, teamInviteCode: String?) async throws {
         isAuthenticating = true
         defer { isAuthenticating = false }
         do {
@@ -405,6 +442,7 @@ final class SessionStore: ObservableObject {
                 // Link RevenueCat user
                 SubscriptionManager.shared.logIn(userId: session.user.id.uuidString)
                 cachePendingProfile(userId: session.user.id, phone: phone, email: session.user.email ?? email)
+                notifySignupCompleted(referralCode: referralCode, teamInviteCode: teamInviteCode)
                 errorMessage = nil
                 return
             }
@@ -414,6 +452,35 @@ final class SessionStore: ObservableObject {
         } catch {
             errorMessage = localized(error)
             throw error
+        }
+    }
+
+    private func notifySignupCompleted(referralCode: String?, teamInviteCode: String?) {
+        let regionSettings = RegionSettingsManager.shared
+        let payload = AdminSignupAlertPayload(
+            referralCodePresent: !(referralCode?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
+            teamInviteCodePresent: !(teamInviteCode?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
+            appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
+            appBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown",
+            appRegion: regionSettings.selectedRegion.rawValue,
+            appLanguage: regionSettings.selectedLanguage.rawValue,
+            currencyCode: regionSettings.selectedRegion.currencyCode,
+            deviceLocale: Locale.current.identifier,
+            deviceCountryCode: Locale.current.region?.identifier,
+            timezone: TimeZone.current.identifier,
+            deviceModel: UIDevice.current.model,
+            osVersion: "\(UIDevice.current.systemName) \(UIDevice.current.systemVersion)"
+        )
+
+        Task { [client] in
+            do {
+                _ = try await client.functions.invoke(
+                    "admin_alerts",
+                    options: FunctionInvokeOptions(body: payload)
+                )
+            } catch {
+                print("admin_alerts signup notification failed: \(error.localizedDescription)")
+            }
         }
     }
 

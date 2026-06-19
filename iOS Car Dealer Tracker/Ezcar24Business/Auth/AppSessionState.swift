@@ -47,7 +47,7 @@ final class AppSessionState: ObservableObject {
             case .signUp:
                 let phoneValue = trimmedPhone.isEmpty ? nil : trimmedPhone
                 let codeValue = trimmedReferralCode.isEmpty ? nil : trimmedReferralCode
-                try await sessionStore.signUp(email: trimmedEmail, password: password, phone: phoneValue, referralCode: codeValue)
+                try await sessionStore.signUp(email: trimmedEmail, password: password, phone: phoneValue, referralCode: codeValue, teamInviteCode: inviteCodeValue)
             }
             if let inviteCodeValue {
                 _ = await sessionStore.submitTeamInviteCode(inviteCodeValue)
