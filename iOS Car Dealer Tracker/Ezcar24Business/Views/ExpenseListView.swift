@@ -996,6 +996,22 @@ struct DealerExpenseDashboardView: View {
     @State private var editingExpense: Expense? = nil
     @State private var searchText = ""
 
+    private var isPadLayout: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
+    private var heroCardAspectRatio: CGFloat {
+        isPadLayout ? 1.586 : 1.586
+    }
+
+    private var heroCardPadding: CGFloat {
+        isPadLayout ? 22 : 24
+    }
+
+    private var heroAmountFontSize: CGFloat {
+        isPadLayout ? 36 : 38
+    }
+
     private var canDeleteRecords: Bool {
         if case .signedIn = sessionStore.status {
             return permissionService.can(.deleteRecords)
@@ -1053,98 +1069,15 @@ struct DealerExpenseDashboardView: View {
         return ZStack(alignment: .bottomTrailing) {
                 ColorTheme.background.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    header
-                    
-                    // Filter chips
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            vehicleChip
-                            userChip
-                            categoryChip
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                    }
-                    .background(ColorTheme.background)
-
-                    List {
-                        if expensePresentation.dateGroups.isEmpty {
-                            emptyState
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                        } else {
-                            ForEach(expensePresentation.dateGroups) { group in
-                                Section {
-                                    ForEach(group.items, id: \.objectID) { expense in
-                                        Button {
-                                            editingExpense = expense
-                                        } label: {
-                                            CompactExpenseRow(expense: expense)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                                        .listRowBackground(Color.clear)
-                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                            if canDeleteRecords {
-                                                Button(role: .destructive) {
-                                                    let account = expense.account
-                                                    if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
-                                                        deleteExpenseFromCloud(deletedId, account: account)
-                                                    }
-                                                } label: {
-                                                    Label("delete".localizedString, systemImage: "trash")
-                                                }
-                                            }
-                                            
-                                            Button {
-                                                editingExpense = expense
-                                            } label: {
-                                                Label("edit".localizedString, systemImage: "pencil")
-                                            }
-                                            .tint(ColorTheme.primary)
-                                        }
-                                    }
-                                } header: {
-                                    HStack {
-                                        Text(group.key)
-                                            .font(.body)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(ColorTheme.primaryText)
-                                        Spacer()
-                                        Text(group.subtotal.asCurrency())
-                                            .font(.subheadline)
-                                            .fontWeight(.bold)
-                                            .foregroundColor(ColorTheme.primary)
-                                    }
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 12)
-                                    .background(ColorTheme.background)
-                                    .listRowInsets(EdgeInsets())
-                                }
-                            }
-                            
-                            Spacer(minLength: 90)
-                                .listRowSeparator(.hidden)
-                                .listRowInsets(EdgeInsets())
-                                .listRowBackground(Color.clear)
-                        }
-                    }
-                    .listStyle(.plain)
-                    .scrollContentBackground(.hidden)
-                    .background(ColorTheme.background)
-                    .refreshable {
-                        if case .signedIn(let user) = sessionStore.status {
-                            await cloudSyncManager.manualSync(user: user)
-                            viewModel.fetchExpenses()
-                        }
-                    }
+                if isPadLayout {
+                    iPadLayout(expensePresentation: expensePresentation)
+                } else {
+                    iPhoneLayout(expensePresentation: expensePresentation)
                 }
 
                 fab
-                    .padding(.trailing, 24)
-                    .padding(.bottom, 90)
+                    .padding(.trailing, isPadLayout ? 28 : 24)
+                    .padding(.bottom, isPadLayout ? 28 : 90)
             }
 
             .sheet(isPresented: $showingAddExpense) {
@@ -1165,16 +1098,170 @@ struct DealerExpenseDashboardView: View {
             }
         }
 
+    @ViewBuilder
+    private func iPhoneLayout(expensePresentation: ExpenseViewModel.ExpensePresentationSnapshot) -> some View {
+        VStack(spacing: 0) {
+            header
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    vehicleChip
+                    userChip
+                    categoryChip
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            .background(ColorTheme.background)
+
+            expenseList(expensePresentation: expensePresentation)
+        }
+    }
+
+    @ViewBuilder
+    private func iPadLayout(expensePresentation: ExpenseViewModel.ExpensePresentationSnapshot) -> some View {
+        HStack(alignment: .top, spacing: 0) {
+            iPadSidePanel(expensePresentation: expensePresentation)
+                .frame(width: 380)
+
+            expenseList(expensePresentation: expensePresentation)
+                .background(ColorTheme.secondaryBackground.opacity(0.4))
+        }
+    }
+
+    @ViewBuilder
+    private func iPadSidePanel(expensePresentation: ExpenseViewModel.ExpensePresentationSnapshot) -> some View {
+        ScrollView {
+            VStack(spacing: 18) {
+                header
+                    .padding(.horizontal, 0)
+
+                iPadExpenseSummaryStats(presentation: expensePresentation)
+
+                iPadExpenseCategoryBreakdown(presentation: expensePresentation)
+
+                // Filter chips
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("filters".localizedString.uppercased())
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .tracking(1)
+                        .padding(.horizontal, 4)
+
+                    HStack(spacing: 8) {
+                        vehicleChip
+                        userChip
+                    }
+                    categoryChip
+                }
+                .padding(.top, 2)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 12)
+            .padding(.bottom, 28)
+        }
+    }
+
+    @ViewBuilder
+    private func expenseList(expensePresentation: ExpenseViewModel.ExpensePresentationSnapshot) -> some View {
+        List {
+            if expensePresentation.dateGroups.isEmpty {
+                emptyState
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            } else {
+                ForEach(expensePresentation.dateGroups) { group in
+                    Section {
+                        ForEach(group.items, id: \.objectID) { expense in
+                            Button {
+                                editingExpense = expense
+                            } label: {
+                                CompactExpenseRow(expense: expense)
+                            }
+                            .buttonStyle(.plain)
+                            .listRowInsets(EdgeInsets(top: 4, leading: isPadLayout ? 8 : 16, bottom: 4, trailing: isPadLayout ? 8 : 16))
+                            .listRowBackground(Color.clear)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                if canDeleteRecords {
+                                    Button(role: .destructive) {
+                                        let account = expense.account
+                                        if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
+                                            deleteExpenseFromCloud(deletedId, account: account)
+                                        }
+                                    } label: {
+                                        Label("delete".localizedString, systemImage: "trash")
+                                    }
+                                }
+
+                                Button {
+                                    editingExpense = expense
+                                } label: {
+                                    Label("edit".localizedString, systemImage: "pencil")
+                                }
+                                .tint(ColorTheme.primary)
+                            }
+                        }
+                    } header: {
+                        HStack {
+                            Text(group.key)
+                                .font(.body)
+                                .fontWeight(.bold)
+                                .foregroundColor(ColorTheme.primaryText)
+                            Spacer()
+                            Text(group.subtotal.asCurrency())
+                                .font(.subheadline)
+                                .fontWeight(.bold)
+                                .foregroundColor(ColorTheme.primary)
+                        }
+                        .padding(.horizontal, isPadLayout ? 12 : 20)
+                        .padding(.vertical, 12)
+                        .background(ColorTheme.background)
+                        .listRowInsets(EdgeInsets())
+                    }
+                }
+
+                Spacer(minLength: isPadLayout ? 32 : 90)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .background(ColorTheme.background)
+        .refreshable {
+            if case .signedIn(let user) = sessionStore.status {
+                await cloudSyncManager.manualSync(user: user)
+                viewModel.fetchExpenses()
+            }
+        }
+    }
+
 
 
     private var header: some View {
         let expensePresentation = viewModel.presentationSnapshot
-        return VStack(spacing: 20) {
-            HStack(alignment: .center) {
+        return VStack(spacing: isPadLayout ? 16 : 20) {
+            HStack(alignment: .center, spacing: 12) {
+                Image(systemName: "creditcard.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(
+                        LinearGradient(
+                            colors: [ColorTheme.primary, ColorTheme.secondary],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .shadow(color: ColorTheme.primary.opacity(0.25), radius: 10, y: 5)
+
                 Text("expenses".localizedString)
-                    .font(.largeTitle.weight(.bold))
+                    .font(.system(size: isPadLayout ? 32 : 34, weight: .black, design: .rounded))
                     .foregroundColor(ColorTheme.primaryText)
-                
+
                 Spacer()
             }
             .padding(.horizontal, 20)
@@ -1245,15 +1332,15 @@ struct DealerExpenseDashboardView: View {
                         .shadow(color: .black.opacity(0.3), radius: 2)
                     
                     Text(expensePresentation.currentWeekTotal.asCurrencyCompact())
-                        .font(.system(size: 38, weight: .heavy, design: .rounded))
+                        .font(.system(size: heroAmountFontSize, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
                         .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                 }
             }
-            .padding(24)
-            .aspectRatio(1.586, contentMode: .fit)
+            .padding(heroCardPadding)
+            .aspectRatio(heroCardAspectRatio, contentMode: .fit)
             .background(
                 ZStack {
                     // Base deep obsidian/blue gradient
@@ -1301,8 +1388,87 @@ struct DealerExpenseDashboardView: View {
             )
             .padding(.horizontal, 20)
         }
-        .padding(.bottom, 16)
+        .padding(.bottom, isPadLayout ? 8 : 16)
         .background(ColorTheme.background)
+    }
+
+    @ViewBuilder
+    private func iPadExpenseSummaryStats(presentation: ExpenseViewModel.ExpensePresentationSnapshot) -> some View {
+        let weekTotal = presentation.currentWeekTotal
+        let totalAll = presentation.totalExpenseAmount
+        let totalCount = presentation.dateGroups.reduce(0) { $0 + $1.items.count }
+
+        VStack(spacing: 12) {
+            iPadSummaryTile(
+                title: "this_week".localizedString.uppercased(),
+                value: weekTotal.asCurrency(),
+                icon: "calendar",
+                color: ColorTheme.primary
+            )
+
+            HStack(spacing: 12) {
+                iPadSummaryTile(
+                    title: "total".localizedString.uppercased(),
+                    value: totalAll.asCurrency(),
+                    icon: "chart.bar.fill",
+                    color: ColorTheme.purple,
+                    compact: true
+                )
+
+                iPadSummaryTile(
+                    title: "transactions".localizedString.uppercased(),
+                    value: "\(totalCount)",
+                    icon: "list.bullet.rectangle.fill",
+                    color: ColorTheme.accent,
+                    compact: true
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func iPadExpenseCategoryBreakdown(presentation: ExpenseViewModel.ExpensePresentationSnapshot) -> some View {
+        let total = presentation.totalExpenseAmount
+        let summaries = presentation.categorySummaries
+            .sorted { $0.value.subtotal > $1.value.subtotal }
+            .prefix(5)
+
+        if total > 0, !summaries.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("by_category".localizedString.uppercased())
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .tracking(1)
+
+                VStack(spacing: 10) {
+                    ForEach(Array(summaries), id: \.key) { category, summary in
+                        iPadCategoryBar(
+                            name: localizedExpenseCategoryName(category),
+                            amount: summary.subtotal,
+                            count: summary.count,
+                            fraction: fraction(of: summary.subtotal, in: total),
+                            color: ColorTheme.categoryColor(for: category)
+                        )
+                    }
+                }
+            }
+            .padding(16)
+            .background(ColorTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.04), radius: 10, y: 5)
+        }
+    }
+
+    private func fraction(of part: Decimal, in total: Decimal) -> CGFloat {
+        guard total > 0 else { return 0 }
+        let totalDouble = NSDecimalNumber(decimal: total).doubleValue
+        guard totalDouble > 0 else { return 0 }
+        let partDouble = NSDecimalNumber(decimal: part).doubleValue
+        return CGFloat(partDouble / totalDouble)
     }
 
     // MARK: - Chips
@@ -1592,6 +1758,96 @@ struct DealerExpenseDashboardView: View {
         }
         
         return parts.isEmpty ? "no_details".localizedString : parts.joined(separator: " • ")
+    }
+}
+
+private struct iPadSummaryTile: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    var compact: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: compact ? 6 : 10) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: compact ? 12 : 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: compact ? 26 : 30, height: compact ? 26 : 30)
+                    .background(color)
+                    .clipShape(RoundedRectangle(cornerRadius: compact ? 9 : 11, style: .continuous))
+
+                Text(title)
+                    .font(.system(size: 10, weight: .heavy))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .tracking(0.6)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            Text(value)
+                .font(.system(size: compact ? 18 : 22, weight: .black, design: .rounded))
+                .foregroundColor(ColorTheme.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(compact ? 12 : 14)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.gray.opacity(0.1), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 10, y: 5)
+    }
+}
+
+private struct iPadCategoryBar: View {
+    let name: String
+    let amount: Decimal
+    let count: Int
+    let fraction: CGFloat
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(ColorTheme.primaryText)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Text(amount.asCurrency())
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Text(String(format: "%lld", Int64(count)))
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 2)
+                    .background(color.opacity(0.85))
+                    .clipShape(Capsule())
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.gray.opacity(0.12))
+
+                    Capsule()
+                        .fill(color)
+                        .frame(width: max(0, geo.size.width * min(max(fraction, 0), 1)))
+                }
+            }
+            .frame(height: 6)
+        }
     }
 }
 

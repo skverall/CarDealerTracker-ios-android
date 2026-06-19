@@ -205,7 +205,7 @@ struct SalesListView: View {
                 }
             }
             .listStyle(.plain)
-            .padding(.bottom, 90)
+            .padding(.bottom, UIDevice.current.userInterfaceIdiom == .pad ? 24 : 90)
             .refreshable {
                 if case .signedIn(let user) = sessionStore.status {
                     await cloudSyncManager.manualSync(user: user)

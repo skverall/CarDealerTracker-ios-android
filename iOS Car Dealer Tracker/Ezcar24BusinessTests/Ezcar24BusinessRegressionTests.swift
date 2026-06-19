@@ -2209,6 +2209,36 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertFalse(csv.contains(formatter.string(from: completedReminder.dueDate!)))
     }
 
+    func testBackupExportCalendarDayRangeIncludesEntireEndDate() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let start = calendar.date(from: DateComponents(year: 2026, month: 4, day: 3, hour: 14, minute: 30))!
+        let end = calendar.date(from: DateComponents(year: 2026, month: 6, day: 19, hour: 8, minute: 15))!
+        let expectedStart = calendar.date(from: DateComponents(year: 2026, month: 4, day: 3))!
+        let expectedEnd = calendar.date(from: DateComponents(year: 2026, month: 6, day: 20))!
+        let finalEndDayMoment = calendar.date(from: DateComponents(year: 2026, month: 6, day: 19, hour: 23, minute: 59, second: 59))!
+
+        let range = try BackupExportManager.calendarDayRange(start: start, end: end, calendar: calendar)
+
+        XCTAssertEqual(range.start, expectedStart)
+        XCTAssertEqual(range.end, expectedEnd)
+        XCTAssertTrue(range.contains(finalEndDayMoment))
+        XCTAssertFalse(range.contains(expectedEnd.addingTimeInterval(1)))
+    }
+
+    func testBackupExportCalendarDayRangeRejectsEndBeforeStart() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+
+        let start = calendar.date(from: DateComponents(year: 2026, month: 6, day: 19))!
+        let end = calendar.date(from: DateComponents(year: 2026, month: 4, day: 3))!
+
+        XCTAssertThrowsError(try BackupExportManager.calendarDayRange(start: start, end: end, calendar: calendar)) { error in
+            XCTAssertEqual(error as? BackupExportError, .invalidDateRange)
+        }
+    }
+
     func testReportMonthUsesPreviousCalendarMonthBoundaries() {
         let calendar = Calendar(identifier: .gregorian)
         let referenceDate = calendar.date(from: DateComponents(year: 2026, month: 3, day: 8, hour: 12))!

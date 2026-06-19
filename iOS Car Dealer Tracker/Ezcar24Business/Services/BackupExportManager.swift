@@ -13,6 +13,20 @@ final class BackupExportManager: ObservableObject {
         self.cloudSyncManager = cloudSyncManager
     }
 
+    nonisolated static func calendarDayRange(
+        start startDate: Date,
+        end endDate: Date,
+        calendar: Calendar = .current
+    ) throws -> DateInterval {
+        let normalizedStart = calendar.startOfDay(for: startDate)
+        let normalizedEndDay = calendar.startOfDay(for: endDate)
+        guard normalizedStart <= normalizedEndDay else {
+            throw BackupExportError.invalidDateRange
+        }
+        let normalizedEnd = calendar.date(byAdding: .day, value: 1, to: normalizedEndDay) ?? normalizedEndDay.addingTimeInterval(86_400)
+        return DateInterval(start: normalizedStart, end: normalizedEnd)
+    }
+
     func exportExpensesCSV(range: DateInterval? = nil) throws -> URL {
         let expenses = try fetchExpenses(range: range)
         var csv = "Date,Description,Category,Amount,Vehicle,User,Account\n"
@@ -264,7 +278,7 @@ final class BackupExportManager: ObservableObject {
                         [
                             primaryDetailCellHTML(
                                 title: sale.title,
-                                detail: "\(escapeHTML(shortDateString(sale.soldAt))) • \(escapeHTML(sale.buyerName))<br><span class=\"muted\">Purchase \(escapeHTML(sale.purchasePrice.asCurrencyFallback())) • Expenses \(escapeHTML(sale.vehicleExpenses.asCurrencyFallback())) • Holding \(escapeHTML(sale.holdingCost.asCurrencyFallback())) • VAT refund \(escapeHTML(sale.vatRefund.asCurrencyFallback()))</span>"
+                                detail: "\(escapeHTML(shortDateString(sale.soldAt))) • \(escapeHTML(sale.buyerName))<br>Purchase \(escapeHTML(sale.purchasePrice.asCurrencyFallback())) • Expenses \(escapeHTML(sale.vehicleExpenses.asCurrencyFallback())) • Holding \(escapeHTML(sale.holdingCost.asCurrencyFallback())) • VAT refund \(escapeHTML(sale.vatRefund.asCurrencyFallback()))"
                             ),
                             plainCellHTML(shortDateString(sale.soldAt)),
                             amountCellHTML(sale.revenue),
@@ -290,7 +304,7 @@ final class BackupExportManager: ObservableObject {
                         [
                             primaryDetailCellHTML(
                                 title: sale.summary,
-                                detail: "\(escapeHTML(shortDateString(sale.soldAt)))<br><span class=\"muted\">COGS \(escapeHTML(sale.costOfGoodsSold.asCurrencyFallback()))</span>"
+                                detail: "\(escapeHTML(shortDateString(sale.soldAt)))<br>COGS \(escapeHTML(sale.costOfGoodsSold.asCurrencyFallback()))"
                             ),
                             plainCellHTML(sale.buyerName),
                             amountCellHTML(sale.revenue),
@@ -455,30 +469,54 @@ final class BackupExportManager: ObservableObject {
         <head>
         <meta charset="utf-8">
         <style>
+        :root {
+            --s-1: 4px;
+            --s-2: 8px;
+            --s-3: 12px;
+            --s-4: 16px;
+            --s-5: 20px;
+            --s-6: 24px;
+            --ink: #0f172a;
+            --ink-2: #334155;
+            --muted: #64748b;
+            --muted-2: #475569;
+            --line: #e2e8f0;
+            --line-soft: #edf2f7;
+            --surface: #ffffff;
+            --surface-2: #f8fafc;
+            --track: #e7edf5;
+            --radius-card: 18px;
+            --radius-panel: 20px;
+            --radius-pill: 999px;
+        }
         * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         body {
             margin: 0;
             padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
-            color: #0f172a;
+            color: var(--ink);
             background: #f3f6fb;
             font-size: 12px;
-            line-height: 1.45;
+            line-height: 1.5;
+            font-variant-numeric: tabular-nums;
         }
-        .shell { padding: 18px; }
+        .shell { padding: var(--s-5); }
+
+        /* ===== HERO ===== */
         .hero {
             background: #11233a;
             color: #ffffff;
-            border-radius: 24px;
-            padding: 26px 28px;
-            margin-bottom: 16px;
+            border-radius: var(--radius-panel);
+            padding: var(--s-6) 28px;
+            margin-bottom: var(--s-4);
+            page-break-inside: avoid;
         }
         .eyebrow {
             font-size: 10px;
             letter-spacing: 1.6px;
             text-transform: uppercase;
             color: rgba(255,255,255,0.74);
-            margin-bottom: 8px;
+            margin-bottom: var(--s-2);
         }
         .hero h1 {
             margin: 0 0 6px 0;
@@ -493,17 +531,19 @@ final class BackupExportManager: ObservableObject {
             font-weight: 600;
         }
         .hero-meta {
-            margin-top: 18px;
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 12px;
+            margin-top: var(--s-5);
+            display: flex;
+            gap: var(--s-3);
+            align-items: stretch;
         }
-        .hero-meta td {
+        .hero-meta .meta-cell {
+            flex: 1 1 0;
+            min-width: 0;
             background: rgba(255,255,255,0.08);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 14px;
-            padding: 12px 14px;
-            vertical-align: top;
+            padding: var(--s-3) 14px;
+            min-height: 58px;
         }
         .meta-label {
             display: block;
@@ -511,20 +551,30 @@ final class BackupExportManager: ObservableObject {
             letter-spacing: 1px;
             text-transform: uppercase;
             color: rgba(255,255,255,0.66);
-            margin-bottom: 4px;
+            margin-bottom: var(--s-1);
         }
+
+        /* ===== METRIC GRID (Executive Summary) ===== */
         .metric-grid {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 12px;
-            margin-bottom: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--s-3);
+            margin-bottom: var(--s-4);
+        }
+        .metric-grid > .metric-card {
+            flex: 1 1 calc(50% - var(--s-3));
+            min-width: 0;
         }
         .metric-card {
-            background: #ffffff;
+            background: var(--surface);
             border: 1px solid #d9e3ef;
             border-top: 5px solid #2563eb;
-            border-radius: 18px;
-            padding: 16px 16px 14px;
+            border-radius: var(--radius-card);
+            padding: var(--s-4) var(--s-4) 14px;
+            page-break-inside: avoid;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
         }
         .metric-card.green { border-top-color: #059669; }
         .metric-card.orange { border-top-color: #ea580c; }
@@ -533,25 +583,31 @@ final class BackupExportManager: ObservableObject {
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #64748b;
-            margin-bottom: 8px;
+            color: var(--muted);
+            margin-bottom: var(--s-2);
+            min-height: 14px;
         }
         .metric-value {
             font-size: 24px;
             font-weight: 760;
             line-height: 1.15;
-            color: #0f172a;
+            color: var(--ink);
+            min-height: 28px;
         }
         .metric-detail {
-            margin-top: 6px;
+            margin-top: var(--s-2);
             font-size: 11px;
-            color: #64748b;
+            color: var(--muted);
+            min-height: 16px;
         }
+
+        /* ===== HEALTH SIGNAL ===== */
         .signal-banner {
-            border-radius: 18px;
-            padding: 16px 18px;
+            border-radius: var(--radius-card);
+            padding: var(--s-4) var(--s-5);
             margin-bottom: 14px;
             border: 1px solid #dbe5f0;
+            page-break-inside: avoid;
         }
         .signal-banner.good {
             background: #ecfdf5;
@@ -568,23 +624,32 @@ final class BackupExportManager: ObservableObject {
         .signal-title {
             font-size: 17px;
             font-weight: 760;
-            color: #0f172a;
-            margin-bottom: 4px;
+            color: var(--ink);
+            margin-bottom: var(--s-1);
         }
         .signal-detail {
-            color: #475569;
+            color: var(--muted-2);
         }
+
+        /* ===== HIGHLIGHT GRID (Executive Brief) ===== */
         .highlight-grid {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 12px;
-            margin-bottom: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--s-3);
+            margin-bottom: var(--s-2);
+        }
+        .highlight-grid > .highlight-card {
+            flex: 1 1 calc(50% - var(--s-3));
+            min-width: 0;
         }
         .highlight-card {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-card);
             padding: 14px 14px 13px;
+            page-break-inside: avoid;
+            display: flex;
+            flex-direction: column;
         }
         .highlight-card.blue { background: #eff6ff; border-color: #bfdbfe; }
         .highlight-card.green { background: #ecfdf5; border-color: #a7f3d0; }
@@ -594,93 +659,120 @@ final class BackupExportManager: ObservableObject {
             font-size: 10px;
             text-transform: uppercase;
             letter-spacing: 1px;
-            color: #64748b;
-            margin-bottom: 8px;
+            color: var(--muted);
+            margin-bottom: var(--s-2);
+            min-height: 13px;
         }
         .highlight-value {
             font-size: 18px;
             font-weight: 760;
             line-height: 1.2;
-            color: #0f172a;
+            color: var(--ink);
             margin-bottom: 6px;
+            min-height: 22px;
+            word-break: break-word;
         }
         .highlight-detail {
             font-size: 11px;
-            color: #475569;
+            color: var(--muted-2);
+            min-height: 16px;
+            margin-top: auto;
         }
+
+        /* ===== PANEL (section container) ===== */
         .panel {
-            background: #ffffff;
+            background: var(--surface);
             border: 1px solid #d9e3ef;
-            border-radius: 20px;
-            padding: 18px 18px 16px;
-            margin-bottom: 16px;
+            border-radius: var(--radius-panel);
+            padding: var(--s-5) var(--s-5) var(--s-4);
+            margin-bottom: var(--s-4);
+            page-break-inside: avoid;
         }
         .panel h3 {
             margin: 0;
             font-size: 21px;
             line-height: 1.2;
             font-weight: 760;
-            color: #0f172a;
+            color: var(--ink);
         }
         .panel-subtitle {
             margin-top: 6px;
             margin-bottom: 14px;
-            color: #64748b;
+            color: var(--muted);
             font-size: 12px;
         }
         .badge-row {
             margin-bottom: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--s-2);
         }
         .badge {
             display: inline-block;
-            margin-right: 8px;
-            margin-bottom: 8px;
-            padding: 8px 12px;
-            border-radius: 999px;
+            padding: var(--s-2) var(--s-3);
+            border-radius: var(--radius-pill);
             background: #eef4ff;
             color: #1e3a8a;
             font-size: 11px;
             font-weight: 600;
         }
         .badge .muted-inline {
-            color: #64748b;
+            color: var(--muted);
             font-weight: 500;
-            margin-right: 4px;
+            margin-right: var(--s-1);
         }
+
+        /* ===== BAR CHART (flex row, equal-height rows, baseline alignment) ===== */
         .chart-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0 10px;
+            display: flex;
+            flex-direction: column;
+            gap: var(--s-3);
+        }
+        .chart-row {
+            display: flex;
+            align-items: center;
+            gap: var(--s-3);
+            min-height: 44px;
+            page-break-inside: avoid;
         }
         .chart-label {
-            width: 31%;
-            padding-right: 10px;
-            color: #334155;
+            flex: 0 0 150px;
+            min-width: 0;
+            color: var(--ink-2);
             font-weight: 600;
-            vertical-align: middle;
+            line-height: 1.3;
+        }
+        .chart-label .muted {
+            display: block;
+            margin-top: 2px;
         }
         .chart-bar {
-            width: 49%;
-            vertical-align: middle;
+            flex: 1 1 0;
+            min-width: 0;
         }
         .bar-track {
-            background: #e7edf5;
-            border-radius: 999px;
+            background: var(--track);
+            border-radius: var(--radius-pill);
             height: 12px;
             overflow: hidden;
         }
         .bar-fill {
             height: 12px;
-            border-radius: 999px;
+            border-radius: var(--radius-pill);
         }
         .chart-value {
-            width: 20%;
+            flex: 0 0 92px;
+            min-width: 0;
             text-align: right;
             font-weight: 700;
-            color: #0f172a;
-            vertical-align: middle;
+            color: var(--ink);
             white-space: nowrap;
         }
+        .chart-value.positive { color: #059669; }
+        .chart-value.negative { color: #dc2626; }
+        .chart-value.neutral { color: var(--ink); }
+
+        /* ===== DATA TABLE ===== */
         .data-table {
             width: 100%;
             border-collapse: collapse;
@@ -690,16 +782,17 @@ final class BackupExportManager: ObservableObject {
             font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.8px;
-            color: #64748b;
+            color: var(--muted);
             text-align: left;
-            border-bottom: 1px solid #e2e8f0;
+            border-bottom: 1px solid var(--line);
+            vertical-align: bottom;
         }
         .data-table tbody tr {
             page-break-inside: avoid;
         }
         .data-table tbody td {
             padding: 12px 0;
-            border-bottom: 1px solid #edf2f7;
+            border-bottom: 1px solid var(--line-soft);
             vertical-align: top;
         }
         .data-table tbody tr:last-child td {
@@ -707,10 +800,18 @@ final class BackupExportManager: ObservableObject {
         }
         .primary-cell {
             font-weight: 650;
-            color: #0f172a;
+            color: var(--ink);
+            line-height: 1.35;
+        }
+        .cell-detail {
+            margin-top: var(--s-1);
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 500;
+            line-height: 1.4;
         }
         .muted {
-            color: #64748b;
+            color: var(--muted);
             font-size: 11px;
             font-weight: 500;
         }
@@ -726,49 +827,57 @@ final class BackupExportManager: ObservableObject {
             color: #dc2626;
         }
         .amount.neutral {
-            color: #0f172a;
+            color: var(--ink);
         }
         .empty-state {
-            padding: 14px 16px;
+            padding: 14px var(--s-4);
             border-radius: 14px;
-            background: #f8fafc;
-            color: #64748b;
+            background: var(--surface-2);
+            color: var(--muted);
             border: 1px dashed #d4dde8;
         }
+
+        /* ===== SPLIT GRID (side-by-side mini panels) ===== */
         .split-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--s-3);
+            align-items: stretch;
         }
-        .split-table td {
-            width: 50%;
-            vertical-align: top;
+        .split-table > .split-cell {
+            flex: 1 1 calc(50% - var(--s-3));
+            min-width: 0;
         }
         .mini-panel {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 18px;
+            background: var(--surface-2);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-card);
             padding: 14px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            page-break-inside: avoid;
         }
         .mini-title {
             font-size: 14px;
             font-weight: 720;
-            color: #0f172a;
+            color: var(--ink);
             margin-bottom: 3px;
         }
         .mini-subtitle {
             font-size: 11px;
-            color: #64748b;
+            color: var(--muted);
             margin-bottom: 10px;
         }
         .stack-track {
             width: 100%;
             height: 14px;
             overflow: hidden;
-            border-radius: 999px;
-            background: #e7edf5;
-            margin-bottom: 12px;
+            border-radius: var(--radius-pill);
+            background: var(--track);
+            margin-bottom: var(--s-3);
             font-size: 0;
+            display: flex;
         }
         .stack-segment {
             display: inline-block;
@@ -786,19 +895,19 @@ final class BackupExportManager: ObservableObject {
             display: inline-block;
             width: 10px;
             height: 10px;
-            border-radius: 999px;
+            border-radius: var(--radius-pill);
             margin-right: 7px;
             vertical-align: middle;
         }
         .legend-label {
-            color: #334155;
+            color: var(--ink-2);
             font-weight: 600;
         }
         .legend-value {
             text-align: right;
             white-space: nowrap;
             font-weight: 700;
-            color: #0f172a;
+            color: var(--ink);
         }
         </style>
         </head>
@@ -808,59 +917,51 @@ final class BackupExportManager: ObservableObject {
                 <div class="eyebrow">Car Dealer Tracker</div>
                 <h1>Monthly Report Snapshot</h1>
                 <h2>\(escapeHTML(snapshot.title))</h2>
-                <table class="hero-meta">
-                    <tr>
-                        <td>
-                            <span class="meta-label">Period</span>
-                            \(escapeHTML(rangeString(snapshot.range)))
-                        </td>
-                        <td>
-                            <span class="meta-label">Generated</span>
-                            \(escapeHTML(DateFormatter.localizedString(from: snapshot.generatedAt, dateStyle: .medium, timeStyle: .short)))
-                        </td>
-                        <td>
-                            <span class="meta-label">Reporting model</span>
-                            Accurate split of revenue, realized sales profit, monthly expenses, and cash movement
-                        </td>
-                    </tr>
-                </table>
+                <div class="hero-meta">
+                    <div class="meta-cell">
+                        <span class="meta-label">Period</span>
+                        \(escapeHTML(rangeString(snapshot.range)))
+                    </div>
+                    <div class="meta-cell">
+                        <span class="meta-label">Generated</span>
+                        \(escapeHTML(DateFormatter.localizedString(from: snapshot.generatedAt, dateStyle: .medium, timeStyle: .short)))
+                    </div>
+                    <div class="meta-cell">
+                        <span class="meta-label">Reporting model</span>
+                        Accurate split of revenue, profit, expenses, and cash movement
+                    </div>
+                </div>
             </div>
 
             <div class="panel">
                 <h3>Executive Summary</h3>
                 <div class="panel-subtitle">A fast scan of revenue, realized profit, expenses, cash movement, and current stock.</div>
-                <table class="metric-grid">
-                    <tr>
-                        <td>\(summaryCardHTML(title: "Total Revenue", value: summary.totalRevenue.asCurrencyFallback(), detail: "Vehicle \(summary.vehicleRevenue.asCurrencyFallback()) • Parts \(summary.partRevenue.asCurrencyFallback())", toneClass: ""))</td>
-                        <td>\(summaryCardHTML(title: "Realized Sales Profit", value: summary.realizedSalesProfit.asCurrencyFallback(), detail: "Vehicle \(summary.vehicleProfit.asCurrencyFallback()) • Parts \(summary.partProfit.asCurrencyFallback())", toneClass: "green"))</td>
-                    </tr>
-                    <tr>
-                        <td>\(summaryCardHTML(title: "Monthly Expenses", value: summary.monthlyExpenses.asCurrencyFallback(), detail: "Top categories below", toneClass: "orange"))</td>
-                        <td>\(summaryCardHTML(title: "Net Cash Movement", value: summary.netCashMovement.asCurrencyFallback(), detail: "Deposits \(summary.depositsTotal.asCurrencyFallback()) • Withdrawals \(summary.withdrawalsTotal.asCurrencyFallback())", toneClass: "indigo"))</td>
-                    </tr>
-                </table>
+                <div class="metric-grid">
+                    \(summaryCardHTML(title: "Total Revenue", value: summary.totalRevenue.asCurrencyFallback(), detail: "Vehicle \(summary.vehicleRevenue.asCurrencyFallback()) • Parts \(summary.partRevenue.asCurrencyFallback())", toneClass: ""))
+                    \(summaryCardHTML(title: "Realized Sales Profit", value: summary.realizedSalesProfit.asCurrencyFallback(), detail: "Vehicle \(summary.vehicleProfit.asCurrencyFallback()) • Parts \(summary.partProfit.asCurrencyFallback())", toneClass: "green"))
+                    \(summaryCardHTML(title: "Monthly Expenses", value: summary.monthlyExpenses.asCurrencyFallback(), detail: "Top categories below", toneClass: "orange"))
+                    \(summaryCardHTML(title: "Net Cash Movement", value: summary.netCashMovement.asCurrencyFallback(), detail: "Deposits \(summary.depositsTotal.asCurrencyFallback()) • Withdrawals \(summary.withdrawalsTotal.asCurrencyFallback())", toneClass: "indigo"))
+                </div>
             </div>
 
             \(executiveBrief)
 
-            <table class="split-table">
-                <tr>
-                    <td>
-                        <div class="panel">
-                            <h3>Financial Overview</h3>
-                            <div class="panel-subtitle">Relative bar view of the month’s key financial signals.</div>
-                            \(financialChart)
-                        </div>
-                    </td>
-                    <td>
-                        <div class="panel">
-                            <h3>Expense Mix</h3>
-                            <div class="panel-subtitle">Top expense categories ranked by amount.</div>
-                            \(expenseMix)
-                        </div>
-                    </td>
-                </tr>
-            </table>
+            <div class="split-table">
+                <div class="split-cell">
+                    <div class="panel">
+                        <h3>Financial Overview</h3>
+                        <div class="panel-subtitle">Relative bar view of the month’s key financial signals.</div>
+                        \(financialChart)
+                    </div>
+                </div>
+                <div class="split-cell">
+                    <div class="panel">
+                        <h3>Expense Mix</h3>
+                        <div class="panel-subtitle">Top expense categories ranked by amount.</div>
+                        \(expenseMix)
+                    </div>
+                </div>
+            </div>
 
             \(vehicleSalesSection)
             \(partSalesSection)
@@ -930,12 +1031,10 @@ final class BackupExportManager: ObservableObject {
                 <div class="signal-detail">\(escapeHTML(signal.detail))</div>
             </div>
             \(highlightGridHTML(highlights))
-            <table class="split-table">
-                <tr>
-                    <td>\(revenueComposition)</td>
-                    <td>\(capitalComposition)</td>
-                </tr>
-            </table>
+            <div class="split-table">
+                <div class="split-cell">\(revenueComposition)</div>
+                <div class="split-cell">\(capitalComposition)</div>
+            </div>
         </div>
         """
     }
@@ -954,14 +1053,8 @@ final class BackupExportManager: ObservableObject {
     }
 
     private func highlightGridHTML(_ cards: [PDFHighlightCard]) -> String {
-        let rows = stride(from: 0, to: cards.count, by: 2).map { index in
-            let first = highlightCardHTML(cards[index])
-            let second = index + 1 < cards.count ? highlightCardHTML(cards[index + 1]) : ""
-            return "<tr><td>\(first)</td><td>\(second)</td></tr>"
-        }
-        .joined()
-
-        return "<table class=\"highlight-grid\">\(rows)</table>"
+        let items = cards.map { highlightCardHTML($0) }.joined()
+        return "<div class=\"highlight-grid\">\(items)</div>"
     }
 
     private func highlightCardHTML(_ card: PDFHighlightCard) -> String {
@@ -981,20 +1074,20 @@ final class BackupExportManager: ObservableObject {
             let width = datum.value == 0 ? 0 : max(0.12, min(1, decimalToDouble(absoluteDecimal(datum.value) / safeMax)))
             let toneClass = datum.value > 0 ? "positive" : datum.value < 0 ? "negative" : "neutral"
             return """
-            <tr>
-                <td class="chart-label">\(escapeHTML(datum.label))</td>
-                <td class="chart-bar">
+            <div class="chart-row">
+                <div class="chart-label">\(escapeHTML(datum.label))</div>
+                <div class="chart-bar">
                     <div class="bar-track">
                         <div class="bar-fill" style="width: \(Int(width * 100))%; background: \(datum.colorHex);"></div>
                     </div>
-                </td>
-                <td class="chart-value \(toneClass)">\(escapeHTML(datum.value.asCurrencyFallback()))</td>
-            </tr>
+                </div>
+                <div class="chart-value \(toneClass)">\(escapeHTML(datum.value.asCurrencyFallback()))</div>
+            </div>
             """
         }
         .joined()
 
-        return "<table class=\"chart-table\">\(rows)</table>"
+        return "<div class=\"chart-table\">\(rows)</div>"
     }
 
     private func stackedComparisonHTML(title: String, subtitle: String, items: [PDFStackDatum], emptyMessage: String) -> String {
@@ -1059,7 +1152,7 @@ final class BackupExportManager: ObservableObject {
         """
         <td>
             <div class="primary-cell">\(escapeHTML(title))</div>
-            <div class="muted">\(detail)</div>
+            <div class="cell-detail">\(detail)</div>
         </td>
         """
     }
@@ -1275,6 +1368,17 @@ struct BackupArchivePayload: Codable {
     let rangeEnd: Date
     let metadata: BackupMetadata
     let files: [ArchiveFilePayload]
+}
+
+enum BackupExportError: LocalizedError, Equatable {
+    case invalidDateRange
+
+    var errorDescription: String? {
+        switch self {
+        case .invalidDateRange:
+            return "End date must be on or after the start date."
+        }
+    }
 }
 
 private extension FileManager {

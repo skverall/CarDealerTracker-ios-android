@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 struct BackupCenterView: View {
     @Environment(\.managedObjectContext) private var context
     @EnvironmentObject private var sessionStore: SessionStore
@@ -74,10 +75,17 @@ struct BackupCenterView: View {
                                     datePickerBox(title: "End", selection: $endDate)
                                 }
                                 .padding(.top, 4)
+
+                                if let dateRangeErrorMessage {
+                                    Text(dateRangeErrorMessage)
+                                        .font(.footnote)
+                                        .foregroundColor(ColorTheme.danger)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
                                 
                                 Button {
                                     runExport {
-                                        let range = DateInterval(start: startDate, end: endDate)
+                                        let range = try selectedReportRange()
                                         return try exporter.generateReportPDF(for: range)
                                     }
                                 } label: {
@@ -96,7 +104,7 @@ struct BackupCenterView: View {
                                     .background(ColorTheme.primary)
                                     .cornerRadius(12)
                                 }
-                                .disabled(isProcessing)
+                                .disabled(isProcessing || dateRangeErrorMessage != nil)
                             }
                             .padding(16)
                         }
@@ -107,7 +115,7 @@ struct BackupCenterView: View {
                                 Button {
                                     runAsyncExport {
                                         let dealerId = CloudSyncEnvironment.currentDealerId
-                                        let range = DateInterval(start: startDate, end: endDate)
+                                        let range = try selectedReportRange()
                                         return try await exporter.createRangeArchive(for: range, dealerId: dealerId)
                                     }
                                 } label: {
@@ -141,7 +149,7 @@ struct BackupCenterView: View {
                                         }
                                     }
                                 }
-                                .disabled(isProcessing)
+                                .disabled(isProcessing || dateRangeErrorMessage != nil)
                                 
                                 if sessionStore.isSignedIn {
                                     HStack(spacing: 6) {
@@ -162,7 +170,10 @@ struct BackupCenterView: View {
             .navigationTitle("Backup & Export".localizedString)
             .navigationBarTitleDisplayMode(.inline)
             .onAppear { attachCloudManagerIfNeeded() }
-            .sheet(isPresented: .constant(shareURL != nil), onDismiss: { shareURL = nil }) {
+            .sheet(isPresented: Binding(
+                get: { shareURL != nil },
+                set: { if !$0 { shareURL = nil } }
+            )) {
                 if let url = shareURL {
                     ShareSheet(items: [url]) {
                         shareURL = nil
@@ -278,42 +289,49 @@ struct BackupCenterView: View {
         }
     }
 
-    private func runExport(_ action: @escaping () throws -> URL) {
+    private var dateRangeErrorMessage: String? {
+        do {
+            _ = try selectedReportRange()
+            return nil
+        } catch {
+            return error.localizedDescription
+        }
+    }
+
+    private func selectedReportRange() throws -> DateInterval {
+        try BackupExportManager.calendarDayRange(start: startDate, end: endDate)
+    }
+
+    private func runExport(_ action: @MainActor @escaping () throws -> URL) {
         statusMessage = nil
         isProcessing = true
-        DispatchQueue.global(qos: .userInitiated).async {
+        Task { @MainActor in
             do {
+                await Task.yield()
                 let url = try action()
-                DispatchQueue.main.async {
-                    shareURL = url
-                    statusMessage = "Ready for export"
-                    isProcessing = false
-                }
+                shareURL = url
+                statusMessage = "Ready for export"
+                isProcessing = false
             } catch {
-                DispatchQueue.main.async {
-                    statusMessage = "Failed: \(error.localizedDescription)"
-                    isProcessing = false
-                }
+                statusMessage = "Failed: \(error.localizedDescription)"
+                isProcessing = false
             }
         }
     }
 
-    private func runAsyncExport(_ action: @escaping () async throws -> URL) {
+    private func runAsyncExport(_ action: @MainActor @escaping () async throws -> URL) {
         statusMessage = nil
         isProcessing = true
-        Task {
+        Task { @MainActor in
             do {
+                await Task.yield()
                 let url = try await action()
-                await MainActor.run {
-                    shareURL = url
-                    statusMessage = "Archive ready"
-                    isProcessing = false
-                }
+                shareURL = url
+                statusMessage = "Archive ready"
+                isProcessing = false
             } catch {
-                await MainActor.run {
-                    statusMessage = "Failed: \(error.localizedDescription)"
-                    isProcessing = false
-                }
+                statusMessage = "Failed: \(error.localizedDescription)"
+                isProcessing = false
             }
         }
     }

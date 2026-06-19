@@ -1625,7 +1625,7 @@ private extension DashboardView {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .listSectionSpacing(20)
-        .padding(.bottom, 90) // Ensure content clears tab bar
+        .padding(.bottom, UIDevice.current.userInterfaceIdiom == .pad ? 24 : 90) // Ensure content clears tab bar (mobile)
         .background(ColorTheme.background)
         .refreshable {
             if case .signedIn(let user) = sessionStore.status {

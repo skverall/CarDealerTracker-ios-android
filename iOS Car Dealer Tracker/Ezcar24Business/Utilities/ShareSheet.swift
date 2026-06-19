@@ -22,10 +22,25 @@ struct ShareSheet: UIViewControllerRepresentable {
         controller.completionWithItemsHandler = { _, _, _, _ in
             completion?()
         }
+        configurePopover(for: controller)
         return controller
     }
 
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {
+        configurePopover(for: uiViewController)
+    }
+
+    private func configurePopover(for controller: UIActivityViewController) {
+        guard let popover = controller.popoverPresentationController else { return }
+        popover.sourceView = controller.view
+        popover.sourceRect = CGRect(
+            x: controller.view.bounds.midX,
+            y: controller.view.bounds.midY,
+            width: 1,
+            height: 1
+        )
+        popover.permittedArrowDirections = []
+    }
 }
 
 extension UIActivity.ActivityType {

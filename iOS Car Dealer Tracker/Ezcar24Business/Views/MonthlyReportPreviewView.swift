@@ -212,14 +212,20 @@ struct MonthlyReportPreviewView: View {
                 if snapshot.vehicleSales.isEmpty {
                     emptyState("No vehicle sales in this month.")
                 } else {
-                    ForEach(snapshot.vehicleSales) { sale in
+                    ForEach(Array(snapshot.vehicleSales.enumerated()), id: \.element.id) { index, sale in
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack {
+                            HStack(alignment: .firstTextBaseline) {
                                 Text(sale.title)
+                                    .font(.subheadline)
                                     .foregroundColor(ColorTheme.primaryText)
-                                Spacer()
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
                                 Text(sale.realizedProfit.asCurrency())
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
                                     .foregroundColor(sale.realizedProfit >= 0 ? .green : .red)
+                                    .lineLimit(1)
                             }
 
                             Text("\(dateString(sale.soldAt)) • \(sale.buyerName)")
@@ -229,6 +235,12 @@ struct MonthlyReportPreviewView: View {
                             Text(String(format: "Revenue %@ • Purchase %@ • Expenses %@ • Holding %@ • VAT refund %@".localizedString, sale.revenue.asCurrency(), sale.purchasePrice.asCurrency(), sale.vehicleExpenses.asCurrency(), sale.holdingCost.asCurrency(), sale.vatRefund.asCurrency()))
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < snapshot.vehicleSales.count - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -244,14 +256,20 @@ struct MonthlyReportPreviewView: View {
                 if snapshot.partSales.isEmpty {
                     emptyState("No part sales in this month.")
                 } else {
-                    ForEach(snapshot.partSales) { sale in
+                    ForEach(Array(snapshot.partSales.enumerated()), id: \.element.id) { index, sale in
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack {
+                            HStack(alignment: .firstTextBaseline) {
                                 Text(sale.summary)
+                                    .font(.subheadline)
                                     .foregroundColor(ColorTheme.primaryText)
-                                Spacer()
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
                                 Text(sale.realizedProfit.asCurrency())
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
                                     .foregroundColor(sale.realizedProfit >= 0 ? .green : .red)
+                                    .lineLimit(1)
                             }
 
                             Text("\(dateString(sale.soldAt)) • \(sale.buyerName)")
@@ -261,6 +279,12 @@ struct MonthlyReportPreviewView: View {
                             Text(String(format: "Revenue %@ • COGS %@".localizedString, sale.revenue.asCurrency(), sale.costOfGoodsSold.asCurrency()))
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < snapshot.partSales.count - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -276,20 +300,32 @@ struct MonthlyReportPreviewView: View {
                 if snapshot.expenseActivity.isEmpty {
                     emptyState("No expenses in this month.")
                 } else {
-                    ForEach(snapshot.expenseActivity) { expense in
+                    ForEach(Array(snapshot.expenseActivity.enumerated()), id: \.element.id) { index, expense in
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack {
+                            HStack(alignment: .firstTextBaseline) {
                                 Text(expense.title)
+                                    .font(.subheadline)
                                     .foregroundColor(ColorTheme.primaryText)
-                                Spacer()
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
                                 Text(expense.amount.asCurrency())
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
                                     .foregroundColor(ColorTheme.primaryText)
+                                    .lineLimit(1)
                             }
 
                             let vehicleLabel = expense.vehicleTitle.map { " • \($0)" } ?? ""
                             Text("\(dateString(expense.date)) • \(expense.categoryTitle)\(vehicleLabel)")
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < snapshot.expenseActivity.count - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -312,18 +348,30 @@ struct MonthlyReportPreviewView: View {
                 } else {
                     Divider()
 
-                    ForEach(Array(cash.rows.prefix(10))) { row in
+                    ForEach(Array(cash.rows.prefix(10).enumerated()), id: \.element.id) { index, row in
                         HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(row.title)
+                                    .font(.subheadline)
                                     .foregroundColor(ColorTheme.primaryText)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 Text("\(dateString(row.date)) • \(row.note)")
                                     .font(.caption)
                                     .foregroundColor(ColorTheme.secondaryText)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
-                            Spacer()
+                            Spacer(minLength: 8)
                             Text(row.signedAmount.asCurrency())
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                                 .foregroundColor(row.signedAmount >= 0 ? .green : .red)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < min(cash.rows.count, 10) - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -345,19 +393,31 @@ struct MonthlyReportPreviewView: View {
                 } else {
                     Divider()
 
-                    ForEach(snapshot.inventorySnapshot) { vehicle in
+                    ForEach(Array(snapshot.inventorySnapshot.enumerated()), id: \.element.id) { index, vehicle in
                         VStack(alignment: .leading, spacing: 6) {
-                            HStack {
+                            HStack(alignment: .firstTextBaseline) {
                                 Text(vehicle.title)
+                                    .font(.subheadline)
                                     .foregroundColor(ColorTheme.primaryText)
-                                Spacer()
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
                                 Text(vehicle.costBasis.asCurrency())
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
                                     .foregroundColor(ColorTheme.primaryText)
+                                    .lineLimit(1)
                             }
 
                             Text(String(format: "%@ • Purchase %@ • Expenses %@".localizedString, vehicle.status.localizedString.capitalized, vehicle.purchasePrice.asCurrency(), vehicle.totalExpenses.asCurrency()))
                                 .font(.caption)
                                 .foregroundColor(ColorTheme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < snapshot.inventorySnapshot.count - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -379,25 +439,36 @@ struct MonthlyReportPreviewView: View {
                 } else {
                     Divider()
 
-                    ForEach(snapshot.partsSnapshot) { part in
-                        HStack {
+                    ForEach(Array(snapshot.partsSnapshot.enumerated()), id: \.element.id) { index, part in
+                        HStack(alignment: .top) {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(part.name)
+                                    .font(.subheadline)
                                     .foregroundColor(ColorTheme.primaryText)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
                                 if !part.code.isEmpty {
                                     Text(part.code)
                                         .font(.caption)
                                         .foregroundColor(ColorTheme.secondaryText)
                                 }
                             }
-                            Spacer()
+                            Spacer(minLength: 8)
                             VStack(alignment: .trailing, spacing: 4) {
                                 Text(decimalString(part.quantityOnHand))
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
                                     .foregroundColor(ColorTheme.primaryText)
+                                    .lineLimit(1)
                                 Text(part.inventoryCost.asCurrency())
                                     .font(.caption)
                                     .foregroundColor(ColorTheme.secondaryText)
                             }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < snapshot.partsSnapshot.count - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -413,13 +484,24 @@ struct MonthlyReportPreviewView: View {
                 if snapshot.topProfitableVehicles.isEmpty {
                     emptyState("No profitable vehicle sales in this month.")
                 } else {
-                    ForEach(snapshot.topProfitableVehicles) { sale in
-                        HStack {
+                    ForEach(Array(snapshot.topProfitableVehicles.enumerated()), id: \.element.id) { index, sale in
+                        HStack(alignment: .firstTextBaseline) {
                             Text(sale.title)
+                                .font(.subheadline)
                                 .foregroundColor(ColorTheme.primaryText)
-                            Spacer()
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 8)
                             Text(sale.realizedProfit.asCurrency())
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                                 .foregroundColor(.green)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < snapshot.topProfitableVehicles.count - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -435,13 +517,24 @@ struct MonthlyReportPreviewView: View {
                 if snapshot.lossMakingVehicles.isEmpty {
                     emptyState("No loss-making vehicle sales in this month.")
                 } else {
-                    ForEach(snapshot.lossMakingVehicles) { sale in
-                        HStack {
+                    ForEach(Array(snapshot.lossMakingVehicles.enumerated()), id: \.element.id) { index, sale in
+                        HStack(alignment: .firstTextBaseline) {
                             Text(sale.title)
+                                .font(.subheadline)
                                 .foregroundColor(ColorTheme.primaryText)
-                            Spacer()
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 8)
                             Text(sale.realizedProfit.asCurrency())
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                                 .foregroundColor(.red)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < snapshot.lossMakingVehicles.count - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -457,13 +550,24 @@ struct MonthlyReportPreviewView: View {
                 if snapshot.topExpenseCategories.isEmpty {
                     emptyState("No expense categories in this month.")
                 } else {
-                    ForEach(snapshot.topExpenseCategories) { category in
-                        HStack {
+                    ForEach(Array(snapshot.topExpenseCategories.enumerated()), id: \.element.id) { index, category in
+                        HStack(alignment: .firstTextBaseline) {
                             Text(category.title)
+                                .font(.subheadline)
                                 .foregroundColor(ColorTheme.primaryText)
-                            Spacer()
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 8)
                             Text(category.amount.asCurrency())
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
                                 .foregroundColor(ColorTheme.secondaryText)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        if index < snapshot.topExpenseCategories.count - 1 {
+                            Divider()
                         }
                     }
                 }
@@ -529,12 +633,19 @@ struct MonthlyReportPreviewView: View {
             Text(title.localizedString)
                 .font(.caption)
                 .foregroundColor(ColorTheme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
             Text(value)
-                .font(.headline)
+                .font(.title2)
+                .fontWeight(.bold)
                 .foregroundColor(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Spacer(minLength: 0)
         }
-        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .frame(minHeight: 88, alignment: .top)
         .background(tint.opacity(0.08))
         .cornerRadius(14)
     }
@@ -547,9 +658,10 @@ struct MonthlyReportPreviewView: View {
             Text(signal.detail.localizedString)
                 .font(.subheadline)
                 .foregroundColor(ColorTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
         .background(signal.tint.opacity(0.12))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
@@ -563,28 +675,41 @@ struct MonthlyReportPreviewView: View {
             Text(highlight.title.localizedString)
                 .font(.caption)
                 .foregroundColor(ColorTheme.secondaryText)
+                .lineLimit(1)
             Text(highlight.value)
                 .font(.headline)
                 .foregroundColor(ColorTheme.primaryText)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
             Text(highlight.detail.localizedString)
                 .font(.caption)
                 .foregroundColor(ColorTheme.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .frame(minHeight: 110, alignment: .top)
         .background(highlight.tint.opacity(0.1))
         .cornerRadius(14)
     }
 
     private func chartRow(item: ReportChartItem, maxValue: Decimal) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text(item.title.localizedString)
+                    .font(.subheadline)
                     .foregroundColor(ColorTheme.primaryText)
-                Spacer()
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
                 Text(item.valueLabel)
+                    .font(.subheadline)
                     .foregroundColor(item.tint)
                     .fontWeight(.semibold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
 
             GeometryReader { geometry in
@@ -597,14 +722,19 @@ struct MonthlyReportPreviewView: View {
                         .frame(width: max(0, geometry.size.width * normalizedWidth(for: item.magnitude, maxValue: maxValue)))
                 }
             }
-            .frame(height: 10)
+            .frame(height: 12)
 
             if let detail = item.detail {
                 Text(detail.localizedString)
                     .font(.caption)
                     .foregroundColor(ColorTheme.secondaryText)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Color.clear.frame(height: 0)
             }
         }
+        .frame(minHeight: 56, alignment: .top)
     }
 
     private func compositionCard(title: String, subtitle: String, items: [ReportCompositionItem], emptyMessage: String) -> some View {
@@ -624,18 +754,22 @@ struct MonthlyReportPreviewView: View {
                 compositionBar(items: items)
 
                 ForEach(items) { item in
-                    HStack {
+                    HStack(alignment: .firstTextBaseline) {
                         HStack(spacing: 8) {
                             Circle()
                                 .fill(item.tint)
                                 .frame(width: 10, height: 10)
                             Text(item.title.localizedString)
+                                .font(.caption)
                                 .foregroundColor(ColorTheme.primaryText)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        Spacer()
+                        Spacer(minLength: 8)
                         Text("\(item.valueLabel) • \(item.shareLabel)")
                             .font(.caption)
                             .foregroundColor(ColorTheme.secondaryText)
+                            .lineLimit(1)
                     }
                 }
             }

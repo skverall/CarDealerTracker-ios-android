@@ -34,6 +34,20 @@ struct VehicleListView: View {
     @State private var buyerPhone: String = ""
     @State private var paymentMethod: String = "Cash"
 
+    private var isPadLayout: Bool {
+        UIDevice.current.userInterfaceIdiom == .pad
+    }
+
+    private var listBottomPadding: CGFloat {
+        isPadLayout ? 0 : 90
+    }
+
+    private var agedInventoryCount: Int {
+        viewModel.vehicles.filter { vehicle in
+            vehicle.status != "sold" && HoldingCostCalculator.calculateDaysInInventory(vehicle: vehicle) >= 120
+        }.count
+    }
+
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \FinancialAccount.accountType, ascending: true)],
         predicate: NSPredicate(format: "deletedAt == nil"),
@@ -89,6 +103,9 @@ struct VehicleListView: View {
     
     var content: some View {
         ZStack {
+            if isPadLayout {
+                iPadVehicleContent
+            } else {
                 ColorTheme.secondaryBackground.ignoresSafeArea()
                 
                 VStack(spacing: 0) {
@@ -98,7 +115,8 @@ struct VehicleListView: View {
                     vehicleList
                 }
             }
-            .navigationTitle("vehicles".localizedString)
+            }
+            .navigationTitle(isPadLayout ? "" : "vehicles".localizedString)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if permissionService.can(.viewInventory), permissionService.canViewVehicleCost() {
@@ -341,6 +359,33 @@ struct VehicleListView: View {
     }
 }
 
+private struct iPadVehicleCanvas: View {
+    var body: some View {
+        ZStack {
+            ColorTheme.background
+
+            LinearGradient(
+                colors: [
+                    ColorTheme.primary.opacity(0.12),
+                    ColorTheme.secondary.opacity(0.07),
+                    Color.clear
+                ],
+                startPoint: .topLeading,
+                endPoint: .center
+            )
+
+            LinearGradient(
+                colors: [
+                    ColorTheme.accent.opacity(0.08),
+                    Color.clear
+                ],
+                startPoint: .bottomTrailing,
+                endPoint: .center
+            )
+        }
+    }
+}
+
 struct VehicleCard: View {
     @ObservedObject private var permissionService = PermissionService.shared
     @ObservedObject private var inventoryStats = InventoryStatsManager.shared
@@ -364,6 +409,14 @@ struct VehicleCard: View {
     }
 
     var body: some View {
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            iPadBody
+        } else {
+            compactBody
+        }
+    }
+
+    private var compactBody: some View {
         VStack(spacing: 0) {
             // Main Content Row
             HStack(alignment: .top, spacing: 10) { // Reduced spacing
@@ -525,6 +578,179 @@ struct VehicleCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous)) // Reduced radius
         .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2) // Subtler shadow
     }
+
+    private var iPadBody: some View {
+        let canSeeCost = permissionService.canViewVehicleCost()
+        let canSeeProfit = permissionService.canViewVehicleProfit()
+
+        return VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 16) {
+                if let id = vehicle.id {
+                    iPadVehicleThumbnailView(vehicleID: id)
+                        .frame(width: 122, height: 92)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(.white.opacity(0.7), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .shadow(color: Color.black.opacity(0.1), radius: 12, y: 7)
+                }
+
+                VStack(alignment: .leading, spacing: 9) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(vehicle.displayNameWithInventory)
+                            .font(.system(size: 21, weight: .black, design: .rounded))
+                            .foregroundColor(ColorTheme.primaryText)
+                            .lineLimit(1)
+
+                        HStack(spacing: 8) {
+                            Text(vehicle.year.asYear())
+                                .fontWeight(.bold)
+
+                            if vehicle.mileage > 0 {
+                                Text("•")
+                                    .foregroundColor(ColorTheme.secondaryText.opacity(0.55))
+                                Text("\(vehicle.mileage) km")
+                            }
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(ColorTheme.secondary)
+                    }
+
+                    HStack(spacing: 8) {
+                        if let inventoryLabel = vehicle.inventoryOrVINLabel {
+                            iPadMetadataPill(text: inventoryLabel, icon: "number")
+                        }
+
+                        if permissionService.canViewVehicleCost() {
+                            iPadMetadataPill(
+                                text: String(format: "%lld exp".localizedString, Int64(viewModel.expenseCount(for: vehicle))),
+                                icon: "wrench.and.screwdriver.fill"
+                            )
+                        }
+
+                    }
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 10) {
+                    HStack(spacing: 8) {
+                        if vehicle.status != "sold" && daysInInventory > 0 {
+                            DaysInInventoryBadge(days: daysInInventory)
+                        }
+
+                        StatusBadge(status: vehicle.status ?? "")
+                    }
+
+                    if canSeeCost {
+                        let totalCost = viewModel.totalCost(for: vehicle) + holdingCost
+                        VStack(alignment: .trailing, spacing: 3) {
+                            Text("total_cost".localizedString.uppercased())
+                                .font(.caption2.weight(.bold))
+                                .foregroundColor(ColorTheme.secondaryText)
+                                .tracking(0.7)
+
+                            Text(totalCost.asCurrency())
+                                .font(.system(size: 19, weight: .black, design: .rounded))
+                                .foregroundColor(ColorTheme.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.72)
+                        }
+                    }
+                }
+            }
+            .padding(18)
+
+            if canSeeCost || canSeeProfit {
+                Divider()
+                    .padding(.horizontal, 18)
+
+                HStack(spacing: 12) {
+                    if canSeeCost {
+                        iPadFinancialCell(
+                            title: "purchase_price".localizedString.uppercased(),
+                            value: (vehicle.purchasePrice as Decimal? ?? 0).asCurrency(),
+                            color: ColorTheme.primaryText,
+                            textAlignment: .leading,
+                            frameAlignment: .leading
+                        )
+                    }
+
+                    if canSeeCost && (holdingCost > 0 || daysInInventory > 0) {
+                        iPadFinancialCell(
+                            title: "holding_cost".localizedString.uppercased(),
+                            value: holdingCost.asCurrency(),
+                            color: holdingCost > 0 ? ColorTheme.warning : ColorTheme.secondaryText,
+                            textAlignment: .center,
+                            frameAlignment: .center
+                        )
+                    }
+
+                    if canSeeProfit, let p = profitValue() {
+                        let adjustedProfit = p - holdingCost
+                        iPadFinancialCell(
+                            title: "profit".localizedString.uppercased(),
+                            value: adjustedProfit.asCurrency(),
+                            color: adjustedProfit >= 0 ? ColorTheme.success : ColorTheme.danger,
+                            textAlignment: .trailing,
+                            frameAlignment: .trailing
+                        )
+                    }
+                }
+                .padding(14)
+                .background(ColorTheme.primary.opacity(0.035))
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .fill(ColorTheme.cardBackground.opacity(0.72))
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [.white.opacity(0.8), ColorTheme.primary.opacity(0.12)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: ColorTheme.primary.opacity(0.08), radius: 18, y: 10)
+    }
+
+    private func iPadMetadataPill(text: String, icon: String, tint: Color = ColorTheme.secondaryText) -> some View {
+        Label(text, systemImage: icon)
+            .font(.caption.weight(.bold))
+            .foregroundColor(tint)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(tint.opacity(0.1))
+            .clipShape(Capsule())
+            .lineLimit(1)
+    }
+
+    private func iPadFinancialCell(title: String, value: String, color: Color, textAlignment: HorizontalAlignment, frameAlignment: Alignment) -> some View {
+        VStack(alignment: textAlignment, spacing: 3) {
+            Text(title)
+                .font(.system(size: 10, weight: .black))
+                .foregroundColor(ColorTheme.secondaryText)
+                .tracking(0.7)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.system(size: 15, weight: .black, design: .rounded))
+                .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: frameAlignment)
+    }
     
     private var dateFormatter: DateFormatter {
         let formatter = DateFormatter()
@@ -568,6 +794,45 @@ struct VehicleThumbnailView: View {
                     .foregroundColor(ColorTheme.secondaryText.opacity(0.5))
             }
         }
+        .onAppear {
+            loadImage()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .vehicleImageUpdated)) { notification in
+            if let updatedID = notification.object as? UUID, updatedID == vehicleID {
+                loadImage()
+            }
+        }
+    }
+
+    private func loadImage() {
+        let dealerId = CloudSyncEnvironment.currentDealerId
+        ImageStore.shared.swiftUIImage(id: vehicleID, dealerId: dealerId) { loaded in
+            self.image = loaded
+        }
+    }
+}
+
+private struct iPadVehicleThumbnailView: View {
+    let vehicleID: UUID
+    @State private var image: Image? = nil
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.gray.opacity(0.1))
+
+            if let image {
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .clipped()
+            } else {
+                Image(systemName: "car.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundColor(ColorTheme.secondaryText.opacity(0.5))
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .onAppear {
             loadImage()
         }
@@ -657,6 +922,461 @@ struct FilterChip: View {
 }
 
 extension VehicleListView {
+    private var iPadVehicleContent: some View {
+        ZStack {
+            iPadVehicleCanvas()
+                .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 18) {
+                    iPadVehicleHero
+                    iPadSearchAndFilterHeader
+                    iPadStatusFilters
+
+                    if viewModel.vehicles.isEmpty {
+                        emptyStateView
+                            .frame(minHeight: 360)
+                            .padding(.top, 12)
+                    } else {
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 460), spacing: 14)],
+                            spacing: 14
+                        ) {
+                            ForEach(viewModel.vehicles, id: \.id) { vehicle in
+                                iPadVehicleRow(vehicle)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 24)
+                .padding(.bottom, 32)
+            }
+            .refreshable {
+                if case .signedIn(let user) = sessionStore.status {
+                    await cloudSyncManager.manualSync(user: user, force: true)
+                    viewModel.fetchVehicles()
+                }
+            }
+        }
+    }
+
+    private var iPadVehicleHero: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top, spacing: 18) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 10) {
+                        Image(systemName: "car.2.fill")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(ColorTheme.primary)
+                            .frame(width: 44, height: 44)
+                            .background(.white.opacity(0.82))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                        Text("vehicles".localizedString)
+                            .font(.system(size: 40, weight: .black, design: .rounded))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
+
+                    Text("Car Dealer Tracker")
+                        .font(.callout.weight(.semibold))
+                        .foregroundColor(.white.opacity(0.78))
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                Picker("Display Mode".localizedString, selection: $viewModel.displayMode) {
+                    ForEach(VehicleViewModel.DisplayMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: 310)
+                .padding(4)
+                .background(.white.opacity(0.22))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+
+            HStack(spacing: 12) {
+                iPadHeroMetric(
+                    title: "inventory".localizedString,
+                    value: "\(viewModel.totalVehiclesCount)",
+                    icon: "rectangle.stack.fill",
+                    color: ColorTheme.primary
+                )
+
+                iPadHeroMetric(
+                    title: "on_sale".localizedString,
+                    value: "\(viewModel.onSaleCount)",
+                    icon: "tag.fill",
+                    color: ColorTheme.success
+                )
+
+                iPadHeroMetric(
+                    title: "reserved".localizedString,
+                    value: "\(viewModel.inGarageCount)",
+                    icon: "house.fill",
+                    color: ColorTheme.accent
+                )
+
+                iPadHeroMetric(
+                    title: "120d+",
+                    value: "\(agedInventoryCount)",
+                    icon: "flame.fill",
+                    color: ColorTheme.danger
+                )
+
+                iPadHeroMetric(
+                    title: "sold".localizedString,
+                    value: "\(viewModel.soldCount)",
+                    icon: "checkmark.seal.fill",
+                    color: ColorTheme.secondary
+                )
+            }
+        }
+        .padding(22)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                ColorTheme.primary,
+                                Color(red: 0.16, green: 0.36, blue: 0.75),
+                                ColorTheme.purple
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(.white.opacity(0.12))
+                    .rotationEffect(.degrees(-8))
+                    .offset(x: 230, y: -70)
+                    .scaleEffect(1.25)
+                    .allowsHitTesting(false)
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(.white.opacity(0.35), lineWidth: 1)
+        )
+        .shadow(color: ColorTheme.primary.opacity(0.24), radius: 24, y: 14)
+    }
+
+    private var iPadSearchAndFilterHeader: some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(ColorTheme.secondaryText)
+
+                TextField("search_vehicle_placeholder".localizedString, text: $viewModel.searchText)
+                    .textFieldStyle(.plain)
+                    .font(.body.weight(.medium))
+            }
+            .padding(.horizontal, 16)
+            .frame(height: 54)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(.white.opacity(0.5), lineWidth: 1)
+            )
+
+            Menu {
+                Picker("Sort By".localizedString, selection: $viewModel.sortOption) {
+                    ForEach(VehicleViewModel.SortOption.allCases) { option in
+                        Text(option.title).tag(option)
+                    }
+                }
+            } label: {
+                iPadToolbarButton(icon: "arrow.up.arrow.down", title: viewModel.sortOption.title, color: ColorTheme.primary)
+            }
+
+            if viewModel.displayMode == .inventory {
+                Menu {
+                    Picker("Filter By".localizedString, selection: $viewModel.selectedStatus) {
+                        Text("all_inventory".localizedString).tag("all")
+                        Divider()
+                        Text("reserved".localizedString).tag("reserved")
+                        Text("on_sale".localizedString).tag("on_sale")
+                        Text("in_transit".localizedString).tag("in_transit")
+                        Text("under_service".localizedString).tag("under_service")
+                    }
+                } label: {
+                    iPadToolbarButton(
+                        icon: viewModel.selectedStatus == "all" ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill",
+                        title: selectedStatusTitle,
+                        color: viewModel.selectedStatus == "all" ? ColorTheme.primary : ColorTheme.secondary
+                    )
+                }
+            }
+
+            Button {
+                viewModel.sortOption = .daysDesc
+                viewModel.selectedStatus = "all"
+                viewModel.fetchVehicles()
+            } label: {
+                iPadToolbarButton(icon: "flame.fill", title: "burning_inventory".localizedString, color: ColorTheme.warning)
+            }
+            .buttonStyle(.hapticScale)
+        }
+    }
+
+    private var iPadStatusFilters: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                iPadStatusFilterButton(
+                    title: "total".localizedString,
+                    count: viewModel.totalVehiclesCount,
+                    icon: "car.2.fill",
+                    color: ColorTheme.primary,
+                    isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "all"
+                ) {
+                    viewModel.displayMode = .inventory
+                    viewModel.selectedStatus = "all"
+                }
+
+                iPadStatusFilterButton(
+                    title: "on_sale".localizedString,
+                    count: viewModel.onSaleCount,
+                    icon: "tag.fill",
+                    color: ColorTheme.success,
+                    isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "on_sale"
+                ) {
+                    viewModel.displayMode = .inventory
+                    viewModel.selectedStatus = "on_sale"
+                }
+
+                iPadStatusFilterButton(
+                    title: "reserved".localizedString,
+                    count: viewModel.inGarageCount,
+                    icon: "house.fill",
+                    color: ColorTheme.accent,
+                    isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "reserved"
+                ) {
+                    viewModel.displayMode = .inventory
+                    viewModel.selectedStatus = "reserved"
+                }
+
+                iPadStatusFilterButton(
+                    title: "in_transit".localizedString,
+                    count: viewModel.inTransitCount,
+                    icon: "airplane",
+                    color: ColorTheme.purple,
+                    isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "in_transit"
+                ) {
+                    viewModel.displayMode = .inventory
+                    viewModel.selectedStatus = "in_transit"
+                }
+
+                iPadStatusFilterButton(
+                    title: "sold".localizedString,
+                    count: viewModel.soldCount,
+                    icon: "checkmark.circle.fill",
+                    color: ColorTheme.secondary,
+                    isActive: viewModel.displayMode == .sold
+                ) {
+                    viewModel.displayMode = .sold
+                }
+            }
+        }
+    }
+
+    private func iPadVehicleRow(_ vehicle: Vehicle) -> some View {
+        NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
+            VehicleCard(vehicle: vehicle, viewModel: viewModel)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            vehicleContextMenu(for: vehicle)
+        }
+        .overlay(alignment: .topTrailing) {
+            Menu {
+                vehicleContextMenu(for: vehicle)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 15, weight: .heavy))
+                    .foregroundColor(ColorTheme.primary)
+                    .frame(width: 34, height: 34)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(.white.opacity(0.55), lineWidth: 1))
+                    .shadow(color: Color.black.opacity(0.06), radius: 6, y: 3)
+            }
+            .padding(.top, 10)
+            .padding(.trailing, 10)
+        }
+    }
+
+    @ViewBuilder
+    private func vehicleContextMenu(for vehicle: Vehicle) -> some View {
+        if permissionService.can(.viewInventory) {
+            Button { editingVehicle = vehicle } label: { Label("edit".localizedString, systemImage: "pencil") }
+            Button { viewModel.duplicateVehicle(vehicle) } label: { Label("duplicate".localizedString, systemImage: "doc.on.doc") }
+            if vehicle.status != "sold", permissionService.can(.createSale) {
+                Button {
+                    prepareQuickSale(for: vehicle)
+                } label: {
+                    Label("sold".localizedString, systemImage: "checkmark.circle")
+                }
+            }
+            if canDeleteRecords {
+                Divider()
+                Button(role: .destructive) {
+                    vehicleToDelete = vehicle
+                    showDeleteAlert = true
+                } label: {
+                    Label("delete".localizedString, systemImage: "trash")
+                }
+            }
+        }
+    }
+
+    private func prepareQuickSale(for vehicle: Vehicle) {
+        sellingVehicle = vehicle
+        sellPriceText = ""
+        sellDate = Date()
+        buyerName = ""
+        buyerPhone = ""
+        paymentMethod = "Cash"
+        sellAccount = nil
+    }
+
+    private var selectedStatusTitle: String {
+        switch viewModel.selectedStatus {
+        case "reserved":
+            return "reserved".localizedString
+        case "on_sale":
+            return "on_sale".localizedString
+        case "in_transit":
+            return "in_transit".localizedString
+        case "under_service":
+            return "under_service".localizedString
+        default:
+            return "all_inventory".localizedString
+        }
+    }
+
+    private func iPadHeroMetric(title: String, value: String, icon: String, color: Color) -> some View {
+        HStack(spacing: 11) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .bold))
+                .foregroundColor(color)
+                .frame(width: 36, height: 36)
+                .background(.white.opacity(0.92))
+                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.caption.weight(.heavy))
+                    .foregroundColor(.white.opacity(0.92))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .shadow(color: .black.opacity(0.25), radius: 1, y: 0.5)
+
+                Text(value)
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
+                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(13)
+        .frame(maxWidth: .infinity, minHeight: 74)
+        .background(.white.opacity(0.16))
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(.white.opacity(0.22), lineWidth: 1)
+        )
+    }
+
+    private func iPadToolbarButton(icon: String, title: String, color: Color) -> some View {
+        HStack(spacing: 9) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .bold))
+
+            Text(title)
+                .font(.subheadline.weight(.bold))
+                .lineLimit(1)
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 14)
+        .frame(height: 54)
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(.white.opacity(0.5), lineWidth: 1)
+        )
+    }
+
+    private func iPadStatusFilterButton(
+        title: String,
+        count: Int,
+        icon: String,
+        color: Color,
+        isActive: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 11) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundColor(isActive ? .white : color)
+                    .frame(width: 34, height: 34)
+                    .background(isActive ? .white.opacity(0.24) : color.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundColor(isActive ? .white : ColorTheme.primaryText)
+                        .lineLimit(1)
+
+                    Text("\(count)")
+                        .font(.title3.weight(.black))
+                        .foregroundColor(isActive ? .white : color)
+                        .monospacedDigit()
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                Group {
+                    if isActive {
+                        LinearGradient(
+                            colors: [color, ColorTheme.primary],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        LinearGradient(
+                            colors: [.white.opacity(0.82), .white.opacity(0.55)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .stroke(isActive ? .white.opacity(0.2) : color.opacity(0.2), lineWidth: 1)
+            )
+            .shadow(color: isActive ? color.opacity(0.28) : Color.black.opacity(0.05), radius: 12, y: 6)
+        }
+        .buttonStyle(.hapticScale)
+    }
+
     private var displayModePicker: some View {
         Picker("Display Mode".localizedString, selection: $viewModel.displayMode) {
             ForEach(VehicleViewModel.DisplayMode.allCases) { mode in
@@ -834,7 +1554,7 @@ extension VehicleListView {
                 }
             }
             .listStyle(.plain)
-            .padding(.bottom, 90) // Ensure content isn't hidden behind floating tab bar
+            .padding(.bottom, listBottomPadding)
             .scrollContentBackground(.hidden)
             .refreshable {
                 if case .signedIn(let user) = sessionStore.status {
