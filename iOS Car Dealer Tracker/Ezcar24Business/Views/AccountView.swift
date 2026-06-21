@@ -20,6 +20,7 @@ struct AccountView: View {
     @State private var dedupState: DedupState = .idle
     @AppStorage(NotificationPreference.enabledKey) private var notificationsEnabled = false
     @AppStorage(NotificationPreference.inventoryStaleThresholdKey) private var inventoryStaleThreshold = NotificationPreference.defaultInventoryStaleThreshold
+    @AppStorage(dashboardCarEnabledKey) private var dashboardCarEnabled = true
     @State private var showNotificationSettingsAlert = false
     @State private var notificationAlertMessage = ""
     @State private var showMailError = false
@@ -236,6 +237,8 @@ struct AccountView: View {
             notificationsRow
 
             partsToggleRow
+
+            dashboardCarToggleRow
         }
     }
 
@@ -1081,6 +1084,39 @@ struct AccountView: View {
                 Toggle("", isOn: $regionSettings.isPartsEnabled)
                     .labelsHidden()
                     .toggleStyle(SwitchToggleStyle(tint: .orange))
+            }
+            .padding(16)
+        }
+    }
+
+    private var dashboardCarToggleRow: some View {
+        VStack(spacing: 0) {
+            Divider().padding(.leading, 52)
+
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(ColorTheme.primary.opacity(0.1))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "car.fill")
+                        .font(.system(size: 15))
+                        .foregroundColor(ColorTheme.primary)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("settings_dashboard_car".localizedString)
+                        .font(.body)
+                        .foregroundColor(ColorTheme.primaryText)
+                    Text("settings_dashboard_car_hint".localizedString)
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: $dashboardCarEnabled)
+                    .labelsHidden()
+                    .toggleStyle(SwitchToggleStyle(tint: ColorTheme.primary))
             }
             .padding(16)
         }

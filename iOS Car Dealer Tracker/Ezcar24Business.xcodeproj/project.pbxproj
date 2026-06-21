@@ -619,6 +619,7 @@
 				ja,
 				uz,
 				ar,
+				"pt-BR",
 				Base,
 			);
 			mainGroup = A0FFFFFC;

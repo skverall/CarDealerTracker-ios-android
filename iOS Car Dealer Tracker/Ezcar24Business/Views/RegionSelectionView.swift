@@ -12,185 +12,184 @@ import SwiftUI
 struct RegionSelectionSheet: View {
     @EnvironmentObject private var regionSettings: RegionSettingsManager
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var selectedRegion: AppRegion = .uae
-    
+
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
     var body: some View {
         NavigationStack {
             ZStack {
                 ColorTheme.background.ignoresSafeArea()
-                
+
                 VStack(spacing: 0) {
-                    ScrollView {
-                        VStack(spacing: 0) {
-                            // Header
-                            VStack(spacing: 16) {
-                                Circle()
-                                    .fill(ColorTheme.secondaryBackground)
-                                    .frame(width: 80, height: 80)
-                                    .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
-                                    .overlay(
-                                        Image(systemName: "banknote.fill") // Currency icon
-                                            .font(.system(size: 40))
-                                            .foregroundStyle(
-                                                LinearGradient(
-                                                    colors: [ColorTheme.primary, ColorTheme.accent],
-                                                    startPoint: .topLeading,
-                                                    endPoint: .bottomTrailing
-                                                )
-                                            )
-                                    )
-                                    .padding(.bottom, 8)
-                                
-                                Text("welcome_to_app".localizedString)
-                                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                                    .foregroundColor(ColorTheme.primaryText)
-                                    .multilineTextAlignment(.center)
-                                    .fixedSize(horizontal: false, vertical: true) // Allow text to wrap/expand vertically
-                                
-                                Text("select_your_currency".localizedString) // Changed key
-                                    .font(.body)
-                                    .foregroundColor(ColorTheme.secondaryText)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 32)
-                            }
-                            .padding(.top, 60) // Add explicit top padding so it's not cut off
-                            .padding(.bottom, 40)
-                            .padding(.horizontal)
-                            
-                            // Region Grid
-                            let columns: [GridItem] = {
-                                if UIDevice.current.userInterfaceIdiom == .pad {
-                                    return [GridItem(.adaptive(minimum: 160), spacing: 20)]
-                                } else {
-                                    return [
-                                        GridItem(.flexible(), spacing: 16),
-                                        GridItem(.flexible(), spacing: 16)
-                                    ]
-                                }
-                            }()
-                            
-                            LazyVGrid(columns: columns, spacing: 16) {
-                                ForEach(AppRegion.allCases) { region in
-                                    RegionCard(
-                                        region: region,
-                                        isSelected: selectedRegion == region
-                                    ) {
-                                        withAnimation(.snappy(duration: 0.24, extraBounce: 0.03)) {
-                                            selectedRegion = region
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 100) // Extra padding at bottom for scrolling
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 28) {
+                            header
+                            currencyList
                         }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 28)
+                        .padding(.bottom, 24)
+                        .frame(maxWidth: isPad ? 560 : .infinity)
+                        .frame(maxWidth: .infinity)
                     }
-                    
-                    // Continue Button - Pinned to bottom
-                    VStack {
-                        Button {
-                            regionSettings.selectedRegion = selectedRegion
-                            regionSettings.hasSelectedRegion = true
-                            dismiss()
-                        } label: {
-                            Text("continue_button".localizedString)
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(
-                                    LinearGradient(
-                                        colors: [ColorTheme.primary, ColorTheme.primary.opacity(0.85)],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(16)
-                                .shadow(color: ColorTheme.primary.opacity(0.3), radius: 10, x: 0, y: 5)
-                        }
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 20)
-                    .background(ColorTheme.background) // Ensure background covers list content upon scroll
+
+                    continueBar
                 }
-                // Constrain max width for iPad so it doesn't look too stretched if full screen,
-                // or centers nicely if in a larger container.
-                .frame(maxWidth: UIDevice.current.userInterfaceIdiom == .pad ? 600 : .infinity)
             }
             .interactiveDismissDisabled()
         }
     }
+
+    // MARK: - Header
+
+    private var header: some View {
+        VStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(ColorTheme.primary.opacity(0.12))
+                    .frame(width: 64, height: 64)
+
+                Image(systemName: "banknote.fill")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [ColorTheme.primary, ColorTheme.accent],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+
+            Text("welcome_to_app".localizedString)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .foregroundColor(ColorTheme.primaryText)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("select_your_currency".localizedString)
+                .font(.subheadline)
+                .foregroundColor(ColorTheme.secondaryText)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.top, 12)
+    }
+
+    // MARK: - Currency List
+
+    private var currencyList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(AppRegion.allCases.enumerated()), id: \.element.id) { index, region in
+                CurrencyRow(
+                    region: region,
+                    isSelected: selectedRegion == region
+                ) {
+                    withAnimation(.snappy(duration: 0.2)) {
+                        selectedRegion = region
+                    }
+                }
+
+                if index < AppRegion.allCases.count - 1 {
+                    Divider()
+                        .padding(.leading, 70)
+                }
+            }
+        }
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 10, x: 0, y: 4)
+    }
+
+    // MARK: - Continue Button
+
+    private var continueBar: some View {
+        Button {
+            regionSettings.selectedRegion = selectedRegion
+            regionSettings.hasSelectedRegion = true
+            dismiss()
+        } label: {
+            Text("continue_button".localizedString)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .frame(height: 54)
+                .background(
+                    LinearGradient(
+                        colors: [ColorTheme.primary, ColorTheme.primary.opacity(0.85)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .cornerRadius(16)
+                .shadow(color: ColorTheme.primary.opacity(0.25), radius: 10, x: 0, y: 5)
+        }
+        .frame(maxWidth: isPad ? 560 : .infinity)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 16)
+        .background(
+            ColorTheme.background
+                .ignoresSafeArea(edges: .bottom)
+                .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: -4)
+        )
+    }
 }
 
-private struct RegionCard: View {
+private struct CurrencyRow: View {
     let region: AppRegion
     let isSelected: Bool
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
-                    // Currency Icon Circle
-                    ZStack {
-                        Circle()
-                            .fill(ColorTheme.secondaryBackground)
-                            .frame(width: 44, height: 44)
-                            .shadow(color: Color.black.opacity(0.05), radius: 2, x: 0, y: 1)
-                        
-                        Text(region.currencySymbol)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(ColorTheme.primaryText)
-                    }
-                    
-                    Spacer()
-                    
-                    // Selection indicator
-                    ZStack {
-                        Circle()
-                            .strokeBorder(isSelected ? ColorTheme.primary : Color.gray.opacity(0.3), lineWidth: isSelected ? 2 : 1.5)
-                            .frame(width: 24, height: 24)
-                        
-                        if isSelected {
-                            Circle()
-                                .fill(ColorTheme.primary)
-                                .frame(width: 14, height: 14)
-                        }
-                    }
+            HStack(spacing: 14) {
+                // Currency symbol badge
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(isSelected ? ColorTheme.primary.opacity(0.14) : ColorTheme.secondaryBackground)
+                        .frame(width: 42, height: 42)
+
+                    Text(region.currencySymbol)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundColor(isSelected ? ColorTheme.primary : ColorTheme.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .padding(.horizontal, 4)
                 }
-                
-                VStack(alignment: .leading, spacing: 4) {
+
+                // Name + code/unit
+                VStack(alignment: .leading, spacing: 2) {
                     Text(region.displayName)
                         .font(.system(.body, design: .rounded))
-                        .fontWeight(.bold)
+                        .fontWeight(.semibold)
                         .foregroundColor(ColorTheme.primaryText)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    
+                        .minimumScaleFactor(0.85)
+
                     Text("\(region.currencyCode) • \(region.usesKilometers ? "km".localizedString : "mi".localizedString)")
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(ColorTheme.secondaryText)
                 }
+
+                Spacer(minLength: 8)
+
+                // Selection indicator
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundColor(isSelected ? ColorTheme.primary : Color.gray.opacity(0.3))
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(ColorTheme.cardBackground)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(isSelected ? ColorTheme.primary : Color.clear, lineWidth: 2)
-                    )
-            )
-            .shadow(
-                color: Color.black.opacity(isSelected ? 0.08 : 0.04),
-                radius: 12,
-                x: 0,
-                y: 4
-            )
-            .scaleEffect(isSelected ? 1.02 : 1.0)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(isSelected ? ColorTheme.primary.opacity(0.06) : Color.clear)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

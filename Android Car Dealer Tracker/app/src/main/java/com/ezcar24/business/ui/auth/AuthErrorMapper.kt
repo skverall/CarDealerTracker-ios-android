@@ -8,6 +8,7 @@ import javax.net.ssl.SSLException
 enum class AuthFailureContext {
     SIGN_IN,
     SIGN_UP,
+    SOCIAL_SIGN_IN,
     PASSWORD_RESET_REQUEST,
     PASSWORD_RESET_COMPLETE,
     PASSWORD_CHANGE
@@ -97,6 +98,9 @@ object AuthErrorMapper {
 
             AuthFailureContext.SIGN_UP ->
                 "We couldn't create your account right now. Please try again."
+
+            AuthFailureContext.SOCIAL_SIGN_IN ->
+                "We couldn't complete social sign-in right now. Please try again."
 
             AuthFailureContext.PASSWORD_RESET_REQUEST ->
                 "We couldn't send the reset email right now. Please try again."

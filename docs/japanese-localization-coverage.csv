@@ -120,7 +120,6 @@ Confirmation,iOS Car Dealer Tracker/Ezcar24Business/Views/AccountView.swift; iOS
 Connect,iOS Car Dealer Tracker/Ezcar24Business/Ezcar24BusinessApp.swift; iOS Car Dealer Tracker/Ezcar24Business/Auth/AuthGateView.swift; iOS Car Dealer Tracker/Ezcar24Business/Views/DataHealthView.swift; iOS Car Dealer Tracker/Ezcar24Business/Services/SupabaseModels.swift; iOS Car Dealer Tracker/Ezcar24Business/Services/CloudSyncManager.swift,Connect,Подключить,接続,no
 Consumption Tax (10%),iOS Car Dealer Tracker/Ezcar24Business/Services/SupabaseModels.swift,Consumption Tax (10%),Потребительский налог (10%),消費税（10%）,yes
 Continue Exporting,catalog/manual,Continue Exporting,Продолжить экспорт,エクスポートを続行,no
-Continue as Guest,iOS Car Dealer Tracker/Ezcar24Business/Auth/LoginView.swift,Continue as Guest,Продолжить как гость,ゲストとして続行,no
 Copied,iOS Car Dealer Tracker/Ezcar24Business/Views/TeamManagementView.swift; iOS Car Dealer Tracker/Ezcar24Business/Views/DataHealthView.swift,Copied,Скопировано,コピーしました,no
 Copy,iOS Car Dealer Tracker/Ezcar24Business/ViewModels/VehicleViewModel.swift; iOS Car Dealer Tracker/Ezcar24Business/ViewModels/DashboardViewModel.swift; iOS Car Dealer Tracker/Ezcar24Business/Views/TeamManagementView.swift; iOS Car Dealer Tracker/Ezcar24Business/Views/DataHealthView.swift; iOS Car Dealer Tracker/Ezcar24Business/Services/Calculators/InventoryMetricsCalculator.swift; iOS Car Dealer Tracker/Ezcar24Business/Services/Calculators/VehicleFinancialsCalculator.swift,Copy,Копировать,コピー,no
 Copy Link,catalog/manual,Copy Link,Копировать ссылку,リンクをコピー,no

@@ -53,7 +53,7 @@ fun RegionLanguageSettingsScreen(
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     val languageOptions = remember {
-        listOf(AppLanguage.ENGLISH, AppLanguage.RUSSIAN, AppLanguage.ARABIC, AppLanguage.JAPANESE, AppLanguage.UZBEK)
+        listOf(AppLanguage.ENGLISH, AppLanguage.PORTUGUESE_BRAZIL, AppLanguage.RUSSIAN, AppLanguage.ARABIC, AppLanguage.JAPANESE, AppLanguage.UZBEK)
     }
 
     Scaffold(

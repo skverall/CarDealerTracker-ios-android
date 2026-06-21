@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Car Dealer Tracker</string>
     <string name="l10n_0_30_days_79c8f34c8d" formatted="false">0-30 يوما</string>
@@ -726,7 +726,6 @@
     <string name="l10n_create_account_eff4fd865f" formatted="false">إنشاء حساب</string>
     <string name="l10n_don_t_have_an_account_f838dc11db" formatted="false">ليس لديك حساب؟</string>
     <string name="l10n_already_have_an_account_8559034a07" formatted="false">لديك حساب بالفعل؟</string>
-    <string name="l10n_continue_as_guest_3deaa38d83" formatted="false">المتابعة كضيف</string>
     <string name="l10n_mark_as_sold_6dc3bf355d" formatted="false">تحديد كمباع</string>
     <string name="l10n_purchase_s_195c86f89f">الشراء %s</string>
     <string name="l10n_no_financial_accounts_available_add_at_lea_6a0adcd262" formatted="false">لا توجد حسابات مالية متاحة. أضف حساب نقدي أو بنكي واحد على الأقل قبل إكمال هذا البيع.</string>
@@ -932,4 +931,8 @@
     <string name="l10n_details_dc3decbb93" formatted="false">التفاصيل</string>
     <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">اشرح لماذا سيساعد ذلك وكالتك.</string>
     <string name="l10n_submit_2dacf65959" formatted="false">إرسال</string>
+    <string name="l10n_continue_with_google_ccc5b0edaa" formatted="false">المتابعة باستخدام Google</string>
+    <string name="l10n_or_1758356db2" formatted="false">أو</string>
+    <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">تعذر إكمال تسجيل الدخول الاجتماعي الآن. حاول مرة أخرى.</string>
+    <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">لم يتم إعداد تسجيل الدخول عبر Google بعد.</string>
 </resources>

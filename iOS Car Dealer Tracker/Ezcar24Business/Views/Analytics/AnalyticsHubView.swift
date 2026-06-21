@@ -1473,7 +1473,7 @@ struct AIInsightsLanguagePolicy {
             .split { $0 == "-" || $0 == "_" }
             .first
             .map(String.init) ?? "en"
-        let allowed: Set<String> = ["en", "ru", "ar", "ja", "ko", "uz", "hi"]
+        let allowed: Set<String> = ["en", "ru", "ar", "ja", "ko", "uz", "hi", "pt"]
         return allowed.contains(code) ? code : "en"
     }
 

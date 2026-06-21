@@ -20,6 +20,8 @@ struct UserGuideView: View {
 
     private var sections: [GuideSection] {
         switch regionSettings.selectedLanguage {
+        case .portugueseBrazil:
+            return portugueseBrazilSections
         case .russian:
             return russianSections
         case .uzbek:
@@ -166,6 +168,148 @@ struct UserGuideView: View {
                     "If AI is disabled, check that you are signed in, Pro is active, and the daily limit is not used up.",
                     "If a team member cannot see a feature, check their role and permissions.",
                     "Contact support from Account > Contact Developer."
+                ]
+            )
+        ]
+    }
+
+    private var portugueseBrazilSections: [GuideSection] {
+        [
+            GuideSection(
+                title: "Primeiros passos",
+                items: [
+                    "Entre ou crie uma organização de concessionária.",
+                    "Abra Conta > Região e idioma para escolher país, moeda, idioma e formatos.",
+                    "Use o seletor de tema em Conta se preferir modo claro ou escuro.",
+                    "Adicione seu primeiro veículo em Veículos e depois crie contas financeiras se quiser que os saldos sejam atualizados automaticamente.",
+                    "Ative ou desative a aba Peças em Conta, conforme sua concessionária venda peças ou não."
+                ]
+            ),
+            GuideSection(
+                title: "Navegação",
+                items: [
+                    "Abas inferiores: Painel, Despesas, Veículos, Peças, Vendas e Clientes.",
+                    "O Painel mostra rapidamente dinheiro, estoque, alertas e atalhos.",
+                    "Use a busca nas listas para encontrar veículos, clientes, notas, VINs e registros mais rápido.",
+                    "A maioria das telas de detalhe abre ao tocar em uma linha; volte pelo botão do iOS ou deslizando pela borda esquerda."
+                ]
+            ),
+            GuideSection(
+                title: "Veículos e fotos",
+                items: [
+                    "Veículos são os principais registros do seu estoque.",
+                    "Os status incluem à venda, reservado, em trânsito, em serviço e vendido.",
+                    "Edite um veículo para atualizar preço, quilometragem, dados de compra, notas e status.",
+                    "Marcar um veículo como vendido cria um registro de venda.",
+                    "Adicione várias fotos, defina uma foto de capa e use Compartilhar para criar um link público do veículo."
+                ]
+            ),
+            GuideSection(
+                title: "Custo de permanência",
+                items: [
+                    "O custo de permanência estima o custo diário de manter um veículo em estoque.",
+                    "Configure a taxa anual em Conta > Ajustes de custo de permanência.",
+                    "Você pode desativar o custo de permanência se sua concessionária não usa esse cálculo.",
+                    "O custo de permanência acumula até a data da venda; depois da venda ele para.",
+                    "O lucro da venda inclui o custo de permanência."
+                ]
+            ),
+            GuideSection(
+                title: "Despesas e contas financeiras",
+                items: [
+                    "Registre despesas de veículos, pessoais e de funcionários por categoria.",
+                    "Vincule uma despesa a um veículo quando ela pertencer a esse veículo.",
+                    "Despesas do veículo afetam o lucro do veículo e a base do custo de permanência.",
+                    "Proprietários e administradores podem gerenciar contas de caixa, banco e crédito em Conta > Contas financeiras.",
+                    "Ao escolher uma conta para uma venda ou despesa, o saldo dessa conta é atualizado."
+                ]
+            ),
+            GuideSection(
+                title: "Vendas e dívidas",
+                items: [
+                    "Crie uma venda de veículo marcando o veículo como vendido ou registrando uma venda.",
+                    "Selecione a conta de recebimento para que o dinheiro entre no saldo correto.",
+                    "O lucro inclui preço de venda, preço de compra, despesas, custo de permanência e reembolso de IVA quando usado.",
+                    "Use Dívidas para acompanhar valores a receber e valores que você deve.",
+                    "Registre pagamentos em dívidas para reduzir o saldo restante."
+                ]
+            ),
+            GuideSection(
+                title: "Estoque de peças",
+                items: [
+                    "Use Peças para controlar estoque, custo de compra, preço de venda e quantidade disponível.",
+                    "Receba estoque quando novas peças chegarem.",
+                    "Crie vendas de peças com itens de linha para manter custo e lucro claros.",
+                    "Se sua concessionária não vende peças, oculte a aba Peças em Conta."
+                ]
+            ),
+            GuideSection(
+                title: "Clientes / CRM",
+                items: [
+                    "Guarde leads e clientes com telefones, notas e status.",
+                    "Registre interações e lembretes para não perder follow-ups.",
+                    "Vincule clientes a vendas e dívidas quando necessário.",
+                    "Busque por nome, telefone e notas."
+                ]
+            ),
+            GuideSection(
+                title: "Analytics e AI Insights",
+                items: [
+                    "Abra Analytics para revisar receita, gastos, lucro, saúde do estoque e desempenho do CRM por período.",
+                    "Use o filtro de período para alternar entre 1D, 1S, 1M, 3M, 6M e Tudo.",
+                    "AI Insights resume vendas, despesas e estoque para o período selecionado.",
+                    "Relatórios de AI são um recurso Pro. Se o Pro não estiver ativo, o botão abre a tela de assinatura.",
+                    "O limite diário de AI é de 15 relatórios. O cartão mostra quantos foram usados e quando o limite reinicia.",
+                    "Relatórios gerados ficam salvos no histórico. Se já existir um relatório, o app pergunta antes de gerar outro."
+                ]
+            ),
+            GuideSection(
+                title: "Equipe e permissões",
+                items: [
+                    "Proprietários e administradores podem convidar membros da equipe em Conta > Membros da equipe.",
+                    "Um colega pode entrar com Entrar na equipe por código quando um administrador compartilhar o código.",
+                    "Os papéis incluem proprietário, administrador, vendas e visualizador.",
+                    "Permissões controlam acesso a finanças, custos, lucro, estoque, leads, peças e exclusão."
+                ]
+            ),
+            GuideSection(
+                title: "Sincronização, offline e saúde dos dados",
+                items: [
+                    "O app é local-first: as alterações são salvas primeiro no telefone e sincronizam em segundo plano.",
+                    "Use Conta > Sincronizar agora quando quiser enviar e receber atualizações manualmente.",
+                    "Use Conta > Saúde dos dados para verificar o status de sincronização e possíveis problemas.",
+                    "Proprietários e administradores podem executar Limpar duplicatas se registros duplicados aparecerem.",
+                    "Se estiver offline, continue trabalhando; o app coloca as alterações na fila e sincroniza quando a rede voltar."
+                ]
+            ),
+            GuideSection(
+                title: "Relatórios, backups e notificações",
+                items: [
+                    "Proprietários podem exportar dados em Conta > Backup e exportação.",
+                    "Relatórios por e-mail permite que usuários elegíveis configurem o envio mensal de relatórios.",
+                    "Relatórios mensais podem ser pré-visualizados antes de enviar ou compartilhar.",
+                    "Notificações cobrem lembretes, vencimento de dívidas, lembrete diário de despesas e alertas de estoque.",
+                    "Se as notificações estiverem desativadas, abra Conta > Notificações para ir aos ajustes do iOS."
+                ]
+            ),
+            GuideSection(
+                title: "Dealer Pro, indicação e conta",
+                items: [
+                    "Dealer Pro desbloqueia ferramentas premium, incluindo AI Insights.",
+                    "Use o cartão Dealer Pro em Conta para gerenciar sua assinatura.",
+                    "Convidar dealer compartilha seu código de indicação; você ganha tempo Pro bônus quando um dealer indicado assina.",
+                    "Veja as estatísticas de indicação em Conta para acompanhar convites.",
+                    "Altere a senha, fale com o desenvolvedor, leia Termos e Política de Privacidade ou exclua sua conta em Conta."
+                ]
+            ),
+            GuideSection(
+                title: "Solução de problemas",
+                items: [
+                    "Se dados ou fotos não aparecerem, puxe para atualizar ou execute Conta > Sincronizar agora.",
+                    "Se registros duplicados aparecerem, peça a um proprietário ou administrador para executar Limpar duplicatas.",
+                    "Se a AI estiver desativada, verifique se você entrou, se o Pro está ativo e se o limite diário não acabou.",
+                    "Se um membro da equipe não consegue ver um recurso, verifique o papel e as permissões dele.",
+                    "Use Conta > Falar com o desenvolvedor para obter suporte."
                 ]
             )
         ]

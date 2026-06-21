@@ -1,8 +1,15 @@
 package com.ezcar24.business.ui.auth
 
+import android.content.Context
+import android.util.Base64
 import android.util.Log
+import androidx.credentials.CredentialManager
+import androidx.credentials.CustomCredential
+import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ezcar24.business.BuildConfig
 import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.repository.AuthDeepLinkResult
 import com.ezcar24.business.data.repository.AccountRepository
@@ -10,10 +17,15 @@ import com.ezcar24.business.data.repository.AuthRepository
 import com.ezcar24.business.data.repository.SignUpResult
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
+import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.security.MessageDigest
+import java.security.SecureRandom
 import javax.inject.Inject
 
 enum class AuthMode {
@@ -54,8 +66,13 @@ data class AuthUiState(
             } else {
                 "This sign-up is ready to join a team automatically."
             }
-        }
+    }
 }
+
+private data class GoogleCredentialResult(
+    val idToken: String,
+    val nonce: String
+)
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
@@ -247,6 +264,56 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun signInWithGoogle(context: Context) {
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            _uiState.value = currentState.copy(isLoading = true, error = null, message = null)
+            try {
+                if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
+                    _uiState.value = currentState.copy(
+                        isLoading = false,
+                        error = "Google Sign-In is not configured yet."
+                    )
+                    return@launch
+                }
+
+                val credential = requestGoogleCredential(context)
+                if (currentState.mode == AuthMode.SIGN_UP) {
+                    currentState.referralCode.trim().ifNotEmpty(authRepository::savePendingReferralCode)
+                }
+                currentState.teamInviteCode.trim().ifNotEmpty(authRepository::savePendingTeamInviteCode)
+                authRepository.loginWithGoogleIdToken(
+                    idToken = credential.idToken,
+                    nonce = credential.nonce
+                )
+                authRepository.applyPendingPostAuthActions(
+                    teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
+                )
+                subscriptionManager.logIn(authRepository.getDealerId())
+                triggerSync()
+                _uiState.value = currentState.copy(
+                    password = "",
+                    phone = "",
+                    referralCode = "",
+                    teamInviteCode = "",
+                    isLoading = false,
+                    isGuestMode = false,
+                    isSuccess = true,
+                    error = null,
+                    message = null
+                )
+            } catch (e: GetCredentialCancellationException) {
+                _uiState.value = currentState.copy(isLoading = false, error = null, message = null)
+            } catch (e: Exception) {
+                Log.e(TAG, "Google sign-in failed", e)
+                _uiState.value = currentState.copy(
+                    isLoading = false,
+                    error = AuthErrorMapper.map(e, AuthFailureContext.SOCIAL_SIGN_IN)
+                )
+            }
+        }
+    }
+
     fun startGuestMode() {
         subscriptionManager.logOut()
         _uiState.value = AuthUiState(
@@ -343,6 +410,50 @@ class AuthViewModel @Inject constructor(
             CloudSyncEnvironment.currentDealerId = dealerId
             cloudSyncManager.syncAfterLogin(dealerId, forceRefresh = true)
         }
+    }
+
+    private suspend fun requestGoogleCredential(context: Context): GoogleCredentialResult {
+        val nonce = generateSecureRandomNonce()
+        val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+            .setNonce(sha256(nonce))
+            .build()
+
+        val request = GetCredentialRequest.Builder()
+            .addCredentialOption(signInWithGoogleOption)
+            .build()
+
+        val result = CredentialManager.create(context).getCredential(
+            request = request,
+            context = context
+        )
+        val credential = result.credential
+        if (credential is CustomCredential &&
+            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+        ) {
+            try {
+                val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
+                return GoogleCredentialResult(idToken = googleCredential.idToken, nonce = nonce)
+            } catch (e: GoogleIdTokenParsingException) {
+                throw IllegalStateException("Google returned an invalid sign-in token.", e)
+            }
+        }
+
+        throw IllegalStateException("Google returned an unsupported credential type.")
+    }
+
+    private fun generateSecureRandomNonce(byteLength: Int = 32): String {
+        val randomBytes = ByteArray(byteLength)
+        SecureRandom().nextBytes(randomBytes)
+        return Base64.encodeToString(
+            randomBytes,
+            Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING
+        )
+    }
+
+    private fun sha256(value: String): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(value.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
     }
 }
 

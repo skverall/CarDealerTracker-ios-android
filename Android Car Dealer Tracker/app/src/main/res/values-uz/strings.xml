@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Car Dealer Tracker</string>
     <string name="l10n_0_30_days_79c8f34c8d" formatted="false">0-30 kun</string>
@@ -726,7 +726,6 @@
     <string name="l10n_create_account_eff4fd865f" formatted="false">Hisob yaratish</string>
     <string name="l10n_don_t_have_an_account_f838dc11db" formatted="false">Hisobingiz yoʻqmi?</string>
     <string name="l10n_already_have_an_account_8559034a07" formatted="false">Hisobingiz bormi?</string>
-    <string name="l10n_continue_as_guest_3deaa38d83" formatted="false">Mehmon sifatida davom etish</string>
     <string name="l10n_mark_as_sold_6dc3bf355d" formatted="false">Sotilgan deb belgilash</string>
     <string name="l10n_purchase_s_195c86f89f">Xarid %s</string>
     <string name="l10n_no_financial_accounts_available_add_at_lea_6a0adcd262" formatted="false">Moliyaviy hisoblar mavjud emas. Bu sotuvni yakunlashdan oldin kamida bitta naqd yoki bank hisobini qoʻshing.</string>
@@ -932,4 +931,8 @@
     <string name="l10n_details_dc3decbb93" formatted="false">Tafsilotlar</string>
     <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">Bu dilerlik ishingizga qanday yordam berishini tushuntiring.</string>
     <string name="l10n_submit_2dacf65959" formatted="false">Yuborish</string>
+    <string name="l10n_continue_with_google_ccc5b0edaa" formatted="false">Google bilan davom etish</string>
+    <string name="l10n_or_1758356db2" formatted="false">yoki</string>
+    <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">Hozir ijtimoiy tarmoq orqali kirishni yakunlab bo‘lmadi. Qayta urinib ko‘ring.</string>
+    <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Google orqali kirish hali sozlanmagan.</string>
 </resources>

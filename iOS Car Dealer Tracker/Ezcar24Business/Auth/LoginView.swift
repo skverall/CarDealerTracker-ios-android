@@ -1,3 +1,6 @@
+import AuthenticationServices
+import CryptoKit
+import Security
 import SwiftUI
 
 struct LoginView: View {
@@ -10,6 +13,7 @@ struct LoginView: View {
     @State private var showingPaywall = false
     @State private var showPassword = false
     @State private var showingOptionalCodes = false
+    @State private var appleSignInNonce: String?
     @FocusState private var focusedField: Field?
 
     init(isGuest: Binding<Bool> = .constant(false)) {
@@ -233,12 +237,7 @@ struct LoginView: View {
             }
             .padding(.top, 4)
 
-            Button("Continue as Guest".localizedString) {
-                startGuestMode()
-            }
-            .font(.system(size: 14, weight: .medium, design: .rounded))
-            .foregroundStyle(ColorTheme.secondaryText)
-            .padding(.top, 4)
+            socialAuthSection
         }
         .padding(32)
         .background(
@@ -402,6 +401,71 @@ struct LoginView: View {
         )
     }
 
+    private var socialAuthSection: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 12) {
+                Rectangle()
+                    .fill(ColorTheme.secondaryText.opacity(0.22))
+                    .frame(height: 1)
+
+                Text("or".localizedString)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(ColorTheme.secondaryText)
+                    .textCase(.uppercase)
+
+                Rectangle()
+                    .fill(ColorTheme.secondaryText.opacity(0.22))
+                    .frame(height: 1)
+            }
+
+            VStack(spacing: 12) {
+                SignInWithAppleButton(.continue, onRequest: configureAppleSignIn, onCompletion: handleAppleSignIn)
+                    .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                    .frame(height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .disabled(sessionStore.isAuthenticating || appSessionState.isProcessing)
+
+                Button(action: handleGoogleSignIn) {
+                    HStack(spacing: 12) {
+                        googleBrandMark
+                        Text("Continue with Google".localizedString)
+                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+
+                        if sessionStore.isAuthenticating {
+                            ProgressView()
+                                .scaleEffect(0.82)
+                        }
+                    }
+                    .foregroundStyle(ColorTheme.primaryText)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color.white.opacity(colorScheme == .dark ? 0.08 : 0.86))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color.white.opacity(colorScheme == .dark ? 0.14 : 0.75), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(sessionStore.isAuthenticating || appSessionState.isProcessing)
+            }
+        }
+    }
+
+    private var googleBrandMark: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white)
+            Text("G")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(Color(red: 0.26, green: 0.52, blue: 0.96))
+        }
+        .frame(width: 24, height: 24)
+        .shadow(color: Color.black.opacity(0.08), radius: 2, x: 0, y: 1)
+    }
+
     // MARK: - Actions
 
     private func syncOptionalCodeVisibility(forceOpen: Bool = false) {
@@ -429,6 +493,73 @@ struct LoginView: View {
         }
     }
 
+    private func handleGoogleSignIn() {
+        prepareSocialAuthContext()
+        sessionStore.resetError()
+        Task {
+            do {
+                try await sessionStore.signInWithGoogle()
+                appSessionState.isGuestMode = false
+                clearSocialSensitiveFields()
+            } catch {
+            }
+        }
+    }
+
+    private func configureAppleSignIn(_ request: ASAuthorizationAppleIDRequest) {
+        prepareSocialAuthContext()
+        let nonce = Self.randomNonceString()
+        appleSignInNonce = nonce
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = Self.sha256(nonce)
+    }
+
+    private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+        switch result {
+        case .success(let authorization):
+            guard
+                let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+                let nonce = appleSignInNonce,
+                let tokenData = credential.identityToken,
+                let idToken = String(data: tokenData, encoding: .utf8)
+            else {
+                sessionStore.errorMessage = "social_sign_in_failed".localizedString
+                return
+            }
+
+            Task {
+                do {
+                    try await sessionStore.signInWithApple(idToken: idToken, nonce: nonce, fullName: credential.fullName)
+                    appSessionState.isGuestMode = false
+                    clearSocialSensitiveFields()
+                } catch {
+                }
+            }
+        case .failure(let error):
+            if let authorizationError = error as? ASAuthorizationError, authorizationError.code == .canceled {
+                sessionStore.resetError()
+            } else {
+                sessionStore.errorMessage = "social_sign_in_failed".localizedString
+            }
+        }
+    }
+
+    private func prepareSocialAuthContext() {
+        let referralCode = appSessionState.mode == .signUp ? trimmedReferralCode : nil
+        let teamInviteCode = trimmedTeamInviteCode
+        sessionStore.savePendingSocialAuthContext(
+            referralCode: referralCode?.isEmpty == false ? referralCode : nil,
+            teamInviteCode: teamInviteCode.isEmpty ? nil : teamInviteCode
+        )
+    }
+
+    private func clearSocialSensitiveFields() {
+        appSessionState.password = ""
+        appSessionState.phone = ""
+        appSessionState.referralCode = ""
+        appSessionState.teamInviteCode = ""
+    }
+
     private func startGuestMode() {
         PersistenceController.shared.deleteAllData()
         cloudSyncManager.updateContext(PersistenceController.shared.viewContext)
@@ -445,5 +576,38 @@ struct LoginView: View {
         Task {
             await appSessionState.authenticate()
         }
+    }
+
+    private static func randomNonceString(length: Int = 32) -> String {
+        precondition(length > 0)
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+
+        while remainingLength > 0 {
+            var randoms = [UInt8](repeating: 0, count: 16)
+            let status = SecRandomCopyBytes(kSecRandomDefault, randoms.count, &randoms)
+            if status != errSecSuccess {
+                fatalError("Unable to generate nonce. SecRandomCopyBytes failed with OSStatus \(status)")
+            }
+
+            randoms.forEach { random in
+                if remainingLength == 0 {
+                    return
+                }
+                if Int(random) < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
+            }
+        }
+
+        return result
+    }
+
+    private static func sha256(_ input: String) -> String {
+        let inputData = Data(input.utf8)
+        let hashedData = SHA256.hash(data: inputData)
+        return hashedData.map { String(format: "%02x", $0) }.joined()
     }
 }

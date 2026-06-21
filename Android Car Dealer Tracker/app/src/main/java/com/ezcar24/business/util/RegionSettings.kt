@@ -36,6 +36,7 @@ enum class AppRegion(
     CANADA("Canada", "CAD", "CA$", "en-CA", true, 2),
     UK("UK", "GBP", "£", "en-GB", false, 2),
     EUROPE("Europe", "EUR", "€", "en-IE", true, 2),
+    BRAZIL("Brazil", "BRL", "R$", "pt-BR", true, 2),
     RUSSIA("Russia", "RUB", "₽", "ru-RU", true, 2),
     TURKEY("Turkey", "TRY", "₺", "tr-TR", true, 2),
     JAPAN("Japan", "JPY", "¥", "ja-JP", true, 0),
@@ -56,7 +57,8 @@ enum class AppLanguage(
     ARABIC("ar", "العربية", true),
     JAPANESE("ja", "日本語", false),
     KOREAN("ko", "한국어", false),
-    UZBEK("uz", "Oʻzbekcha", false)
+    UZBEK("uz", "Oʻzbekcha", false),
+    PORTUGUESE_BRAZIL("pt-BR", "Português (Brasil)", false)
 }
 
 enum class AppTheme {

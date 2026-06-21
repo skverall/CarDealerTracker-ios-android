@@ -5,6 +5,9 @@ import android.net.Uri
 import android.os.Build
 import android.util.Log
 
+import androidx.credentials.ClearCredentialStateRequest
+import androidx.credentials.CredentialManager
+
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
@@ -16,7 +19,9 @@ import javax.inject.Singleton
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
 import io.github.jan.supabase.auth.providers.builtin.Email
+import io.github.jan.supabase.auth.providers.builtin.IDToken
 import io.github.jan.supabase.postgrest.postgrest
 
 import kotlinx.coroutines.Dispatchers
@@ -107,6 +112,7 @@ class AuthRepository @Inject constructor(
     private val client: SupabaseClient,
     private val regionSettingsManager: RegionSettingsManager
 ) {
+    private val appContext = context.applicationContext
     private val authPrefs = context.getSharedPreferences(AUTH_PREFS, Context.MODE_PRIVATE)
     private val json = Json { ignoreUnknownKeys = true }
     private val _deepLinkEvents = MutableSharedFlow<AuthDeepLinkResult>(extraBufferCapacity = 4)
@@ -122,6 +128,14 @@ class AuthRepository @Inject constructor(
         client.auth.signInWith(Email) {
             this.email = email
             this.password = password
+        }
+    }
+
+    suspend fun loginWithGoogleIdToken(idToken: String, nonce: String) {
+        client.auth.signInWith(IDToken) {
+            this.idToken = idToken
+            this.provider = Google
+            this.nonce = nonce
         }
     }
 
@@ -258,6 +272,11 @@ class AuthRepository @Inject constructor(
 
     suspend fun signOut() {
         client.auth.signOut()
+        runCatching {
+            CredentialManager.create(appContext).clearCredentialState(ClearCredentialStateRequest())
+        }.onFailure { error ->
+            Log.w(TAG, "Credential Manager state clear failed", error)
+        }
     }
 
     suspend fun deleteAccount() = withContext(Dispatchers.IO) {
@@ -495,7 +514,7 @@ class AuthRepository @Inject constructor(
             .apply()
     }
 
-    private fun savePendingReferralCode(code: String) {
+    fun savePendingReferralCode(code: String) {
         val normalized = code.trim().uppercase(Locale.US)
         if (normalized.isEmpty()) return
         authPrefs.edit()

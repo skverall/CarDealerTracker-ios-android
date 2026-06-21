@@ -1,4 +1,5 @@
 import Foundation
+import AuthenticationServices
 import Supabase
 import UIKit
 
@@ -418,9 +419,7 @@ final class SessionStore: ObservableObject {
         defer { isAuthenticating = false }
         do {
             let session = try await client.auth.signIn(email: email, password: password)
-            updateStatus(for: .signedIn, session: session)
-            // Link RevenueCat user
-            SubscriptionManager.shared.logIn(userId: session.user.id.uuidString)
+            completeSignIn(with: session)
             errorMessage = nil
         } catch {
             errorMessage = localized(error)
@@ -453,6 +452,93 @@ final class SessionStore: ObservableObject {
             errorMessage = localized(error)
             throw error
         }
+    }
+
+    func savePendingSocialAuthContext(referralCode: String?, teamInviteCode: String?) {
+        if let referralCode, !referralCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            cachePendingReferralCode(referralCode)
+        }
+        if let teamInviteCode, !teamInviteCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            cachePendingTeamInviteCode(teamInviteCode)
+        }
+    }
+
+    func signInWithGoogle() async throws {
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+        do {
+            let session = try await client.auth.signInWithOAuth(
+                provider: .google,
+                redirectTo: AuthRedirect.callbackURL,
+                scopes: "openid email profile"
+            ) { authSession in
+                authSession.prefersEphemeralWebBrowserSession = false
+            }
+            completeSignIn(with: session)
+            errorMessage = nil
+        } catch {
+            handleSocialAuthError(error)
+            throw error
+        }
+    }
+
+    func signInWithApple(idToken: String, nonce: String, fullName: PersonNameComponents?) async throws {
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+        do {
+            let session = try await client.auth.signInWithIdToken(
+                credentials: OpenIDConnectCredentials(
+                    provider: .apple,
+                    idToken: idToken,
+                    nonce: nonce
+                )
+            )
+            completeSignIn(with: session)
+            try? await updateAppleDisplayNameIfNeeded(fullName)
+            errorMessage = nil
+        } catch {
+            handleSocialAuthError(error)
+            throw error
+        }
+    }
+
+    private func completeSignIn(with session: Session) {
+        updateStatus(for: .signedIn, session: session)
+        SubscriptionManager.shared.logIn(userId: session.user.id.uuidString)
+    }
+
+    private func updateAppleDisplayNameIfNeeded(_ fullName: PersonNameComponents?) async throws {
+        guard let fullName else { return }
+        let formatter = PersonNameComponentsFormatter()
+        let displayName = formatter.string(from: fullName).trimmingCharacters(in: .whitespacesAndNewlines)
+        let givenName = fullName.givenName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let familyName = fullName.familyName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !displayName.isEmpty || !(givenName?.isEmpty ?? true) || !(familyName?.isEmpty ?? true) else { return }
+
+        var data: [String: AnyJSON] = [:]
+        if !displayName.isEmpty {
+            data["full_name"] = .string(displayName)
+        }
+        if let givenName, !givenName.isEmpty {
+            data["given_name"] = .string(givenName)
+        }
+        if let familyName, !familyName.isEmpty {
+            data["family_name"] = .string(familyName)
+        }
+
+        _ = try await client.auth.update(user: UserAttributes(data: data))
+    }
+
+    private func handleSocialAuthError(_ error: Error) {
+        if let authorizationError = error as? ASAuthorizationError, authorizationError.code == .canceled {
+            errorMessage = nil
+            return
+        }
+        if (error as NSError).code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+            errorMessage = nil
+            return
+        }
+        errorMessage = "social_sign_in_failed".localizedStringFallback
     }
 
     private func notifySignupCompleted(referralCode: String?, teamInviteCode: String?) {

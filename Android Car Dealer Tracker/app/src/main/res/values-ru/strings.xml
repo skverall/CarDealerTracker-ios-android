@@ -35,4 +35,8 @@
     <string name="l10n_details_dc3decbb93" formatted="false">Подробности</string>
     <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">Объясните, почему это поможет вашему дилерству.</string>
     <string name="l10n_submit_2dacf65959" formatted="false">Отправить</string>
+    <string name="l10n_continue_with_google_ccc5b0edaa" formatted="false">Продолжить с Google</string>
+    <string name="l10n_or_1758356db2" formatted="false">или</string>
+    <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">Не удалось завершить вход через соцсервис. Попробуйте еще раз.</string>
+    <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Вход через Google еще не настроен.</string>
 </resources>

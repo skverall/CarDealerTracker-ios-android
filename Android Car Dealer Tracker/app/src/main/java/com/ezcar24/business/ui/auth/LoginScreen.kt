@@ -64,6 +64,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -84,6 +85,7 @@ fun LoginScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var showingOptionalCodes by rememberSaveable { mutableStateOf(uiState.mode == AuthMode.SIGN_UP && uiState.hasOptionalCodes) }
 
@@ -359,19 +361,10 @@ fun LoginScreen(
                         }
                     }
 
-                    TextButton(
-                        onClick = viewModel::startGuestMode,
-                        enabled = !uiState.isLoading,
-                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                        contentPadding = ButtonDefaults.TextButtonContentPadding
-                    ) {
-                        Text(
-                            text = localizedUiString("Continue as Guest"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    SocialAuthSection(
+                        isLoading = uiState.isLoading,
+                        onGoogleClick = { viewModel.signInWithGoogle(context) }
+                    )
                 }
             }
 
@@ -587,6 +580,95 @@ private fun PrimaryAuthButton(
                     fontWeight = FontWeight.Bold
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun SocialAuthSection(
+    isLoading: Boolean,
+    onGoogleClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f))
+            )
+            Text(
+                text = localizedUiString("or").uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(1.dp)
+                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.22f))
+            )
+        }
+
+        Button(
+            onClick = onGoogleClick,
+            enabled = !isLoading,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(54.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GoogleBrandMark()
+                Text(
+                    text = localizedUiString("Continue with Google"),
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(18.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GoogleBrandMark() {
+    Surface(
+        modifier = Modifier.size(24.dp),
+        shape = CircleShape,
+        color = Color.White,
+        shadowElevation = 1.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = "G",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF4285F4)
+            )
         }
     }
 }

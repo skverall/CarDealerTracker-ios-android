@@ -277,7 +277,6 @@ private extension DashboardView {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 8)
     }
 
     var syncStatusBar: some View {
@@ -385,7 +384,12 @@ private extension DashboardView {
 private extension DashboardView {
     var financialOverviewSection: some View {
         Section {
-            VStack(spacing: 24) {
+            VStack(spacing: 0) {
+                timeFiltersSection
+
+                DrivingCarLane()
+
+                VStack(spacing: 24) {
                 if permissionService.can(.viewFinancials) {
                     // 1. Account Balances
                     VStack(spacing: 12) {
@@ -541,6 +545,7 @@ private extension DashboardView {
                 }
             }
             .padding(.horizontal, 20)
+            }
             .listRowInsets(EdgeInsets())
         }
         .listRowSeparator(.hidden)
@@ -1610,10 +1615,6 @@ extension Expense {
 private extension DashboardView {
     var dashboardList: some View {
         List {
-            timeFiltersSection
-                .listRowInsets(EdgeInsets())
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
             financialOverviewSection
             analyticsSection
             todaysExpensesSection
@@ -1628,6 +1629,184 @@ private extension DashboardView {
         .refreshable {
             if case .signedIn(let user) = sessionStore.status {
                 await cloudSyncManager.manualSync(user: user)
+            }
+        }
+    }
+}
+
+// MARK: - Driving Car Lane
+
+let dashboardCarEnabledKey = "dashboard_car_enabled"
+
+private struct DrivingCarLane: View {
+    var laneHeight: CGFloat = 38
+    var duration: Double = 6.5
+
+    @AppStorage(dashboardCarEnabledKey) private var enabled = true
+    @AppStorage("dashboard_car_moving") private var moving = true
+    @AppStorage("dashboard_car_progress") private var pausedProgress = 0.5
+
+    @State private var runStart = Date()
+    @State private var didStart = false
+
+    var body: some View {
+        if enabled {
+            lane
+        } else {
+            Color.clear.frame(height: 12)
+        }
+    }
+
+    private var lane: some View {
+        let carHeight = laneHeight - 4
+        let carWidth = carHeight * (112.0 / 72.0)
+        let baseY = (laneHeight - carHeight) / 2
+        return TimelineView(.animation) { timeline in
+            GeometryReader { geo in
+                let now = timeline.date
+                let t = now.timeIntervalSinceReferenceDate
+                let laneWidth = geo.size.width
+                let travel = laneWidth + carWidth * 2
+                let progress = moving
+                    ? (now.timeIntervalSince(runStart) / duration).truncatingRemainder(dividingBy: 1)
+                    : pausedProgress
+                let x = -carWidth + CGFloat(progress) * travel
+                let bob = moving ? CGFloat(sin(t * 7)) * 1.0 : CGFloat(sin(t * 3)) * 0.5
+                let wheelAngle = progress * 44
+
+                CartoonCar(wheelAngle: wheelAngle, moving: moving, time: t)
+                    .frame(width: carWidth, height: carHeight)
+                    .contentShape(Rectangle())
+                    .offset(x: x, y: baseY + bob)
+                    .onTapGesture { toggleMoving(at: progress) }
+                    .onLongPressGesture(minimumDuration: 0.45) { deleteCar() }
+            }
+        }
+        .frame(height: laneHeight)
+        .accessibilityHidden(true)
+        .onAppear {
+            guard !didStart else { return }
+            didStart = true
+            runStart = Date().addingTimeInterval(-pausedProgress * duration)
+        }
+    }
+
+    private func toggleMoving(at progress: Double) {
+        if moving {
+            pausedProgress = progress
+            moving = false
+        } else {
+            runStart = Date().addingTimeInterval(-pausedProgress * duration)
+            moving = true
+        }
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+
+    private func deleteCar() {
+        enabled = false
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+}
+
+private struct CartoonCar: View {
+    var wheelAngle: Double = 0
+    var moving: Bool = true
+    var time: Double = 0
+
+    var body: some View {
+        Canvas { ctx, size in
+            let sx = size.width / 112
+            let sy = size.height / 72
+            func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * sx, y: y * sy) }
+            func rrect(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ rad: CGFloat) -> Path {
+                Path(roundedRect: CGRect(x: x * sx, y: y * sy, width: w * sx, height: h * sy),
+                     cornerSize: CGSize(width: rad * sx, height: rad * sy))
+            }
+            func ell(_ cx: CGFloat, _ cy: CGFloat, _ rx: CGFloat, _ ry: CGFloat) -> Path {
+                Path(ellipseIn: CGRect(x: (cx - rx) * sx, y: (cy - ry) * sy, width: 2 * rx * sx, height: 2 * ry * sy))
+            }
+
+            let blue = Color(red: 0.15, green: 0.48, blue: 0.97)
+            let blueDark = Color(red: 0.07, green: 0.30, blue: 0.82)
+            let outline = Color(red: 0.07, green: 0.12, blue: 0.23)
+            let glass = Color(red: 0.82, green: 0.92, blue: 1.0)
+            let tire = Color(red: 0.15, green: 0.15, blue: 0.17)
+            let hub = Color(red: 0.87, green: 0.89, blue: 0.93)
+            let lw = 2.2 * min(sx, sy)
+
+            // ground shadow
+            ctx.fill(ell(56, 69, 42, 4), with: .color(.black.opacity(0.10)))
+
+            if moving {
+                // speed lines while driving
+                for yy in [26.0, 40.0, 52.0] {
+                    ctx.fill(rrect(0, yy - 1.2, 12, 2.4, 1.2), with: .color(blue.opacity(0.40)))
+                }
+            } else {
+                // exhaust puffs while idling
+                for i in 0..<3 {
+                    let phase = (time * 0.5 + Double(i) * 0.34).truncatingRemainder(dividingBy: 1)
+                    let px = max(1.0, 12 - phase * 11)
+                    let py = 52 - phase * 7
+                    let r = 1.6 + phase * 2.4
+                    ctx.fill(ell(px, py, r, r), with: .color(.gray.opacity((1 - phase) * 0.35)))
+                }
+            }
+
+            // body silhouette (facing right)
+            var car = Path()
+            car.move(to: pt(16, 57))
+            car.addLine(to: pt(16, 42))
+            car.addQuadCurve(to: pt(40, 18), control: pt(16, 24))
+            car.addQuadCurve(to: pt(74, 18), control: pt(57, 11))
+            car.addQuadCurve(to: pt(98, 40), control: pt(99, 21))
+            car.addLine(to: pt(98, 50))
+            car.addQuadCurve(to: pt(90, 57), control: pt(98, 56))
+            car.closeSubpath()
+            ctx.fill(car, with: .linearGradient(
+                Gradient(colors: [blue, blueDark]),
+                startPoint: pt(0, 16), endPoint: pt(0, 58)))
+            ctx.stroke(car, with: .color(outline), lineWidth: lw)
+
+            // roof gloss
+            ctx.fill(ell(56, 21, 15, 3), with: .color(.white.opacity(0.22)))
+
+            // windows
+            let rearWindow = rrect(38, 24, 17, 12, 5)
+            let frontWindow = rrect(60, 24, 15, 12, 5)
+            ctx.fill(rearWindow, with: .color(glass))
+            ctx.stroke(rearWindow, with: .color(outline), lineWidth: lw * 0.7)
+            ctx.fill(frontWindow, with: .color(glass))
+            ctx.stroke(frontWindow, with: .color(outline), lineWidth: lw * 0.7)
+
+            // headlight (friendly round eye)
+            let light = ell(92, 44, 4, 4.8)
+            ctx.fill(light, with: .color(Color(red: 1.0, green: 0.95, blue: 0.70)))
+            ctx.stroke(light, with: .color(outline), lineWidth: lw * 0.6)
+            ctx.fill(ell(90.6, 42.6, 1.2, 1.2), with: .color(.white.opacity(0.9)))
+
+            // door seam
+            var door = Path()
+            door.move(to: pt(57, 36))
+            door.addLine(to: pt(57, 56))
+            ctx.stroke(door, with: .color(blueDark.opacity(0.85)), lineWidth: lw * 0.7)
+
+            // wheels
+            for cx in [32.0, 84.0] {
+                ctx.fill(ell(cx, 56, 11, 11), with: .color(tire))
+                ctx.stroke(ell(cx, 56, 11, 11), with: .color(outline), lineWidth: lw)
+                ctx.fill(ell(cx, 56, 5.5, 5.5), with: .color(hub))
+
+                var spokes = Path()
+                let center = pt(cx, 56)
+                for k in 0..<4 {
+                    let a = wheelAngle + Double(k) * .pi / 2
+                    spokes.move(to: center)
+                    spokes.addLine(to: CGPoint(x: center.x + CGFloat(cos(a)) * 5.5 * sx,
+                                               y: center.y + CGFloat(sin(a)) * 5.5 * sy))
+                }
+                ctx.stroke(spokes, with: .color(Color(red: 0.55, green: 0.58, blue: 0.63)), lineWidth: lw * 0.7)
+                ctx.fill(ell(cx, 56, 1.8, 1.8), with: .color(outline))
             }
         }
     }

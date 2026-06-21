@@ -17,6 +17,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
     case canada = "Canada"
     case uk = "UK"
     case europe = "Europe"
+    case brazil = "Brazil"
     case russia = "Russia"
     case turkey = "Turkey"
     case uzbekistan = "Uzbekistan"
@@ -34,6 +35,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .canada: return "region_canada".localizedString
         case .uk: return "region_uk".localizedString
         case .europe: return "region_europe".localizedString
+        case .brazil: return "region_brazil".localizedString
         case .russia: return "region_russia".localizedString
         case .turkey: return "region_turkey".localizedString
         case .uzbekistan: return "region_uzbekistan".localizedString
@@ -51,6 +53,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .canada: return "CAD"
         case .uk: return "GBP"
         case .europe: return "EUR"
+        case .brazil: return "BRL"
         case .russia: return "RUB"
         case .turkey: return "TRY"
         case .uzbekistan: return "UZS"
@@ -68,6 +71,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .canada: return "CA$"
         case .uk: return "£"
         case .europe: return "€"
+        case .brazil: return "R$"
         case .russia: return "₽"
         case .turkey: return "₺"
         case .uzbekistan: return "soʻm"
@@ -85,6 +89,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .canada: return "en_CA"
         case .uk: return "en_GB"
         case .europe: return "en_IE" // Ireland uses Euro and English
+        case .brazil: return "pt_BR"
         case .russia: return "ru_RU"
         case .turkey: return "tr_TR"
         case .uzbekistan: return "uz_UZ"
@@ -133,9 +138,10 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     case korean = "ko"
     case uzbek = "uz"
     case hindi = "hi"
+    case portugueseBrazil = "pt-BR"
     
     static var selectableLanguages: [AppLanguage] {
-        [.english, .russian, .arabic, .japanese, .uzbek, .hindi]
+        [.english, .portugueseBrazil, .russian, .arabic, .japanese, .uzbek, .hindi]
     }
 
     var id: String { rawValue }
@@ -150,6 +156,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
         case .korean: return "한국어"
         case .uzbek: return "Oʻzbekcha"
         case .hindi: return "हिन्दी"
+        case .portugueseBrazil: return "Português (Brasil)"
         }
     }
     
@@ -162,6 +169,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
         case .korean: return "🇰🇷"
         case .uzbek: return "🇺🇿"
         case .hindi: return "🇮🇳"
+        case .portugueseBrazil: return "🇧🇷"
         }
     }
     
@@ -171,7 +179,12 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     }
     
     var locale: Locale {
-        Locale(identifier: rawValue)
+        switch self {
+        case .portugueseBrazil:
+            return Locale(identifier: "pt_BR")
+        default:
+            return Locale(identifier: rawValue)
+        }
     }
 }
 
