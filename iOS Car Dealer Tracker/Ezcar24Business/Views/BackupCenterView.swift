@@ -104,14 +104,8 @@ struct BackupCenterView: View {
                         // MARK: - Custom Range Report
                         menuSection(title: "Custom Range Report") {
                             VStack(spacing: 16) {
-                                HStack(spacing: 12) {
-                                    datePickerBox(title: "Start", selection: $startDate)
-                                    Image(systemName: "arrow.right")
-                                        .foregroundStyle(ColorTheme.tertiaryText)
-                                        .font(.caption)
-                                    datePickerBox(title: "End", selection: $endDate)
-                                }
-                                .padding(.top, 4)
+                                dateRangeSelector
+                                    .padding(.top, 4)
 
                                 if let dateRangeErrorMessage {
                                     Text(dateRangeErrorMessage)
@@ -201,6 +195,7 @@ struct BackupCenterView: View {
                             .padding(16)
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .top)
                     .padding(16)
                 }
             }
@@ -250,6 +245,7 @@ struct BackupCenterView: View {
             }
         }
         .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
     }
     
     private func menuSection<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -263,9 +259,33 @@ struct BackupCenterView: View {
             VStack(spacing: 0) {
                 content()
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(ColorTheme.cardBackground)
             .cornerRadius(16)
             .shadow(color: Color.black.opacity(0.03), radius: 5, x: 0, y: 2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var dateRangeSelector: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                datePickerBox(title: "Start", selection: $startDate)
+                Image(systemName: "arrow.right")
+                    .foregroundStyle(ColorTheme.tertiaryText)
+                    .font(.caption)
+                datePickerBox(title: "End", selection: $endDate)
+            }
+
+            VStack(spacing: 12) {
+                datePickerBox(title: "Start", selection: $startDate)
+
+                Image(systemName: "arrow.down")
+                    .foregroundStyle(ColorTheme.tertiaryText)
+                    .font(.caption)
+
+                datePickerBox(title: "End", selection: $endDate)
+            }
         }
     }
     
@@ -283,6 +303,7 @@ struct BackupCenterView: View {
         .padding(10)
         .background(ColorTheme.background)
         .cornerRadius(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     private struct ExportRow: View {
@@ -308,6 +329,9 @@ struct BackupCenterView: View {
                     Text(title)
                         .font(.callout)
                         .foregroundColor(ColorTheme.primaryText)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .layoutPriority(1)
                     
                     Spacer()
                     

@@ -63,6 +63,8 @@ class VehicleViewModel: ObservableObject {
 
     private let context: NSManagedObjectContext
     private var cancellables = Set<AnyCancellable>()
+    private var vehicleFetchGeneration = 0
+    private var statsFetchGeneration = 0
 
 
     init(context: NSManagedObjectContext) {
@@ -74,6 +76,7 @@ class VehicleViewModel: ObservableObject {
         
         // Debounce search
         $searchText
+            .dropFirst()
             .debounce(for: .milliseconds(300), scheduler: RunLoop.main)
             .removeDuplicates()
             .sink { [weak self] _ in
@@ -83,6 +86,7 @@ class VehicleViewModel: ObservableObject {
             
         // React to sort changes
         $sortOption
+            .dropFirst()
             .sink { [weak self] _ in
                 // Small delay to allow state update before fetch
                 DispatchQueue.main.async {
@@ -93,6 +97,7 @@ class VehicleViewModel: ObservableObject {
 
         // React to status filter changes
         $selectedStatus
+            .dropFirst()
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
                     self?.fetchVehicles()
@@ -102,6 +107,7 @@ class VehicleViewModel: ObservableObject {
             
         // React to display mode changes
         $displayMode
+            .dropFirst()
             .sink { [weak self] _ in
                 DispatchQueue.main.async {
                     self?.fetchVehicles()
@@ -196,18 +202,19 @@ class VehicleViewModel: ObservableObject {
         }
 
         do {
-            vehicles = try context.fetch(request)
-            // Trigger stats calculation for the fetched vehicles
-            // Run asynchronously to avoid "Publishing changes from within view updates"
-            Task {
-                InventoryStatsManager.shared.recalculateStats(for: vehicles)
-            }
+            let fetchedVehicles = try context.fetch(request)
+            scheduleVehiclesPublish(fetchedVehicles)
         } catch {
             print("Error fetching vehicles: \(error)")
         }
     }
 
     func fetchStats() {
+        let fetchedStats = calculateStats()
+        scheduleStatsPublish(fetchedStats)
+    }
+
+    private func calculateStats() -> VehicleStats {
         let basePredicate = NSPredicate(format: "deletedAt == nil")
         
         // Helper to count with status
@@ -226,10 +233,10 @@ class VehicleViewModel: ObservableObject {
             basePredicate,
             NSPredicate(format: "status != %@", "sold")
         ])
-        totalVehiclesCount = (try? context.count(for: totalReq)) ?? 0
+        let totalVehiclesCount = (try? context.count(for: totalReq)) ?? 0
         
         // Sold (All time)
-        soldCount = count(status: "sold")
+        let soldCount = count(status: "sold")
         
         // In Garage (Owned + Service)
         let garageReq: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
@@ -240,13 +247,13 @@ class VehicleViewModel: ObservableObject {
                  NSPredicate(format: "status == %@", "under_service")
              ])
         ])
-        inGarageCount = (try? context.count(for: garageReq)) ?? 0
+        let inGarageCount = (try? context.count(for: garageReq)) ?? 0
         
         // In Transit
-        inTransitCount = count(status: "in_transit")
+        let inTransitCount = count(status: "in_transit")
         
         // Service (kept for internal tracking if needed, but not distinct in dashboard anymore)
-        underServiceCount = count(status: "under_service")
+        let underServiceCount = count(status: "under_service")
         
         // On Sale (Combine on_sale and available)
         let onSaleReq: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
@@ -257,7 +264,16 @@ class VehicleViewModel: ObservableObject {
                 NSPredicate(format: "status == %@", "available")
             ])
         ])
-        onSaleCount = (try? context.count(for: onSaleReq)) ?? 0
+        let onSaleCount = (try? context.count(for: onSaleReq)) ?? 0
+
+        return VehicleStats(
+            totalVehiclesCount: totalVehiclesCount,
+            onSaleCount: onSaleCount,
+            soldCount: soldCount,
+            inGarageCount: inGarageCount,
+            inTransitCount: inTransitCount,
+            underServiceCount: underServiceCount
+        )
     }
 
     // Optional imageData will be saved to disk (not Core Data) to avoid bloat and keep UI fast.
@@ -427,7 +443,10 @@ class VehicleViewModel: ObservableObject {
             .debounce(for: .milliseconds(150), scheduler: RunLoop.main)
             .sink { [weak self] _ in
                 // Re-render any views calling `totalCost(for:)` without forcing a full vehicle re-fetch.
-                self?.objectWillChange.send()
+                Task { @MainActor [weak self] in
+                    await Task.yield()
+                    self?.objectWillChange.send()
+                }
             }
             .store(in: &cancellables)
     }
@@ -443,6 +462,34 @@ class VehicleViewModel: ObservableObject {
         return false
     }
 
+    private func scheduleVehiclesPublish(_ fetchedVehicles: [Vehicle]) {
+        vehicleFetchGeneration += 1
+        let generation = vehicleFetchGeneration
+
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, generation == self.vehicleFetchGeneration else { return }
+            self.vehicles = fetchedVehicles
+            InventoryStatsManager.shared.recalculateStats(for: fetchedVehicles)
+        }
+    }
+
+    private func scheduleStatsPublish(_ stats: VehicleStats) {
+        statsFetchGeneration += 1
+        let generation = statsFetchGeneration
+
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, generation == self.statsFetchGeneration else { return }
+            self.totalVehiclesCount = stats.totalVehiclesCount
+            self.onSaleCount = stats.onSaleCount
+            self.soldCount = stats.soldCount
+            self.inGarageCount = stats.inGarageCount
+            self.inTransitCount = stats.inTransitCount
+            self.underServiceCount = stats.underServiceCount
+        }
+    }
+
 
     private func saveContext() {
         do {
@@ -450,6 +497,15 @@ class VehicleViewModel: ObservableObject {
         } catch {
             print("Error saving context: \(error)")
         }
+    }
+
+    private struct VehicleStats {
+        let totalVehiclesCount: Int
+        let onSaleCount: Int
+        let soldCount: Int
+        let inGarageCount: Int
+        let inTransitCount: Int
+        let underServiceCount: Int
     }
 }
 

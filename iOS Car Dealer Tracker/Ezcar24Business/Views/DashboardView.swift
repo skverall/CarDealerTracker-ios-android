@@ -384,9 +384,8 @@ private extension DashboardView {
 
 private extension DashboardView {
     var financialOverviewSection: some View {
-        Section {
-            VStack(spacing: 24) {
-                if permissionService.can(.viewFinancials) {
+        VStack(spacing: 24) {
+            if permissionService.can(.viewFinancials) {
                     // 1. Account Balances
                     VStack(spacing: 12) {
                         Text("Account Balances".localizedString)
@@ -542,11 +541,10 @@ private extension DashboardView {
             }
             .padding(.horizontal, 20)
             .listRowInsets(EdgeInsets())
-        }
-        .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowBackground(Color.clear)
     }
-    
+
     var analyticsSection: some View {
         Section {
             Button {
@@ -1644,7 +1642,7 @@ private extension DashboardView {
 let dashboardCarEnabledKey = "dashboard_car_enabled"
 
 private struct DrivingCarLane: View {
-    var laneHeight: CGFloat = 26
+    var laneHeight: CGFloat = 24
     var duration: Double = 6.5
 
     @AppStorage(dashboardCarEnabledKey) private var enabled = true
@@ -1658,7 +1656,7 @@ private struct DrivingCarLane: View {
         if enabled {
             lane
         } else {
-            Color.clear.frame(height: 0)
+            Color.clear.frame(height: 6)
         }
     }
 
