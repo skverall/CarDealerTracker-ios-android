@@ -277,6 +277,7 @@ private extension DashboardView {
             }
         }
         .padding(.horizontal, 20)
+        .padding(.bottom, 8)
     }
 
     var syncStatusBar: some View {
@@ -384,12 +385,7 @@ private extension DashboardView {
 private extension DashboardView {
     var financialOverviewSection: some View {
         Section {
-            VStack(spacing: 0) {
-                timeFiltersSection
-
-                DrivingCarLane()
-
-                VStack(spacing: 24) {
+            VStack(spacing: 24) {
                 if permissionService.can(.viewFinancials) {
                     // 1. Account Balances
                     VStack(spacing: 12) {
@@ -545,7 +541,6 @@ private extension DashboardView {
                 }
             }
             .padding(.horizontal, 20)
-            }
             .listRowInsets(EdgeInsets())
         }
         .listRowSeparator(.hidden)
@@ -1615,6 +1610,16 @@ extension Expense {
 private extension DashboardView {
     var dashboardList: some View {
         List {
+            timeFiltersSection
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+
+            DrivingCarLane()
+                .listRowInsets(EdgeInsets())
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+
             financialOverviewSection
             analyticsSection
             todaysExpensesSection
@@ -1639,7 +1644,7 @@ private extension DashboardView {
 let dashboardCarEnabledKey = "dashboard_car_enabled"
 
 private struct DrivingCarLane: View {
-    var laneHeight: CGFloat = 38
+    var laneHeight: CGFloat = 26
     var duration: Double = 6.5
 
     @AppStorage(dashboardCarEnabledKey) private var enabled = true
@@ -1653,7 +1658,7 @@ private struct DrivingCarLane: View {
         if enabled {
             lane
         } else {
-            Color.clear.frame(height: 12)
+            Color.clear.frame(height: 0)
         }
     }
 
