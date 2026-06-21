@@ -1,28 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "settings_dashboard_car" : {
-      "localizations" : {
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "سيارة لوحة التحكم" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dashboard car" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "डैशबोर्ड कार" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ダッシュボードの車" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Carrinho do painel" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Машинка на дашборде" } },
-        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Boshqaruv paneli mashinasi" } }
-      }
-    },
-    "settings_dashboard_car_hint" : {
-      "localizations" : {
-        "ar" : { "stringUnit" : { "state" : "translated", "value" : "اضغط للإيقاف · اضغط مطولاً للإزالة" } },
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap to park · hold to remove" } },
-        "hi" : { "stringUnit" : { "state" : "translated", "value" : "रोकने के लिए टैप करें · हटाने के लिए दबाए रखें" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タップで停止 · 長押しで削除" } },
-        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Toque para parar · segure para remover" } },
-        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нажмите, чтобы остановить · удержание — убрать" } },
-        "uz" : { "stringUnit" : { "state" : "translated", "value" : "To‘xtatish uchun bosing · olib tashlash uchun bosib turing" } }
-      }
-    },
     "" : {
       "localizations" : {
         "ar" : {
@@ -16671,6 +16649,59 @@
         }
       }
     },
+    "Continue with Google" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "المتابعة باستخدام Google"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continue with Google"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google के साथ जारी रखें"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Googleで続行"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google로 계속"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Continuar com o Google"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Продолжить с Google"
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google bilan davom etish"
+          }
+        }
+      }
+    },
     "continue_button" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -27594,6 +27625,9 @@
           }
         }
       }
+    },
+    "G" : {
+
     },
     "Generate Invite Code" : {
       "extractionState" : "manual",
@@ -41775,6 +41809,59 @@
         }
       }
     },
+    "or" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "أو"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "or"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "या"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "または"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "또는"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ou"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "или"
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "yoki"
+          }
+        }
+      }
+    },
     "other" : {
       "comment" : "Generic other label.",
       "extractionState" : "stale",
@@ -55061,6 +55148,7 @@
       }
     },
     "region_brazil" : {
+      "extractionState" : "stale",
       "localizations" : {
         "ar" : {
           "stringUnit" : {
@@ -60778,6 +60866,100 @@
         }
       }
     },
+    "settings_dashboard_car" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سيارة لوحة التحكم"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dashboard car"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "डैशबोर्ड कार"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダッシュボードの車"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Carrinho do painel"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Машинка на дашборде"
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boshqaruv paneli mashinasi"
+          }
+        }
+      }
+    },
+    "settings_dashboard_car_hint" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اضغط للإيقاف · اضغط مطولاً للإزالة"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap to park · hold to remove"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "रोकने के लिए टैप करें · हटाने के लिए दबाए रखें"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "タップで停止 · 長押しで削除"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Toque para parar · segure para remover"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите, чтобы остановить · удержание — убрать"
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To‘xtatish uchun bosing · olib tashlash uchun bosib turing"
+          }
+        }
+      }
+    },
     "Share" : {
       "comment" : "The text on a button that triggers sharing a vehicle listing.",
       "extractionState" : "stale",
@@ -61551,6 +61733,59 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "SMS"
+          }
+        }
+      }
+    },
+    "social_sign_in_failed" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "تعذر إكمال تسجيل الدخول الاجتماعي الآن. حاول مرة أخرى."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We couldn't complete social sign-in right now. Please try again."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "हम अभी सोशल साइन-इन पूरा नहीं कर सके। कृपया फिर से कोशिश करें।"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "現在、ソーシャルサインインを完了できませんでした。もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "지금 소셜 로그인을 완료할 수 없습니다. 다시 시도해 주세요."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível concluir o login social agora. Tente novamente."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось завершить вход через соцсервис. Попробуйте еще раз."
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hozir ijtimoiy tarmoq orqali kirishni yakunlab bo‘lmadi. Qayta urinib ko‘ring."
           }
         }
       }
@@ -72618,162 +72853,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pro sinov muddati faol"
-          }
-        }
-      }
-    },
-    "Continue with Google" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "المتابعة باستخدام Google"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continue with Google"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google के साथ जारी रखें"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Googleで続行"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google로 계속"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Continuar com o Google"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Продолжить с Google"
-          }
-        },
-        "uz" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Google bilan davom etish"
-          }
-        }
-      }
-    },
-    "or" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "أو"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "or"
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "या"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "または"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "또는"
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ou"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "или"
-          }
-        },
-        "uz" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "yoki"
-          }
-        }
-      }
-    },
-    "social_sign_in_failed" : {
-      "localizations" : {
-        "ar" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "تعذر إكمال تسجيل الدخول الاجتماعي الآن. حاول مرة أخرى."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "We couldn't complete social sign-in right now. Please try again."
-          }
-        },
-        "hi" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "हम अभी सोशल साइन-इन पूरा नहीं कर सके। कृपया फिर से कोशिश करें।"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "現在、ソーシャルサインインを完了できませんでした。もう一度お試しください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "지금 소셜 로그인을 완료할 수 없습니다. 다시 시도해 주세요."
-          }
-        },
-        "pt-BR" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível concluir o login social agora. Tente novamente."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не удалось завершить вход через соцсервис. Попробуйте еще раз."
-          }
-        },
-        "uz" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hozir ijtimoiy tarmoq orqali kirishni yakunlab bo‘lmadi. Qayta urinib ko‘ring."
           }
         }
       }
