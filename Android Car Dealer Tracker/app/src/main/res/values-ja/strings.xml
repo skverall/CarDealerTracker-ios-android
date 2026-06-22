@@ -935,4 +935,5 @@
     <string name="l10n_or_1758356db2" formatted="false">または</string>
     <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">現在、ソーシャルサインインを完了できませんでした。もう一度お試しください。</string>
     <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Googleログインはまだ設定されていません。</string>
+    <string name="l10n_south_africa_35fda17ff0" formatted="false">南アフリカ</string>
 </resources>

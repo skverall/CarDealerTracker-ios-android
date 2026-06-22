@@ -164,6 +164,24 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertEqual("search_client".localizedString, "Cari Klien")
     }
 
+    func testSouthAfricaRegionUsesZARFormatting() {
+        let manager = RegionSettingsManager.shared
+        let originalRegion = manager.selectedRegion
+        defer {
+            manager.selectedRegion = originalRegion
+        }
+
+        manager.selectedRegion = .southAfrica
+
+        let formatted = manager.formatCurrency(Decimal(1_234.56))
+
+        XCTAssertEqual(AppRegion.southAfrica.currencyCode, "ZAR")
+        XCTAssertEqual(AppRegion.southAfrica.currencySymbol, "R")
+        XCTAssertEqual(AppRegion.southAfrica.currencyDecimals, 2)
+        XCTAssertEqual(AppRegion.southAfrica.localeIdentifier, "en_ZA")
+        XCTAssertTrue(formatted.contains("R"))
+    }
+
     func testAIInsightsActionRequiresInlineConfirmationBeforeReplacingReport() {
         let usage = AIInsightsUsage(used: 2, limit: 15, remaining: 13, resetsAt: nil)
 

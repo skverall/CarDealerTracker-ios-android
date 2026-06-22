@@ -38,6 +38,7 @@ enum class AppRegion(
     EUROPE("Europe", "EUR", "€", "en-IE", true, 2),
     BRAZIL("Brazil", "BRL", "R$", "pt-BR", true, 2),
     INDONESIA("Indonesia", "IDR", "Rp", "id-ID", true, 0),
+    SOUTH_AFRICA("South Africa", "ZAR", "R", "en-ZA", true, 2),
     RUSSIA("Russia", "RUB", "₽", "ru-RU", true, 2),
     TURKEY("Turkey", "TRY", "₺", "tr-TR", true, 2),
     JAPAN("Japan", "JPY", "¥", "ja-JP", true, 0),

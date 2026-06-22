@@ -19,6 +19,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
     case europe = "Europe"
     case brazil = "Brazil"
     case indonesia = "Indonesia"
+    case southAfrica = "South Africa"
     case russia = "Russia"
     case turkey = "Turkey"
     case uzbekistan = "Uzbekistan"
@@ -38,6 +39,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .europe: return "region_europe".localizedString
         case .brazil: return "region_brazil".localizedString
         case .indonesia: return "region_indonesia".localizedString
+        case .southAfrica: return "region_south_africa".localizedString
         case .russia: return "region_russia".localizedString
         case .turkey: return "region_turkey".localizedString
         case .uzbekistan: return "region_uzbekistan".localizedString
@@ -57,6 +59,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .europe: return "EUR"
         case .brazil: return "BRL"
         case .indonesia: return "IDR"
+        case .southAfrica: return "ZAR"
         case .russia: return "RUB"
         case .turkey: return "TRY"
         case .uzbekistan: return "UZS"
@@ -76,6 +79,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .europe: return "€"
         case .brazil: return "R$"
         case .indonesia: return "Rp"
+        case .southAfrica: return "R"
         case .russia: return "₽"
         case .turkey: return "₺"
         case .uzbekistan: return "soʻm"
@@ -95,6 +99,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .europe: return "en_IE" // Ireland uses Euro and English
         case .brazil: return "pt_BR"
         case .indonesia: return "id_ID"
+        case .southAfrica: return "en_ZA"
         case .russia: return "ru_RU"
         case .turkey: return "tr_TR"
         case .uzbekistan: return "uz_UZ"

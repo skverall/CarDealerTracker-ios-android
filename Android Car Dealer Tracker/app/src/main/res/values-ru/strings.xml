@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="l10n_ideas_voting_71b73b7de3" formatted="false">Идеи и голосование</string>
     <string name="l10n_suggest_features_and_vote_on_requests_from_92183a931f" formatted="false">Предлагайте функции и голосуйте за запросы других дилеров</string>
@@ -39,4 +39,5 @@
     <string name="l10n_or_1758356db2" formatted="false">или</string>
     <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">Не удалось завершить вход через соцсервис. Попробуйте еще раз.</string>
     <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Вход через Google еще не настроен.</string>
+    <string name="l10n_south_africa_35fda17ff0" formatted="false">Южная Африка</string>
 </resources>

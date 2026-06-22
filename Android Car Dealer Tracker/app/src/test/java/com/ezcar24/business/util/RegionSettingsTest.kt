@@ -36,6 +36,14 @@ class RegionSettingsTest {
     }
 
     @Test
+    fun `south africa region uses rand and south african locale`() {
+        assertEquals("ZAR", AppRegion.SOUTH_AFRICA.currencyCode)
+        assertEquals("R", AppRegion.SOUTH_AFRICA.currencySymbol)
+        assertEquals("en-ZA", AppRegion.SOUTH_AFRICA.localeTag)
+        assertEquals(2, AppRegion.SOUTH_AFRICA.currencyDecimals)
+    }
+
+    @Test
     fun `indonesian language option is available`() {
         assertEquals("id", AppLanguage.INDONESIAN.tag)
         assertEquals("Bahasa Indonesia", AppLanguage.INDONESIAN.nativeName)
