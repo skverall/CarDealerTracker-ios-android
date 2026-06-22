@@ -18,6 +18,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
     case uk = "UK"
     case europe = "Europe"
     case brazil = "Brazil"
+    case indonesia = "Indonesia"
     case russia = "Russia"
     case turkey = "Turkey"
     case uzbekistan = "Uzbekistan"
@@ -36,6 +37,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .uk: return "region_uk".localizedString
         case .europe: return "region_europe".localizedString
         case .brazil: return "region_brazil".localizedString
+        case .indonesia: return "region_indonesia".localizedString
         case .russia: return "region_russia".localizedString
         case .turkey: return "region_turkey".localizedString
         case .uzbekistan: return "region_uzbekistan".localizedString
@@ -54,6 +56,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .uk: return "GBP"
         case .europe: return "EUR"
         case .brazil: return "BRL"
+        case .indonesia: return "IDR"
         case .russia: return "RUB"
         case .turkey: return "TRY"
         case .uzbekistan: return "UZS"
@@ -72,6 +75,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .uk: return "£"
         case .europe: return "€"
         case .brazil: return "R$"
+        case .indonesia: return "Rp"
         case .russia: return "₽"
         case .turkey: return "₺"
         case .uzbekistan: return "soʻm"
@@ -90,6 +94,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
         case .uk: return "en_GB"
         case .europe: return "en_IE" // Ireland uses Euro and English
         case .brazil: return "pt_BR"
+        case .indonesia: return "id_ID"
         case .russia: return "ru_RU"
         case .turkey: return "tr_TR"
         case .uzbekistan: return "uz_UZ"
@@ -111,7 +116,7 @@ enum AppRegion: String, CaseIterable, Codable, Identifiable {
     /// Number of decimal places for currency
     var currencyDecimals: Int {
         switch self {
-        case .korea, .japan, .uzbekistan: return 0  // Won, Yen, and UZS typically don't use decimals
+        case .korea, .japan, .uzbekistan, .indonesia: return 0  // Won, Yen, UZS, and IDR typically don't use decimals
         default: return 2
         }
     }
@@ -134,6 +139,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     case english = "en"
     case russian = "ru"
     case arabic = "ar"
+    case indonesian = "id"
     case japanese = "ja"
     case korean = "ko"
     case uzbek = "uz"
@@ -141,7 +147,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
     case portugueseBrazil = "pt-BR"
     
     static var selectableLanguages: [AppLanguage] {
-        [.english, .portugueseBrazil, .russian, .arabic, .japanese, .uzbek, .hindi]
+        [.english, .indonesian, .portugueseBrazil, .russian, .arabic, .japanese, .uzbek, .hindi]
     }
 
     var id: String { rawValue }
@@ -152,6 +158,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
         case .english: return "English"
         case .russian: return "Русский"
         case .arabic: return "العربية"
+        case .indonesian: return "Bahasa Indonesia"
         case .japanese: return "日本語"
         case .korean: return "한국어"
         case .uzbek: return "Oʻzbekcha"
@@ -165,6 +172,7 @@ enum AppLanguage: String, CaseIterable, Codable, Identifiable {
         case .english: return "🇬🇧"
         case .russian: return "🇷🇺"
         case .arabic: return "🇦🇪"
+        case .indonesian: return "🇮🇩"
         case .japanese: return "🇯🇵"
         case .korean: return "🇰🇷"
         case .uzbek: return "🇺🇿"

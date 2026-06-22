@@ -26,4 +26,19 @@ class RegionSettingsTest {
         assertEquals("Oʻzbekcha", AppLanguage.UZBEK.nativeName)
         assertFalse(AppLanguage.UZBEK.isRtl)
     }
+
+    @Test
+    fun `indonesia region uses rupiah and indonesian locale`() {
+        assertEquals("IDR", AppRegion.INDONESIA.currencyCode)
+        assertEquals("Rp", AppRegion.INDONESIA.currencySymbol)
+        assertEquals("id-ID", AppRegion.INDONESIA.localeTag)
+        assertEquals(0, AppRegion.INDONESIA.currencyDecimals)
+    }
+
+    @Test
+    fun `indonesian language option is available`() {
+        assertEquals("id", AppLanguage.INDONESIAN.tag)
+        assertEquals("Bahasa Indonesia", AppLanguage.INDONESIAN.nativeName)
+        assertFalse(AppLanguage.INDONESIAN.isRtl)
+    }
 }

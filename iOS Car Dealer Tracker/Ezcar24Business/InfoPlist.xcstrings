@@ -22,6 +22,12 @@
             "value" : "Car Dealer Tracker"
           }
         },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Car Dealer Tracker"
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -41,6 +47,12 @@
           }
         },
         "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ezcar24Business"
+          }
+        },
+        "id" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Ezcar24Business"
@@ -75,6 +87,12 @@
             "value" : "आपको अपनी कारों की तस्वीरें लेने देने के लिए हमें आपके कैमरे की access चाहिए।"
           }
         },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami memerlukan akses ke kamera Anda agar Anda dapat mengambil foto kendaraan Anda."
+          }
+        },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
@@ -102,6 +120,12 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "आपको कार की तस्वीरें upload करने देने के लिए हमें आपकी photo library की access चाहिए।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami memerlukan akses ke perpustakaan foto Anda agar Anda dapat mengunggah gambar kendaraan."
           }
         },
         "pt-BR" : {

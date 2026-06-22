@@ -1,0 +1,962 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Car Dealer Tracker</string>
+    <string name="l10n_0_30_days_79c8f34c8d" formatted="false">0-30 hari</string>
+    <string name="l10n_10_1df30ffd07" formatted="false">10%</string>
+    <string name="l10n_15_2b01c5b342" formatted="false">15%</string>
+    <string name="l10n_20_ea7ba4661a" formatted="false">20%</string>
+    <string name="l10n_25_5e1164e36f" formatted="false">25%</string>
+    <string name="l10n_31_60_days_9ba963c672" formatted="false">31-60 hari</string>
+    <string name="l10n_61_90_days_d441b757a6" formatted="false">61-90 hari</string>
+    <string name="l10n_90_days_025be66f3a" formatted="false">90+ hari</string>
+    <string name="l10n_about_holding_costs_3d2034fe33" formatted="false">Tentang Biaya Penyimpanan</string>
+    <string name="l10n_access_updated_51fe14626d" formatted="false">Akses diperbarui.</string>
+    <string name="l10n_account_85dfa32c97" formatted="false">Akun</string>
+    <string name="l10n_account_name_db3b79e181" formatted="false">Akun Nama</string>
+    <string name="l10n_account_transactions_11823944ea" formatted="false">Akun Transaksi</string>
+    <string name="l10n_accounts_36bae31694" formatted="false">Akun</string>
+    <string name="l10n_active_member_08604aa2d6" formatted="false">Anggota aktif</string>
+    <string name="l10n_active_subscription_ca7dbfa9fb" formatted="false">Langganan aktif</string>
+    <string name="l10n_add_61cc55aa04" formatted="false">Tambahkan</string>
+    <string name="l10n_add_a_note_what_was_this_expense_for_c08bd5a3bf" formatted="false">Tambahkan catatan (untuk apa biaya ini?)</string>
+    <string name="l10n_add_account_568c7279d9" formatted="false">Tambahkan Akun</string>
+    <string name="l10n_add_account_feature_coming_soon_69f93d7502" formatted="false">Tambahkan fitur Akun segera hadir</string>
+    <string name="l10n_add_client_d2bacebb97" formatted="false">Tambahkan Klien</string>
+    <string name="l10n_add_deposit_09a9471993" formatted="false">Tambahkan Setoran</string>
+    <string name="l10n_add_expense_f53d122b20" formatted="false">Tambahkan Biaya</string>
+    <string name="l10n_add_interaction_5e56ca5d10" formatted="false">Tambahkan Interaksi</string>
+    <string name="l10n_add_lead_6a1df4c114" formatted="false">Tambahkan Timbal</string>
+    <string name="l10n_add_line_item_dc45f5a83e" formatted="false">Tambahkan Item Baris</string>
+    <string name="l10n_add_notes_here_e22fea650a" formatted="false">Tambahkan catatan di sini...</string>
+    <string name="l10n_add_part_83760b6974" formatted="false">Tambahkan Bagian</string>
+    <string name="l10n_add_photos_be917560d1" formatted="false">Tambahkan Foto</string>
+    <string name="l10n_add_reminder_9d1c0460dd" formatted="false">Tambahkan Pengingat</string>
+    <string name="l10n_add_sale_b337755e1f" formatted="false">Tambahkan Penjualan</string>
+    <string name="l10n_add_user_8743938546" formatted="false">Tambahkan Pengguna</string>
+    <string name="l10n_add_user_feature_coming_soon_5ed892a941" formatted="false">Fitur Tambahkan Pengguna segera hadir</string>
+    <string name="l10n_add_vehicle_c1f3a9f514" formatted="false">Tambahkan Kendaraan</string>
+    <string name="l10n_additional_notes_d2291b5d1a" formatted="false">Catatan tambahan...</string>
+    <string name="l10n_align_inventory_carrying_cost_with_ios_ana_bc068ebc37" formatted="false">Selaraskan biaya penyimpanan inventaris dengan analitik iOS</string>
+    <string name="l10n_all_6a72085653" formatted="false">Semua</string>
+    <string name="l10n_all_categories_1fd266c217" formatted="false">Semua Kategori</string>
+    <string name="l10n_all_employees_127ec08a02" formatted="false">Semua Karyawan</string>
+    <string name="l10n_all_good_4441c53766" formatted="false">Semuanya bagus</string>
+    <string name="l10n_all_types_eb672cb3ba" formatted="false">Semua Jenis</string>
+    <string name="l10n_all_vehicles_dd9eb32418" formatted="false">Semua Vehicles</string>
+    <string name="l10n_amount_abd20c69e9" formatted="false">AMOUNT</string>
+    <string name="l10n_amount_s_ec8b61efc7">Jumlah (%s)</string>
+    <string name="l10n_annual_percentage_rate_for_holding_cost_ca_a7c28951ee" formatted="false">Tingkat persentase tahunan untuk perhitungan biaya penyimpanan</string>
+    <string name="l10n_annual_rate_81552973a1" formatted="false">Tarif Tahunan (%)</string>
+    <string name="l10n_annual_rate_a438a59151" formatted="false">Tarif Tahunan</string>
+    <string name="l10n_app_content_language_ee2302ebc9" formatted="false">Bahasa konten aplikasi</string>
+    <string name="l10n_archive_export_failed_d6b43c3fa9" formatted="false">Ekspor arsip gagal</string>
+    <string name="l10n_asking_price_b892b74008" formatted="false">Harga Permintaan</string>
+    <string name="l10n_at_least_6_characters_d5af567482" formatted="false">Setidaknya 6 karakter</string>
+    <string name="l10n_attach_receipt_0bfc326bcd" formatted="false">Lampirkan tanda terima</string>
+    <string name="l10n_automatically_calculated_from_annual_rate_6ff256bfdb" formatted="false">Secara otomatis dihitung dari tarif tahunan</string>
+    <string name="l10n_available_vehicles_480bae92bc" formatted="false">Tersedia Vehicles:</string>
+    <string name="l10n_back_b52b36b726" formatted="false">Kembali</string>
+    <string name="l10n_backup_export_d8c6bdd3ee" formatted="false">Cadangan &amp; Ekspor</string>
+    <string name="l10n_balance_s_75b5f54c82">Saldo (%s)</string>
+    <string name="l10n_bank_9e89988cc3" formatted="false">Bank</string>
+    <string name="l10n_based_on_aging_and_market_conditions_consi_7876b380bd" formatted="false">Berdasarkan penuaan dan kondisi pasar, pertimbangkan penurunan harga untuk mempercepat penjualan.</string>
+    <string name="l10n_batch_label_fbb29dce48" formatted="false">Label Batch</string>
+    <string name="l10n_brief_summary_of_the_interaction_e8e6ea860a" formatted="false">Ringkasan singkat interaksi</string>
+    <string name="l10n_build_json_archive_02746b36ea" formatted="false">Bangun Arsip JSON</string>
+    <string name="l10n_business_name_a8e3901b09" formatted="false">Nama bisnis</string>
+    <string name="l10n_buyer_details_dba47552c8" formatted="false">Detail Pembeli</string>
+    <string name="l10n_buyer_name_2b4f2a6012" formatted="false">Nama Pembeli</string>
+    <string name="l10n_buyer_phone_7c5502c5b3" formatted="false">Telepon Pembeli</string>
+    <string name="l10n_calculate_holding_costs_ed57a45e72" formatted="false">Hitung biaya penyimpanan</string>
+    <string name="l10n_call_291a0a58df" formatted="false">Telepon</string>
+    <string name="l10n_cancel_77dfd2135f" formatted="false">Batal</string>
+    <string name="l10n_cancel_anytime_no_hidden_fees_d8bea9fd42">Batalkan kapan saja. Tidak ada biaya tersembunyi.</string>
+    <string name="l10n_car_bc47a3dce0" formatted="false">Mobil</string>
+    <string name="l10n_car_dealer_tracker_7c5908a418" formatted="false">Car Dealer Tracker</string>
+    <string name="l10n_cash_758ec54e43" formatted="false">Uang tunai</string>
+    <string name="l10n_cash_bank_and_account_movement_5c935878ac" formatted="false">Pergerakan uang tunai, bank dan rekening</string>
+    <string name="l10n_category_a3c686e711" formatted="false">Kategori</string>
+    <string name="l10n_change_64fbd995d3" formatted="false">Perubahan</string>
+    <string name="l10n_change_password_49289db43e" formatted="false">Ubah Kata Sandi</string>
+    <string name="l10n_change_photo_6080b454e5" formatted="false">Ubah Foto</string>
+    <string name="l10n_change_role_7b55cbe933" formatted="false">Ubah Peran</string>
+    <string name="l10n_choose_file_54a2a8411d" formatted="false">Pilih File</string>
+    <string name="l10n_clean_up_duplicates_7fc0497c55" formatted="false">Bersihkan Duplikat</string>
+    <string name="l10n_clear_719ea396ad" formatted="false">Jelas</string>
+    <string name="l10n_clear_all_c043160a89" formatted="false">Hapus semuanya</string>
+    <string name="l10n_clear_filters_412226715c" formatted="false">Hapus filter</string>
+    <string name="l10n_clear_filters_to_see_all_leads_adc98b15db" formatted="false">Hapus filter untuk melihat semua prospek</string>
+    <string name="l10n_client_follow_ups_debts_and_inventory_remi_8d8f44f8a4" formatted="false">Tindak lanjut klien, hutang dan pengingat inventaris</string>
+    <string name="l10n_client_interactions_6b224458e6" formatted="false">Interaksi Klien</string>
+    <string name="l10n_client_name_130c62f72d" formatted="false">Nama Klien</string>
+    <string name="l10n_client_reminder_9373ed22b0" formatted="false">Pengingat Klien</string>
+    <string name="l10n_clients_28e22fe3dd" formatted="false">Klien</string>
+    <string name="l10n_close_bbfa773e5a" formatted="false">Tutup</string>
+    <string name="l10n_code_adac69379a" formatted="false">Kode</string>
+    <string name="l10n_complete_sale_ebdd278082" formatted="false">Penjualan Lengkap</string>
+    <string name="l10n_confirm_04a212215e" formatted="false">Konfirmasikan</string>
+    <string name="l10n_confirm_password_c2d404cb7b" formatted="false">Konfirmasi Kata Sandi</string>
+    <string name="l10n_contact_developer_846bcff57b" formatted="false">Hubungi Developer</string>
+    <string name="l10n_contact_info_3ec80d39d2" formatted="false">CONTACT INFO</string>
+    <string name="l10n_contact_info_e873f4db37" formatted="false">Info Kontak</string>
+    <string name="l10n_continue_2e02623966" formatted="false">Lanjutkan</string>
+    <string name="l10n_copied_to_clipboard_0e73834873" formatted="false">Disalin ke papan klip</string>
+    <string name="l10n_copy_code_6c10692719" formatted="false">Salin kode</string>
+    <string name="l10n_cost_75fde9afb2" formatted="false">COST</string>
+    <string name="l10n_could_not_attach_receipt_002c812c35" formatted="false">Tidak dapat melampirkan tanda terima</string>
+    <string name="l10n_could_not_open_receipt_3a52256bcf" formatted="false">Tidak dapat membuka resi</string>
+    <string name="l10n_cover_8b656a5dd9" formatted="false">Penutup</string>
+    <string name="l10n_create_business_b992caf4a9" formatted="false">Buat Bisnis</string>
+    <string name="l10n_create_part_sale_eeef3a4213" formatted="false">Buat Penjualan Bagian</string>
+    <string name="l10n_create_sale_ee71e2b920" formatted="false">Buat Penjualan</string>
+    <string name="l10n_create_your_account_4046b58182" formatted="false">Buat akun Anda</string>
+    <string name="l10n_critical_04b7b26c8c" formatted="false">Kritis</string>
+    <string name="l10n_crm_summary_394916621f" formatted="false">CRM Ringkasan</string>
+    <string name="l10n_currency_e070de2244" formatted="false">Mata uang</string>
+    <string name="l10n_currency_region_c9a9ff05aa" formatted="false">Mata Uang / Wilayah</string>
+    <string name="l10n_custom_range_report_46cf03bd77" formatted="false">Laporan Rentang Kustom</string>
+    <string name="l10n_d_exp_e293e81168">%d pengalaman</string>
+    <string name="l10n_daily_cost_10_000_15_365_4_11_per_day_506c1e5867" formatted="false">Biaya harian = $10.000 × (15% 365) = $4,11 per hari</string>
+    <string name="l10n_daily_rate_fe3d54900d" formatted="false">Tarif Harian</string>
+    <string name="l10n_dashboard_d87f47b47e" formatted="false">Dasbor</string>
+    <string name="l10n_data_health_bc65a39db5" formatted="false">Kesehatan Data</string>
+    <string name="l10n_date_eb9a4bc1c0" formatted="false">Tanggal</string>
+    <string name="l10n_days_high_to_low_e01ed449bc" formatted="false">Hari: Tinggi ke Rendah</string>
+    <string name="l10n_days_in_inventory_75eebd53e7" formatted="false">Hari di Inventaris:</string>
+    <string name="l10n_days_low_to_high_f66275dbea" formatted="false">Hari: Rendah ke Tinggi</string>
+    <string name="l10n_deal_history_144ed39d2f" formatted="false">Riwayat Kesepakatan</string>
+    <string name="l10n_deal_value_s_0dbb3f7861">Nilai Transaksi (%s)</string>
+    <string name="l10n_dealer_pro_c1e6ec9ef0" formatted="false">Dealer Pro</string>
+    <string name="l10n_debt_payments_c2265e641f" formatted="false">Pembayaran Hutang</string>
+    <string name="l10n_debts_787aab25f6" formatted="false">Hutang</string>
+    <string name="l10n_delete_account_data_252712421d" formatted="false">Hapus Akun &amp; Data</string>
+    <string name="l10n_delete_f6fdbe48dc" formatted="false">Hapus</string>
+    <string name="l10n_delete_interaction_72592ef009" formatted="false">Hapus interaksi</string>
+    <string name="l10n_delete_photo_fc700472e1" formatted="false">Hapus foto</string>
+    <string name="l10n_delete_records_20ec0fc73b" formatted="false">Hapus Catatan</string>
+    <string name="l10n_delete_reminder_18cf079683" formatted="false">Hapus pengingat</string>
+    <string name="l10n_delete_vehicle_2d8f468e29" formatted="false">Hapus Kendaraan?</string>
+    <string name="l10n_delete_vehicle_35f19fe601" formatted="false">Hapus Kendaraan</string>
+    <string name="l10n_deposit_e7b0b317a6" formatted="false">Setoran</string>
+    <string name="l10n_deposit_to_20c6e379b9" formatted="false">Setor Ke</string>
+    <string name="l10n_sale_date_9bc0933ab1" formatted="false">Tanggal Penjualan</string>
+    <string name="l10n_bank_transfer_17ef50d8f8" formatted="false">Transfer Bank</string>
+    <string name="l10n_cheque_6c0a136376" formatted="false">Periksa</string>
+    <string name="l10n_finance_1b48d3f014" formatted="false">Keuangan</string>
+    <string name="l10n_other_6e6a6f2086" formatted="false">Lainnya</string>
+    <string name="l10n_no_available_vehicles_f0dc6b09f8" formatted="false">Tidak ada kendaraan yang tersedia</string>
+    <string name="l10n_add_a_vehicle_first_to_record_a_sale_a8a007c416" formatted="false">Tambahkan kendaraan terlebih dahulu untuk mencatat penjualan.</string>
+    <string name="l10n_detailed_notes_about_the_interaction_76cd9c1921" formatted="false">Catatan terperinci tentang interaksi...</string>
+    <string name="l10n_dismiss_70afe9eff3" formatted="false">Singkirkan</string>
+    <string name="l10n_done_e9b450d14b" formatted="false">Selesai</string>
+    <string name="l10n_due_s_be08cc1da0">Batas waktu: %1$s</string>
+    <string name="l10n_duplicates_sync_state_and_diagnostics_80e028bf24" formatted="false">Duplikat, status sinkronisasi, dan diagnostik</string>
+    <string name="l10n_duration_minutes_10c3d1ca4b" formatted="false">Durasi (menit)</string>
+    <string name="l10n_edit_5301648dcf" formatted="false">Edit</string>
+    <string name="l10n_edit_account_a7bbd29ef8" formatted="false">Sunting Akun</string>
+    <string name="l10n_edit_debt_b321534344" formatted="false">Sunting Hutang</string>
+    <string name="l10n_email_84add5b295" formatted="false">Surel</string>
+    <string name="l10n_email_address_09ba557fd1" formatted="false">Alamat Surel</string>
+    <string name="l10n_email_reports_593bdc0539" formatted="false">Laporan Email</string>
+    <string name="l10n_email_support_for_sync_or_account_issues_aaeecf78ff" formatted="false">Dukungan email untuk masalah sinkronisasi atau akun</string>
+    <string name="l10n_enable_holding_cost_calculation_8c6e77a841" formatted="false">Aktifkan Perhitungan Biaya Penyimpanan</string>
+    <string name="l10n_enable_parts_tracking_module_84b8e24907" formatted="false">Aktifkan modul pelacakan bagian</string>
+    <string name="l10n_entity_counts_7cd051ce3f" formatted="false">Jumlah Entitas</string>
+    <string name="l10n_estimated_value_c0da7cb3ed" formatted="false">Perkiraan Nilai</string>
+    <string name="l10n_estimated_value_s_2695067f49">Perkiraan Nilai (%s)</string>
+    <string name="l10n_everything_you_need_to_grow_your_dealershi_859d1c457c">Semua yang Anda butuhkan untuk mengembangkan bisnis dealer Anda.</string>
+    <string name="l10n_example_0f01ed56a1" formatted="false">Contoh</string>
+    <string name="l10n_example_with_15_annual_rate_on_a_10_000_ve_24898fe9da" formatted="false">Contoh: Dengan tarif tahunan 15% a untuk kendaraan seharga $10.000:</string>
+    <string name="l10n_executive_summary_3abcc2cf04" formatted="false">Ringkasan Eksekutif</string>
+    <string name="l10n_expense_templates_f352328486" formatted="false">Templat Pengeluaran</string>
+    <string name="l10n_expenses_8d437dbf95" formatted="false">Biaya</string>
+    <string name="l10n_expenses_d_560ebc5a74" formatted="false">Expenses (%1$d)</string>
+    <string name="l10n_export_clients_csv_8c21a892e1" formatted="false">Ekspor klien CSV</string>
+    <string name="l10n_export_expenses_csv_ef83c6d4b7" formatted="false">Biaya ekspor CSV</string>
+    <string name="l10n_export_failed_d6c17e9bd7" formatted="false">Ekspor gagal</string>
+    <string name="l10n_export_vehicles_csv_69dee19215" formatted="false">Ekspor kendaraan CSV</string>
+    <string name="l10n_filter_d7decf1aa2" formatted="false">Menyaring</string>
+    <string name="l10n_financial_accounts_728ed9e9ca" formatted="false">Akun Keuangan</string>
+    <string name="l10n_financial_overview_bd34d08878" formatted="false">Ikhtisar Keuangan</string>
+    <string name="l10n_formula_annual_rate_365_days_c6985dd15d" formatted="false">Rumus: Tarif Tahunan 365 hari</string>
+    <string name="l10n_free_plan_46bba20f3f" formatted="false">Paket Gratis</string>
+    <string name="l10n_full_backup_archive_6d63cfb1eb" formatted="false">Cadangan &amp; Arsip Penuh</string>
+    <string name="l10n_general_9239ee2cda" formatted="false">Umum</string>
+    <string name="l10n_generate_pdf_report_71a2691414" formatted="false">Hasilkan PDF Laporan</string>
+    <string name="l10n_holding_cost_072a0eb5df" formatted="false">Biaya Penyimpanan</string>
+    <string name="l10n_holding_cost_is_s_of_total_cost_consider_f_1657f0d2c7">Biaya penyimpanan adalah %s%% dari total biaya. Pertimbangkan perputaran yang lebih cepat.</string>
+    <string name="l10n_holding_cost_settings_56d4285d35" formatted="false">Pengaturan Biaya Penyimpanan</string>
+    <string name="l10n_holding_costs_are_s_of_vehicle_cost_consid_dd6b8bdb30">Biaya penyimpanan adalah %s%% dari biaya kendaraan. Pertimbangkan perputaran yang lebih cepat.</string>
+    <string name="l10n_holding_costs_represent_the_daily_expense__f638001ece" formatted="false">Biaya penyimpanan mewakili biaya harian untuk menyimpan kendaraan di inventaris Anda. </string>
+    <string name="l10n_how_it_works_8cecc82d72" formatted="false">Cara Kerjanya</string>
+    <string name="l10n_improvement_06a5958742" formatted="false">Perbaikan</string>
+    <string name="l10n_in_garage_6e98e8be38" formatted="false">Di Garasi</string>
+    <string name="l10n_in_transit_046e5cee81" formatted="false">Dalam Transit</string>
+    <string name="l10n_info_4b631f6984" formatted="false">Informasi</string>
+    <string name="l10n_initial_balance_b59c095a59" formatted="false">Saldo Awal</string>
+    <string name="l10n_initial_stock_246f037a63" formatted="false">Stok Awal</string>
+    <string name="l10n_interactions_0b3583ecaa" formatted="false">Interaksi</string>
+    <string name="l10n_interactions_3e9b25e52c" formatted="false">INTERACTIONS</string>
+    <string name="l10n_inventory_300d29fd5f" formatted="false">Inventaris</string>
+    <string name="l10n_inventory_overview_6c60ff1858" formatted="false">Ikhtisar Inventaris</string>
+    <string name="l10n_inventory_parts_48753b6a28" formatted="false">Inventaris &amp; Parts</string>
+    <string name="l10n_inventory_value_d96f52b847" formatted="false">Nilai Persediaan</string>
+    <string name="l10n_invite_accepted_use_the_business_switcher__48c892716f" formatted="false">Undangan diterima. Gunakan pengalih bisnis untuk mengubah organisasi.</string>
+    <string name="l10n_invite_b136609f06" formatted="false">Undang</string>
+    <string name="l10n_invite_code_copied_53ba04fe05" formatted="false">Kode undangan disalin</string>
+    <string name="l10n_invite_code_e91cf27d1a" formatted="false">Kode undangan</string>
+    <string name="l10n_invite_code_is_required_d56d4da09f" formatted="false">Kode undangan diperlukan.</string>
+    <string name="l10n_invite_code_saved_sign_in_to_apply_0358d383fb" formatted="false">Kode undangan disimpan. Masuk untuk melamar.</string>
+    <string name="l10n_invite_ready_d63d9ab8e9" formatted="false">Undangan Siap</string>
+    <string name="l10n_invite_removed_6c02654e1f" formatted="false">Undangan dihapus.</string>
+    <string name="l10n_invite_team_member_ba9a4750b3" formatted="false">Undang Anggota Tim</string>
+    <string name="l10n_join_car_dealer_tracker_using_my_invite_co_688ef50dfa">Bergabunglah dengan Car Dealer Tracker menggunakan kode undangan saya %1$s. Berlangganan dan kami berdua mendapat satu bulan ekstra gratis.
+%2$s</string>
+    <string name="l10n_join_e0d73143de" formatted="false">Bergabunglah</string>
+    <string name="l10n_join_team_by_code_de2c46a824" formatted="false">Bergabunglah dengan Tim dengan Kode</string>
+    <string name="l10n_kilometers_87bafdbb82" formatted="false">Kilometer</string>
+    <string name="l10n_language_89b86ab0e6" formatted="false">Bahasa</string>
+    <string name="l10n_last_sync_s_3823d3f26b">Sinkronisasi Terakhir: %s</string>
+    <string name="l10n_lead_funnel_1a4f54a31c" formatted="false">Corong Utama</string>
+    <string name="l10n_lead_information_f5caed15cb" formatted="false">LEAD INFORMATION</string>
+    <string name="l10n_lead_management_a32661e4fa" formatted="false">Manajemen Pimpinan</string>
+    <string name="l10n_lead_score_570b129882" formatted="false">Skor Utama</string>
+    <string name="l10n_lead_source_272a3bc17b" formatted="false">Sumber Utama</string>
+    <string name="l10n_lead_stage_3835cf63f8" formatted="false">Panggung Pimpin</string>
+    <string name="l10n_legal_902c91d94e" formatted="false">Hukum</string>
+    <string name="l10n_line_items_7cea20a1a0" formatted="false">Item Baris</string>
+    <string name="l10n_load_the_finance_snapshot_used_for_deliver_7133b84064" formatted="false">Muat cuplikan keuangan yang digunakan untuk pengiriman</string>
+    <string name="l10n_low_stock_023d1181eb" formatted="false">Stok Rendah</string>
+    <string name="l10n_manage_bf58d17e56" formatted="false">Kelola</string>
+    <string name="l10n_manage_parts_inventory_b3976d6b7d" formatted="false">Kelola Parts Inventaris</string>
+    <string name="l10n_manage_team_6008d643e7" formatted="false">Kelola Tim</string>
+    <string name="l10n_management_63cecca67b" formatted="false">Manajemen</string>
+    <string name="l10n_mark_all_read_e5f6134329" formatted="false">Tandai Semua Telah Dibaca</string>
+    <string name="l10n_mark_sold_f9ed53bb35" formatted="false">Tandai Terjual</string>
+    <string name="l10n_max_s_c462e78d25">Maks: %s</string>
+    <string name="l10n_member_removed_f948dba5bc" formatted="false">Anggota dihapus.</string>
+    <string name="l10n_menu_57f5f5efbc" formatted="false">Tidak bisa</string>
+    <string name="l10n_merge_duplicate_vehicles_clients_users_and_21d32c6631" formatted="false">Gabungkan kendaraan duplikat, klien, pengguna, dan akun</string>
+    <string name="l10n_message_68f4145fee" formatted="false">Pesan</string>
+    <string name="l10n_mileage_83d293bb51" formatted="false">Jarak tempuh:</string>
+    <string name="l10n_mileage_f67a0513bc" formatted="false">jarak tempuh</string>
+    <string name="l10n_miles_5fa6c4032b" formatted="false">mil</string>
+    <string name="l10n_monthly_finance_snapshot_preview_and_test__c2b4e0c277" formatted="false">Cuplikan keuangan bulanan, pratinjau dan pengiriman tes</string>
+    <string name="l10n_more_options_86c0a35ec8" formatted="false">Opsi lainnya</string>
+    <string name="l10n_move_to_s_219f3bcc39">Pindah ke %s</string>
+    <string name="l10n_name_709a23220f" formatted="false">Nama</string>
+    <string name="l10n_need_attention_90_days_968bd64859" formatted="false">Butuh perhatian (90+ hari)</string>
+    <string name="l10n_net_profit_8bebc63cc9" formatted="false">Laba Bersih</string>
+    <string name="l10n_net_profit_dce52ef31f" formatted="false">NET PROFIT</string>
+    <string name="l10n_never_80c3052d33" formatted="false">Tidak pernah</string>
+    <string name="l10n_new_debt_acf70a9a2b" formatted="false">Hutang Baru</string>
+    <string name="l10n_new_password_4894cb39ee" formatted="false">Kata Sandi Baru</string>
+    <string name="l10n_new_sale_66d89d8f55" formatted="false">Penjualan Baru</string>
+    <string name="l10n_newest_added_04df647871" formatted="false">Terbaru Ditambahkan</string>
+    <string name="l10n_next_reminder_5f4f731670" formatted="false">Pengingat Berikutnya</string>
+    <string name="l10n_no_816c52fd2b" formatted="false">Tidak</string>
+    <string name="l10n_no_burning_inventory_6dd14714f6" formatted="false">Tidak ada inventaris yang terbakar</string>
+    <string name="l10n_no_expenses_recorded_for_this_vehicle_c072fec1dd" formatted="false">Tidak ada biaya yang dicatat untuk kendaraan ini</string>
+    <string name="l10n_no_interactions_recorded_fcfb0c9bc0" formatted="false">Tidak ada interaksi yang dicatat</string>
+    <string name="l10n_no_inventory_available_yet_5380356e1d" formatted="false">Belum ada inventaris yang tersedia</string>
+    <string name="l10n_no_organizations_yet_e932e617af" formatted="false">Belum ada organisasi</string>
+    <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">Tidak ada riwayat pembayaran</string>
+    <string name="l10n_no_photo_available_26ee476cf8" formatted="false">Tidak ada foto yang tersedia</string>
+    <string name="l10n_no_photos_selected_dde0dad3af" formatted="false">Tidak ada foto yang dipilih</string>
+    <string name="l10n_no_reminders_set_deaccb44c3" formatted="false">Tidak ada pengingat yang disetel</string>
+    <string name="l10n_no_transactions_yet_494bb679a0" formatted="false">Belum ada transaksi</string>
+    <string name="l10n_no_vehicle_linked_1207f8a434" formatted="false">Tidak ada kendaraan yang terhubung</string>
+    <string name="l10n_no_vehicle_selected_ba526a43b4" formatted="false">Tidak ada kendaraan yang dipilih</string>
+    <string name="l10n_no_vehicles_found_c578cfdbd5" formatted="false">Tidak ada kendaraan yang ditemukan</string>
+    <string name="l10n_none_6eef664840" formatted="false">Tidak ada</string>
+    <string name="l10n_not_selected_183079f3bd" formatted="false">Tidak dipilih</string>
+    <string name="l10n_note_optional_df9d34ca45" formatted="false">Catatan (Opsional)</string>
+    <string name="l10n_notes_70440046a3" formatted="false">Catatan</string>
+    <string name="l10n_notes_e69fc18a69" formatted="false">NOTES</string>
+    <string name="l10n_notes_optional_2fd5716446" formatted="false">Catatan (Opsional)</string>
+    <string name="l10n_offline_queue_51301f4d01" formatted="false">Antrian Offline</string>
+    <string name="l10n_ok_9ce3bd4224" formatted="false">OK</string>
+    <string name="l10n_oldest_added_4864f09810" formatted="false">Ditambahkan Terlama</string>
+    <string name="l10n_on_hand_41733d8e55" formatted="false">Di Tangan</string>
+    <string name="l10n_on_hand_s_b4e94bd7fb">Di Tangan: %s</string>
+    <string name="l10n_on_sale_684df04fff" formatted="false">Dijual</string>
+    <string name="l10n_open_receipt_29074b8045" formatted="false">Buka tanda terima</string>
+    <string name="l10n_operational_8459f93535" formatted="false">Operasional</string>
+    <string name="l10n_owes_you_855addac0e" formatted="false">OWES YOU</string>
+    <string name="l10n_owned_b62ff5ccd1" formatted="false">Dimiliki</string>
+    <string name="l10n_paid_by_2e06e8e0d2" formatted="false">Dibayar Oleh</string>
+    <string name="l10n_part_88be9d62d7" formatted="false">Bagian</string>
+    <string name="l10n_part_batches_e6bca6edb1" formatted="false">Bagian Batch</string>
+    <string name="l10n_part_sale_line_items_913154a288" formatted="false">Item Baris Penjualan Bagian</string>
+    <string name="l10n_part_sales_14413b3d65" formatted="false">Bagian Sales</string>
+    <string name="l10n_parts_e374280917" formatted="false">Suku Cadang</string>
+    <string name="l10n_password_reset_email_sent_check_your_inbox_de927be614" formatted="false">Email pengaturan ulang kata sandi terkirim! Periksa kotak masuk Anda.</string>
+    <string name="l10n_password_updated_successfully_please_sign__8c88ae9b78" formatted="false">Kata sandi berhasil diperbarui. Silakan masuk dengan kata sandi baru Anda.</string>
+    <string name="l10n_payment_amount_s_4b4a7ded49">Jumlah Pembayaran (%s)</string>
+    <string name="l10n_payment_method_f383f6a23c" formatted="false">Metode Pembayaran</string>
+    <string name="l10n_pending_invite_4c0cead4ed" formatted="false">Undangan tertunda</string>
+    <string name="l10n_phone_number_ab25d61bb1" formatted="false">Nomor Telepon</string>
+    <string name="l10n_photo_gallery_44ef3f997a" formatted="false">Galeri Foto</string>
+    <string name="l10n_please_sign_in_to_accept_the_invitation_8500a13e70" formatted="false">Silakan masuk untuk menerima undangan.</string>
+    <string name="l10n_preview_f1fbb2b43d" formatted="false">Pratinjau</string>
+    <string name="l10n_preview_previous_month_0f655d06b2" formatted="false">Pratinjau bulan sebelumnya</string>
+    <string name="l10n_price_high_to_low_c60097c36d" formatted="false">Harga: Tinggi ke Rendah</string>
+    <string name="l10n_price_low_to_high_ed3d3af1bd" formatted="false">Harga: Rendah ke Tinggi</string>
+    <string name="l10n_priority_d_25ab148977">Prioritas %d</string>
+    <string name="l10n_privacy_policy_9db108ba6b" formatted="false">Kebijakan Privasi</string>
+    <string name="l10n_processing_272bc02ec5">Memproses...</string>
+    <string name="l10n_profile_ff4fc0276e" formatted="false">Profil</string>
+    <string name="l10n_projected_roi_is_s_consider_cost_reduction_8685e99daf">ROI yang diproyeksikan adalah %s%%. Pertimbangkan pengurangan biaya atau kenaikan harga.</string>
+    <string name="l10n_purchase_date_44c49c39bc" formatted="false">Tanggal Pembelian:</string>
+    <string name="l10n_purchase_status_2a8751d8fd" formatted="false">Pembelian &amp; Status</string>
+    <string name="l10n_quantity_44f6af6945" formatted="false">Kuantitas</string>
+    <string name="l10n_queue_d_dad2e299dd">Antrian: %d</string>
+    <string name="l10n_quick_exports_d46b411b0f" formatted="false">Ekspor Cepat</string>
+    <string name="l10n_re_enter_password_aefce7f750" formatted="false">Masukkan kembali kata sandi</string>
+    <string name="l10n_receipt_f6ce3b6fcf" formatted="false">Tanda terima</string>
+    <string name="l10n_receipt_removed_d5c1b3de12" formatted="false">Tanda terima dihapus</string>
+    <string name="l10n_receipt_updated_91e7da08ee" formatted="false">Tanda terima diperbarui</string>
+    <string name="l10n_receive_stock_7f38105bfd" formatted="false">Menerima Stok</string>
+    <string name="l10n_record_payment_6577ced3c0" formatted="false">Catat Pembayaran</string>
+    <string name="l10n_refresh_56e3badc4e" formatted="false">Segarkan</string>
+    <string name="l10n_region_language_61abc4a8c8" formatted="false">Wilayah &amp; Bahasa</string>
+    <string name="l10n_reminder_title_e0a0d76c7c" formatted="false">Judul Pengingat</string>
+    <string name="l10n_reminders_414594a618" formatted="false">REMINDERS</string>
+    <string name="l10n_reminders_ae8c393938" formatted="false">Pengingat</string>
+    <string name="l10n_reminders_deadlines_00a3464088" formatted="false">Pengingat &amp; Batas Waktu</string>
+    <string name="l10n_remove_cover_7a5eef5219" formatted="false">Hapus penutup</string>
+    <string name="l10n_remove_e963907dac" formatted="false">Hapus</string>
+    <string name="l10n_remove_receipt_7ad9820882" formatted="false">Hapus Tanda Terima</string>
+    <string name="l10n_report_export_failed_4df279729b" formatted="false">Ekspor laporan gagal</string>
+    <string name="l10n_request_details_5a4c5cf8bc" formatted="false">Detail Permintaan</string>
+    <string name="l10n_request_permanent_removal_of_your_account__715c8b1c9a" formatted="false">Minta penghapusan permanen akun Anda dan semua datanya</string>
+    <string name="l10n_reset_44c57abd88" formatted="false">Setel ulang</string>
+    <string name="l10n_restore_purchases_2d5574135f" formatted="false">Pulihkan Pembelian</string>
+    <string name="l10n_retry_9f5cd8a2e8">Coba lagi</string>
+    <string name="l10n_revenue_9ee5830936" formatted="false">REVENUE</string>
+    <string name="l10n_roi_high_to_low_829d8222f7" formatted="false">ROI: Tinggi ke Rendah</string>
+    <string name="l10n_roi_is_s_consider_reviewing_pricing_strate_d69c12723b">ROI adalah %s%%. Pertimbangkan untuk meninjau strategi penetapan harga.</string>
+    <string name="l10n_roi_low_to_high_0f09644eb4" formatted="false">ROI: Rendah ke Tinggi</string>
+    <string name="l10n_s_s_089331a24a">%1$s • %2$s</string>
+    <string name="l10n_s_s_d5e99a8a81">%1$s (%2$s)</string>
+    <string name="l10n_s_s_x_s_0f834ca715">%1$s: %2$s x %3$s</string>
+    <string name="l10n_sale_details_be513b66e1" formatted="false">Detail Penjualan</string>
+    <string name="l10n_sale_price_s_cef9b3cb38">Harga Jual (%s)</string>
+    <string name="l10n_sales_d0edfb6e8c" formatted="false">Penjualan</string>
+    <string name="l10n_save_as_template_18ea0c6cf8" formatted="false">Simpan sebagai Templat</string>
+    <string name="l10n_save_client_to_add_reminders_9973b72e07" formatted="false">Simpan klien untuk menambahkan pengingat</string>
+    <string name="l10n_save_client_to_log_interactions_c757eff3fd" formatted="false">Simpan klien untuk mencatat interaksi</string>
+    <string name="l10n_save_efc007a393" formatted="false">Simpan</string>
+    <string name="l10n_save_expense_b89a5c0890" formatted="false">Menghemat Biaya</string>
+    <string name="l10n_save_interaction_71551456df" formatted="false">Simpan Interaksi</string>
+    <string name="l10n_save_order_bc2ed7f4c6" formatted="false">Simpan Pesanan</string>
+    <string name="l10n_save_settings_0022a3e10c" formatted="false">Simpan Pengaturan</string>
+    <string name="l10n_save_template_2d7eec43dc" formatted="false">Simpan Templat</string>
+    <string name="l10n_search_6d7a30a931" formatted="false">Cari...</string>
+    <string name="l10n_search_bce0641417" formatted="false">Cari</string>
+    <string name="l10n_search_by_name_phone_10fa0a8ccb" formatted="false">Cari berdasarkan nama, telepon...</string>
+    <string name="l10n_search_leads_6406ab34a2" formatted="false">Cari petunjuk...</string>
+    <string name="l10n_search_make_model_vin_dfaf1206da" formatted="false">Telusuri Merek, Model, VIN...</string>
+    <string name="l10n_search_vehicles_clients_expenses_d2a6e2e3ca" formatted="false">Cari kendaraan, klien, pengeluaran</string>
+    <string name="l10n_security_f25ce1b8a3" formatted="false">Keamanan</string>
+    <string name="l10n_see_all_8196e42428" formatted="false">Lihat Semua</string>
+    <string name="l10n_select_account_3a2f7de683" formatted="false">Pilih Akun</string>
+    <string name="l10n_select_user_c875cbd5b1" formatted="false">Pilih Pengguna</string>
+    <string name="l10n_select_vehicle_fea7a520f3" formatted="false">Pilih Kendaraan</string>
+    <string name="l10n_select_vehicle_from_inventory_eac779c320" formatted="false">Pilih Kendaraan dari Inventaris</string>
+    <string name="l10n_selected_vehicle_541c389a97" formatted="false">SELECTED VEHICLE</string>
+    <string name="l10n_send_test_email_fc552c754d" formatted="false">Kirim email percobaan</string>
+    <string name="l10n_set_as_cover_d928f2a600" formatted="false">Tetapkan sebagai penutup</string>
+    <string name="l10n_set_first_photo_as_cover_d614268a69" formatted="false">Tetapkan foto pertama sebagai sampul</string>
+    <string name="l10n_settings_saved_successfully_8b014ac160" formatted="false">Pengaturan berhasil disimpan</string>
+    <string name="l10n_share_09ca55ca52" formatted="false">Bagikan</string>
+    <string name="l10n_share_file_f405dcfb52" formatted="false">Bagikan Berkas</string>
+    <string name="l10n_share_invite_dbcc1e50dc" formatted="false">Bagikan undangan</string>
+    <string name="l10n_sign_in_f8492cc1de" formatted="false">Masuk</string>
+    <string name="l10n_sign_up_2ba4023df4" formatted="false">Daftar</string>
+    <string name="l10n_sms_9e10d4517d" formatted="false">SMS</string>
+    <string name="l10n_snapshots_export_and_recovery_826b7d89cd" formatted="false">Snapshot, ekspor, dan pemulihan</string>
+    <string name="l10n_sold_e6560d9c29" formatted="false">Terjual</string>
+    <string name="l10n_sort_adc4e96a47" formatted="false">Sortir</string>
+    <string name="l10n_start_free_trial_22c637aa3f" formatted="false">Mulai Uji Coba Gratis</string>
+    <string name="l10n_status_bae7d5be70" formatted="false">Status</string>
+    <string name="l10n_subscribe_now_378b0c5691" formatted="false">Berlangganan Sekarang</string>
+    <string name="l10n_summary_12b71c3e0f" formatted="false">Ringkasan</string>
+    <string name="l10n_support_f32d5a3b17" formatted="false">Dukungan</string>
+    <string name="l10n_sync_905f63092f" formatted="false">Sinkronisasi</string>
+    <string name="l10n_sync_now_c9113495d0" formatted="false">Sinkronkan Sekarang</string>
+    <string name="l10n_syncing_s_a95262f700">Sinkronisasi: %s</string>
+    <string name="l10n_system_fallback_language_6c4f089b7b" formatted="false">Bahasa cadangan sistem</string>
+    <string name="l10n_take_photo_e9765b270b" formatted="false">Ambil Foto</string>
+    <string name="l10n_tap_edit_to_add_photo_c6a1bff634" formatted="false">Ketuk Edit untuk menambahkan foto</string>
+    <string name="l10n_tap_to_add_a_new_client_c724b04224" formatted="false">Ketuk + untuk menambahkan klien baru</string>
+    <string name="l10n_tap_to_add_photo_c86051a233" formatted="false">Ketuk untuk menambahkan foto</string>
+    <string name="l10n_tap_to_upgrade_to_pro_0fe329c732" formatted="false">Ketuk untuk meningkatkan ke Pro</string>
+    <string name="l10n_team_members_a12f4a2ed5" formatted="false">Anggota Tim</string>
+    <string name="l10n_template_name_48c5544ff8" formatted="false">Nama Templat</string>
+    <string name="l10n_template_saved_aa1dc3dd61" formatted="false">Templat disimpan</string>
+    <string name="l10n_terms_of_use_97738411d6" formatted="false">Ketentuan Penggunaan</string>
+    <string name="l10n_text_4345cb1fa2" formatted="false">%</string>
+    <string name="l10n_this_action_cannot_be_undone_951f495b34" formatted="false">Tindakan ini tidak dapat dibatalkan.</string>
+    <string name="l10n_this_affects_currency_formatting_mileage_u_cc8c13f997" formatted="false">Hal ini memengaruhi format mata uang, satuan jarak tempuh, dan bahasa aplikasi.</string>
+    <string name="l10n_this_interaction_will_be_removed_from_the__515f9c32f7" formatted="false">Interaksi ini akan dihapus dari timeline klien.</string>
+    <string name="l10n_this_reminder_and_its_notification_will_be_eb9d1ed05d" formatted="false">Pengingat ini dan pemberitahuannya akan dihapus.</string>
+    <string name="l10n_title_768e0c1c69" formatted="false">Judul</string>
+    <string name="l10n_top_sold_vehicles_75b5535b97" formatted="false">Terlaris Vehicles</string>
+    <string name="l10n_total_assets_5d9f9af9e7" formatted="false">Jumlah Aset</string>
+    <string name="l10n_total_b25928c699" formatted="false">Jumlah</string>
+    <string name="l10n_total_revenue_f3a8370f38" formatted="false">Pendapatan Total</string>
+    <string name="l10n_total_value_4949c4c8f4" formatted="false">Nilai Total</string>
+    <string name="l10n_track_daily_cost_of_keeping_vehicles_in_in_7fcc384e23" formatted="false">Lacak biaya harian untuk menyimpan kendaraan dalam inventaris</string>
+    <string name="l10n_trigger_the_backend_delivery_flow_802ee82819" formatted="false">Memicu aliran pengiriman backend</string>
+    <string name="l10n_unable_to_load_plans_12c3ee13be">Tidak dapat memuat rencana</string>
+    <string name="l10n_unit_cost_0105252023" formatted="false">Biaya Satuan</string>
+    <string name="l10n_unit_price_1eea68d093" formatted="false">Harga Satuan</string>
+    <string name="l10n_unlock_full_potential_1c078f3769">Buka Potensi Penuh</string>
+    <string name="l10n_update_access_b5cb6f9c8f" formatted="false">Perbarui Akses</string>
+    <string name="l10n_update_asking_price_95bce5bf83" formatted="false">Perbarui Harga Permintaan</string>
+    <string name="l10n_update_password_61dcf34e70" formatted="false">Perbarui Kata Sandi</string>
+    <string name="l10n_update_your_login_credentials_d6cfe5b236" formatted="false">Perbarui kredensial login Anda</string>
+    <string name="l10n_upgrade_to_pro_24de9364ba">Tingkatkan ke Pro</string>
+    <string name="l10n_upload_8bdf057f91" formatted="false">Unggah</string>
+    <string name="l10n_upload_photos_f561065970" formatted="false">Unggah Foto</string>
+    <string name="l10n_upsert_e66a0fdf4e" formatted="false">Masukkan</string>
+    <string name="l10n_use_template_2379761496" formatted="false">Gunakan Templat</string>
+    <string name="l10n_user_guide_bec249e659" formatted="false">Panduan Pengguna</string>
+    <string name="l10n_users_57f2b181d0" formatted="false">Pengguna</string>
+    <string name="l10n_vehicle_9bb28c0dd3" formatted="false">Kendaraan</string>
+    <string name="l10n_vehicle_details_ef6dde72ac" formatted="false">Detail Kendaraan</string>
+    <string name="l10n_vehicle_has_been_in_inventory_for_d_days_c_f0713f2dae">Kendaraan telah disimpan selama %d hari. Pertimbangkan penetapan harga yang agresif.</string>
+    <string name="l10n_vehicle_has_been_in_inventory_for_d_days_m_ee11aeb93c">Kendaraan telah disimpan selama %d hari. Pantau dengan cermat.</string>
+    <string name="l10n_vehicle_has_been_in_inventory_for_d_days_r_66c29937e3">Kendaraan telah disimpan selama %d hari. Tinjau strategi penetapan harga.</string>
+    <string name="l10n_vehicle_has_healthy_margin_consider_a_smal_ea30eb4520" formatted="false">Kendaraan memiliki margin yang sehat. Pertimbangkan penurunan harga kecil untuk mempercepat penjualan.</string>
+    <string name="l10n_vehicle_interest_077f79a86a" formatted="false">Minat Kendaraan</string>
+    <string name="l10n_vehicle_interest_ba912fc45c" formatted="false">VEHICLE INTEREST</string>
+    <string name="l10n_vehicle_not_found_6e96578c6e" formatted="false">Kendaraan tidak ditemukan</string>
+    <string name="l10n_vehicle_photo_fd45ffbd9b" formatted="false">Foto Kendaraan</string>
+    <string name="l10n_vehicles_60261ed275" formatted="false">Kendaraan</string>
+    <string name="l10n_view_analytics_03b4fa3532" formatted="false">Lihat Analitik</string>
+    <string name="l10n_view_expenses_a38d3ee633" formatted="false">Lihat Expenses</string>
+    <string name="l10n_view_financials_3d9ca33d4b" formatted="false">Lihat Keuangan</string>
+    <string name="l10n_view_funnel_4e0fb19942" formatted="false">Lihat Corong</string>
+    <string name="l10n_view_inventory_d834980d77" formatted="false">Lihat Inventaris</string>
+    <string name="l10n_view_leads_bae2691c69" formatted="false">Lihat Prospek</string>
+    <string name="l10n_view_part_cost_26b100383a" formatted="false">Lihat Biaya Bagian</string>
+    <string name="l10n_view_part_profit_7161f621f7" formatted="false">Lihat Bagian Keuntungan</string>
+    <string name="l10n_view_parts_inventory_ad3ca8694c" formatted="false">Lihat Parts Inventaris</string>
+    <string name="l10n_view_receipt_94c8c4b5ab" formatted="false">Lihat Tanda Terima</string>
+    <string name="l10n_view_vehicle_cost_2eea1fd8dd" formatted="false">Lihat Biaya Kendaraan</string>
+    <string name="l10n_view_vehicle_profit_80f9d39e15" formatted="false">Lihat Keuntungan Kendaraan</string>
+    <string name="l10n_vin_f4d631a147" formatted="false">VIN:</string>
+    <string name="l10n_vin_s_fbdc3936ba">VIN: %s</string>
+    <string name="l10n_warning_e9c4556335" formatted="false">Peringatan</string>
+    <string name="l10n_welcome_back_1c9089485a" formatted="false">Selamat Datang Kembali</string>
+    <string name="l10n_what_is_this_client_looking_for_5026141573" formatted="false">Apa yang dicari klien ini?</string>
+    <string name="l10n_what_is_this_for_5c24adade1" formatted="false">Untuk apa ini?</string>
+    <string name="l10n_whatsapp_b336fc5587" formatted="false">Ada apa</string>
+    <string name="l10n_withdraw_47e5641946" formatted="false">Menarik diri</string>
+    <string name="l10n_withdraw_funds_3e29e33238" formatted="false">Penarikan Dana</string>
+    <string name="l10n_year_newest_f5b725e08b" formatted="false">Tahun: Terbaru</string>
+    <string name="l10n_yes_5397e0583f" formatted="false">Ya</string>
+    <string name="l10n_you_owe_aeb436abf8" formatted="false">YOU OWE</string>
+    <string name="l10n_you_re_all_set_058a813016">Anda sudah siap!</string>
+    <string name="l10n_your_pro_subscription_is_active_enjoy_full_bf224961b4">Langganan Pro Anda aktif. Nikmati akses penuh.</string>
+    <string name="l10n_preview_mode_5eadd20cb9" formatted="false">Modus pratinjau</string>
+    <string name="l10n_create_an_account_to_use_s_with_sync_team__6057bef556">Buat akun untuk menggunakan %s dengan sinkronisasi, akses tim, dan cadangan cloud.</string>
+    <string name="l10n_you_do_not_have_permission_to_open_s_3a8ddbea88">Anda tidak memiliki izin untuk membuka %s.</string>
+    <string name="l10n_refresh_access_8228750e41" formatted="false">Segarkan akses</string>
+    <string name="l10n_checking_access_for_s_149c919eca">Memeriksa akses untuk %s...</string>
+    <string name="l10n_financial_preview_c6529ccd3e" formatted="false">Pratinjau Keuangan</string>
+    <string name="l10n_total_cost_b5d8da40f3" formatted="false">Jumlah Biaya</string>
+    <string name="l10n_sale_price_17ae734e91" formatted="false">Harga Jual</string>
+    <string name="l10n_estimated_profit_e16237eb37" formatted="false">Perkiraan Keuntungan</string>
+    <string name="l10n_edit_vehicle_b213eb6d7b" formatted="false">Sunting Kendaraan</string>
+    <string name="l10n_reserved_67a6ff10f1" formatted="false">Dicadangkan</string>
+    <string name="l10n_under_service_db3458f0c8" formatted="false">Di bawah Layanan</string>
+    <string name="l10n_purchase_price_s_c05061525a">Harga Pembelian (%s)</string>
+    <string name="l10n_asking_price_s_52fbad33bd">Harga Permintaan (%s)</string>
+    <string name="l10n_paid_from_a2cf4d1148" formatted="false">Dibayar Dari</string>
+    <string name="l10n_purchase_date_74feb2cafb" formatted="false">Tanggal Pembelian</string>
+    <string name="l10n_enter_vin_number_b7dc986485" formatted="false">Masukkan nomor VIN</string>
+    <string name="l10n_failed_to_save_vehicle_b1914c4b33" formatted="false">Gagal menyimpan kendaraan.</string>
+    <string name="l10n_vin_12033717d5" formatted="false">VIN</string>
+    <string name="l10n_make_a94431ee22" formatted="false">Buat</string>
+    <string name="l10n_model_68c2cc7f0c" formatted="false">Model</string>
+    <string name="l10n_year_879e32326c" formatted="false">Tahun</string>
+    <string name="l10n_toyota_5983871b10" formatted="false">Toyota</string>
+    <string name="l10n_camry_73a0bf56d0" formatted="false">kamera</string>
+    <string name="l10n_john_doe_ae6e4d1209" formatted="false">John Doe</string>
+    <string name="l10n_971_e0c6bf217e" formatted="false">+971...</string>
+    <string name="l10n_remaining_cc632b5e2f" formatted="false">Tersisa</string>
+    <string name="l10n_batch_value_57f83418ae" formatted="false">Nilai Batch</string>
+    <string name="l10n_search_parts_7f81925d81" formatted="false">Cari bagian</string>
+    <string name="l10n_search_sales_7a3b35f23c" formatted="false">Cari penjualan</string>
+    <string name="l10n_on_e0049a6651" formatted="false">Aktif</string>
+    <string name="l10n_off_e3de5ab0ca" formatted="false">Mati</string>
+    <string name="l10n_purchase_date_s_48bb29c697">Tanggal Pembelian: %s</string>
+    <string name="l10n_sale_date_s_73bd6ae143">Tanggal Penjualan: %s</string>
+    <string name="l10n_select_part_51247cc3d3" formatted="false">Pilih Bagian</string>
+    <string name="l10n_select_client_bed9d98b39" formatted="false">Pilih Klien</string>
+    <string name="l10n_part_details_fb7fd13619" formatted="false">Detail Bagian</string>
+    <string name="l10n_batches_30925eece3" formatted="false">kumpulan</string>
+    <string name="l10n_no_stock_batches_recorded_yet_aca34dec1b" formatted="false">Belum ada batch stok yang tercatat</string>
+    <string name="l10n_unnamed_batch_f0c334f4ce" formatted="false">Kumpulan tanpa nama</string>
+    <string name="l10n_3_car_free_limit_5db2950cc0" formatted="false">Batas bebas 3 mobil</string>
+    <string name="l10n_free_plan_includes_up_to_3_vehicles_upgrad_384f6af203" formatted="false">Paket gratis mencakup hingga 3 kendaraan. Tingkatkan ke Pro untuk menambah inventaris tanpa batas.</string>
+    <string name="l10n_not_now_e457149073" formatted="false">Tidak sekarang</string>
+    <string name="l10n_team_management_f603b9592c" formatted="false">Manajemen Tim</string>
+    <string name="l10n_no_active_business_1a7c7a70d3" formatted="false">Tidak ada bisnis yang aktif</string>
+    <string name="l10n_switch_to_a_business_in_account_first_d5185945dc" formatted="false">Beralih ke bisnis di Akun terlebih dahulu</string>
+    <string name="l10n_active_a733b809d2" formatted="false">Aktif</string>
+    <string name="l10n_invited_53469df1c4" formatted="false">Diundang</string>
+    <string name="l10n_no_team_members_yet_19c467e9da" formatted="false">Belum ada anggota tim</string>
+    <string name="l10n_invite_teammates_by_email_and_assign_the_c_e82cb4baf5" formatted="false">Undang rekan satu tim melalui email dan tetapkan peran yang benar.</string>
+    <string name="l10n_unknown_user_3048dd9c09" formatted="false">Pengguna tidak dikenal</string>
+    <string name="l10n_owner_89ff31225c" formatted="false">Owner</string>
+    <string name="l10n_admin_4e7afebcfb" formatted="false">Admin</string>
+    <string name="l10n_viewer_dbad9f126b" formatted="false">Viewer</string>
+    <string name="l10n_role_c3f104d136" formatted="false">Peran</string>
+    <string name="l10n_create_account_now_68eb45aecd" formatted="false">Buat akun sekarang</string>
+    <string name="l10n_create_a_login_immediately_instead_of_send_b386ad04c1" formatted="false">Segera buat login daripada hanya mengirim kode undangan saja.</string>
+    <string name="l10n_inviting_dc7a6e8b6b" formatted="false">Mengundang...</string>
+    <string name="l10n_remove_invite_5c2c255b05" formatted="false">Hapus Undangan</string>
+    <string name="l10n_remove_member_f6963c1f50" formatted="false">Hapus Anggota</string>
+    <string name="l10n_this_will_cancel_the_pending_invite_for_s_6ccb4de69a">Ini akan membatalkan undangan yang tertunda untuk %s.</string>
+    <string name="l10n_this_will_remove_s_from_the_team_1d8c62f412">Ini akan menghapus %s dari tim.</string>
+    <string name="l10n_this_member_4cc70454c5" formatted="false">anggota ini</string>
+    <string name="l10n_access_2f81a22de0" formatted="false">Akses</string>
+    <string name="l10n_generated_password_ac775239e4" formatted="false">Kata sandi yang dihasilkan</string>
+    <string name="l10n_fallback_link_03845a59f7" formatted="false">Tautan cadangan</string>
+    <string name="l10n_no_access_granted_480ba7822a" formatted="false">Tidak ada akses yang diberikan.</string>
+    <string name="l10n_full_owner_access_across_the_business_76a25c96c2" formatted="false">Akses pemilik penuh di seluruh bisnis.</string>
+    <string name="l10n_full_access_to_operations_analytics_and_te_1ca2f0ee33" formatted="false">Akses penuh ke operasi, analitik, dan manajemen tim.</string>
+    <string name="l10n_deal_focused_access_with_inventory_and_lea_8a054ea9fb" formatted="false">Akses yang berfokus pada kesepakatan dengan inventaris dan prospek, namun tanpa administrasi tim.</string>
+    <string name="l10n_read_only_visibility_with_restricted_sales_9f5fcf70ad" formatted="false">Visibilitas hanya baca dengan tindakan penjualan dan keuangan terbatas.</string>
+    <string name="l10n_custom_access_profile_fa32533178" formatted="false">Profil akses khusus.</string>
+    <string name="l10n_browse_vehicles_and_stock_visibility_9841fbcdb2" formatted="false">Telusuri kendaraan dan visibilitas stok.</string>
+    <string name="l10n_record_vehicle_sales_and_close_deals_a20daec01d" formatted="false">Catat penjualan kendaraan dan tutup transaksi.</string>
+    <string name="l10n_browse_parts_catalog_and_stock_levels_5b8f67f2c9" formatted="false">Telusuri katalog suku cadang dan tingkat stok.</string>
+    <string name="l10n_add_edit_and_remove_parts_from_inventory_07057348b7" formatted="false">Tambahkan, edit, dan hapus komponen dari inventaris.</string>
+    <string name="l10n_sell_parts_and_record_part_sales_007a1d9dcb" formatted="false">Jual suku cadang dan catat penjualan suku cadang.</string>
+    <string name="l10n_open_crm_leads_and_follow_up_lists_8590bde1b7" formatted="false">Buka CRM, prospek dan daftar tindak lanjut.</string>
+    <string name="l10n_see_expense_history_and_spend_data_c43f66fc4e" formatted="false">Lihat riwayat pengeluaran dan data pengeluaran.</string>
+    <string name="l10n_access_cost_data_for_each_vehicle_b9605a6cc7" formatted="false">Akses data biaya untuk setiap kendaraan.</string>
+    <string name="l10n_access_deal_profit_and_margin_data_94c286486e" formatted="false">Akses data keuntungan dan margin kesepakatan.</string>
+    <string name="l10n_access_cost_data_for_parts_a49093c7bf" formatted="false">Akses data biaya untuk suku cadang.</string>
+    <string name="l10n_access_part_sale_profit_and_margin_data_61de1c1496" formatted="false">Akses sebagian keuntungan penjualan dan data margin.</string>
+    <string name="l10n_invite_members_and_edit_their_access_01a8d831fb" formatted="false">Undang anggota dan edit akses mereka.</string>
+    <string name="l10n_remove_vehicles_users_and_other_records_b6cf14c8b3" formatted="false">Hapus kendaraan, pengguna, dan catatan lainnya.</string>
+    <string name="l10n_access_financial_accounts_and_overall_fina_3d8311bfb8" formatted="false">Akses akun keuangan dan data keuangan secara keseluruhan.</string>
+    <string name="l10n_invite_sent_successfully_80c2a50d62" formatted="false">Undangan berhasil dikirim.</string>
+    <string name="l10n_no_active_business_found_09c3d19a4e" formatted="false">Tidak ada bisnis aktif yang ditemukan.</string>
+    <string name="l10n_copy_af74f7c536" formatted="false">Salin</string>
+    <string name="l10n_guest_mode_87e15e1994" formatted="false">Modus Tamu</string>
+    <string name="l10n_dealer_invite_code_4f99dfa889" formatted="false">Kode undangan dealer</string>
+    <string name="l10n_manage_s_access_and_roles_fcde4d1c1d">Kelola akses dan peran %s</string>
+    <string name="l10n_manage_dealer_access_and_roles_b6fc1cd773" formatted="false">Kelola akses dan peran dealer</string>
+    <string name="l10n_last_sync_s_100ec475b2">Sinkronisasi terakhir %s</string>
+    <string name="l10n_manually_force_a_cloud_sync_e2cf1e24db" formatted="false">Paksa sinkronisasi cloud secara manual</string>
+    <string name="l10n_sign_out_61fd08ff5c" formatted="false">Keluar</string>
+    <string name="l10n_car_dealer_tracker_v_s_811f6da01d">Car Dealer Tracker v%s</string>
+    <string name="l10n_member_since_s_dc23bdfe14">Anggota sejak %s</string>
+    <string name="l10n_guest_session_d94ca0059d" formatted="false">Sesi tamu</string>
+    <string name="l10n_select_business_bb94249d23" formatted="false">Pilih Bisnis</string>
+    <string name="l10n_tap_to_switch_business_4c82a2a4e3" formatted="false">Ketuk untuk beralih bisnis</string>
+    <string name="l10n_verified_account_0051693083" formatted="false">Terverifikasi Akun</string>
+    <string name="l10n_invite_dealer_70fc8d5061" formatted="false">Undang Dealer</string>
+    <string name="l10n_bonus_access_until_s_9f844e03ed">Akses bonus hingga %s</string>
+    <string name="l10n_generate_invite_link_3f79d67399" formatted="false">Hasilkan Tautan Undangan</string>
+    <string name="l10n_share_invite_link_576748fde3" formatted="false">Bagikan Tautan Undangan</string>
+    <string name="l10n_rewards_d_referrals_45663eb115">Hadiah: %d referensi</string>
+    <string name="l10n_creating_28ea7667d0" formatted="false">Membuat...</string>
+    <string name="l10n_create_6e157c5da4" formatted="false">Buat</string>
+    <string name="l10n_paste_the_invite_code_you_received_from_th_526ac04e34" formatted="false">Tempelkan kode undangan yang Anda terima dari pemilik bisnis.</string>
+    <string name="l10n_what_you_get_f31727ff20" formatted="false">WHAT YOU GET</string>
+    <string name="l10n_ai_tips_c45d03315e" formatted="false">AI Tip</string>
+    <string name="l10n_instant_insights_for_smarter_deals_d21846c08b" formatted="false">Wawasan instan untuk transaksi yang lebih cerdas</string>
+    <string name="l10n_unlimited_b8bef37b71" formatted="false">Tidak terbatas</string>
+    <string name="l10n_add_unlimited_cars_no_restrictions_b5571f0a46" formatted="false">Tambahkan mobil tanpa batas, tanpa batasan</string>
+    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">Disinkronkan di semua perangkat Anda</string>
+    <string name="l10n_reports_88bc3fe3da" formatted="false">Laporan</string>
+    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">Ekspor laporan PDF profesional</string>
+    <string name="l10n_only_owners_and_admins_can_manage_email_re_dba756724c" formatted="false">Hanya pemilik dan admin yang dapat mengelola laporan email.</string>
+    <string name="l10n_monthly_report_settings_saved_8d9bf71863" formatted="false">Pengaturan laporan bulanan disimpan.</string>
+    <string name="l10n_email_reports_are_available_to_owners_and__4f05c35dc3" formatted="false">Laporan email hanya tersedia untuk pemilik dan admin.</string>
+    <string name="l10n_delivery_9631af52c6" formatted="false">Pengiriman</string>
+    <string name="l10n_schedule_0a8adac9d6" formatted="false">Jadwal</string>
+    <string name="l10n_timezone_d1f7dc891b" formatted="false">Zona waktu</string>
+    <string name="l10n_preview_month_d73c18fcd3" formatted="false">Bulan pratinjau</string>
+    <string name="l10n_all_owner_and_admin_members_with_a_resolve_dc94a475db" formatted="false">Semua pemilik dan anggota admin dengan alamat email yang telah diselesaikan.</string>
+    <string name="l10n_no_owner_or_admin_email_address_is_availab_6e99fb9a91" formatted="false">Tidak ada alamat email pemilik atau admin yang tersedia untuk pengiriman.</string>
+    <string name="l10n_report_contents_4f7bd4f9ad" formatted="false">Isi laporan</string>
+    <string name="l10n_scope_4651a34e4d" formatted="false">Ruang lingkup</string>
+    <string name="l10n_finance_inventory_parts_7569d39de4" formatted="false">Keuangan + inventaris + suku cadang</string>
+    <string name="l10n_format_041a5dec48" formatted="false">Format</string>
+    <string name="l10n_email_summary_pdf_attachment_c477a7549f" formatted="false">Ringkasan email + lampiran PDF</string>
+    <string name="l10n_profit_display_32b7228a67" formatted="false">Tampilan keuntungan</string>
+    <string name="l10n_realized_sales_profit_monthly_expenses_and_eabc1c529f" formatted="false">Realisasi laba penjualan, pengeluaran bulanan, dan pergerakan kas bersih</string>
+    <string name="l10n_actions_c3cd636a58" formatted="false">Tindakan</string>
+    <string name="l10n_monthly_email_reports_1a6e3c2fa4" formatted="false">Laporan email bulanan</string>
+    <string name="l10n_preview_and_export_the_same_finance_snapsh_837f2c449d" formatted="false">Pratinjau dan ekspor cuplikan keuangan yang sama yang akan mendukung pengiriman email di masa mendatang.</string>
+    <string name="l10n_enable_monthly_report_emails_42b4656342" formatted="false">Aktifkan email laporan bulanan</string>
+    <string name="l10n_owner_and_admin_recipients_only_159e48aaac" formatted="false">Hanya penerima pemilik dan admin</string>
+    <string name="l10n_preview_snapshot_ed5e438877" formatted="false">Pratinjau cuplikan</string>
+    <string name="l10n_generated_s_e2b61ae41f">Menghasilkan %s</string>
+    <string name="l10n_total_revenue_1a21e65652" formatted="false">Pendapatan total</string>
+    <string name="l10n_sales_profit_9a5946d3c5" formatted="false">Sales keuntungan</string>
+    <string name="l10n_monthly_expenses_04e5752edb" formatted="false">Pengeluaran bulanan</string>
+    <string name="l10n_net_cash_movement_32bd0e0118" formatted="false">Pergerakan kas bersih</string>
+    <string name="l10n_day_d_of_each_month_at_s_43c913cc7f">Hari %1$d setiap bulan pukul %2$s</string>
+    <string name="l10n_data_management_d5d83b7638" formatted="false">Manajemen Data</string>
+    <string name="l10n_create_local_backups_generate_pdf_reports__dfad3bb37a" formatted="false">Buat cadangan lokal, buat laporan PDF, atau arsipkan seluruh kumpulan data Anda ke cloud.</string>
+    <string name="l10n_includes_csvs_pdf_report_4d100a325b" formatted="false">Termasuk CSV + PDF Laporan</string>
+    <string name="l10n_cloud_backup_runs_when_your_business_accou_939cd4c8bf" formatted="false">Pencadangan cloud berjalan saat akun bisnis Anda aktif.</string>
+    <string name="l10n_start_952f375412" formatted="false">Mulai</string>
+    <string name="l10n_end_a2bb9d34b8" formatted="false">Akhir</string>
+    <string name="l10n_sync_diagnostics_e3a60d67e9" formatted="false">Sinkronisasi Diagnostik</string>
+    <string name="l10n_run_a_quick_check_to_compare_local_data_re_046301efe7" formatted="false">Jalankan pemeriksaan cepat untuk membandingkan data lokal, data jarak jauh, dan perubahan antrean.</string>
+    <string name="l10n_running_126eda8b21" formatted="false">Berlari...</string>
+    <string name="l10n_run_diagnostics_69d5bf9cc8" formatted="false">Jalankan Diagnostik</string>
+    <string name="l10n_refreshing_5b7bdb61fd" formatted="false">Menyegarkan...</string>
+    <string name="l10n_force_full_refresh_c12df9f4b6" formatted="false">Paksa Penyegaran Penuh</string>
+    <string name="l10n_last_sync_2072a8ad7a" formatted="false">Sinkronisasi Terakhir</string>
+    <string name="l10n_diagnostics_3af2279f9e" formatted="false">Diagnostik</string>
+    <string name="l10n_queue_items_9b3aa37300" formatted="false">Item Antrian</string>
+    <string name="l10n_syncing_4ae6fa22bc" formatted="false">Sinkronisasi</string>
+    <string name="l10n_healthy_80ea156e1b" formatted="false">Sehat</string>
+    <string name="l10n_degraded_13c27ff80a" formatted="false">Terdegradasi</string>
+    <string name="l10n_in_progress_b6bd42e4e7" formatted="false">Sedang berlangsung</string>
+    <string name="l10n_remote_check_failed_s_79bb3b14c4">Pemeriksaan jarak jauh gagal: %s</string>
+    <string name="l10n_local_d_remote_s_779ee9db55">Lokal %1$d • Jarak Jauh %2$s</string>
+    <string name="l10n_diagnostics_failed_e180bfe739" formatted="false">Diagnostik gagal</string>
+    <string name="l10n_refresh_failed_3d1f4a6759" formatted="false">Penyegaran gagal</string>
+    <string name="l10n_expense_a0db8e68b8" formatted="false">Biaya</string>
+    <string name="l10n_inventory_summary_d629dc5380" formatted="false">Ringkasan Inventaris</string>
+    <string name="l10n_no_expenses_for_this_period_939c25fd70" formatted="false">Tidak ada biaya untuk periode ini</string>
+    <string name="l10n_no_expenses_today_b928d4054b" formatted="false">Tidak ada biaya hari ini</string>
+    <string name="l10n_no_recent_expenses_2114ee1370" formatted="false">Tidak ada pengeluaran baru-baru ini</string>
+    <string name="l10n_no_spending_data_for_this_period_2882770210" formatted="false">Tidak ada data pengeluaran untuk periode ini</string>
+    <string name="l10n_recent_expenses_72acc98a05" formatted="false">Expenses terbaru</string>
+    <string name="l10n_spending_breakdown_12cb543e6a" formatted="false">Perincian Pengeluaran</string>
+    <string name="l10n_switch_business_or_create_one_c758de5f69" formatted="false">Ganti bisnis atau buat bisnis</string>
+    <string name="l10n_sync_failed_39040109b6" formatted="false">Sinkronisasi gagal</string>
+    <string name="l10n_synced_at_s_a99f918d50">Disinkronkan pada %s</string>
+    <string name="l10n_today_s_expenses_b11adc27ed" formatted="false">Expenses hari ini</string>
+    <string name="l10n_total_spent_s_52404e25ac">Total Pembelanjaan (%s)</string>
+    <string name="l10n_d_queued_83fc6181c2">• %d mengantri</string>
+    <string name="l10n_good_morning_06e3362314" formatted="false">Selamat pagi</string>
+    <string name="l10n_good_afternoon_6ec55f0220" formatted="false">Selamat sore</string>
+    <string name="l10n_good_evening_cf4eecdf55" formatted="false">Selamat malam</string>
+    <string name="l10n_synced_just_now_a38fad8f71" formatted="false">Baru saja disinkronkan</string>
+    <string name="l10n_sync_status_e712487134" formatted="false">Status Sinkronisasi</string>
+    <string name="l10n_new_leads_dda9a1b88a" formatted="false">Prospek Baru</string>
+    <string name="l10n_calls_today_5b92102263" formatted="false">Panggilan Hari Ini</string>
+    <string name="l10n_pipeline_32b1d5a784" formatted="false">Saluran pipa</string>
+    <string name="l10n_conversion_9151f8433f" formatted="false">Konversi</string>
+    <string name="l10n_avg_days_eaa4b580dc" formatted="false">Rata-rata Hari</string>
+    <string name="l10n_health_3703cd2168" formatted="false">Kesehatan</string>
+    <string name="l10n_1d_dba20f120b" formatted="false">1D</string>
+    <string name="l10n_1w_d53520d2de" formatted="false">1W</string>
+    <string name="l10n_1m_2c5bef1b03" formatted="false">1M</string>
+    <string name="l10n_3m_6dce163081" formatted="false">3M</string>
+    <string name="l10n_6m_b78ebb44df" formatted="false">6M</string>
+    <string name="l10n_90_days_9e155ebd73" formatted="false">90+ Hari</string>
+    <string name="l10n_vehicle_0b0591061c" formatted="false">kendaraan</string>
+    <string name="l10n_check_out_this_1_s_asking_2_s_59620817ef">Lihat ini %1$s.\nBertanya: %2$s</string>
+    <string name="l10n_report_s_40c9b6cdc3">Laporan: %s</string>
+    <string name="l10n_year_s_013413cf3f">Tahun: %s</string>
+    <string name="l10n_n_a_08d2e98e67" formatted="false">N/A</string>
+    <string name="l10n_1_d_days_2_s_70bb0b673e">%1$d hari (%2$s)</string>
+    <string name="l10n_d_more_expenses_fed20c0c3a">+%d pengeluaran lebih banyak</string>
+    <string name="l10n_deposited_to_3a1636cc3c" formatted="false">Disetorkan Ke</string>
+    <string name="l10n_no_expenses_found_15f519954e" formatted="false">Tidak ada biaya yang ditemukan</string>
+    <string name="l10n_add_your_first_expense_to_start_tracking_s_97ff450c6a" formatted="false">Tambahkan pengeluaran pertama Anda untuk mulai melacak pengeluaran.</string>
+    <string name="l10n_today_24345a1437" formatted="false">Hari ini</string>
+    <string name="l10n_yesterday_da24830f1f" formatted="false">Kemarin</string>
+    <string name="l10n_this_week_4e68dca8ab" formatted="false">Minggu ini</string>
+    <string name="l10n_this_month_0f6cc3a89c" formatted="false">Bulan ini</string>
+    <string name="l10n_older_63f34dd211" formatted="false">Lebih tua</string>
+    <string name="l10n_week_f82be68a7f" formatted="false">Minggu</string>
+    <string name="l10n_month_082bc378cd" formatted="false">Bulan</string>
+    <string name="l10n_personal_40f0732379" formatted="false">Pribadi</string>
+    <string name="l10n_employee_079711ea16" formatted="false">Karyawan</string>
+    <string name="l10n_bills_815465782c" formatted="false">Tagihan</string>
+    <string name="l10n_marketing_e0c534a057" formatted="false">Pemasaran</string>
+    <string name="l10n_expense_type_cfc6cbdc39" formatted="false">Jenis Biaya</string>
+    <string name="l10n_new_6403f2b7eb" formatted="false">Baru</string>
+    <string name="l10n_no_clients_found_8234e2afa3" formatted="false">Tidak ada Clients Ditemukan</string>
+    <string name="l10n_unknown_client_a2b07fe548" formatted="false">Klien Tidak Dikenal</string>
+    <string name="l10n_engaged_a893e68583" formatted="false">Bertunangan</string>
+    <string name="l10n_negotiation_368cbdd7c8" formatted="false">Negosiasi</string>
+    <string name="l10n_purchased_8b70c504aa" formatted="false">Dibeli</string>
+    <string name="l10n_lost_75a7bf994e" formatted="false">Hilang</string>
+    <string name="l10n_added_on_s_05fb27c0f1">Ditambahkan pada %s</string>
+    <string name="l10n_new_client_90299459d3" formatted="false">Klien Baru</string>
+    <string name="l10n_edit_client_f618b16ce5" formatted="false">Sunting Klien</string>
+    <string name="l10n_client_details_7f08b4c196" formatted="false">Detail Klien</string>
+    <string name="l10n_last_interaction_bad430f253" formatted="false">Interaksi Terakhir</string>
+    <string name="l10n_phone_77064d5265" formatted="false">Telepon</string>
+    <string name="l10n_preferred_date_68f2d8b5d1" formatted="false">Tanggal Pilihan</string>
+    <string name="l10n_select_vehicle_cb380af23c" formatted="false">Pilih kendaraan</string>
+    <string name="l10n_not_provided_20a0418296" formatted="false">Tidak disediakan</string>
+    <string name="l10n_not_set_93039e609d" formatted="false">Tidak disetel</string>
+    <string name="l10n_interaction_94dc8e4a59" formatted="false">Interaksi</string>
+    <string name="l10n_no_sales_yet_a5d3d3ad56" formatted="false">Belum ada Sales</string>
+    <string name="l10n_record_your_first_sale_to_see_profit_analy_5ee5212c35" formatted="false">Catat penjualan pertama Anda untuk melihat analisis keuntungan.</string>
+    <string name="l10n_revenue_35cf82f9d2" formatted="false">Pendapatan</string>
+    <string name="l10n_unknown_buyer_0e2dd14474" formatted="false">Pembeli Tidak Diketahui</string>
+    <string name="l10n_vehicle_removed_de559fb9fc" formatted="false">Kendaraan Dihapus</string>
+    <string name="l10n_parts_sale_efb3131b64" formatted="false">Parts Penjualan</string>
+    <string name="l10n_walk_in_801d866beb" formatted="false">Masuk</string>
+    <string name="l10n_copy_report_a9d0649046" formatted="false">Salin Laporan</string>
+    <string name="l10n_copied_8e3df45a49" formatted="false">Disalin</string>
+    <string name="l10n_share_report_ead1994747" formatted="false">Bagikan Laporan</string>
+    <string name="l10n_oldest_queued_0e969dc264" formatted="false">Antrian Terlama</string>
+    <string name="l10n_report_not_available_c048c43355" formatted="false">Laporan tidak tersedia</string>
+    <string name="l10n_sync_diagnostics_report_be53c6eb11" formatted="false">Laporan diagnostik sinkronisasi</string>
+    <string name="l10n_email_address_c94d3175a6" formatted="false">Alamat email</string>
+    <string name="l10n_phone_number_8961d3bf56" formatted="false">Nomor telepon</string>
+    <string name="l10n_password_8be3c943b1" formatted="false">Kata sandi</string>
+    <string name="l10n_hide_password_e40123b4e7" formatted="false">Sembunyikan kata sandi</string>
+    <string name="l10n_show_password_044b852f30" formatted="false">Tampilkan kata sandi</string>
+    <string name="l10n_forgot_password_4c29f7f033" formatted="false">Lupa kata sandi?</string>
+    <string name="l10n_have_an_invite_code_1e6ef85ebb" formatted="false">Punya kode undangan?</string>
+    <string name="l10n_referral_code_05341bac5d" formatted="false">Kode referensi</string>
+    <string name="l10n_team_access_code_c0ee3640ce" formatted="false">Kode akses tim</string>
+    <string name="l10n_create_account_eff4fd865f" formatted="false">Buat Akun</string>
+    <string name="l10n_don_t_have_an_account_f838dc11db" formatted="false">Belum punya akun?</string>
+    <string name="l10n_already_have_an_account_8559034a07" formatted="false">Sudah punya akun?</string>
+    <string name="l10n_mark_as_sold_6dc3bf355d" formatted="false">Tandai sebagai Terjual</string>
+    <string name="l10n_purchase_s_195c86f89f">Beli %s</string>
+    <string name="l10n_no_financial_accounts_available_add_at_lea_6a0adcd262" formatted="false">Tidak ada akun keuangan yang tersedia. Tambahkan setidaknya satu rekening tunai atau bank sebelum menyelesaikan penjualan ini.</string>
+    <string name="l10n_enter_a_valid_sale_price_27d2987d25" formatted="false">Masukkan harga jual yang valid.</string>
+    <string name="l10n_buyer_name_is_required_c056804e7a" formatted="false">Nama pembeli wajib diisi.</string>
+    <string name="l10n_select_the_account_where_this_payment_shou_b6ca476793" formatted="false">Pilih rekening tempat pembayaran ini harus disimpan.</string>
+    <string name="l10n_failed_to_complete_sale_1104a321e4" formatted="false">Gagal menyelesaikan penjualan.</string>
+    <string name="l10n_update_required_e875d3a416" formatted="false">Pembaruan Diperlukan</string>
+    <string name="l10n_a_new_version_of_car_dealer_tracker_is_ava_315aace8be" formatted="false">Versi baru Car Dealer Tracker telah tersedia. Harap perbarui untuk terus menggunakan aplikasi.</string>
+    <string name="l10n_current_s_00043013b0">Saat ini: %s</string>
+    <string name="l10n_available_s_11c7c0b8ef">Tersedia: %s</string>
+    <string name="l10n_update_now_7c107b40dc" formatted="false">Perbarui Sekarang</string>
+    <string name="l10n_no_results_b993b0c537" formatted="false">Tidak ada hasil</string>
+    <string name="l10n_open_cf9b77061f" formatted="false">Buka</string>
+    <string name="l10n_reset_password_3fb75e3bfe" formatted="false">Atur Ulang Kata Sandi</string>
+    <string name="l10n_create_a_new_password_to_regain_access_you_637d29b4b8" formatted="false">Buat sandi baru untuk mendapatkan kembali akses.\nAnda akan masuk lagi setelah menyimpan.</string>
+    <string name="l10n_passwords_do_not_match_d69c3b1ac5" formatted="false">Kata sandi tidak cocok</string>
+    <string name="l10n_password_must_be_at_least_6_characters_lon_536c6f174b" formatted="false">Kata sandi harus terdiri dari minimal 6 karakter.</string>
+    <string name="l10n_passwords_do_not_match_f7c3cd4759" formatted="false">Kata sandi tidak cocok.</string>
+    <string name="l10n_please_enter_your_email_address_to_reset_y_caa523788e" formatted="false">Silakan masukkan alamat email Anda untuk mengatur ulang kata sandi Anda.</string>
+    <string name="l10n_changes_the_password_for_the_currently_sig_4b61efd15b" formatted="false">Mengubah kata sandi untuk akun yang sedang masuk.</string>
+    <string name="l10n_password_updated_successfully_bcf756e001" formatted="false">Kata sandi berhasil diperbarui.</string>
+    <string name="l10n_sync_completed_successfully_d9624c2d92" formatted="false">Sinkronisasi berhasil diselesaikan.</string>
+    <string name="l10n_duplicate_records_cleaned_up_successfully_0874e5af09" formatted="false">Catatan duplikat berhasil dibersihkan.</string>
+    <string name="l10n_select_a_business_first_55b4eacf1c" formatted="false">Pilih bisnis terlebih dahulu.</string>
+    <string name="l10n_unable_to_generate_invite_code_2c7ba333a9" formatted="false">Tidak dapat membuat kode undangan.</string>
+    <string name="l10n_switched_to_s_49d341c815">Beralih ke %s.</string>
+    <string name="l10n_created_s_3b66d0ab71">Dibuat %s.</string>
+    <string name="l10n_appearance_41def7a0fe" formatted="false">Penampilan</string>
+    <string name="l10n_light_a36ef8aba2" formatted="false">Ringan</string>
+    <string name="l10n_dark_ae1ef01432" formatted="false">Gelap</string>
+    <string name="l10n_deal_desk_protected_sale_cd2c095326" formatted="false">Penjualan dilindungi Deal Desk</string>
+    <string name="l10n_revenue_payment_method_and_deposit_accou_5757ceb0eb" formatted="false">Pendapatan, metode pembayaran, dan rekening simpanan dikunci sehingga pajak, biaya, dan uang tunai yang dikumpulkan tetap benar.</string>
+    <string name="l10n_protected_by_deal_desk_29bf4ce2ad" formatted="false">Dilindungi oleh Deal Desk</string>
+    <string name="l10n_only_owner_or_admin_can_change_these_setti_df364d99fe" formatted="false">Hanya pemilik atau admin yang dapat mengubah pengaturan ini.</string>
+    <string name="l10n_deal_desk_settings_saved_fb71bf81c6" formatted="false">Pengaturan Deal Desk disimpan.</string>
+    <string name="l10n_we_couldn_t_load_deal_desk_settings_right__f8ff00e893" formatted="false">Kami tidak dapat memuat pengaturan Deal Desk saat ini. Silakan coba lagi.</string>
+    <string name="l10n_we_couldn_t_save_deal_desk_settings_right__d893d2e000" formatted="false">Kami tidak dapat menyimpan pengaturan Deal Desk saat ini. Silakan coba lagi.</string>
+    <string name="l10n_deal_desk_4511b3bf34" formatted="false">Deal Desk</string>
+    <string name="l10n_deal_desk_settings_are_available_to_owners_29a112ff4a" formatted="false">Pengaturan Deal Desk hanya tersedia untuk pemilik dan admin.</string>
+    <string name="l10n_default_template_1d947d4b95" formatted="false">Templat bawaan</string>
+    <string name="l10n_business_region_c538518fcf" formatted="false">Wilayah Bisnis</string>
+    <string name="l10n_template_3ec1ae061c" formatted="false">Templat</string>
+    <string name="l10n_default_taxes_a7baea721b" formatted="false">Pajak bawaan</string>
+    <string name="l10n_default_fees_be6cb2d2d5" formatted="false">Biaya bawaan</string>
+    <string name="l10n_saving_369c534df3" formatted="false">Menyimpan</string>
+    <string name="l10n_save_settings_913aba9f96" formatted="false">Simpan pengaturan</string>
+    <string name="l10n_build_taxable_sale_totals_from_the_same_te_633efd83e0" formatted="false">Buat total penjualan kena pajak dari sistem templat yang sama dengan yang digunakan pada iOS.</string>
+    <string name="l10n_enable_deal_desk_aab767d691" formatted="false">Aktifkan Meja Transaksi</string>
+    <string name="l10n_existing_dealers_stay_off_until_someone_tu_f07d797963" formatted="false">Dealer yang ada tetap tidak aktif sampai seseorang mengaktifkannya. Penjualan lama tetap tidak tersentuh.</string>
+    <string name="l10n_fixed_amount_341e8bb9d2" formatted="false">Jumlah tetap</string>
+    <string name="l10n_of_sale_price_3bd5d077b3" formatted="false">% of harga jual</string>
+    <string name="l10n_tax_and_fee_templates_for_vehicle_sales_3d8f8c34f2" formatted="false">Templat pajak dan biaya untuk penjualan kendaraan</string>
+    <string name="l10n_generic_ff7613e54f" formatted="false">Generik</string>
+    <string name="l10n_sales_tax_9e082751b5" formatted="false">Sales pajak</string>
+    <string name="l10n_gst_d6d11f54ee" formatted="false">GST</string>
+    <string name="l10n_hst_8e933a39dd" formatted="false">HST</string>
+    <string name="l10n_pst_4fca696988" formatted="false">PST</string>
+    <string name="l10n_qst_9f5fa24209" formatted="false">QST</string>
+    <string name="l10n_consumption_tax_10_5fd3561dea" formatted="false">Pajak Konsumsi (10%)</string>
+    <string name="l10n_vat_tax_0a11f48f80" formatted="false">VAT / Pajak</string>
+    <string name="l10n_doc_fee_92ad130442" formatted="false">Biaya dokter</string>
+    <string name="l10n_registration_b233e775d6" formatted="false">Pendaftaran</string>
+    <string name="l10n_license_3229609e15" formatted="false">Lisensi</string>
+    <string name="l10n_admin_fee_e07131f108" formatted="false">Biaya admin</string>
+    <string name="l10n_licensing_aa636d6486" formatted="false">Perizinan</string>
+    <string name="l10n_plate_registration_9cea499e8f" formatted="false">Piring / Registrasi</string>
+    <string name="l10n_inspection_shaken_dbf54f11f5" formatted="false">Inspeksi/Kocok</string>
+    <string name="l10n_fees_72abbc9284" formatted="false">Biaya</string>
+    <string name="l10n_usa_template_lines_are_placeholders_until__afa72f029d" formatted="false">Baris templat USA adalah pengganti hingga Anda memasukkan pajak dan biaya setempat.</string>
+    <string name="l10n_usa_tax_lines_are_placeholders_until_you_e_fe4c0901c3" formatted="false">USA jalur pajak adalah pengganti sampai Anda memasukkan tarif lokal.</string>
+    <string name="l10n_usa_fee_lines_are_placeholders_until_you_e_2daf187eda" formatted="false">USA baris biaya adalah pengganti sampai Anda memasukkan jumlah lokal Anda.</string>
+    <string name="l10n_canada_template_lines_are_placeholders_unt_3898c08898" formatted="false">Garis templat Kanada adalah pengganti sampai Anda memasukkan pajak dan biaya setempat.</string>
+    <string name="l10n_canada_tax_lines_are_placeholders_until_yo_4d15b50a70" formatted="false">Jalur pajak Kanada adalah pengganti sampai Anda memasukkan tarif lokal Anda.</string>
+    <string name="l10n_canada_fee_lines_are_placeholders_until_yo_e419d0152f" formatted="false">Jalur biaya Kanada adalah pengganti sampai Anda memasukkan jumlah lokal Anda.</string>
+    <string name="l10n_generic_template_starts_empty_add_only_the_b31ebd7bc6" formatted="false">Templat generik dimulai dengan kosong. Tambahkan hanya pajak dan biaya yang sebenarnya Anda kumpulkan.</string>
+    <string name="l10n_generic_tax_line_is_optional_enter_it_only_169098c5cb" formatted="false">Jalur pajak umum bersifat opsional. Masukkan hanya jika Anda memungut pajak.</string>
+    <string name="l10n_generic_fee_line_is_optional_enter_it_only_6aa1b79a43" formatted="false">Garis biaya umum adalah opsional. Masukkan hanya jika Anda memungut biaya.</string>
+    <string name="l10n_checking_deal_desk_0edf927e4f" formatted="false">Memeriksa Deal Desk</string>
+    <string name="l10n_loading_tax_and_fee_settings_for_this_busi_6af1008a6a" formatted="false">Memuat setelan pajak dan biaya untuk bisnis ini.</string>
+    <string name="l10n_classic_sale_504d9a8373" formatted="false">Penjualan klasik</string>
+    <string name="l10n_deal_desk_settings_are_unavailable_so_this_b7f826bb62" formatted="false">Pengaturan Deal Desk tidak tersedia, jadi penjualan ini menggunakan alur standar.</string>
+    <string name="l10n_deal_desk_is_on_ae7fd16931" formatted="false">Deal Desk aktif</string>
+    <string name="l10n_use_the_same_tax_fee_and_payment_snapshot__e96dd17503" formatted="false">Gunakan cuplikan pajak, biaya, dan pembayaran yang sama seperti iOS.</string>
+    <string name="l10n_use_deal_desk_cc8ae7a648" formatted="false">Gunakan Deal Desk</string>
+    <string name="l10n_use_classic_sale_10d0e53b72" formatted="false">Gunakan penjualan klasik</string>
+    <string name="l10n_price_3e8248e32e" formatted="false">Harga</string>
+    <string name="l10n_jurisdiction_5d1cc3c5c6" formatted="false">Yurisdiksi</string>
+    <string name="l10n_vehicle_sale_price_s_6622dbabc4">Harga jual kendaraan (%s)</string>
+    <string name="l10n_taxes_7e36e3192e" formatted="false">Pajak</string>
+    <string name="l10n_payments_44357ae55a" formatted="false">Pembayaran</string>
+    <string name="l10n_down_payment_s_dd82ef3a8f">Uang muka (%s)</string>
+    <string name="l10n_apr_3f74cb5357" formatted="false">APR %</string>
+    <string name="l10n_term_months_02f7d93a33" formatted="false">Jangka waktu bulan</string>
+    <string name="l10n_full_customer_total_is_collected_today_a9140c5ea4" formatted="false">Total pelanggan penuh dikumpulkan hari ini.</string>
+    <string name="l10n_save_deal_desk_sale_32462f85d6" formatted="false">Simpan Penjualan Deal Desk</string>
+    <string name="l10n_out_the_door_9a6c02671c" formatted="false">Keluar dari pintu</string>
+    <string name="l10n_due_today_11ea0f15f8" formatted="false">Jatuh tempo hari ini</string>
+    <string name="l10n_financed_aa92ed54a5" formatted="false">Dibiayai</string>
+    <string name="l10n_monthly_d31edb7b8a" formatted="false">Bulanan</string>
+    <string name="l10n_referral_stats_bc48454398" formatted="false">Statistik Rujukan</string>
+    <string name="l10n_referral_summary_398509751c" formatted="false">Ringkasan Referensi</string>
+    <string name="l10n_months_earned_ee50a6f7e0" formatted="false">Bulan diperoleh</string>
+    <string name="l10n_successful_referrals_5d1157e296" formatted="false">Referensi yang berhasil</string>
+    <string name="l10n_referral_bonus_active_until_s_e15725d074">Bonus referral aktif sampai %s</string>
+    <string name="l10n_no_active_referral_bonus_54b976d7e9" formatted="false">Tidak ada bonus referensi aktif</string>
+    <string name="l10n_referral_details_58331897c2" formatted="false">Detail Referensi</string>
+    <string name="l10n_last_reward_303f9cb7ba" formatted="false">Hadiah terakhir</string>
+    <string name="l10n_no_referral_rewards_yet_9a2ad25f4c" formatted="false">Belum ada imbalan rujukan</string>
+    <string name="l10n_view_referral_stats_f0ea55b3c4" formatted="false">Lihat statistik rujukan</string>
+    <string name="l10n_share_your_referral_link_and_earn_pro_bonu_645fed7d12" formatted="false">Bagikan tautan referensi Anda dan dapatkan bonus Pro bulan ketika dealer lain berlangganan.</string>
+    <string name="l10n_pull_down_to_refresh_referral_rewards_b2c5b69cf8" formatted="false">Tarik ke bawah untuk menyegarkan hadiah rujukan.</string>
+    <string name="l10n_refresh_referral_stats_5ea28e10ec" formatted="false">Segarkan statistik rujukan</string>
+    <string name="l10n_unable_to_load_referral_stats_0090b4cbb5" formatted="false">Tidak dapat memuat statistik rujukan.</string>
+    <string name="l10n_loading_b04ba49f84" formatted="false">Memuat...</string>
+    <string name="l10n_edit_profile_cd280a41f7" formatted="false">Sunting Profil</string>
+    <string name="l10n_display_name_c7874aaa0f" formatted="false">Nama tampilan</string>
+    <string name="l10n_this_name_appears_in_expenses_team_activit_b923925002" formatted="false">Nama ini muncul dalam pengeluaran, aktivitas tim, dan laporan.</string>
+    <string name="l10n_profile_updated_bcf7629607" formatted="false">Profil diperbarui.</string>
+    <string name="l10n_name_is_required_d7659e2c4a" formatted="false">Nama wajib diisi.</string>
+    <string name="l10n_unable_to_save_profile_144c95511f" formatted="false">Tidak dapat menyimpan profil.</string>
+    <string name="l10n_keep_this_short_and_recognizable_for_your__323c862c84" formatted="false">Jaga agar ini tetap singkat dan mudah dikenali oleh tim dealer Anda.</string>
+    <string name="l10n_previous_calendar_month_a25de3fb12" formatted="false">Bulan kalender sebelumnya</string>
+    <string name="l10n_structured_around_realized_sales_profit_mo_75c0ef51e9" formatted="false">Terstruktur berdasarkan realisasi laba penjualan, pengeluaran bulanan, dan pergerakan kas, bukan satu angka bersih sintetis.</string>
+    <string name="l10n_a_faster_operator_level_scan_before_the_de_97310b2f67" formatted="false">Pemindaian tingkat operator yang lebih cepat sebelum tabel terperinci.</string>
+    <string name="l10n_fast_visual_comparison_of_the_month_s_core_c2959e37ca" formatted="false">Perbandingan visual cepat dari metrik inti bulan ini.</string>
+    <string name="l10n_top_categories_from_expenses_recorded_insi_64aea00c69" formatted="false">Kategori teratas dari pengeluaran yang dicatat dalam bulan laporan.</string>
+    <string name="l10n_closed_vehicle_deals_for_this_report_month_dcf74f6110" formatted="false">Penawaran kendaraan tertutup untuk bulan laporan ini.</string>
+    <string name="l10n_d_entries_876a9e2c99">%d entri</string>
+    <string name="l10n_s_s_e3007085f4">%1$s - %2$s</string>
+    <string name="l10n_profit_s_127349c20c">Untung %s</string>
+    <string name="l10n_s_revenue_s_8f20f9d4a4">%1$s - Pendapatan %2$s</string>
+    <string name="l10n_cost_basis_s_e868f7ec9f">Dasar biaya %s</string>
+    <string name="l10n_executive_brief_652632b7a8" formatted="false">Ringkasan eksekutif</string>
+    <string name="l10n_healthy_month_7b9bc8d603" formatted="false">Bulan yang sehat</string>
+    <string name="l10n_profit_and_cash_movement_are_both_positive_221f801d2d" formatted="false">Laba dan pergerakan uang tunai keduanya positif.</string>
+    <string name="l10n_profit_pressure_9b602eca59" formatted="false">Tekanan keuntungan</string>
+    <string name="l10n_sold_units_closed_below_their_tracked_cost_4547cc1938" formatted="false">Unit yang terjual ditutup di bawah basis biaya terlacaknya.</string>
+    <string name="l10n_cash_outflow_9719635a34" formatted="false">Arus kas keluar</string>
+    <string name="l10n_withdrawals_are_higher_than_deposits_for_t_cd9927003e" formatted="false">Penarikan lebih tinggi dari deposito pada bulan tersebut.</string>
+    <string name="l10n_quiet_month_19df53a98c" formatted="false">Bulan yang tenang</string>
+    <string name="l10n_no_strong_positive_or_negative_signal_in_t_72bb52233c" formatted="false">Tidak ada sinyal positif atau negatif yang kuat pada periode ini.</string>
+    <string name="l10n_vehicle_sales_8895d303e8" formatted="false">Penjualan kendaraan</string>
+    <string name="l10n_part_sales_4b3782156d" formatted="false">Bagian penjualan</string>
+    <string name="l10n_inventory_capital_56030f5413" formatted="false">Modal persediaan</string>
+    <string name="l10n_parts_stock_cost_6f2d52b5f2" formatted="false">Parts biaya stok</string>
+    <string name="l10n_revenue_composition_22f7372e73" formatted="false">Komposisi pendapatan</string>
+    <string name="l10n_capital_parked_in_stock_88acae9a5f" formatted="false">Modal diparkir dalam stok</string>
+    <string name="l10n_financial_overview_54611b2162" formatted="false">Ikhtisar keuangan</string>
+    <string name="l10n_vehicle_revenue_a2144861e0" formatted="false">Pendapatan kendaraan</string>
+    <string name="l10n_part_revenue_e7914f46b1" formatted="false">Bagian pendapatan</string>
+    <string name="l10n_vehicle_profit_b0481c06cf" formatted="false">Keuntungan kendaraan</string>
+    <string name="l10n_part_profit_c18f992ddc" formatted="false">Bagian keuntungan</string>
+    <string name="l10n_expense_mix_b12ed3e178" formatted="false">Campuran biaya</string>
+    <string name="l10n_no_expenses_recorded_in_this_month_3de82e1c09" formatted="false">Tidak ada pengeluaran yang dicatat pada bulan ini.</string>
+    <string name="l10n_no_vehicle_sales_recorded_in_this_month_9f5fb576c1" formatted="false">Tidak ada penjualan kendaraan yang tercatat pada bulan ini.</string>
+    <string name="l10n_no_part_sales_recorded_in_this_month_0a1a389d05" formatted="false">Tidak ada penjualan suku cadang yang tercatat pada bulan ini.</string>
+    <string name="l10n_cash_movement_fc07e4a87d" formatted="false">Pergerakan uang tunai</string>
+    <string name="l10n_deposits_460f6e60e6" formatted="false">Deposito</string>
+    <string name="l10n_withdrawals_0745d25309" formatted="false">Penarikan</string>
+    <string name="l10n_net_movement_4c497bb1b6" formatted="false">Gerakan bersih</string>
+    <string name="l10n_transactions_1e3281a962" formatted="false">Transaksi</string>
+    <string name="l10n_inventory_snapshot_405f42972b" formatted="false">Cuplikan inventaris</string>
+    <string name="l10n_vehicles_in_stock_748191865b" formatted="false">Vehicles tersedia</string>
+    <string name="l10n_vehicle_capital_2790d1bf55" formatted="false">Modal kendaraan</string>
+    <string name="l10n_parts_in_stock_2be20efe51" formatted="false">Parts tersedia</string>
+    <string name="l10n_top_profitable_vehicles_43058e7be2" formatted="false">Kendaraan paling menguntungkan</string>
+    <string name="l10n_no_profitable_vehicle_sales_in_this_month_cee7c3032b" formatted="false">Tidak ada penjualan kendaraan yang menguntungkan di bulan ini.</string>
+    <string name="l10n_loss_making_vehicles_b3b9b69d22" formatted="false">Kendaraan yang merugi</string>
+    <string name="l10n_no_loss_making_vehicle_sales_in_this_month_531acae4ba" formatted="false">Tidak ada penjualan kendaraan yang merugi di bulan ini.</string>
+    <string name="l10n_open_the_finance_snapshot_used_for_pdf_exp_74c9de7d2b" formatted="false">Buka snapshot keuangan yang digunakan untuk ekspor PDF</string>
+    <string name="l10n_realized_sales_profit_bb21f32e6e" formatted="false">Keuntungan penjualan yang direalisasikan</string>
+    <string name="l10n_sales_profit_668d2b49c9" formatted="false">Sales Untung</string>
+    <string name="l10n_vehicles_sold_e1b0e92bdf" formatted="false">Vehicles Terjual</string>
+    <string name="l10n_ai_insights_center_1627b77d25" formatted="false">AI Insights Pusat</string>
+    <string name="l10n_deep_dive_into_your_business_performance_ecb97cddbc" formatted="false">Selidiki lebih dalam kinerja bisnis Anda.</string>
+    <string name="l10n_vat_refund_9f2f9d1a74" formatted="false">VAT Pengembalian dana %</string>
+    <string name="l10n_vat_refund_amount_s_6c97ec0dbd" formatted="false">VAT Jumlah Pengembalian Dana: %s</string>
+    <string name="l10n_new_walk_in_client_26bf1f002f" formatted="false">Klien Baru / Walk-in</string>
+    <string name="l10n_no_contact_info_87d92b4f2d" formatted="false">Tidak ada informasi kontak</string>
+    <string name="l10n_permanently_remove_your_account_and_cloud__f76f931103" formatted="false">Hapus akun dan data cloud Anda secara permanen</string>
+    <string name="l10n_this_will_permanently_delete_your_account__2a7d65a9a6" formatted="false">Ini akan menghapus akun Anda dan semua data cloud secara permanen.</string>
+    <string name="l10n_type_delete_and_re_enter_your_account_emai_2a7b026525" formatted="false">Ketik DELETE dan masukkan kembali email akun Anda untuk melanjutkan.</string>
+    <string name="l10n_confirmation_3424edc235" formatted="false">Konfirmasi</string>
+    <string name="l10n_deleting_e16cac651b" formatted="false">Menghapus...</string>
+    <string name="l10n_ideas_voting_71b73b7de3" formatted="false">Ide &amp; Pemungutan Suara</string>
+    <string name="l10n_suggest_features_and_vote_on_requests_from_92183a931f" formatted="false">Sarankan fitur dan pilih permintaan dari dealer lain</string>
+    <string name="l10n_tell_us_what_to_build_next_2bee7e0189" formatted="false">Beri tahu kami apa yang harus dibangun selanjutnya</string>
+    <string name="l10n_add_ideas_vote_for_requests_and_help_prior_cd98a96cbe" formatted="false">Tambahkan ide, pilih permintaan, dan bantu prioritaskan pembaruan.</string>
+    <string name="l10n_open_ideas_c9cbf406c8" formatted="false">Ide Terbuka</string>
+    <string name="l10n_add_idea_994efc413e" formatted="false">Tambahkan ide</string>
+    <string name="l10n_sign_in_to_share_ideas_83913a035c" formatted="false">Masuk untuk berbagi ide</string>
+    <string name="l10n_every_registered_dealer_can_suggest_improv_ef09bd29a8" formatted="false">Setiap dealer terdaftar dapat menyarankan perbaikan dan memberikan suara, bahkan tanpa Pro.</string>
+    <string name="l10n_could_not_load_ideas_c1358509bf" formatted="false">Tidak dapat memuat ide</string>
+    <string name="l10n_try_again_cef2fe093b" formatted="false">Coba Lagi</string>
+    <string name="l10n_no_ideas_yet_d72eae7cde" formatted="false">Belum ada ide</string>
+    <string name="l10n_be_the_first_to_suggest_what_would_make_th_3e84deaee0" formatted="false">Jadilah orang pertama yang menyarankan apa yang membuat aplikasi ini lebih baik untuk dealer Anda.</string>
+    <string name="l10n_add_idea_e1649cc0ef" formatted="false">Tambahkan Ide</string>
+    <string name="l10n_help_decide_what_we_build_next_e7871bf0a8" formatted="false">Membantu memutuskan apa yang kami bangun selanjutnya</string>
+    <string name="l10n_post_one_clear_idea_then_vote_on_requests__357cdcf905" formatted="false">Posting satu ide yang jelas, lalu pilih permintaan dari dealer lain.</string>
+    <string name="l10n_mine_d42af7968b" formatted="false">Milik saya</string>
+    <string name="l10n_remove_vote_b212f50d67" formatted="false">Hapus suara</string>
+    <string name="l10n_vote_64f8729141" formatted="false">Pilih</string>
+    <string name="l10n_delete_this_idea_13119ab9f6" formatted="false">Hapus ide ini?</string>
+    <string name="l10n_your_idea_will_be_removed_from_the_board_c_76a3ed3908" formatted="false">Ide Anda akan dihapus dari papan. Ide yang sudah selesai tetap terlihat.</string>
+    <string name="l10n_developer_added_this_509753d3f0" formatted="false">Pengembang menambahkan ini</string>
+    <string name="l10n_mark_done_0911cce79b" formatted="false">Tandai selesai</string>
+    <string name="l10n_planned_9cbe42aaff" formatted="false">Direncanakan</string>
+    <string name="l10n_in_progress_f61eadaf15" formatted="false">Sedang Berlangsung</string>
+    <string name="l10n_shipped_dec6e32908" formatted="false">Selesai dikirim</string>
+    <string name="l10n_closed_88d86b7721" formatted="false">Ditutup</string>
+    <string name="l10n_new_idea_a94746e76a" formatted="false">Ide Baru</string>
+    <string name="l10n_short_title_d1c3c0e37d" formatted="false">Judul pendek</string>
+    <string name="l10n_example_add_home_screen_widgets_4f14115430" formatted="false">Contoh: Tambahkan widget layar beranda</string>
+    <string name="l10n_4_to_120_characters_7c0daf019b" formatted="false">4 hingga 120 karakter</string>
+    <string name="l10n_details_dc3decbb93" formatted="false">Detail</string>
+    <string name="l10n_explain_why_this_would_help_your_dealershi_579a49ab02" formatted="false">Jelaskan mengapa ini akan membantu dealer Anda.</string>
+    <string name="l10n_submit_2dacf65959" formatted="false">Kirim</string>
+    <string name="l10n_continue_with_google_ccc5b0edaa" formatted="false">Lanjutkan dengan Google</string>
+    <string name="l10n_or_1758356db2" formatted="false">atau</string>
+    <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">Kami tidak dapat menyelesaikan proses masuk sosial saat ini. Silakan coba lagi.</string>
+    <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Google Sign-In belum dikonfigurasi.</string>
+    <string name="l10n_track_cash_revenue_profit_and_active_inven_4bdd5546ca" formatted="false">Pantau kas, pendapatan, laba, dan inventaris aktif dari satu tempat.</string>
+    <string name="l10n_use_range_chips_to_switch_from_today_to_al_821b1d15a1" formatted="false">Gunakan chip rentang untuk beralih dari analitik hari ini ke sepanjang waktu.</string>
+    <string name="l10n_run_manual_sync_when_android_data_feels_be_a3a493cc6d" formatted="false">Jalankan sinkronisasi manual saat data Android terasa tertinggal dari aplikasi iOS.</string>
+    <string name="l10n_inventory_and_sold_vehicles_live_in_the_sa_664e7bd5b6" formatted="false">Inventaris dan kendaraan terjual berada dalam daftar yang sama dengan filter cepat.</string>
+    <string name="l10n_swipe_vehicles_to_delete_or_mark_them_as_s_4b914654c0" formatted="false">Geser kendaraan untuk menghapus atau menandainya terjual.</string>
+    <string name="l10n_open_a_vehicle_to_review_total_cost_expens_cfb680f11a" formatted="false">Buka kendaraan untuk meninjau total biaya, pengeluaran, dan performa penjualan.</string>
+    <string name="l10n_financial_accounts_keeps_account_balances__f276ac3d7c" formatted="false">Akun Keuangan menjaga saldo akun tetap selaras dengan penjualan dan biaya.</string>
+    <string name="l10n_backup_export_is_the_recovery_point_for_sn_202e96e596" formatted="false">Cadangan &amp; Ekspor adalah titik pemulihan untuk snapshot dan laporan.</string>
+    <string name="l10n_data_health_is_the_first_stop_if_sync_or_d_9295fd2b51" formatted="false">Kesehatan Data adalah tempat pertama untuk memeriksa masalah sinkronisasi atau duplikat.</string>
+    <string name="l10n_use_contact_developer_from_account_for_syn_2355e141d9" formatted="false">Gunakan Hubungi Developer di Akun untuk masalah sinkronisasi atau langganan.</string>
+    <string name="l10n_privacy_policy_and_terms_of_use_are_availa_02e4ee4595" formatted="false">Kebijakan Privasi dan Ketentuan Penggunaan tersedia di bagian Legal.</string>
+</resources>

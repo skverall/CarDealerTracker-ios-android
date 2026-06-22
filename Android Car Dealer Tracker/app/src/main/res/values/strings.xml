@@ -948,4 +948,15 @@
     <string name="l10n_or_1758356db2" formatted="false">or</string>
     <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">We couldn\'t complete social sign-in right now. Please try again.</string>
     <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Google Sign-In is not configured yet.</string>
+    <string name="l10n_track_cash_revenue_profit_and_active_inven_4bdd5546ca" formatted="false">Track cash, revenue, profit and active inventory from one place.</string>
+    <string name="l10n_use_range_chips_to_switch_from_today_to_al_821b1d15a1" formatted="false">Use range chips to switch from today to all-time analytics.</string>
+    <string name="l10n_run_manual_sync_when_android_data_feels_be_a3a493cc6d" formatted="false">Run manual sync when Android data feels behind the iOS app.</string>
+    <string name="l10n_inventory_and_sold_vehicles_live_in_the_sa_664e7bd5b6" formatted="false">Inventory and sold vehicles live in the same list with fast filters.</string>
+    <string name="l10n_swipe_vehicles_to_delete_or_mark_them_as_s_4b914654c0" formatted="false">Swipe vehicles to delete or mark them as sold.</string>
+    <string name="l10n_open_a_vehicle_to_review_total_cost_expens_cfb680f11a" formatted="false">Open a vehicle to review total cost, expenses and sale performance.</string>
+    <string name="l10n_financial_accounts_keeps_account_balances__f276ac3d7c" formatted="false">Financial Accounts keeps account balances aligned with sales and expenses.</string>
+    <string name="l10n_backup_export_is_the_recovery_point_for_sn_202e96e596" formatted="false">Backup &amp; Export is the recovery point for snapshots and reports.</string>
+    <string name="l10n_data_health_is_the_first_stop_if_sync_or_d_9295fd2b51" formatted="false">Data Health is the first stop if sync or duplicate issues appear.</string>
+    <string name="l10n_use_contact_developer_from_account_for_syn_2355e141d9" formatted="false">Use Contact Developer from Account for sync or subscription issues.</string>
+    <string name="l10n_privacy_policy_and_terms_of_use_are_availa_02e4ee4595" formatted="false">Privacy Policy and Terms of Use are available from the Legal section.</string>
 </resources>

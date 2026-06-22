@@ -20,6 +20,8 @@ struct UserGuideView: View {
 
     private var sections: [GuideSection] {
         switch regionSettings.selectedLanguage {
+        case .indonesian:
+            return indonesianSections
         case .portugueseBrazil:
             return portugueseBrazilSections
         case .russian:
@@ -310,6 +312,148 @@ struct UserGuideView: View {
                     "Se a AI estiver desativada, verifique se você entrou, se o Pro está ativo e se o limite diário não acabou.",
                     "Se um membro da equipe não consegue ver um recurso, verifique o papel e as permissões dele.",
                     "Use Conta > Falar com o desenvolvedor para obter suporte."
+                ]
+            )
+        ]
+    }
+
+    private var indonesianSections: [GuideSection] {
+        [
+            GuideSection(
+                title: "Mulai cepat",
+                items: [
+                    "Masuk atau buat organisasi dealer.",
+                    "Buka Account > Region & Language untuk memilih negara, mata uang, bahasa, dan format.",
+                    "Gunakan pilihan tema di Account jika Anda lebih suka mode terang atau gelap.",
+                    "Tambahkan kendaraan pertama dari Vehicles, lalu buat akun keuangan jika ingin saldo diperbarui otomatis.",
+                    "Aktifkan atau sembunyikan tab Parts dari Account sesuai apakah dealer Anda menjual suku cadang."
+                ]
+            ),
+            GuideSection(
+                title: "Navigasi",
+                items: [
+                    "Tab bawah: Dashboard, Expenses, Vehicles, Parts, Sales, Clients.",
+                    "Dashboard memberi tampilan tercepat untuk kas, inventaris, peringatan, dan tindakan cepat.",
+                    "Gunakan pencarian di daftar untuk menemukan kendaraan, klien, catatan, VIN, dan record lebih cepat.",
+                    "Sebagian besar layar detail dibuka dengan mengetuk baris; kembali dengan tombol iOS atau geser dari tepi kiri."
+                ]
+            ),
+            GuideSection(
+                title: "Kendaraan dan foto",
+                items: [
+                    "Kendaraan adalah record utama inventaris Anda.",
+                    "Status mencakup dijual, dipesan, dalam perjalanan, dalam servis, dan terjual.",
+                    "Edit kendaraan untuk memperbarui harga, jarak tempuh, detail pembelian, catatan, dan status.",
+                    "Menandai kendaraan sebagai terjual akan membuat record penjualan.",
+                    "Tambahkan beberapa foto, pilih foto sampul, dan gunakan Share untuk membuat tautan publik kendaraan."
+                ]
+            ),
+            GuideSection(
+                title: "Biaya simpan",
+                items: [
+                    "Holding cost memperkirakan biaya harian untuk menyimpan kendaraan di stok.",
+                    "Atur tarif tahunan di Account > Holding Cost Settings.",
+                    "Anda dapat mematikan holding cost jika dealer Anda tidak memakai perhitungan ini.",
+                    "Holding cost berjalan sampai tanggal penjualan; setelah terjual perhitungan berhenti.",
+                    "Laba Sales sudah memasukkan holding cost."
+                ]
+            ),
+            GuideSection(
+                title: "Biaya dan akun keuangan",
+                items: [
+                    "Catat biaya kendaraan, pribadi, dan karyawan berdasarkan kategori.",
+                    "Hubungkan biaya ke kendaraan jika biaya tersebut milik kendaraan tertentu.",
+                    "Biaya kendaraan memengaruhi laba kendaraan dan dasar holding cost.",
+                    "Owner dan Admin dapat mengelola akun cash, bank, dan credit dari Account > Financial Accounts.",
+                    "Saat Anda memilih akun untuk penjualan atau biaya, saldo akun tersebut diperbarui."
+                ]
+            ),
+            GuideSection(
+                title: "Penjualan dan utang",
+                items: [
+                    "Buat penjualan kendaraan dengan menandai kendaraan sebagai terjual atau mencatat penjualan.",
+                    "Pilih akun penerima agar uang masuk ke saldo yang benar.",
+                    "Laba mencakup harga jual, harga beli, biaya, holding cost, dan pengembalian PPN bila digunakan.",
+                    "Gunakan Debts untuk melacak uang yang harus dibayar kepada Anda dan uang yang Anda utangkan.",
+                    "Catat pembayaran utang untuk mengurangi sisa saldo."
+                ]
+            ),
+            GuideSection(
+                title: "Inventaris suku cadang",
+                items: [
+                    "Gunakan Parts untuk melacak stok suku cadang, biaya beli, harga jual, dan jumlah tersedia.",
+                    "Terima stok saat suku cadang baru datang.",
+                    "Buat penjualan suku cadang dengan line item agar biaya dan laba tetap jelas.",
+                    "Jika dealer Anda tidak menjual suku cadang, sembunyikan tab Parts dari Account."
+                ]
+            ),
+            GuideSection(
+                title: "Klien / CRM",
+                items: [
+                    "Simpan prospek dan pelanggan dengan nomor telepon, catatan, dan status.",
+                    "Catat interaksi dan pengingat agar follow-up tidak hilang.",
+                    "Hubungkan klien ke penjualan dan utang bila perlu.",
+                    "Cari berdasarkan nama, telepon, dan catatan."
+                ]
+            ),
+            GuideSection(
+                title: "Analytics dan AI Insights",
+                items: [
+                    "Buka Analytics untuk meninjau pendapatan, pengeluaran, laba, kesehatan inventaris, dan performa CRM per periode.",
+                    "Gunakan filter periode untuk berpindah antara 1D, 1W, 1M, 3M, 6M, dan All.",
+                    "AI Insights merangkum penjualan, biaya, dan inventaris untuk periode yang dipilih.",
+                    "AI reports adalah fitur Pro. Jika Pro tidak aktif, tombol membuka layar langganan.",
+                    "Batas harian AI adalah 15 laporan. Kartu menunjukkan berapa yang sudah digunakan dan kapan batas direset.",
+                    "Laporan yang dibuat disimpan di riwayat. Jika laporan sudah ada, aplikasi meminta konfirmasi sebelum membuat yang baru."
+                ]
+            ),
+            GuideSection(
+                title: "Tim dan izin",
+                items: [
+                    "Owner dan Admin dapat mengundang anggota tim dari Account > Team Members.",
+                    "Rekan tim dapat bergabung dengan Join Team by Code saat admin membagikan kode.",
+                    "Peran mencakup owner, admin, sales, dan viewer.",
+                    "Izin mengontrol akses ke keuangan, biaya modal, laba, inventaris, prospek, suku cadang, dan penghapusan."
+                ]
+            ),
+            GuideSection(
+                title: "Sinkronisasi, offline, dan kesehatan data",
+                items: [
+                    "Aplikasi ini local-first: perubahan disimpan di ponsel dulu lalu disinkronkan di latar belakang.",
+                    "Gunakan Account > Sync Now saat ingin mengirim dan mengambil pembaruan secara manual.",
+                    "Gunakan Account > Data Health untuk memeriksa status sinkronisasi dan kemungkinan masalah data.",
+                    "Owner dan Admin dapat menjalankan Clean Up Duplicates jika record duplikat muncul.",
+                    "Jika offline, tetap bekerja; aplikasi mengantrekan perubahan dan menyinkronkan saat jaringan kembali."
+                ]
+            ),
+            GuideSection(
+                title: "Laporan, backup, dan notifikasi",
+                items: [
+                    "Owner dapat mengekspor data dari Account > Backup & Export.",
+                    "Email Reports membantu pengguna yang berhak mengatur pengiriman laporan bulanan.",
+                    "Laporan bulanan dapat dipratinjau sebelum dikirim atau dibagikan.",
+                    "Notifikasi menangani pengingat, jatuh tempo utang, pengingat biaya harian, dan peringatan digest inventaris.",
+                    "Jika notifikasi dimatikan, buka Account > Notifications untuk masuk ke pengaturan iOS."
+                ]
+            ),
+            GuideSection(
+                title: "Dealer Pro, referral, dan akun",
+                items: [
+                    "Dealer Pro membuka alat premium, termasuk AI Insights.",
+                    "Gunakan kartu Dealer Pro di Account untuk mengelola langganan.",
+                    "Invite Dealer membagikan kode referral Anda; Anda mendapat bonus waktu Pro saat dealer yang diundang berlangganan.",
+                    "Lihat referral stats dari Account untuk melacak undangan.",
+                    "Ubah password, hubungi developer, baca Terms dan Privacy Policy, atau hapus akun dari Account."
+                ]
+            ),
+            GuideSection(
+                title: "Pemecahan masalah",
+                items: [
+                    "Jika data atau foto tidak muncul, tarik untuk refresh atau jalankan Account > Sync Now.",
+                    "Jika record duplikat muncul, minta Owner atau Admin menjalankan Clean Up Duplicates.",
+                    "Jika AI nonaktif, pastikan Anda sudah masuk, Pro aktif, dan batas harian belum habis.",
+                    "Jika anggota tim tidak bisa melihat fitur, periksa peran dan izinnya.",
+                    "Hubungi dukungan dari Account > Contact Developer."
                 ]
             )
         ]

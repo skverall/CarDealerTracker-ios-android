@@ -133,6 +133,37 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertFalse(formatted.contains(".00"))
     }
 
+    func testIndonesiaRegionUsesIDRFormattingAndLanguageOption() {
+        let manager = RegionSettingsManager.shared
+        let originalRegion = manager.selectedRegion
+        let originalLanguage = manager.selectedLanguage
+        defer {
+            manager.selectedRegion = originalRegion
+            manager.selectedLanguage = originalLanguage
+        }
+
+        manager.selectedRegion = .indonesia
+        manager.selectedLanguage = .indonesian
+
+        let formatted = manager.formatCurrency(Decimal(1_234_567))
+
+        XCTAssertEqual(AppRegion.indonesia.currencyCode, "IDR")
+        XCTAssertEqual(AppRegion.indonesia.currencyDecimals, 0)
+        XCTAssertEqual(AppRegion.indonesia.localeIdentifier, "id_ID")
+        XCTAssertTrue(AppLanguage.allCases.contains(.indonesian))
+        XCTAssertTrue(AppLanguage.selectableLanguages.contains(.indonesian))
+        XCTAssertFalse(AppLanguage.indonesian.isRTL)
+        XCTAssertTrue(formatted.contains("Rp"))
+        XCTAssertFalse(formatted.contains(".00"))
+
+        XCTAssertEqual("Continue".localizedString, "Lanjutkan")
+        XCTAssertEqual("Weekly".localizedString, "Mingguan")
+        XCTAssertEqual("Billed yearly".localizedString, "Ditagih tahunan")
+        XCTAssertEqual("Best value".localizedString, "Nilai terbaik")
+        XCTAssertEqual("Save Deal Desk Sale".localizedString, "Simpan Penjualan Deal Desk")
+        XCTAssertEqual("search_client".localizedString, "Cari Klien")
+    }
+
     func testAIInsightsActionRequiresInlineConfirmationBeforeReplacingReport() {
         let usage = AIInsightsUsage(used: 2, limit: 15, remaining: 13, resetsAt: nil)
 

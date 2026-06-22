@@ -535,6 +535,17 @@ private fun localizedPartCategory(category: String, language: AppLanguage): Stri
                 else -> category
             }
         }
+        AppLanguage.INDONESIAN -> {
+            when (trimmedLower) {
+                "engine" -> "Mesin"
+                "body" -> "Bodi"
+                "electrical" -> "Kelistrikan"
+                "suspension" -> "Suspensi"
+                "interior" -> "Interior"
+                "other" -> "Lainnya"
+                else -> category
+            }
+        }
         AppLanguage.ARABIC -> {
             when (trimmedLower) {
                 "engine" -> "محرك"
@@ -652,6 +663,12 @@ private fun storedPartCategory(displayValue: String, language: AppLanguage): Str
     if (lower == "suspensão" || lower == "suspensao") return "Suspension"
     if (lower == "interior") return "Interior"
     if (lower == "outros" || lower == "outro") return "Other"
+
+    if (lower == "mesin") return "Engine"
+    if (lower == "bodi") return "Body"
+    if (lower == "kelistrikan") return "Electrical"
+    if (lower == "suspensi") return "Suspension"
+    if (lower == "lainnya" || lower == "lain") return "Other"
 
     return trimmed
 }

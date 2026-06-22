@@ -101,13 +101,13 @@ fun UserGuideScreen(onBack: () -> Unit) {
                             verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Text(
-                                text = section.title,
+                                text = localizedUiString(section.title),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
                             section.bullets.forEach { bullet ->
                                 Text(
-                                    text = "\u2022 $bullet",
+                                    text = "\u2022 ${localizedUiString(bullet)}",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )

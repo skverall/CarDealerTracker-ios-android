@@ -396,6 +396,10 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
             return "\(totalCount) авто > \(threshold) дн.; \(criticalCount) авто > \(criticalThreshold) дн. Топ: \(topVehicles)"
         }
 
+        if languageCode.hasPrefix("id") {
+            return "\(totalCount) kendaraan > \(threshold) hari; \(criticalCount) kendaraan > \(criticalThreshold) hari. Teratas: \(topVehicles)"
+        }
+
         return "\(totalCount) vehicles over \(threshold)d; \(criticalCount) over \(criticalThreshold)d. Top: \(topVehicles)"
     }
 
