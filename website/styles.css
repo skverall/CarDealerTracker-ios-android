@@ -317,19 +317,23 @@ h1 {
 
 .hero-facts {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(128px, 1fr));
   gap: 12px;
   margin: 0;
 }
 
 .hero-facts div {
-  padding: 16px;
+  min-height: 104px;
+  padding: 17px 16px 16px;
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
   transition: transform 220ms var(--ease), box-shadow 220ms var(--ease);
 }
 
@@ -339,18 +343,23 @@ h1 {
 }
 
 .hero-facts dt {
-  margin-bottom: 6px;
+  min-height: 28px;
+  margin-bottom: 8px;
   color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.75px;
+  line-height: 1.25;
   text-transform: uppercase;
 }
 
 .hero-facts dd {
   margin: 0;
-  font-size: 15px;
+  color: #071a3f;
+  font-size: clamp(14px, 1.05vw, 16px);
   font-weight: 800;
+  line-height: 1.22;
+  text-wrap: balance;
 }
 
 .hero-visual {
@@ -988,6 +997,15 @@ h1 {
 
   .hero-copy {
     max-width: 760px;
+  }
+
+  .hero-facts {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+    max-width: 520px;
+  }
+
+  .hero-facts div {
+    min-height: 98px;
   }
 
   .hero-visual {

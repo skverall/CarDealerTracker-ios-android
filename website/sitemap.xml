@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+  xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+  <url>
+    <loc>https://business.ezcar24.com/</loc>
+    <lastmod>2026-06-22</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/og-image.svg</image:loc>
+      <image:title>Car Dealer Tracker landing page preview</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/icons/app-icon.png</image:loc>
+      <image:title>Car Dealer Tracker app icon</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/screens/dashboard.jpg</image:loc>
+      <image:title>Car Dealer Tracker dashboard screen</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/screens/vehicles.jpg</image:loc>
+      <image:title>Used car dealer inventory screen</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/screens/expenses.jpg</image:loc>
+      <image:title>Dealer expense tracking screen</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/screens/sales.jpg</image:loc>
+      <image:title>Dealer sales management screen</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/screens/clients.jpg</image:loc>
+      <image:title>Auto dealer CRM screen</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/screens/parts.jpg</image:loc>
+      <image:title>Dealer parts inventory screen</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://business.ezcar24.com/assets/screens/analytics.jpg</image:loc>
+      <image:title>Dealership analytics screen</image:title>
+    </image:image>
+  </url>
+</urlset>
