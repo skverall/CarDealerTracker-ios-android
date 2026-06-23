@@ -95,6 +95,81 @@ struct VehicleSpendStat: Identifiable {
     let amount: Decimal
 }
 
+enum DashboardCockpitTone {
+    case calm
+    case warning
+    case urgent
+    case opportunity
+}
+
+struct DashboardCockpitMetric: Identifiable {
+    let id: String
+    let title: String
+    let value: String
+    let detail: String
+    let systemImage: String
+    let tone: DashboardCockpitTone
+    let requiresFinancials: Bool
+}
+
+struct DashboardCockpitVehicle: Identifiable {
+    let id: NSManagedObjectID
+    let title: String
+    let daysInInventory: Int
+    let capital: Decimal
+    let tone: DashboardCockpitTone
+}
+
+struct DashboardCockpitAgeBucket: Identifiable {
+    let id: String
+    let title: String
+    let count: Int
+    let tone: DashboardCockpitTone
+}
+
+private struct DashboardCockpitVehicleRisk {
+    let vehicle: Vehicle
+    let title: String
+    let days: Int
+    let capital: Decimal
+    let tone: DashboardCockpitTone
+}
+
+struct DashboardCockpitSnapshot {
+    let score: Int
+    let title: String
+    let detail: String
+    let operationsTitle: String
+    let operationsDetail: String
+    let primaryActionTitle: String
+    let activeVehicleCount: Int
+    let slowVehicleCount: Int
+    let averageDaysInInventory: Int
+    let metrics: [DashboardCockpitMetric]
+    let riskVehicles: [DashboardCockpitVehicle]
+    let ageBuckets: [DashboardCockpitAgeBucket]
+    let tone: DashboardCockpitTone
+
+    @MainActor
+    static var empty: DashboardCockpitSnapshot {
+        DashboardCockpitSnapshot(
+            score: 100,
+            title: "dealer_cockpit_empty_title".localizedString,
+            detail: "dealer_cockpit_empty_detail".localizedString,
+            operationsTitle: "dealer_cockpit_empty_title".localizedString,
+            operationsDetail: "dealer_cockpit_empty_detail".localizedString,
+            primaryActionTitle: "dealer_cockpit_review_inventory".localizedString,
+            activeVehicleCount: 0,
+            slowVehicleCount: 0,
+            averageDaysInInventory: 0,
+            metrics: [],
+            riskVehicles: [],
+            ageBuckets: [],
+            tone: .calm
+        )
+    }
+}
+
 final class DashboardRefreshDebouncer {
     private let delayNanoseconds: UInt64
     private var pendingTask: Task<Void, Never>?
@@ -163,6 +238,7 @@ class DashboardViewModel: ObservableObject {
     @Published var topVehicles: [VehicleSpendStat] = []
     @Published var todaysExpenses: [Expense] = []
     @Published var recentExpenses: [Expense] = []
+    @Published var cockpitSnapshot: DashboardCockpitSnapshot = .empty
     
     var currentRange: DashboardTimeRange = .all
 
@@ -225,6 +301,7 @@ class DashboardViewModel: ObservableObject {
         currentRange = range
         let rangeStart = range.startDate
         let rangeEnd = range.endDate
+        var fetchedVehicles: [Vehicle] = []
         let accountRequest: NSFetchRequest<FinancialAccount> = FinancialAccount.fetchRequest()
         accountRequest.predicate = NSPredicate(format: "deletedAt == nil")
 
@@ -243,6 +320,7 @@ class DashboardViewModel: ObservableObject {
 
         do {
             let vehicles = try context.fetch(vehicleRequest)
+            fetchedVehicles = vehicles
             vehicleCount = vehicles.count
 
             // Status counts
@@ -461,6 +539,7 @@ class DashboardViewModel: ObservableObject {
 
         loadTodaysExpenses()
         loadRecentExpenses()
+        buildCockpitSnapshot(vehicles: fetchedVehicles)
     }
 
     private func sumAccountBalances(_ accounts: [FinancialAccount], kind: FinancialAccountKind) -> Decimal {
@@ -793,6 +872,192 @@ class DashboardViewModel: ObservableObject {
             print("Error fetching recent expenses: \(error)")
             recentExpenses = []
         }
+    }
+
+    private func buildCockpitSnapshot(vehicles: [Vehicle]) {
+        let activeVehicles = vehicles.filter { vehicle in
+            let status = vehicle.status ?? ""
+            return status != "sold"
+        }
+
+        guard !activeVehicles.isEmpty else {
+            cockpitSnapshot = .empty
+            return
+        }
+
+        let risks = activeVehicles.map { vehicle -> DashboardCockpitVehicleRisk in
+            let days = HoldingCostCalculator.calculateDaysInInventory(vehicle: vehicle)
+            let capital = (vehicle.purchasePrice?.decimalValue ?? 0) + activeExpenseTotal(for: vehicle)
+            let title = vehicleTitle(vehicle)
+            let tone: DashboardCockpitTone
+            switch days {
+            case 90...:
+                tone = .urgent
+            case 61...89:
+                tone = .warning
+            case 31...60:
+                tone = .opportunity
+            default:
+                tone = .calm
+            }
+            return DashboardCockpitVehicleRisk(vehicle: vehicle, title: title, days: days, capital: capital, tone: tone)
+        }
+
+        let criticalCount = risks.filter { $0.days >= 90 }.count
+        let staleCount = risks.filter { $0.days >= 61 && $0.days < 90 }.count
+        let agingCount = risks.filter { $0.days >= 31 && $0.days < 61 }.count
+        let freshCount = max(0, activeVehicles.count - criticalCount - staleCount - agingCount)
+        let slowVehicleCount = criticalCount + staleCount
+        let averageDays = risks.map(\.days).reduce(0, +) / max(risks.count, 1)
+        let netCash = totalCash + totalBank
+        let expensePressure = totalExpenses > 0 && periodSalesRevenue > 0 && totalExpenses > periodSalesRevenue
+        let hasCreditPressure = totalCredit > netCash && totalCredit > 0
+
+        var score = 100
+        score -= min(45, criticalCount * 18 + staleCount * 12 + agingCount * 5)
+        if periodSalesProfit < 0 { score -= 16 }
+        if expensePressure { score -= 10 }
+        if hasCreditPressure { score -= 8 }
+        score = max(0, min(100, score))
+
+        let title: String
+        let detail: String
+        let tone: DashboardCockpitTone
+        if criticalCount > 0 {
+            title = String(format: "dealer_cockpit_status_stale_title".localizedString, criticalCount)
+            detail = oldestVehicleDetail(from: risks)
+            tone = .urgent
+        } else if staleCount > 0 || agingCount > 0 {
+            title = "dealer_cockpit_status_watch_title".localizedString
+            detail = String(format: "dealer_cockpit_status_watch_detail".localizedString, slowVehicleCount + agingCount, averageDays)
+            tone = .warning
+        } else if periodSalesProfit < 0 {
+            title = "dealer_cockpit_status_profit_title".localizedString
+            detail = "dealer_cockpit_status_profit_detail".localizedString
+            tone = .warning
+        } else if expensePressure {
+            title = "dealer_cockpit_status_expense_title".localizedString
+            detail = "dealer_cockpit_status_expense_detail".localizedString
+            tone = .opportunity
+        } else {
+            title = "dealer_cockpit_status_calm_title".localizedString
+            detail = String(format: "dealer_cockpit_status_calm_detail".localizedString, activeVehicles.count, averageDays)
+            tone = .calm
+        }
+
+        let operationsTitle: String
+        let operationsDetail: String
+        if criticalCount > 0 || staleCount > 0 {
+            operationsTitle = String(format: "dealer_cockpit_status_stale_title".localizedString, max(criticalCount, staleCount))
+            operationsDetail = oldestVehicleDetail(from: risks)
+        } else {
+            operationsTitle = "dealer_cockpit_operations_calm_title".localizedString
+            operationsDetail = String(format: "dealer_cockpit_operations_calm_detail".localizedString, activeVehicles.count, averageDays)
+        }
+
+        let riskVehicles = risks
+            .sorted {
+                if $0.days != $1.days { return $0.days > $1.days }
+                return ($0.capital as NSDecimalNumber).doubleValue > ($1.capital as NSDecimalNumber).doubleValue
+            }
+            .prefix(3)
+            .map {
+                DashboardCockpitVehicle(
+                    id: $0.vehicle.objectID,
+                    title: $0.title,
+                    daysInInventory: $0.days,
+                    capital: $0.capital,
+                    tone: $0.tone
+                )
+            }
+
+        cockpitSnapshot = DashboardCockpitSnapshot(
+            score: score,
+            title: title,
+            detail: detail,
+            operationsTitle: operationsTitle,
+            operationsDetail: operationsDetail,
+            primaryActionTitle: "dealer_cockpit_review_inventory".localizedString,
+            activeVehicleCount: activeVehicles.count,
+            slowVehicleCount: slowVehicleCount,
+            averageDaysInInventory: averageDays,
+            metrics: [
+                DashboardCockpitMetric(
+                    id: "active-stock",
+                    title: "dealer_cockpit_active_stock".localizedString,
+                    value: "\(activeVehicles.count)",
+                    detail: String(format: "dealer_cockpit_slow_stock_count".localizedString, slowVehicleCount),
+                    systemImage: "car.2.fill",
+                    tone: slowVehicleCount > 0 ? .warning : .calm,
+                    requiresFinancials: false
+                ),
+                DashboardCockpitMetric(
+                    id: "inventory-exposure",
+                    title: "dealer_cockpit_inventory_exposure".localizedString,
+                    value: totalVehicleValue.asCurrencyCompact(),
+                    detail: String(format: "dealer_cockpit_average_age".localizedString, averageDays),
+                    systemImage: "square.stack.3d.up.fill",
+                    tone: slowVehicleCount > 0 ? .warning : .calm,
+                    requiresFinancials: true
+                ),
+                DashboardCockpitMetric(
+                    id: "cash-position",
+                    title: "dealer_cockpit_cash_position".localizedString,
+                    value: netCash.asCurrencyCompact(),
+                    detail: totalCredit > 0 ? String(format: "dealer_cockpit_credit_line".localizedString, totalCredit.asCurrencyCompact()) : "dealer_cockpit_no_credit_pressure".localizedString,
+                    systemImage: "building.columns.fill",
+                    tone: hasCreditPressure ? .warning : .calm,
+                    requiresFinancials: true
+                ),
+                DashboardCockpitMetric(
+                    id: "period-rhythm",
+                    title: "dealer_cockpit_period_rhythm".localizedString,
+                    value: periodSalesRevenue.asCurrencyCompact(),
+                    detail: String(format: "dealer_cockpit_profit_line".localizedString, periodSalesProfit.asCurrencyCompact()),
+                    systemImage: "waveform.path.ecg",
+                    tone: periodSalesProfit < 0 ? .urgent : .opportunity,
+                    requiresFinancials: true
+                ),
+                DashboardCockpitMetric(
+                    id: "sold-count",
+                    title: "vehicles_sold".localizedString,
+                    value: "\(soldCount)",
+                    detail: String(format: "dealer_cockpit_average_age".localizedString, averageDays),
+                    systemImage: "checkmark.seal.fill",
+                    tone: .opportunity,
+                    requiresFinancials: false
+                )
+            ],
+            riskVehicles: riskVehicles,
+            ageBuckets: [
+                DashboardCockpitAgeBucket(id: "fresh", title: "dealer_cockpit_bucket_fresh".localizedString, count: freshCount, tone: .calm),
+                DashboardCockpitAgeBucket(id: "aging", title: "dealer_cockpit_bucket_aging".localizedString, count: agingCount, tone: .opportunity),
+                DashboardCockpitAgeBucket(id: "stale", title: "dealer_cockpit_bucket_stale".localizedString, count: staleCount, tone: .warning),
+                DashboardCockpitAgeBucket(id: "critical", title: "dealer_cockpit_bucket_critical".localizedString, count: criticalCount, tone: .urgent)
+            ],
+            tone: tone
+        )
+    }
+
+    private func vehicleTitle(_ vehicle: Vehicle?) -> String {
+        let title = [vehicle?.make, vehicle?.model]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        guard !title.isEmpty else {
+            return "unnamed_vehicle".localizedString
+        }
+        if vehicle?.year ?? 0 > 0 {
+            return "\(vehicle?.year ?? 0) \(title)"
+        }
+        return title
+    }
+
+    private func oldestVehicleDetail(from risks: [DashboardCockpitVehicleRisk]) -> String {
+        guard let top = risks.max(by: { $0.days < $1.days }) else {
+            return "dealer_cockpit_empty_detail".localizedString
+        }
+        return String(format: "dealer_cockpit_oldest_detail".localizedString, top.title, top.days)
     }
     var averagePerVehicle: Decimal {
         guard periodUniqueVehicles > 0 else { return 0 }

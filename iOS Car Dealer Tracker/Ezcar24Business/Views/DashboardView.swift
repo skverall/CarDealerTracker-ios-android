@@ -113,6 +113,9 @@ struct DashboardView: View {
             }
             viewModel.fetchFinancialData(range: selectedRange)
         }
+        .onChange(of: regionSettings.selectedLanguage) { _, _ in
+            viewModel.fetchFinancialData(range: selectedRange)
+        }
         .onChange(of: cloudSyncManager.lastSyncAt) { _, _ in
             Task { await refreshOfflineQueueCount() }
         }
@@ -382,6 +385,30 @@ private extension DashboardView {
 // MARK: - Sections
 
 private extension DashboardView {
+    var dealerCockpitSection: some View {
+        Group {
+            if permissionService.can(.viewInventory) || permissionService.can(.viewFinancials) {
+                Section {
+                    DealerCockpitCard(
+                        snapshot: viewModel.cockpitSnapshot,
+                        canViewInventory: permissionService.can(.viewInventory),
+                        canViewFinancials: permissionService.can(.viewFinancials),
+                        canViewProfit: permissionService.canViewVehicleProfit(),
+                        openInventory: {
+                            navPath.append(.assets)
+                        },
+                        openInsights: {
+                            navPath.append(.analytics)
+                        }
+                    )
+                }
+                .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 0, trailing: 20))
+                .listRowSeparator(.hidden)
+                .listRowBackground(Color.clear)
+            }
+        }
+    }
+
     var financialOverviewSection: some View {
         VStack(spacing: 24) {
             if permissionService.can(.viewFinancials) {
@@ -806,6 +833,414 @@ private extension DashboardView {
         }
 
         CategoryBreakdownCard(stats: viewModel.categoryStats)
+    }
+}
+
+private struct DealerCockpitCard: View {
+    let snapshot: DashboardCockpitSnapshot
+    let canViewInventory: Bool
+    let canViewFinancials: Bool
+    let canViewProfit: Bool
+    let openInventory: () -> Void
+    let openInsights: () -> Void
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    private var headlineTitle: String {
+        canViewProfit ? snapshot.title : snapshot.operationsTitle
+    }
+
+    private var headlineDetail: String {
+        canViewProfit ? snapshot.detail : snapshot.operationsDetail
+    }
+
+    private var visibleMetrics: [DashboardCockpitMetric] {
+        if canViewFinancials {
+            let metrics = snapshot.metrics.filter { metric in
+                metric.requiresFinancials && (canViewProfit || metric.id != "period-rhythm")
+            }
+            if !metrics.isEmpty {
+                return Array(metrics.prefix(3))
+            }
+        }
+        return Array(snapshot.metrics.filter { !$0.requiresFinancials }.prefix(3))
+    }
+
+    private var metricColumns: [GridItem] {
+        if horizontalSizeClass == .compact {
+            return Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
+        }
+        return [GridItem(.adaptive(minimum: 128), spacing: 10)]
+    }
+
+    private var primaryActionTitle: String {
+        horizontalSizeClass == .compact ? "dealer_cockpit_review".localizedString : snapshot.primaryActionTitle
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles.rectangle.stack.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundColor(snapshot.tone.color)
+
+                        Text("dealer_cockpit_title".localizedString)
+                            .font(.subheadline.weight(.heavy))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                    }
+
+                    Text(headlineTitle)
+                        .font(.system(size: 26, weight: .heavy, design: .rounded))
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.72)
+
+                    Text(headlineDetail)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.72))
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.82)
+                }
+
+                Spacer(minLength: 8)
+
+                if canViewProfit {
+                    CockpitScoreRing(score: snapshot.score, tone: snapshot.tone)
+                } else {
+                    CockpitInventoryBadge(count: snapshot.activeVehicleCount)
+                }
+            }
+
+            if !visibleMetrics.isEmpty {
+                LazyVGrid(columns: metricColumns, spacing: 10) {
+                    ForEach(visibleMetrics) { metric in
+                        CockpitMetricTile(metric: metric)
+                    }
+                }
+            }
+
+            if !snapshot.ageBuckets.isEmpty {
+                CockpitAgeTrack(buckets: snapshot.ageBuckets)
+            }
+
+            HStack(spacing: 10) {
+                if canViewInventory {
+                    Button(action: openInventory) {
+                        Label(primaryActionTitle, systemImage: "car.2.fill")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(.black)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 11)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.white)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.hapticScale)
+                    .accessibilityLabel(snapshot.primaryActionTitle)
+                }
+
+                if canViewFinancials {
+                    Button(action: openInsights) {
+                        Label("dealer_cockpit_open_insights".localizedString, systemImage: "chart.line.uptrend.xyaxis")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 11)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                Capsule()
+                                    .fill(Color.white.opacity(0.12))
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.hapticScale)
+                }
+            }
+
+            if canViewInventory && !snapshot.riskVehicles.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        Text("dealer_cockpit_priority_stock".localizedString)
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(.white.opacity(0.72))
+                            .textCase(.uppercase)
+
+                        Spacer()
+
+                        Text(String(format: "dealer_cockpit_average_age".localizedString, snapshot.averageDaysInInventory))
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.white.opacity(0.62))
+                    }
+
+                    VStack(spacing: 8) {
+                        ForEach(snapshot.riskVehicles) { vehicle in
+                            CockpitVehicleRow(vehicle: vehicle, showCapital: canViewFinancials)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(18)
+        .background(
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.05, green: 0.09, blue: 0.16),
+                        Color(red: 0.10, green: 0.17, blue: 0.28),
+                        Color(red: 0.06, green: 0.08, blue: 0.12)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                RadialGradient(
+                    colors: [snapshot.tone.color.opacity(0.32), .clear],
+                    center: .topTrailing,
+                    startRadius: 20,
+                    endRadius: 230
+                )
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 10)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\("dealer_cockpit_title".localizedString). \(headlineTitle). \(headlineDetail)")
+    }
+}
+
+private struct CockpitScoreRing: View {
+    let score: Int
+    let tone: DashboardCockpitTone
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color.white.opacity(0.12), lineWidth: 8)
+
+            Circle()
+                .trim(from: 0, to: CGFloat(score) / 100)
+                .stroke(
+                    tone.color,
+                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+
+            VStack(spacing: 1) {
+                Text("\(score)")
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
+
+                Text("dealer_cockpit_readiness".localizedString)
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(.white.opacity(0.58))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.62)
+            }
+        }
+        .frame(width: 78, height: 78)
+        .accessibilityLabel(String(format: "dealer_cockpit_score_accessibility".localizedString, score))
+    }
+}
+
+private struct CockpitInventoryBadge: View {
+    let count: Int
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("\(count)")
+                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                .foregroundColor(.white)
+                .monospacedDigit()
+
+            Text("dealer_cockpit_active_stock".localizedString)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(.white.opacity(0.6))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(width: 78, height: 78)
+        .background(
+            Circle()
+                .fill(Color.white.opacity(0.10))
+        )
+        .overlay(
+            Circle()
+                .stroke(Color.white.opacity(0.14), lineWidth: 1)
+        )
+    }
+}
+
+private struct CockpitMetricTile: View {
+    let metric: DashboardCockpitMetric
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: metric.systemImage)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(metric.tone.color)
+                    .frame(width: 24, height: 24)
+                    .background(
+                        Circle()
+                            .fill(metric.tone.color.opacity(0.18))
+                    )
+
+                Text(metric.title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.68))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.66)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(metric.value)
+                    .font(.system(size: 17, weight: .heavy, design: .rounded))
+                    .foregroundColor(.white)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.58)
+
+                Text(metric.detail)
+                    .font(.caption2)
+                    .foregroundColor(.white.opacity(0.56))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.62)
+            }
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.10), lineWidth: 1)
+        )
+    }
+}
+
+private struct CockpitAgeTrack: View {
+    let buckets: [DashboardCockpitAgeBucket]
+
+    private var total: Int {
+        max(1, buckets.reduce(0) { $0 + $1.count })
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            GeometryReader { proxy in
+                let visibleBuckets = buckets.filter { $0.count > 0 }
+                let spacing: CGFloat = 4
+                let availableWidth = max(0, proxy.size.width - CGFloat(max(visibleBuckets.count - 1, 0)) * spacing)
+
+                HStack(spacing: spacing) {
+                    ForEach(visibleBuckets) { bucket in
+                        RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            .fill(bucket.tone.color)
+                            .frame(width: max(6, availableWidth * CGFloat(bucket.count) / CGFloat(total)))
+                    }
+                }
+            }
+            .frame(height: 10)
+
+            HStack(spacing: 8) {
+                ForEach(buckets.filter { $0.count > 0 }) { bucket in
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(bucket.tone.color)
+                            .frame(width: 6, height: 6)
+
+                        Text("\(bucket.title) \(bucket.count)")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.white.opacity(0.58))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    }
+                }
+
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.white.opacity(0.07))
+        )
+    }
+}
+
+private struct CockpitVehicleRow: View {
+    let vehicle: DashboardCockpitVehicle
+    let showCapital: Bool
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(vehicle.tone.color)
+                .frame(width: 8, height: 8)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(vehicle.title)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(.white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.74)
+
+                Text(String(format: "dealer_cockpit_oldest_days".localizedString, vehicle.daysInInventory))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.white.opacity(0.56))
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            if showCapital {
+                Text(vehicle.capital.asCurrencyCompact())
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(.white.opacity(0.72))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.68)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color.white.opacity(0.07))
+        )
+    }
+}
+
+private extension DashboardCockpitTone {
+    var color: Color {
+        switch self {
+        case .calm:
+            return ColorTheme.success
+        case .warning:
+            return ColorTheme.warning
+        case .urgent:
+            return ColorTheme.danger
+        case .opportunity:
+            return ColorTheme.accent
+        }
     }
 }
 
@@ -1644,6 +2079,7 @@ private extension DashboardView {
                 .listRowBackground(Color.clear)
                 .environment(\.defaultMinListRowHeight, 0)
 
+            dealerCockpitSection
             financialOverviewSection
             analyticsSection
             todaysExpensesSection

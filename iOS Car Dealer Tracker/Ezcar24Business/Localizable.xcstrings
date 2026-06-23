@@ -45047,6 +45047,474 @@
         }
       }
     },
+    "dealer_cockpit_active_stock" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "المخزون النشط" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Active stock" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "सक्रिय स्टॉक" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Stok aktif" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "稼働在庫" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Estoque ativo" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Активный склад" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Faol ombor" } }
+      }
+    },
+    "dealer_cockpit_average_age" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "متوسط العمر %d يوم" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Avg age %d days" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "औसत उम्र %d दिन" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Rata-rata %d hari" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "平均 %d 日" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Idade média %d dias" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Средний возраст %d дн." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "O‘rtacha %d kun" } }
+      }
+    },
+    "dealer_cockpit_bucket_aging" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "يتقدم" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Aging" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "पुराना हो रहा" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Menua" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "滞留" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Envelhecendo" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Стареет" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Eskiryapti" } }
+      }
+    },
+    "dealer_cockpit_bucket_critical" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "حرج" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Critical" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "गंभीर" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kritis" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "危険" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Crítico" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Критично" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Jiddiy" } }
+      }
+    },
+    "dealer_cockpit_bucket_fresh" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "جديد" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Fresh" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "नया" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Baru" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "新鮮" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Novo" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Свежие" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Yangi" } }
+      }
+    },
+    "dealer_cockpit_bucket_stale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "بطيء" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Stale" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "अटका हुआ" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Lambat" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "長期" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Parado" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Залежалось" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Turib qolgan" } }
+      }
+    },
+    "dealer_cockpit_cash_position" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "وضع النقد" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cash position" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "नकद स्थिति" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Posisi kas" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "現金状況" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Posição de caixa" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Денежная позиция" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Naqd pozitsiya" } }
+      }
+    },
+    "dealer_cockpit_credit_line" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "ائتمان %@ مستخدم" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ credit used" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "%@ क्रेडिट उपयोग" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%@ kredit terpakai" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ のクレジット使用" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "%@ de crédito usado" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Кредит использован: %@" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "%@ kredit ishlatilgan" } }
+      }
+    },
+    "dealer_cockpit_empty_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "أضف أول سيارة لرؤية المخاطر والفرص هنا." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add your first vehicle to see risk and opportunity here." } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "जोखिम और अवसर देखने के लिए पहला वाहन जोड़ें." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tambahkan kendaraan pertama untuk melihat risiko dan peluang." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "最初の車両を追加すると、リスクと機会が表示されます。" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Adicione o primeiro veículo para ver riscos e oportunidades." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавьте первую машину, чтобы видеть риски и возможности здесь." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Risk va imkoniyatlarni ko‘rish uchun birinchi mashinani qo‘shing." } }
+      }
+    },
+    "dealer_cockpit_empty_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "ابنِ قاعدة المخزون" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Build your inventory baseline" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "इन्वेंटरी आधार बनाएं" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Bangun dasar inventaris" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "在庫の基準を作成" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Crie sua base de estoque" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Соберите базу склада" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Ombor bazasini yarating" } }
+      }
+    },
+    "dealer_cockpit_inventory_exposure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "تعرض المخزون" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Inventory exposure" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "इन्वेंटरी जोखिम" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Eksposur stok" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "在庫エクスポージャー" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Exposição do estoque" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Экспозиция склада" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Ombor riski" } }
+      }
+    },
+    "dealer_cockpit_no_credit_pressure" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "لا يوجد ضغط ائتماني" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No credit pressure" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "क्रेडिट दबाव नहीं" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada tekanan kredit" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "与信圧力なし" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Sem pressão de crédito" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Без кредитного давления" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Kredit bosimi yo‘q" } }
+      }
+    },
+    "dealer_cockpit_oldest_days" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "%d يوم في المخزون" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%d days in stock" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "%d दिन स्टॉक में" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%d hari di stok" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "在庫 %d 日" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "%d dias em estoque" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%d дн. на складе" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "%d kun omborda" } }
+      }
+    },
+    "dealer_cockpit_oldest_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "%@ في المخزون منذ %d يوم." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ has been in stock for %d days." } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "%@ %d दिनों से स्टॉक में है." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%@ sudah %d hari di stok." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ は %d 日在庫にあります。" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "%@ está em estoque há %d dias." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%@ на складе уже %d дн." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "%@ %d kundan beri omborda." } }
+      }
+    },
+    "dealer_cockpit_open_insights" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "افتح الرؤى" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open insights" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "इनसाइट खोलें" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Buka insight" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "分析を開く" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Abrir insights" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Открыть аналитику" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Tahlilni ochish" } }
+      }
+    },
+    "dealer_cockpit_operations_calm_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "%d سيارة نشطة، متوسط العمر %d يوم." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%d active vehicles, %d day average age." } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "%d सक्रिय वाहन, औसत उम्र %d दिन." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%d kendaraan aktif, rata-rata %d hari." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "稼働車両 %d 台、平均 %d 日。" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "%d veículos ativos, média de %d dias." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%d активных машин, средний возраст %d дн." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "%d faol mashina, o‘rtacha %d kun." } }
+      }
+    },
+    "dealer_cockpit_operations_calm_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "المخزون تحت السيطرة" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Inventory is under control" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "इन्वेंटरी नियंत्रण में है" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Inventaris terkendali" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "在庫は管理されています" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Estoque sob controle" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Склад под контролем" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Ombor nazoratda" } }
+      }
+    },
+    "dealer_cockpit_period_rhythm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "إيقاع الفترة" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Period rhythm" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "अवधि की गति" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Ritme periode" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "期間リズム" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Ritmo do período" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Ритм периода" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Davr ritmi" } }
+      }
+    },
+    "dealer_cockpit_priority_stock" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "مخزون الأولوية" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Priority stock" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "प्राथमिक स्टॉक" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Stok prioritas" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "優先在庫" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Estoque prioritário" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Приоритетный склад" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Ustuvor ombor" } }
+      }
+    },
+    "dealer_cockpit_profit_line" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "الربح %@" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ profit" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "%@ लाभ" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Laba %@" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "利益 %@" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Lucro %@" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Прибыль %@" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "%@ foyda" } }
+      }
+    },
+    "dealer_cockpit_readiness" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "جاهزية" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Readiness" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "तैयारी" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kesiapan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "準備度" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Prontidão" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Готовность" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Tayyorlik" } }
+      }
+    },
+    "dealer_cockpit_review" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "راجع" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Review" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "देखें" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tinjau" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "確認" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Revisar" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Проверить" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Tekshirish" } }
+      }
+    },
+    "dealer_cockpit_review_inventory" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "راجع المخزون" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Review inventory" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "इन्वेंटरी देखें" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tinjau inventaris" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "在庫を確認" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Revisar estoque" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Проверить склад" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Omborni tekshirish" } }
+      }
+    },
+    "dealer_cockpit_score_accessibility" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "درجة الجاهزية %d من 100" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Readiness score %d out of 100" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "तैयारी स्कोर 100 में से %d" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Skor kesiapan %d dari 100" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "準備度スコア 100 点中 %d" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Pontuação de prontidão %d de 100" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Оценка готовности %d из 100" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Tayyorlik bahosi 100 dan %d" } }
+      }
+    },
+    "dealer_cockpit_slow_stock_count" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "%d سيارة بطيئة" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%d slow vehicles" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "%d धीमे वाहन" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%d kendaraan lambat" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "遅い車両 %d 台" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "%d veículos lentos" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%d медленных машин" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "%d sekin mashina" } }
+      }
+    },
+    "dealer_cockpit_status_calm_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "%d سيارة نشطة ومتوسط العمر %d يوم. استمر في متابعة المصاريف والعملاء." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%d active vehicles with %d day average age. Keep tracking expenses and leads." } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "%d सक्रिय वाहन, औसत उम्र %d दिन. खर्च और लीड ट्रैक करते रहें." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%d kendaraan aktif dengan rata-rata %d hari. Tetap pantau biaya dan prospek." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "稼働車両 %d 台、平均 %d 日。費用とリードを追跡し続けましょう。" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "%d veículos ativos com média de %d dias. Continue acompanhando despesas e leads." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%d активных машин, средний возраст %d дн. Продолжайте следить за расходами и лидами." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "%d faol mashina, o‘rtacha %d kun. Xarajatlar va mijozlarni kuzatishda davom eting." } }
+      }
+    },
+    "dealer_cockpit_status_calm_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "الأعمال تحت السيطرة" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Business looks controlled" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "व्यवसाय नियंत्रण में है" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Bisnis terlihat terkendali" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "事業は安定しています" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Negócio sob controle" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Бизнес под контролем" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Biznes nazoratda" } }
+      }
+    },
+    "dealer_cockpit_status_expense_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "المبيعات موجودة، لكن المصاريف أعلى من إيقاع الإيراد لهذا النطاق." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sales are happening, but expenses are running above revenue rhythm for this range." } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "बिक्री हो रही है, लेकिन इस अवधि में खर्च राजस्व की गति से ऊपर हैं." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Penjualan berjalan, tetapi biaya lebih cepat dari ritme pendapatan." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "売上はありますが、この期間の費用が収益ペースを上回っています。" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Há vendas, mas as despesas estão acima do ritmo da receita neste período." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Продажи идут, но расходы выше ритма выручки за этот период." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Savdolar bor, lekin bu davrda xarajatlar tushum ritmidan yuqori." } }
+      }
+    },
+    "dealer_cockpit_status_expense_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "راجع ضغط المصاريف" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Review expense pressure" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "खर्च दबाव देखें" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tinjau tekanan biaya" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "費用圧力を確認" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Revise a pressão de despesas" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Проверьте давление расходов" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Xarajat bosimini tekshiring" } }
+      }
+    },
+    "dealer_cockpit_status_profit_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "الهامش سلبي في النطاق المختار. راجع التسعير والتكاليف قبل إضافة مخزون جديد." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Margin is negative in the selected range. Review pricing and costs before adding more stock." } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "चयनित अवधि में मार्जिन नकारात्मक है. नया स्टॉक जोड़ने से पहले कीमत और लागत देखें." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Margin negatif pada rentang ini. Tinjau harga dan biaya sebelum menambah stok." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択期間の利益率がマイナスです。在庫追加前に価格とコストを確認しましょう。" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "A margem está negativa no período. Revise preços e custos antes de adicionar estoque." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Маржа в выбранном периоде отрицательная. Проверьте цены и расходы перед новым закупом." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Tanlangan davrda marja manfiy. Yangi ombor qo‘shishdan oldin narx va xarajatlarni tekshiring." } }
+      }
+    },
+    "dealer_cockpit_status_profit_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "احمِ الهامش أولاً" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Protect margin first" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "पहले मार्जिन बचाएं" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Lindungi margin dulu" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "まず利益率を守る" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Proteja a margem primeiro" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сначала защитите маржу" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Avval marjani himoya qiling" } }
+      }
+    },
+    "dealer_cockpit_status_stale_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "حرّك %d سيارة بطيئة أولاً" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move %d stale vehicles first" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "पहले %d धीमे वाहन हटाएं" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Gerakkan %d kendaraan lambat dulu" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "まず長期在庫 %d 台を動かす" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Mova primeiro %d veículos parados" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сначала сдвиньте %d залежавшихся машин" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Avval %d turib qolgan mashinani harakatlantiring" } }
+      }
+    },
+    "dealer_cockpit_status_watch_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "%d سيارات تحتاج مراجعة، ومتوسط العمر %d يوم." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%d vehicles need review, with %d day average age." } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "%d वाहनों की समीक्षा चाहिए, औसत उम्र %d दिन." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%d kendaraan perlu ditinjau, rata-rata %d hari." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%d 台の確認が必要、平均 %d 日。" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "%d veículos precisam de revisão, média de %d dias." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%d машин требуют проверки, средний возраст %d дн." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "%d mashinani tekshirish kerak, o‘rtacha %d kun." } }
+      }
+    },
+    "dealer_cockpit_status_watch_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "راقب تباطؤ المخزون" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Watch inventory drag" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "इन्वेंटरी धीमापन देखें" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pantau stok melambat" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "在庫停滞を監視" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Acompanhe estoque lento" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Следите за торможением склада" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Ombor sekinlashuvini kuzating" } }
+      }
+    },
+    "dealer_cockpit_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "قمرة التاجر" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Dealer Cockpit" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "डीलर कॉकपिट" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kokpit Dealer" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ディーラーコックピット" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Cockpit do revendedor" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Пульт дилера" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Diler kokpiti" } }
+      }
+    },
+    "unnamed_vehicle" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "سيارة بدون اسم" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unnamed vehicle" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "बिना नाम का वाहन" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kendaraan tanpa nama" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "名称未設定の車両" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Veículo sem nome" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Машина без названия" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Nomsiz mashina" } }
+      }
+    },
     "data_health" : {
       "extractionState" : "manual",
       "localizations" : {
