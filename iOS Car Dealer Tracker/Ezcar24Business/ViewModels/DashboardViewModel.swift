@@ -960,7 +960,7 @@ class DashboardViewModel: ObservableObject {
                 if $0.days != $1.days { return $0.days > $1.days }
                 return ($0.capital as NSDecimalNumber).doubleValue > ($1.capital as NSDecimalNumber).doubleValue
             }
-            .prefix(3)
+            .prefix(6)
             .map {
                 DashboardCockpitVehicle(
                     id: $0.vehicle.objectID,
