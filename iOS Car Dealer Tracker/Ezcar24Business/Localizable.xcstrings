@@ -65138,7 +65138,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wawasan instan untuk transaksi yang lebih cerdas"
+            "value" : "Tips instan untuk transaksi cerdas"
           }
         },
         "ja" : {
@@ -65374,7 +65374,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Disinkronkan di semua perangkat Anda"
+            "value" : "Sinkron di semua perangkat"
           }
         },
         "ja" : {
@@ -65433,7 +65433,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tidak terbatas"
+            "value" : "Tanpa batas"
           }
         },
         "ja" : {
@@ -65492,7 +65492,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tambahkan mobil tanpa batas, tanpa batasan"
+            "value" : "Tambah mobil tanpa batas"
           }
         },
         "ja" : {
@@ -66200,7 +66200,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mulai Uji Coba Gratis 7 Hari"
+            "value" : "Mulai Gratis 7 Hari"
           }
         },
         "ja" : {
@@ -66495,7 +66495,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buka inventaris tanpa batas, keuntungan per kendaraan, sinkronisasi cloud, dan laporan."
+            "value" : "Buka inventaris tanpa batas, laba per kendaraan, sinkron cloud, dan laporan."
           }
         },
         "ja" : {
@@ -66554,7 +66554,7 @@
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Lakukan tanpa batas"
+            "value" : "Tanpa batas"
           }
         },
         "ja" : {
@@ -75142,49 +75142,261 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "اضغط للإيقاف · اضغط مطولاً للإزالة"
+            "value" : "اضغط للإيقاف · اضغط مطولاً للإرسال للموقف"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tap to park · hold to remove"
+            "value" : "Tap to pause · hold to park"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "रोकने के लिए टैप करें · हटाने के लिए दबाए रखें"
+            "value" : "रोकने के लिए टैप करें · पार्क करने के लिए दबाए रखें"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ketuk untuk memarkir · tahan untuk menghapus"
+            "value" : "Ketuk untuk jeda · tahan untuk parkir"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "タップで停止 · 長押しで削除"
+            "value" : "タップで停止 · 長押しで格納"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Toque para parar · segure para remover"
+            "value" : "Toque para pausar · segure para estacionar"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Нажмите, чтобы остановить · удержание — убрать"
+            "value" : "Нажмите, чтобы остановить · удержание — на стоянку"
           }
         },
         "uz" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "To‘xtatish uchun bosing · olib tashlash uchun bosib turing"
+            "value" : "To‘xtatish uchun bosing · to‘xtash joyiga qo‘yish uchun bosib turing"
+          }
+        }
+      }
+    },
+    "dashboard_car_parking_confirm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إرسال إلى الموقف"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send to Parking"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "पार्किंग में भेजें"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parkirkan Mobil"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "格納する"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar para a garagem"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправить на стоянку"
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To‘xtash joyiga qo‘yish"
+          }
+        }
+      }
+    },
+    "dashboard_car_parking_keep" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "اتركها تقود"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Keep Driving"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "चलती रहने दें"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biarkan Tetap Jalan"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "走らせたままにする"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Deixar rodando"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оставить ехать"
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Yurishda qoldirish"
+          }
+        }
+      }
+    },
+    "dashboard_car_parking_message" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "سيتم إخفاء سيارة لوحة التحكم. يمكنك إعادتها في أي وقت من الإعدادات."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This hides the dashboard car. You can bring it back anytime from Settings."
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "डैशबोर्ड कार छिप जाएगी। आप इसे सेटिंग्स से कभी भी वापस ला सकते हैं।"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mobil dasbor akan disembunyikan. Anda bisa mengaktifkannya lagi kapan saja di Pengaturan."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ダッシュボードの車を非表示にします。設定からいつでも戻せます。"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isso oculta o carrinho do painel. Você pode trazê-lo de volta a qualquer momento nos Ajustes."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Машинка исчезнет с дашборда. Вернуть её можно в любой момент в настройках."
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Boshqaruv paneli mashinasi yashiriladi. Uni istalgan payt sozlamalardan qaytarishingiz mumkin."
+          }
+        }
+      }
+    },
+    "dashboard_car_parking_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "إرسال السيارة إلى الموقف؟"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send the car to parking?"
+          }
+        },
+        "hi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "कार को पार्किंग में भेजें?"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Parkirkan mobil?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "車を格納しますか？"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviar o carrinho para a garagem?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Отправить машинку на стоянку?"
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mashinani to‘xtash joyiga qo‘yilsinmi?"
           }
         }
       }

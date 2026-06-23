@@ -277,7 +277,6 @@ private extension DashboardView {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.bottom, 8)
     }
 
     var syncStatusBar: some View {
@@ -817,7 +816,9 @@ private struct AccountBalanceCard: View {
     let color: Color
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let amountParts = amountDisplayParts
+
+        VStack(alignment: .leading, spacing: 9) {
             ZStack {
                  Circle()
                      .fill(
@@ -827,29 +828,42 @@ private struct AccountBalanceCard: View {
                              endPoint: .bottomTrailing
                          )
                      )
-                     .frame(width: 40, height: 40)
+                     .frame(width: 34, height: 34)
                      .shadow(color: color.opacity(0.32), radius: 5, x: 0, y: 2)
                  Image(systemName: icon)
-                     .font(.system(size: 18, weight: .bold))
+                     .font(.system(size: 15, weight: .bold))
                      .foregroundColor(.white)
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundColor(ColorTheme.secondaryText)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.72)
 
-                Text(amount.asCurrencyCompact())
-                    .font(.system(size: 23, weight: .bold, design: .rounded))
-                    .foregroundColor(ColorTheme.primaryText)
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    if let prefix = amountParts.prefix {
+                        Text(prefix)
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(ColorTheme.primaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.9)
+                    }
+
+                    Text(amountParts.value)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(ColorTheme.primaryText)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.86)
+                        .allowsTightening(true)
+                }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 16)
-        .frame(maxWidth: .infinity, minHeight: 116, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 96, alignment: .leading)
         .background(ColorTheme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
         .shadow(color: Color.black.opacity(0.035), radius: 7, x: 0, y: 3)
@@ -857,6 +871,15 @@ private struct AccountBalanceCard: View {
             RoundedRectangle(cornerRadius: 17, style: .continuous)
                 .stroke(Color.gray.opacity(0.06), lineWidth: 1)
         )
+    }
+
+    private var amountDisplayParts: (prefix: String?, value: String) {
+        let formatted = amount.asCurrencyCompact().replacingOccurrences(of: "\u{00a0}", with: " ")
+        let parts = formatted.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        guard parts.count == 2 else {
+            return (nil, formatted)
+        }
+        return (String(parts[0]), String(parts[1]))
     }
 }
 
@@ -1606,17 +1629,20 @@ extension Expense {
 }
 
 private extension DashboardView {
+    var dashboardIntroSection: some View {
+        VStack(spacing: 6) {
+            timeFiltersSection
+            DrivingCarLane(laneHeight: 20)
+        }
+    }
+
     var dashboardList: some View {
         List {
-            timeFiltersSection
+            dashboardIntroSection
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
-
-            DrivingCarLane()
-                .listRowInsets(EdgeInsets())
-                .listRowSeparator(.hidden)
-                .listRowBackground(Color.clear)
+                .environment(\.defaultMinListRowHeight, 0)
 
             financialOverviewSection
             analyticsSection
@@ -1642,7 +1668,7 @@ private extension DashboardView {
 let dashboardCarEnabledKey = "dashboard_car_enabled"
 
 private struct DrivingCarLane: View {
-    var laneHeight: CGFloat = 24
+    var laneHeight: CGFloat = 20
     var duration: Double = 6.5
 
     @AppStorage(dashboardCarEnabledKey) private var enabled = true
@@ -1651,17 +1677,33 @@ private struct DrivingCarLane: View {
 
     @State private var runStart = Date()
     @State private var didStart = false
+    @State private var showingParkingDialog = false
 
     var body: some View {
-        if enabled {
-            lane
-        } else {
-            Color.clear.frame(height: 6)
+        Group {
+            if enabled {
+                lane
+            } else {
+                Color.clear.frame(height: 6)
+            }
+        }
+        .confirmationDialog(
+            "dashboard_car_parking_title".localizedString,
+            isPresented: $showingParkingDialog,
+            titleVisibility: .visible
+        ) {
+            Button("dashboard_car_parking_confirm".localizedString, role: .destructive) {
+                parkCar()
+            }
+
+            Button("dashboard_car_parking_keep".localizedString, role: .cancel) {}
+        } message: {
+            Text("dashboard_car_parking_message".localizedString)
         }
     }
 
     private var lane: some View {
-        let carHeight = laneHeight - 4
+        let carHeight = max(laneHeight - 2, 10)
         let carWidth = carHeight * (112.0 / 72.0)
         let baseY = (laneHeight - carHeight) / 2
         return TimelineView(.animation) { timeline in
@@ -1682,7 +1724,7 @@ private struct DrivingCarLane: View {
                     .contentShape(Rectangle())
                     .offset(x: x, y: baseY + bob)
                     .onTapGesture { toggleMoving(at: progress) }
-                    .onLongPressGesture(minimumDuration: 0.45) { deleteCar() }
+                    .onLongPressGesture(minimumDuration: 0.45) { requestParking() }
             }
         }
         .frame(height: laneHeight)
@@ -1705,7 +1747,12 @@ private struct DrivingCarLane: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
-    private func deleteCar() {
+    private func requestParking() {
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        showingParkingDialog = true
+    }
+
+    private func parkCar() {
         enabled = false
         UINotificationFeedbackGenerator().notificationOccurred(.success)
     }

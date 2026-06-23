@@ -777,22 +777,39 @@ struct PaywallView: View {
                 .allowsTightening(true)
                 .frame(maxWidth: .infinity)
         } else {
-            HStack(spacing: 7) {
-                Text(heroTitlePrefix)
-                    .foregroundStyle(.white)
-                Text(heroTitleHighlight)
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [PaywallPalette.goldLight, PaywallPalette.gold, PaywallPalette.goldDeep],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 7) {
+                    Text(heroTitlePrefix)
+                        .foregroundStyle(.white)
+                    Text(heroTitleHighlight)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [PaywallPalette.goldLight, PaywallPalette.gold, PaywallPalette.goldDeep],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
+                }
+
+                VStack(spacing: layout.isCompact ? -2 : 0) {
+                    Text(heroTitlePrefix)
+                        .foregroundStyle(.white)
+                    Text(heroTitleHighlight)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [PaywallPalette.goldLight, PaywallPalette.gold, PaywallPalette.goldDeep],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                }
             }
             .font(.system(size: layout.titleFontSize, weight: .bold, design: .serif))
             .lineLimit(1)
-            .minimumScaleFactor(0.58)
+            .minimumScaleFactor(0.52)
             .allowsTightening(true)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
         }
     }
 
@@ -1237,7 +1254,7 @@ struct PaywallFeatureCard: View {
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: layout.isCompact ? 10 : 12) {
+        HStack(alignment: .center, spacing: layout.isCompact ? 8 : 10) {
             ZStack {
                 RoundedRectangle(cornerRadius: layout.isCompact ? 10 : 12, style: .continuous)
                     .fill(PaywallPalette.goldDeep.opacity(0.22))
@@ -1257,12 +1274,13 @@ struct PaywallFeatureCard: View {
                     .font(.system(size: layout.featureCardSubtitleSize, weight: .regular))
                     .foregroundStyle(.white.opacity(0.58))
                     .lineLimit(2)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.64)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .layoutPriority(1)
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, layout.isCompact ? 10 : 12)
+        .padding(.horizontal, layout.isCompact ? 9 : 10)
         .frame(maxWidth: .infinity)
         .frame(height: layout.featureCardHeight)
         .background(PaywallGlassBackground(cornerRadius: 14))
@@ -1347,11 +1365,14 @@ struct PaywallPlanCard: View {
                             .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
                             .foregroundStyle(.white)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.74)
+                            .layoutPriority(1)
                         if let badge = badgeText {
                             Text(badge)
                                 .font(.system(size: isCompact ? 8 : 9, weight: .heavy))
                                 .foregroundStyle(PaywallPalette.inkOnGold)
                                 .lineLimit(1)
+                                .minimumScaleFactor(0.78)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
                                 .background(
@@ -1370,6 +1391,7 @@ struct PaywallPlanCard: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
                 }
+                .layoutPriority(1)
 
                 Spacer(minLength: 4)
 
