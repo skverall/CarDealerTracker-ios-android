@@ -160,7 +160,7 @@ struct SalesListView: View {
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                         } else {
-                            ForEach(viewModel.unifiedSales) { item in
+                            ForEach(Array(viewModel.unifiedSales.enumerated()), id: \.element.id) { index, item in
                                 ZStack {
                                     if case .vehicle(let sale) = item.type, let vehicle = sale.vehicle {
                                         NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
@@ -171,6 +171,7 @@ struct SalesListView: View {
 
                                     SaleCard(item: item)
                                 }
+                                .staggeredAppear(index: index)
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -185,7 +186,7 @@ struct SalesListView: View {
                                 .listRowBackground(Color.clear)
                                 .listRowSeparator(.hidden)
                         } else {
-                            ForEach(debtViewModel.debtItems) { item in
+                            ForEach(Array(debtViewModel.debtItems.enumerated()), id: \.element.id) { index, item in
                                 ZStack {
                                     NavigationLink(destination: DebtDetailView(debt: item.debt, viewModel: debtViewModel)) {
                                         EmptyView()
@@ -194,6 +195,7 @@ struct SalesListView: View {
 
                                     DebtCard(item: item)
                                 }
+                                .staggeredAppear(index: index)
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))

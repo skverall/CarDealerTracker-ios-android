@@ -542,8 +542,9 @@ struct ExpenseListView: View {
                                 .listRowBackground(Color.clear)
 
                         if !collapsedDateGroups.contains(group.key) {
-                            ForEach(group.items, id: \.objectID) { expense in
+                            ForEach(Array(group.items.enumerated()), id: \.element.objectID) { index, expense in
                                     expenseListRow(expense)
+                                        .staggeredAppear(index: index)
                                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                         .listRowBackground(Color.clear)
                             }
@@ -577,8 +578,9 @@ struct ExpenseListView: View {
                                 .listRowBackground(Color.clear)
 
                                 if !collapsedCategories.contains(group.key) {
-                                    ForEach(group.items, id: \.objectID) { expense in
+                                    ForEach(Array(group.items.enumerated()), id: \.element.objectID) { index, expense in
                                         expenseListRow(expense)
+                                            .staggeredAppear(index: index)
                                             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                             .listRowBackground(Color.clear)
                                     }
