@@ -176,7 +176,19 @@ struct VehicleDetailView: View {
     var daysInInventory: Int {
         HoldingCostCalculator.calculateDaysInInventory(vehicle: vehicle)
     }
-    
+
+    var detailDaysInInventory: Int { daysInInventory }
+
+    var detailAgeAccentColor: Color {
+        guard vehicle.status != "sold" else { return ColorTheme.secondary }
+        switch daysInInventory {
+        case 90...: return ColorTheme.ageStale
+        case 60..<90: return ColorTheme.ageStale.opacity(0.8)
+        case 30..<60: return ColorTheme.ageAging
+        default: return ColorTheme.ageFresh
+        }
+    }
+
     var roiPercent: Decimal? {
         guard let salePrice = vehicle.salePrice?.decimalValue else { return nil }
         return VehicleFinancialsCalculator.calculateROI(
@@ -929,19 +941,17 @@ struct VehicleDetailView: View {
             let hasImage = ImageStore.shared.hasImage(id: id, dealerId: dealerId)
             let addPhotosText = "add_photos".localizedString
             VStack(spacing: 12) {
-                ZStack {
+                ZStack(alignment: .bottomLeading) {
                     if hasImage {
                         VehicleLargeImageView(vehicleID: id)
                             .id(refreshID)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 260)
+                            .clipped()
                     } else {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 0)
                             .fill(ColorTheme.secondaryBackground)
                             .frame(height: 200)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(style: StrokeStyle(lineWidth: 1, dash: [6]))
-                                    .foregroundColor(ColorTheme.secondary)
-                            )
                             .overlay(
                                 VStack(spacing: 12) {
                                     Image(systemName: "camera.fill")
@@ -954,8 +964,27 @@ struct VehicleDetailView: View {
                                 }
                             )
                     }
+
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.55)],
+                        startPoint: .center,
+                        endPoint: .bottom
+                    )
+                    .frame(height: 110)
+                    .allowsHitTesting(false)
+
+                    if hasImage {
+                        HStack(spacing: 8) {
+                            if vehicle.status != "sold", detailDaysInInventory > 0 {
+                                FloatingInfoPill(text: String(format: "detail_days_badge".localizedString, detailDaysInInventory), color: detailAgeAccentColor)
+                            }
+                            StatusBadge(status: vehicle.status ?? "")
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 14)
+                    }
                 }
-                .padding(.horizontal)
+                .frame(maxWidth: .infinity)
                 .onTapGesture {
                     if hasImage || !vehiclePhotos.isEmpty {
                         openPhotoViewer(startingAt: 0)
@@ -3839,5 +3868,24 @@ struct VehicleExpenseRow: View {
     return NavigationStack {
         VehicleDetailView(vehicle: vehicle)
             .environment(\.managedObjectContext, context)
+    }
+}
+
+private struct FloatingInfoPill: View {
+    let text: String
+    let color: Color
+
+    var body: some View {
+        Text(text)
+            .font(.caption2.weight(.bold))
+            .foregroundColor(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(
+                Capsule().fill(.black.opacity(0.35))
+            )
+            .overlay(
+                Capsule().stroke(.white.opacity(0.25), lineWidth: 0.5)
+            )
     }
 }
