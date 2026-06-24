@@ -41393,6 +41393,34 @@
         }
       }
     },
+    "inventory_radar_focus_detail" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "السيارات النشطة الأقدم أولاً، مرتبة حسب أيام البقاء في المخزون." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Oldest active vehicles first, sorted by days in stock." } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "सबसे पुरानी सक्रिय गाड़ियां पहले, स्टॉक में दिनों के हिसाब से." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kendaraan aktif tertua lebih dulu, diurutkan berdasarkan hari di stok." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "稼働中の古い車両から、在庫日数順で表示しています。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "재고 보유 일수 기준으로 오래된 활성 차량부터 표시합니다." } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Veículos ativos mais antigos primeiro, ordenados por dias em estoque." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сначала самые старые активные машины, сортировка по дням на складе." } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Avval eng eski faol mashinalar, ombordagi kunlar bo‘yicha saralangan." } }
+      }
+    },
+    "inventory_radar_focus_title" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "ar" : { "stringUnit" : { "state" : "translated", "value" : "تركيز الرادار" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Radar focus" } },
+        "hi" : { "stringUnit" : { "state" : "translated", "value" : "रडार फोकस" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Fokus radar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "レーダーフォーカス" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "레이더 포커스" } },
+        "pt-BR" : { "stringUnit" : { "state" : "translated", "value" : "Foco do radar" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Фокус радара" } },
+        "uz" : { "stringUnit" : { "state" : "translated", "value" : "Radar fokusi" } }
+      }
+    },
     "buyer_details" : {
       "extractionState" : "manual",
       "localizations" : {

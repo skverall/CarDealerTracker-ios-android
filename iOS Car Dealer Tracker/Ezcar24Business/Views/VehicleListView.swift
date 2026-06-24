@@ -22,8 +22,10 @@ struct VehicleListView: View {
     @State private var showingPaywall = false
     @State private var paywallVehicleCount = 0
     private let presetStatus: String?
+    private let focusAgingInventory: Bool
     private let showNavigation: Bool
     @State private var presetApplied: Bool = false
+    @State private var showAgingInventoryFocusBanner: Bool = false
     @State private var editingVehicle: Vehicle?
     @State private var vehicleToDelete: Vehicle?
     @State private var showDeleteAlert: Bool = false
@@ -82,8 +84,9 @@ struct VehicleListView: View {
 
 
 
-    init(presetStatus: String? = nil, showNavigation: Bool = true) {
+    init(presetStatus: String? = nil, focusAgingInventory: Bool = false, showNavigation: Bool = true) {
         self.presetStatus = presetStatus
+        self.focusAgingInventory = focusAgingInventory
         self.showNavigation = showNavigation
         let context = PersistenceController.shared.container.viewContext
         _viewModel = StateObject(wrappedValue: VehicleViewModel(context: context))
@@ -112,6 +115,11 @@ struct VehicleListView: View {
                     displayModePicker
                     VehicleStatusDashboard(viewModel: viewModel)
                     searchAndFilterHeader
+                    if showAgingInventoryFocusBanner {
+                        agingInventoryFocusBanner
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                    }
                     vehicleList
                 }
             }
@@ -264,18 +272,82 @@ struct VehicleListView: View {
                 }
             }
             .onAppear {
-                if !presetApplied, let s = presetStatus {
-                    if s == "sold" {
-                        viewModel.displayMode = .sold
-                    } else {
-                        viewModel.displayMode = .inventory
-                        viewModel.selectedStatus = s
-                    }
-                    viewModel.fetchVehicles()
-                    presetApplied = true
-                }
+                applyLaunchPresetIfNeeded()
             }
         }
+
+    private func applyLaunchPresetIfNeeded() {
+        guard !presetApplied else { return }
+
+        if let s = presetStatus {
+            if s == "sold" {
+                viewModel.displayMode = .sold
+            } else {
+                viewModel.displayMode = .inventory
+                viewModel.selectedStatus = s
+            }
+            viewModel.fetchVehicles()
+            presetApplied = true
+            return
+        }
+
+        if focusAgingInventory {
+            viewModel.displayMode = .inventory
+            viewModel.selectedStatus = "all"
+            viewModel.sortOption = .daysDesc
+            showAgingInventoryFocusBanner = true
+            viewModel.fetchVehicles()
+        }
+
+        presetApplied = true
+    }
+
+    private var agingInventoryFocusBanner: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "scope")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundColor(ColorTheme.warning)
+                .frame(width: 32, height: 32)
+                .background(
+                    Circle()
+                        .fill(ColorTheme.warning.opacity(0.14))
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("inventory_radar_focus_title".localizedString)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(ColorTheme.primaryText)
+                    .lineLimit(1)
+
+                Text("inventory_radar_focus_detail".localizedString)
+                    .font(.caption.weight(.medium))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .lineLimit(2)
+            }
+
+            Spacer(minLength: 8)
+
+            Button {
+                showAgingInventoryFocusBanner = false
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .frame(width: 28, height: 28)
+                    .background(ColorTheme.background)
+                    .clipShape(Circle())
+            }
+            .accessibilityLabel("close".localizedString)
+        }
+        .padding(12)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(ColorTheme.warning.opacity(0.14), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.035), radius: 8, y: 3)
+    }
     
     private func handleUpgradeRequest() {
         if isSignedIn {
@@ -931,6 +1003,9 @@ extension VehicleListView {
                 VStack(spacing: 18) {
                     iPadVehicleHero
                     iPadSearchAndFilterHeader
+                    if showAgingInventoryFocusBanner {
+                        agingInventoryFocusBanner
+                    }
                     iPadStatusFilters
 
                     if viewModel.vehicles.isEmpty {

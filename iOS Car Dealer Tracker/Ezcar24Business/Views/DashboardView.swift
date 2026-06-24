@@ -17,7 +17,7 @@ extension Notification.Name {
 }
 
 enum DashboardDestination: String, Identifiable, Hashable {
-    case assets, cashAccounts, bankAccounts, creditAccounts, revenue, profit, sold, analytics, dataHealth
+    case assets, priorityInventory, cashAccounts, bankAccounts, creditAccounts, revenue, profit, sold, analytics, dataHealth
     var id: String { rawValue }
 }
 
@@ -117,7 +117,7 @@ struct DashboardView: View {
                     openInventory: {
                         presentedSheet = nil
                         DispatchQueue.main.async {
-                            navPath.append(.assets)
+                            navPath.append(.priorityInventory)
                         }
                     },
                     openAnalytics: {
@@ -163,6 +163,8 @@ struct DashboardView: View {
         switch destination {
         case .assets:
             VehicleListView(showNavigation: false)
+        case .priorityInventory:
+            VehicleListView(focusAgingInventory: true, showNavigation: false)
         case .cashAccounts:
             FinancialAccountsView(filterKind: .cash)
         case .bankAccounts:
@@ -426,7 +428,7 @@ private extension DashboardView {
                         canViewFinancials: permissionService.can(.viewFinancials),
                         canViewProfit: permissionService.canViewVehicleProfit(),
                         openInventory: {
-                            navPath.append(.assets)
+                            navPath.append(.priorityInventory)
                         },
                         openInsights: {
                             presentedSheet = .inventoryRadar
