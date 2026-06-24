@@ -120,9 +120,11 @@ struct AnalyticsHubView: View {
                 rangePicker
 
                 analyticsPulseCard
+                    .staggeredAppear(index: 0)
 
                 if canViewFinance && canViewInventory {
                     aiInsightsCard
+                        .staggeredAppear(index: 1)
                 }
 
                 if canViewInventory {
@@ -132,6 +134,7 @@ struct AnalyticsHubView: View {
                         inventoryCard
                     }
                     .buttonStyle(.plain)
+                    .staggeredAppear(index: 2)
                 } else {
                     AnalyticsRestrictedCard(title: "inventory_analytics".localizedString)
                 }
@@ -145,6 +148,7 @@ struct AnalyticsHubView: View {
                         financeCard
                     }
                     .buttonStyle(.plain)
+                    .staggeredAppear(index: 3)
                 } else {
                     AnalyticsRestrictedCard(title: "finance_analytics".localizedString)
                 }
@@ -158,6 +162,7 @@ struct AnalyticsHubView: View {
                         crmCard
                     }
                     .buttonStyle(.plain)
+                    .staggeredAppear(index: 4)
                 } else {
                     AnalyticsRestrictedCard(title: "crm_analytics".localizedString)
                 }
