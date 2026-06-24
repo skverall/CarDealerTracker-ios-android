@@ -180,16 +180,48 @@ extension View {
 // MARK: - Premium Button Styles
 
 struct HapticScaleButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1.0)
-            .opacity(configuration.isPressed ? 0.9 : 1.0)
-            .animation(.snappy(duration: 0.18, extraBounce: 0.02), value: configuration.isPressed)
+            .scaleEffect(reduceMotion ? 1.0 : (configuration.isPressed ? 0.96 : 1.0))
+            .opacity(reduceMotion ? 1.0 : (configuration.isPressed ? 0.9 : 1.0))
+            .animation(reduceMotion ? nil : .snappy(duration: 0.18, extraBounce: 0.02), value: configuration.isPressed)
     }
 }
 
 extension ButtonStyle where Self == HapticScaleButtonStyle {
     static var hapticScale: HapticScaleButtonStyle {
         HapticScaleButtonStyle()
+    }
+}
+
+struct StaggeredAppear: ViewModifier {
+    let index: Int
+    let baseDelay: Double
+    let step: Double
+
+    @State private var shown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 12)
+            .onAppear {
+                if reduceMotion {
+                    shown = true
+                } else {
+                    withAnimation(.snappy(duration: 0.38, extraBounce: 0.04).delay(baseDelay + Double(min(index, 8)) * step)) {
+                        shown = true
+                    }
+                }
+            }
+    }
+}
+
+extension View {
+    func staggeredAppear(index: Int, baseDelay: Double = 0.05, step: Double = 0.04) -> some View {
+        modifier(StaggeredAppear(index: index, baseDelay: baseDelay, step: step))
     }
 }

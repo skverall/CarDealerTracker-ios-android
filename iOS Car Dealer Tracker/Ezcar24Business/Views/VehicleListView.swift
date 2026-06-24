@@ -1017,8 +1017,9 @@ extension VehicleListView {
                             columns: [GridItem(.adaptive(minimum: 460), spacing: 14)],
                             spacing: 14
                         ) {
-                            ForEach(viewModel.vehicles, id: \.id) { vehicle in
+                            ForEach(Array(viewModel.vehicles.enumerated()), id: \.element.id) { index, vehicle in
                                 iPadVehicleRow(vehicle)
+                                    .staggeredAppear(index: index)
                             }
                         }
                     }
@@ -1578,7 +1579,7 @@ extension VehicleListView {
             }
         } else {
             List {
-                ForEach(viewModel.vehicles, id: \.id) { vehicle in
+                ForEach(Array(viewModel.vehicles.enumerated()), id: \.element.id) { index, vehicle in
                     ZStack {
                         VehicleCard(vehicle: vehicle, viewModel: viewModel)
                         NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
@@ -1587,6 +1588,7 @@ extension VehicleListView {
                         .opacity(0)
                         .buttonStyle(PlainButtonStyle()) // Important to keep interaction working correctly
                     }
+                    .staggeredAppear(index: index)
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
