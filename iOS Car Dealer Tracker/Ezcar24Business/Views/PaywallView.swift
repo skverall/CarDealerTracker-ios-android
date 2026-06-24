@@ -305,8 +305,9 @@ struct PaywallView: View {
                 columns: [GridItem(.flexible(), spacing: layout.featureSpacing), GridItem(.flexible(), spacing: layout.featureSpacing)],
                 spacing: layout.featureSpacing
             ) {
-                ForEach(features, id: \.title) { feature in
+                ForEach(Array(features.enumerated()), id: \.element.title) { index, feature in
                     PaywallFeatureCard(feature: feature, layout: layout)
+                        .staggeredAppear(index: index, baseDelay: 0.15, step: 0.06)
                 }
             }
         }

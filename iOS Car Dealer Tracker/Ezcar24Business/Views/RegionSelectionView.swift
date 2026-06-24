@@ -89,6 +89,7 @@ struct RegionSelectionSheet: View {
                         selectedRegion = region
                     }
                 }
+                .staggeredAppear(index: index)
 
                 if index < AppRegion.allCases.count - 1 {
                     Divider()
