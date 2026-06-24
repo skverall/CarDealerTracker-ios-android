@@ -22,3 +22,5 @@ Android Car Dealer Tracker/build/
 Android Car Dealer Tracker/app/build/
 node_modules/
 .next/
+
+.superpowers/
