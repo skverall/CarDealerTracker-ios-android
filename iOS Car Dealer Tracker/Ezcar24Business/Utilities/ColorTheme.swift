@@ -50,7 +50,26 @@ struct ColorTheme {
         colors: [Color(red: 0.15, green: 0.75, blue: 0.45), Color(red: 0.0, green: 0.5, blue: 0.3)],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
-    
+
+    // Inventory Pulse — age buckets
+    static let ageFresh = Color(red: 0.16, green: 0.67, blue: 0.39)   // #29AB63 (success)
+    static let ageAging = Color(red: 1.0, green: 0.82, blue: 0.26)    // #FFD142 (warning)
+    static let ageStale = Color(red: 0.9, green: 0.2, blue: 0.26)     // #E63342 (danger)
+
+    // Inventory Pulse — card mood gradients (one deliberate accent; rest of dashboard stays light/airy)
+    static let pulseCalmGradient = LinearGradient(
+        colors: [Color(red: 0.09, green: 0.28, blue: 0.55), Color(red: 0.18, green: 0.52, blue: 0.92)],
+        startPoint: .topLeading, endPoint: .bottomTrailing
+    )
+    static let pulseWatchGradient = LinearGradient(
+        colors: [Color(red: 0.09, green: 0.28, blue: 0.55), Color(red: 0.98, green: 0.55, blue: 0.22)],
+        startPoint: .topLeading, endPoint: .bottomTrailing
+    )
+    static let pulseUrgentGradient = LinearGradient(
+        colors: [Color(red: 0.23, green: 0.08, blue: 0.06), Color(red: 0.9, green: 0.2, blue: 0.26)],
+        startPoint: .topLeading, endPoint: .bottomTrailing
+    )
+
     // Glossy glass borders for cards
     static let glossyGlassBorder = LinearGradient(
         colors: [.white.opacity(0.4), .white.opacity(0.0), .white.opacity(0.1)],
