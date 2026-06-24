@@ -336,18 +336,25 @@ struct AddExpenseView: View {
     
     private var amountInputSection: some View {
         VStack(spacing: 8) {
-            Text("amount".localizedString.uppercased())
-                .font(.caption2)
-                .fontWeight(.bold)
-                .foregroundColor(ColorTheme.secondaryText)
-                .tracking(1)
-            
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(ColorTheme.categoryColor(for: draft.category))
+                    .frame(width: 7, height: 7)
+                    .animation(.snappy(duration: 0.25), value: draft.category)
+
+                Text("amount".localizedString.uppercased())
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .tracking(1)
+            }
+
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(regionSettings.selectedRegion.currencySymbol)
                     .font(.title3)
                     .fontWeight(.semibold)
                     .foregroundColor(ColorTheme.tertiaryText)
-                
+
                 TextField("0", text: $draft.amount)
                     .font(.system(size: 48, weight: .bold, design: .rounded))
                     .foregroundColor(ColorTheme.primaryText)
@@ -361,6 +368,17 @@ struct AddExpenseView: View {
                     }
             }
         }
+        .padding(.vertical, 14)
+        .padding(.horizontal, 28)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(ColorTheme.categoryColor(for: draft.category).opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(ColorTheme.categoryColor(for: draft.category).opacity(0.25), lineWidth: 1)
+        )
+        .animation(.snappy(duration: 0.28), value: draft.category)
         .padding(.top, 4)
     }
     
