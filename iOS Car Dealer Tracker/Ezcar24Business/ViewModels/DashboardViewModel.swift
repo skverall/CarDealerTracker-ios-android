@@ -8,6 +8,7 @@
 import Foundation
 import CoreData
 import Combine
+import SwiftUI
 
 
 enum DashboardTimeRange: String, CaseIterable, Identifiable, Hashable {
@@ -102,6 +103,26 @@ enum DashboardCockpitTone {
     case opportunity
 }
 
+enum PulseMood {
+    case calm, watch, urgent
+
+    var gradient: LinearGradient {
+        switch self {
+        case .calm:   return ColorTheme.pulseCalmGradient
+        case .watch:  return ColorTheme.pulseWatchGradient
+        case .urgent: return ColorTheme.pulseUrgentGradient
+        }
+    }
+
+    var arcColor: Color {
+        switch self {
+        case .calm:   return .white
+        case .watch:  return ColorTheme.ageAging
+        case .urgent: return ColorTheme.ageAging
+        }
+    }
+}
+
 struct DashboardCockpitMetric: Identifiable {
     let id: String
     let title: String
@@ -136,7 +157,8 @@ private struct DashboardCockpitVehicleRisk {
 }
 
 struct DashboardCockpitSnapshot {
-    let score: Int
+    let pulseMood: PulseMood
+    let pulseArcFraction: Double   // average days / 120, clamped 0...1
     let title: String
     let detail: String
     let operationsTitle: String
@@ -153,7 +175,8 @@ struct DashboardCockpitSnapshot {
     @MainActor
     static var empty: DashboardCockpitSnapshot {
         DashboardCockpitSnapshot(
-            score: 100,
+            pulseMood: .calm,
+            pulseArcFraction: 0,
             title: "dealer_cockpit_empty_title".localizedString,
             detail: "dealer_cockpit_empty_detail".localizedString,
             operationsTitle: "dealer_cockpit_empty_title".localizedString,
@@ -913,12 +936,15 @@ class DashboardViewModel: ObservableObject {
         let expensePressure = totalExpenses > 0 && periodSalesRevenue > 0 && totalExpenses > periodSalesRevenue
         let hasCreditPressure = totalCredit > netCash && totalCredit > 0
 
-        var score = 100
-        score -= min(45, criticalCount * 18 + staleCount * 12 + agingCount * 5)
-        if periodSalesProfit < 0 { score -= 16 }
-        if expensePressure { score -= 10 }
-        if hasCreditPressure { score -= 8 }
-        score = max(0, min(100, score))
+        let pulseMood: PulseMood
+        if criticalCount > 0 {
+            pulseMood = .urgent
+        } else if staleCount > 0 || agingCount > 0 {
+            pulseMood = .watch
+        } else {
+            pulseMood = .calm
+        }
+        let pulseArcFraction = min(1.0, max(0.0, Double(averageDays) / 120.0))
 
         let title: String
         let detail: String
@@ -972,7 +998,8 @@ class DashboardViewModel: ObservableObject {
             }
 
         cockpitSnapshot = DashboardCockpitSnapshot(
-            score: score,
+            pulseMood: pulseMood,
+            pulseArcFraction: pulseArcFraction,
             title: title,
             detail: detail,
             operationsTitle: operationsTitle,

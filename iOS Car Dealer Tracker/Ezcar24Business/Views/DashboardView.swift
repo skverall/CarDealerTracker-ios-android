@@ -113,17 +113,10 @@ struct DashboardView: View {
                     snapshot: viewModel.cockpitSnapshot,
                     canViewInventory: permissionService.can(.viewInventory),
                     canViewFinancials: permissionService.can(.viewFinancials),
-                    canViewProfit: permissionService.canViewVehicleProfit(),
-                    openInventory: {
+                    onReviewAll: {
                         presentedSheet = nil
                         DispatchQueue.main.async {
                             navPath.append(.priorityInventory)
-                        }
-                    },
-                    openAnalytics: {
-                        presentedSheet = nil
-                        DispatchQueue.main.async {
-                            navPath.append(.analytics)
                         }
                     }
                 )
@@ -422,20 +415,16 @@ private extension DashboardView {
         Group {
             if permissionService.can(.viewInventory) || permissionService.can(.viewFinancials) {
                 Section {
-                    DealerCockpitCard(
+                    InventoryPulseCard(
                         snapshot: viewModel.cockpitSnapshot,
                         canViewInventory: permissionService.can(.viewInventory),
                         canViewFinancials: permissionService.can(.viewFinancials),
-                        canViewProfit: permissionService.canViewVehicleProfit(),
-                        openInventory: {
-                            navPath.append(.priorityInventory)
-                        },
-                        openInsights: {
-                            presentedSheet = .inventoryRadar
-                        }
+                        onTap: { presentedSheet = .inventoryRadar }
                     )
+                    .padding(.horizontal, 20)
+                    .padding(.top, 4)
                 }
-                .listRowInsets(EdgeInsets(top: 4, leading: 20, bottom: 0, trailing: 20))
+                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 0, trailing: 0))
                 .listRowSeparator(.hidden)
                 .listRowBackground(Color.clear)
             }
@@ -869,935 +858,355 @@ private extension DashboardView {
     }
 }
 
-private struct DealerCockpitCard: View {
-    let snapshot: DashboardCockpitSnapshot
-    let canViewInventory: Bool
-    let canViewFinancials: Bool
-    let canViewProfit: Bool
-    let openInventory: () -> Void
-    let openInsights: () -> Void
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+private struct InventoryPulseArc: View {
+    let fraction: Double
+    let strokeColor: Color
+    let centerValue: String
+    let centerLabel: String
 
-    private var headlineTitle: String {
-        canViewProfit ? snapshot.title : snapshot.operationsTitle
-    }
-
-    private var headlineDetail: String {
-        canViewProfit ? snapshot.detail : snapshot.operationsDetail
-    }
-
-    private var visibleMetrics: [DashboardCockpitMetric] {
-        if canViewFinancials {
-            let metrics = snapshot.metrics.filter { metric in
-                metric.requiresFinancials && (canViewProfit || metric.id != "period-rhythm")
-            }
-            if !metrics.isEmpty {
-                return Array(metrics.prefix(3))
-            }
-        }
-        return Array(snapshot.metrics.filter { !$0.requiresFinancials }.prefix(3))
-    }
-
-    private var metricColumns: [GridItem] {
-        if horizontalSizeClass == .compact {
-            return Array(repeating: GridItem(.flexible(), spacing: 8), count: 3)
-        }
-        return [GridItem(.adaptive(minimum: 128), spacing: 10)]
-    }
-
-    private var primaryActionTitle: String {
-        horizontalSizeClass == .compact ? "dealer_cockpit_review".localizedString : snapshot.primaryActionTitle
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkles.rectangle.stack.fill")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(snapshot.tone.color)
-
-                        Text("dealer_cockpit_title".localizedString)
-                            .font(.subheadline.weight(.heavy))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                    }
-
-                    Text(headlineTitle)
-                        .font(.system(size: 26, weight: .heavy, design: .rounded))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.72)
-
-                    Text(headlineDetail)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.72))
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.82)
-                }
-
-                Spacer(minLength: 8)
-
-                if canViewProfit {
-                    CockpitScoreRing(score: snapshot.score, tone: snapshot.tone)
-                } else {
-                    CockpitInventoryBadge(count: snapshot.activeVehicleCount)
-                }
-            }
-
-            if !visibleMetrics.isEmpty {
-                LazyVGrid(columns: metricColumns, spacing: 10) {
-                    ForEach(visibleMetrics) { metric in
-                        CockpitMetricTile(metric: metric)
-                    }
-                }
-            }
-
-            if !snapshot.ageBuckets.isEmpty {
-                CockpitAgeTrack(buckets: snapshot.ageBuckets)
-            }
-
-            HStack(spacing: 10) {
-                if canViewInventory {
-                    Button(action: openInventory) {
-                        Label(primaryActionTitle, systemImage: "car.2.fill")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundColor(.black)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 11)
-                            .frame(maxWidth: .infinity)
-                            .background(Color.white)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.hapticScale)
-                    .accessibilityLabel(snapshot.primaryActionTitle)
-                }
-
-                if canViewFinancials {
-                    Button(action: openInsights) {
-                        Label("dealer_cockpit_open_insights".localizedString, systemImage: "chart.line.uptrend.xyaxis")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundColor(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 11)
-                            .frame(maxWidth: .infinity)
-                            .background(
-                                Capsule()
-                                    .fill(Color.white.opacity(0.12))
-                            )
-                            .overlay(
-                                Capsule()
-                                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                            )
-                    }
-                    .buttonStyle(.hapticScale)
-                }
-            }
-
-            if canViewInventory && !snapshot.riskVehicles.isEmpty {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack {
-                        Text("dealer_cockpit_priority_stock".localizedString)
-                            .font(.caption.weight(.bold))
-                            .foregroundColor(.white.opacity(0.72))
-                            .textCase(.uppercase)
-
-                        Spacer()
-
-                        Text(String(format: "dealer_cockpit_average_age".localizedString, snapshot.averageDaysInInventory))
-                            .font(.caption2.weight(.semibold))
-                            .foregroundColor(.white.opacity(0.62))
-                    }
-
-                    VStack(spacing: 8) {
-                        ForEach(snapshot.riskVehicles.prefix(3)) { vehicle in
-                            CockpitVehicleRow(vehicle: vehicle, showCapital: canViewFinancials)
-                        }
-                    }
-                }
-            }
-        }
-        .padding(18)
-        .background(
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.05, green: 0.09, blue: 0.16),
-                        Color(red: 0.10, green: 0.17, blue: 0.28),
-                        Color(red: 0.06, green: 0.08, blue: 0.12)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-
-                RadialGradient(
-                    colors: [snapshot.tone.color.opacity(0.32), .clear],
-                    center: .topTrailing,
-                    startRadius: 20,
-                    endRadius: 230
-                )
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.18), radius: 18, x: 0, y: 10)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\("dealer_cockpit_title".localizedString). \(headlineTitle). \(headlineDetail)")
-    }
-}
-
-private struct CockpitScoreRing: View {
-    let score: Int
-    let tone: DashboardCockpitTone
+    @State private var displayedFraction: Double = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.12), lineWidth: 8)
+                .stroke(Color.white.opacity(0.22), lineWidth: 7)
 
             Circle()
-                .trim(from: 0, to: CGFloat(score) / 100)
+                .trim(from: 0, to: displayedFraction)
                 .stroke(
-                    tone.color,
-                    style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                    strokeColor,
+                    style: StrokeStyle(lineWidth: 7, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
 
             VStack(spacing: 1) {
-                Text("\(score)")
-                    .font(.system(size: 22, weight: .heavy, design: .rounded))
+                Text(centerValue)
+                    .font(.system(size: 20, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
                     .monospacedDigit()
-
-                Text("dealer_cockpit_readiness".localizedString)
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(.white.opacity(0.58))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.62)
-            }
-        }
-        .frame(width: 78, height: 78)
-        .accessibilityLabel(String(format: "dealer_cockpit_score_accessibility".localizedString, score))
-    }
-}
-
-private struct CockpitInventoryBadge: View {
-    let count: Int
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text("\(count)")
-                .font(.system(size: 24, weight: .heavy, design: .rounded))
-                .foregroundColor(.white)
-                .monospacedDigit()
-
-            Text("dealer_cockpit_active_stock".localizedString)
-                .font(.system(size: 9, weight: .bold))
-                .foregroundColor(.white.opacity(0.6))
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(width: 78, height: 78)
-        .background(
-            Circle()
-                .fill(Color.white.opacity(0.10))
-        )
-        .overlay(
-            Circle()
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
-        )
-    }
-}
-
-private struct CockpitMetricTile: View {
-    let metric: DashboardCockpitMetric
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: metric.systemImage)
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundColor(metric.tone.color)
-                    .frame(width: 24, height: 24)
-                    .background(
-                        Circle()
-                            .fill(metric.tone.color.opacity(0.18))
-                    )
-
-                Text(metric.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.68))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.66)
-            }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(metric.value)
-                    .font(.system(size: 17, weight: .heavy, design: .rounded))
-                    .foregroundColor(.white)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.58)
-
-                Text(metric.detail)
-                    .font(.caption2)
-                    .foregroundColor(.white.opacity(0.56))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.62)
-            }
-        }
-        .padding(10)
-        .frame(maxWidth: .infinity, minHeight: 104, alignment: .topLeading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.08))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.white.opacity(0.10), lineWidth: 1)
-        )
-    }
-}
-
-private struct CockpitAgeTrack: View {
-    let buckets: [DashboardCockpitAgeBucket]
-
-    private var total: Int {
-        max(1, buckets.reduce(0) { $0 + $1.count })
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            GeometryReader { proxy in
-                let visibleBuckets = buckets.filter { $0.count > 0 }
-                let spacing: CGFloat = 4
-                let availableWidth = max(0, proxy.size.width - CGFloat(max(visibleBuckets.count - 1, 0)) * spacing)
-
-                HStack(spacing: spacing) {
-                    ForEach(visibleBuckets) { bucket in
-                        RoundedRectangle(cornerRadius: 5, style: .continuous)
-                            .fill(bucket.tone.color)
-                            .frame(width: max(6, availableWidth * CGFloat(bucket.count) / CGFloat(total)))
-                    }
-                }
-            }
-            .frame(height: 10)
-
-            HStack(spacing: 8) {
-                ForEach(buckets.filter { $0.count > 0 }) { bucket in
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(bucket.tone.color)
-                            .frame(width: 6, height: 6)
-
-                        Text("\(bucket.title) \(bucket.count)")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundColor(.white.opacity(0.58))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                    }
-                }
-
-                Spacer(minLength: 0)
-            }
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color.white.opacity(0.07))
-        )
-    }
-}
-
-private struct CockpitVehicleRow: View {
-    let vehicle: DashboardCockpitVehicle
-    let showCapital: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(vehicle.tone.color)
-                .frame(width: 8, height: 8)
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(vehicle.title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(.white)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.74)
-
-                Text(String(format: "dealer_cockpit_oldest_days".localizedString, vehicle.daysInInventory))
-                    .font(.caption2.weight(.semibold))
-                    .foregroundColor(.white.opacity(0.56))
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            if showCapital {
-                Text(vehicle.capital.asCurrencyCompact())
-                    .font(.caption.weight(.bold))
+                Text(centerLabel)
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(.white.opacity(0.72))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.68)
+                    .textCase(.uppercase)
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.white.opacity(0.07))
-        )
+        .frame(width: 76, height: 76)
+        .onAppear { animate(to: fraction) }
+        .onChange(of: fraction) { _, newValue in animate(to: newValue) }
+    }
+
+    private func animate(to value: Double) {
+        if reduceMotion {
+            displayedFraction = value
+        } else {
+            withAnimation(.snappy(duration: 0.5, extraBounce: 0.04)) {
+                displayedFraction = value
+            }
+        }
+    }
+}
+
+private struct InventoryPulseCard: View {
+    let snapshot: DashboardCockpitSnapshot
+    let canViewInventory: Bool
+    let canViewFinancials: Bool
+    let onTap: () -> Void
+
+    @State private var appeared = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var mood: PulseMood { snapshot.pulseMood }
+
+    private func count(for bucket: String) -> Int {
+        snapshot.ageBuckets.first(where: { $0.id == bucket })?.count ?? 0
+    }
+
+    private var headline: String {
+        switch mood {
+        case .calm:
+            return "pulse_headline_calm".localizedString
+        case .watch:
+            return String(format: "pulse_headline_watch".localizedString, count(for: "aging") + count(for: "stale"))
+        case .urgent:
+            return String(format: "pulse_headline_urgent".localizedString, count(for: "critical"))
+        }
+    }
+
+    private var subline: String {
+        String(format: "pulse_subline".localizedString, snapshot.activeVehicleCount, snapshot.averageDaysInInventory)
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("pulse_eyebrow".localizedString)
+                            .font(.caption.weight(.bold))
+                            .foregroundColor(.white.opacity(0.72))
+                            .textCase(.uppercase)
+                            .tracking(1.2)
+
+                        Text(headline)
+                            .font(.system(size: 22, weight: .heavy))
+                            .foregroundColor(.white)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+
+                        Text(subline)
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.82))
+                    }
+                    Spacer(minLength: 12)
+                    InventoryPulseArc(
+                        fraction: snapshot.pulseArcFraction,
+                        strokeColor: mood.arcColor,
+                        centerValue: "\(snapshot.averageDaysInInventory)",
+                        centerLabel: "pulse_avg_days".localizedString
+                    )
+                }
+
+                compositionBar
+            }
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                ZStack {
+                    mood.gradient
+                    RadialGradient(
+                        colors: [.white.opacity(0.16), .clear],
+                        center: .topTrailing,
+                        startRadius: 10,
+                        endRadius: 220
+                    )
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 28, style: .continuous)
+                    .stroke(.white.opacity(0.14), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.22), radius: 16, x: 0, y: 10)
+        }
+        .buttonStyle(.hapticScale)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 12)
+        .onAppear {
+            if reduceMotion { appeared = true }
+            else { withAnimation(.snappy(duration: 0.42, extraBounce: 0.06)) { appeared = true } }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(headline). \(subline)")
+        .accessibilityAddTraits(.isButton)
+    }
+
+    private var compositionBar: some View {
+        GeometryReader { proxy in
+            let fresh = count(for: "fresh")
+            let aging = count(for: "aging")
+            let stale = count(for: "stale") + count(for: "critical")
+            let total = max(1, fresh + aging + stale)
+            let spacing: CGFloat = 4
+            let usable = max(0, proxy.size.width - spacing * 2)
+            HStack(spacing: spacing) {
+                segment(ColorTheme.ageFresh, fresh, total, usable, spacing, "pulse_fresh")
+                segment(ColorTheme.ageAging, aging, total, usable, spacing, "pulse_aging")
+                segment(ColorTheme.ageStale, stale, total, usable, spacing, "pulse_stale")
+            }
+        }
+        .frame(height: 30)
+        .animation(reduceMotion ? nil : .snappy(duration: 0.38, extraBounce: 0.04), value: snapshot.ageBuckets.map(\.count))
+    }
+
+    private func segment(_ color: Color, _ count: Int, _ total: Int, _ width: CGFloat, _ spacing: CGFloat, _ labelKey: String) -> some View {
+        let w = max(0, width * CGFloat(count) / CGFloat(total))
+        return RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(color)
+            .frame(width: count > 0 ? w : 0)
+            .overlay(
+                count > 0
+                    ? Text("\(count)")
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(.white)
+                    : nil
+            )
+            .accessibilityLabel(String(format: "pulse_segment_accessibility".localizedString, labelKey.localizedString, count))
     }
 }
 
 private struct InventoryRadarSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
     let snapshot: DashboardCockpitSnapshot
     let canViewInventory: Bool
     let canViewFinancials: Bool
-    let canViewProfit: Bool
-    let openInventory: () -> Void
-    let openAnalytics: () -> Void
+    let onReviewAll: () -> Void
 
-    private var headlineTitle: String {
-        canViewProfit ? snapshot.title : snapshot.operationsTitle
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var appeared = false
+
+    private var freshCount: Int { snapshot.ageBuckets.first(where: { $0.id == "fresh" })?.count ?? 0 }
+    private var agingCount: Int { snapshot.ageBuckets.first(where: { $0.id == "aging" })?.count ?? 0 }
+    private var staleTotal: Int {
+        (snapshot.ageBuckets.first(where: { $0.id == "stale" })?.count ?? 0)
+            + (snapshot.ageBuckets.first(where: { $0.id == "critical" })?.count ?? 0)
     }
 
-    private var headlineDetail: String {
-        canViewProfit ? snapshot.detail : snapshot.operationsDetail
+    private var storyTitle: String {
+        String(format: staleTotal > 0
+               ? "radar_story_title_stale".localizedString
+               : "radar_story_title_ok".localizedString,
+               staleTotal, snapshot.averageDaysInInventory)
     }
 
-    private var visibleMetrics: [DashboardCockpitMetric] {
-        if canViewFinancials {
-            let metrics = snapshot.metrics.filter { metric in
-                metric.requiresFinancials && (canViewProfit || metric.id != "period-rhythm")
-            }
-            if !metrics.isEmpty {
-                return Array(metrics.prefix(4))
-            }
-        }
-        return Array(snapshot.metrics.filter { !$0.requiresFinancials }.prefix(4))
+    private var totalTiedUp: Decimal {
+        snapshot.riskVehicles.prefix(3).reduce(0) { $0 + $1.capital }
     }
 
-    private var actionItems: [RadarActionItem] {
-        var items: [RadarActionItem] = []
-
-        if snapshot.slowVehicleCount > 0 {
-            items.append(
-                RadarActionItem(
-                    title: "dealer_radar_move_slow_title".localizedString,
-                    detail: String(format: "dealer_radar_move_slow_detail".localizedString, snapshot.slowVehicleCount, snapshot.averageDaysInInventory),
-                    systemImage: "timer",
-                    tone: snapshot.tone == .urgent ? .urgent : .warning
-                )
-            )
+    private var storyDetail: String {
+        guard let oldest = snapshot.riskVehicles.first else {
+            return String(format: "radar_story_detail_empty".localizedString, snapshot.averageDaysInInventory)
         }
-
-        if canViewFinancials, let cashMetric = snapshot.metrics.first(where: { $0.id == "cash-position" }) {
-            items.append(
-                RadarActionItem(
-                    title: "dealer_radar_cash_title".localizedString,
-                    detail: cashMetric.detail,
-                    systemImage: "building.columns.fill",
-                    tone: cashMetric.tone
-                )
-            )
-        }
-
-        if canViewProfit, let rhythmMetric = snapshot.metrics.first(where: { $0.id == "period-rhythm" }) {
-            items.append(
-                RadarActionItem(
-                    title: "dealer_radar_rhythm_title".localizedString,
-                    detail: rhythmMetric.detail,
-                    systemImage: "waveform.path.ecg",
-                    tone: rhythmMetric.tone
-                )
-            )
-        }
-
-        if items.isEmpty {
-            items.append(
-                RadarActionItem(
-                    title: "dealer_radar_calm_title".localizedString,
-                    detail: "dealer_radar_calm_detail".localizedString,
-                    systemImage: "checkmark.seal.fill",
-                    tone: .calm
-                )
-            )
-        }
-
-        return Array(items.prefix(3))
-    }
-
-    private var metricColumns: [GridItem] {
-        if horizontalSizeClass == .compact {
-            return Array(repeating: GridItem(.flexible(), spacing: 10), count: 2)
-        }
-        return [GridItem(.adaptive(minimum: 150), spacing: 12)]
+        return String(format: "radar_story_detail".localizedString,
+                      canViewFinancials ? totalTiedUp.asCurrencyCompact() : "",
+                      oldest.daysInInventory)
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    radarHero
-
-                    if snapshot.activeVehicleCount == 0 {
-                        RadarEmptyState()
-                    } else {
-                        if !visibleMetrics.isEmpty {
-                            LazyVGrid(columns: metricColumns, spacing: 10) {
-                                ForEach(visibleMetrics) { metric in
-                                    RadarMetricCard(metric: metric)
-                                }
-                            }
-                        }
-
-                        RadarActionSection(items: actionItems)
-
-                        if !snapshot.ageBuckets.isEmpty {
-                            RadarBucketSection(buckets: snapshot.ageBuckets)
-                        }
-
-                        if canViewInventory {
-                            RadarPriorityVehiclesSection(
-                                vehicles: snapshot.riskVehicles,
-                                showCapital: canViewFinancials
-                            )
-                        }
-
-                        radarActions
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
-                .padding(.bottom, 28)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                storyHeader
+                ageDiagram
+                oldestCarsSection
+                if canViewInventory { reviewAllButton }
             }
-            .background(ColorTheme.background.ignoresSafeArea())
-            .navigationTitle("dealer_radar_title".localizedString)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("done".localizedString) {
-                        dismiss()
-                    }
-                }
-            }
+            .padding(20)
+        }
+        .background(ColorTheme.background.ignoresSafeArea())
+        .onAppear {
+            if reduceMotion { appeared = true }
+            else { withAnimation(.snappy(duration: 0.4, extraBounce: 0.05)) { appeared = true } }
         }
     }
 
-    private var radarHero: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "scope")
-                            .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(snapshot.tone.color)
-
-                        Text("dealer_radar_subtitle".localizedString)
-                            .font(.caption.weight(.semibold))
-                            .foregroundColor(.white.opacity(0.68))
-                            .lineLimit(2)
-                    }
-
-                    Text(headlineTitle)
-                        .font(.system(size: 28, weight: .heavy, design: .rounded))
-                        .foregroundColor(.white)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.72)
-
-                    Text(headlineDetail)
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.72))
-                        .lineLimit(3)
-                }
-
-                Spacer(minLength: 8)
-
-                if canViewProfit {
-                    CockpitScoreRing(score: snapshot.score, tone: snapshot.tone)
-                } else {
-                    CockpitInventoryBadge(count: snapshot.activeVehicleCount)
-                }
-            }
+    private var storyHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("radar_eyebrow".localizedString)
+                .font(.caption.weight(.bold))
+                .foregroundColor(ColorTheme.secondaryText)
+                .textCase(.uppercase)
+                .tracking(0.8)
+            Text(storyTitle)
+                .font(.system(size: 26, weight: .heavy, design: .rounded))
+                .foregroundColor(ColorTheme.primaryText)
+                .lineLimit(3)
+                .minimumScaleFactor(0.8)
+            Text(storyDetail)
+                .font(.subheadline)
+                .foregroundColor(ColorTheme.secondaryText)
         }
-        .padding(18)
-        .background(
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        Color(red: 0.05, green: 0.09, blue: 0.16),
-                        Color(red: 0.10, green: 0.17, blue: 0.28),
-                        Color(red: 0.06, green: 0.08, blue: 0.12)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-
-                RadialGradient(
-                    colors: [snapshot.tone.color.opacity(0.30), .clear],
-                    center: .topTrailing,
-                    startRadius: 16,
-                    endRadius: 220
-                )
-            }
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.white.opacity(0.12), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.14), radius: 16, y: 8)
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 8)
     }
 
-    private var radarActions: some View {
-        HStack(spacing: 10) {
-            if canViewInventory {
-                Button(action: openInventory) {
-                    Label(snapshot.primaryActionTitle, systemImage: "car.2.fill")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundColor(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 13)
-                        .frame(maxWidth: .infinity)
-                        .background(ColorTheme.primary)
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.hapticScale)
-            }
-
-            if canViewFinancials {
-                Button(action: openAnalytics) {
-                    Label("dealer_cockpit_open_insights".localizedString, systemImage: "chart.line.uptrend.xyaxis")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundColor(ColorTheme.primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.72)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 13)
-                        .frame(maxWidth: .infinity)
-                        .background(ColorTheme.cardBackground)
-                        .clipShape(Capsule())
-                        .overlay(
-                            Capsule()
-                                .stroke(ColorTheme.primary.opacity(0.16), lineWidth: 1)
-                        )
-                }
-                .buttonStyle(.hapticScale)
-            }
-        }
-    }
-}
-
-private struct RadarActionItem: Identifiable {
-    let id = UUID()
-    let title: String
-    let detail: String
-    let systemImage: String
-    let tone: DashboardCockpitTone
-}
-
-private struct RadarMetricCard: View {
-    let metric: DashboardCockpitMetric
-
-    var body: some View {
+    private var ageDiagram: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: metric.systemImage)
-                .font(.system(size: 15, weight: .bold))
-                .foregroundColor(metric.tone.color)
-                .frame(width: 32, height: 32)
-                .background(
-                    Circle()
-                        .fill(metric.tone.color.opacity(0.12))
-                )
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(metric.title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(ColorTheme.secondaryText)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.72)
-
-                Text(metric.value)
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                    .foregroundColor(ColorTheme.primaryText)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.68)
-
-                Text(metric.detail)
-                    .font(.caption2.weight(.medium))
-                    .foregroundColor(ColorTheme.tertiaryText)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.72)
-            }
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)
-        .background(ColorTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(metric.tone.color.opacity(0.10), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.035), radius: 8, y: 3)
-    }
-}
-
-private struct RadarActionSection: View {
-    let items: [RadarActionItem]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("dealer_radar_next_actions".localizedString)
+            Text("radar_age_label".localizedString)
                 .font(.caption.weight(.bold))
                 .foregroundColor(ColorTheme.secondaryText)
                 .textCase(.uppercase)
 
-            VStack(spacing: 10) {
-                ForEach(items) { item in
-                    RadarActionCard(item: item)
+            GeometryReader { proxy in
+                let total = max(1, freshCount + agingCount + staleTotal)
+                let spacing: CGFloat = 4
+                let usable = max(0, proxy.size.width - spacing * 2)
+                HStack(spacing: spacing) {
+                    ageBar(ColorTheme.ageFresh, freshCount, total, usable, spacing)
+                    ageBar(ColorTheme.ageAging, agingCount, total, usable, spacing)
+                    ageBar(ColorTheme.ageStale, staleTotal, total, usable, spacing)
                 }
             }
-        }
-    }
-}
+            .frame(height: 36)
 
-private struct RadarActionCard: View {
-    let item: RadarActionItem
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: item.systemImage)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(item.tone.color)
-                .frame(width: 32, height: 32)
-                .background(
-                    Circle()
-                        .fill(item.tone.color.opacity(0.12))
-                )
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(ColorTheme.primaryText)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.78)
-
-                Text(item.detail)
-                    .font(.caption.weight(.medium))
-                    .foregroundColor(ColorTheme.secondaryText)
-                    .lineLimit(3)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(14)
-        .background(ColorTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(item.tone.color.opacity(0.10), lineWidth: 1)
-        )
-    }
-}
-
-private struct RadarBucketSection: View {
-    let buckets: [DashboardCockpitAgeBucket]
-
-    private var visibleBuckets: [DashboardCockpitAgeBucket] {
-        buckets.filter { $0.count > 0 }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("dealer_radar_risk_mix".localizedString)
-                .font(.caption.weight(.bold))
-                .foregroundColor(ColorTheme.secondaryText)
-                .textCase(.uppercase)
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 130), spacing: 10)], spacing: 10) {
-                ForEach(visibleBuckets) { bucket in
-                    RadarBucketCard(bucket: bucket)
-                }
-            }
-        }
-    }
-}
-
-private struct RadarBucketCard: View {
-    let bucket: DashboardCockpitAgeBucket
-
-    var body: some View {
-        HStack(spacing: 10) {
-            Circle()
-                .fill(bucket.tone.color)
-                .frame(width: 10, height: 10)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(bucket.title)
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(ColorTheme.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-
-                Text("\(bucket.count)")
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
-                    .foregroundColor(bucket.tone.color)
-                    .monospacedDigit()
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .background(ColorTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(bucket.tone.color.opacity(0.12), lineWidth: 1)
-        )
-    }
-}
-
-private struct RadarPriorityVehiclesSection: View {
-    let vehicles: [DashboardCockpitVehicle]
-    let showCapital: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("dealer_cockpit_priority_stock".localizedString)
+                axisLabel("0d"); Spacer(); axisLabel("30d"); Spacer(); axisLabel("60d"); Spacer(); axisLabel("90d+")
+            }
+        }
+        .padding(14)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(Color.gray.opacity(0.06), lineWidth: 1)
+        )
+    }
+
+    private func ageBar(_ color: Color, _ count: Int, _ total: Int, _ width: CGFloat, _ spacing: CGFloat) -> some View {
+        let w = max(0, width * CGFloat(count) / CGFloat(total))
+        return RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(color)
+            .frame(width: count > 0 ? w : 0)
+            .overlay(count > 0 ? Text("\(count)").font(.caption.weight(.bold)).foregroundColor(.white) : nil)
+    }
+
+    private func axisLabel(_ text: String) -> some View {
+        Text(text).font(.caption2).foregroundColor(ColorTheme.tertiaryText)
+    }
+
+    private var oldestCarsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if !snapshot.riskVehicles.isEmpty {
+                Text("radar_oldest_label".localizedString)
                     .font(.caption.weight(.bold))
                     .foregroundColor(ColorTheme.secondaryText)
                     .textCase(.uppercase)
-
-                Spacer()
-
-                Text("\(vehicles.count)")
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(ColorTheme.tertiaryText)
             }
-
-            if vehicles.isEmpty {
-                Text("dealer_radar_priority_empty".localizedString)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(ColorTheme.secondaryText)
-                    .padding(16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(ColorTheme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            } else {
-                VStack(spacing: 10) {
-                    ForEach(vehicles) { vehicle in
-                        RadarVehicleRow(vehicle: vehicle, showCapital: showCapital)
+            ForEach(Array(snapshot.riskVehicles.prefix(3).enumerated()), id: \.element.id) { index, vehicle in
+                HStack(spacing: 12) {
+                    Circle().fill(ColorTheme.ageStale).frame(width: 8, height: 8)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(vehicle.title)
+                            .font(.subheadline.weight(.bold))
+                            .foregroundColor(ColorTheme.primaryText)
+                            .lineLimit(1)
+                        Text(String(format: "radar_car_detail".localizedString, vehicle.daysInInventory,
+                                    canViewFinancials ? vehicle.capital.asCurrencyCompact() : ""))
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
                     }
+                    Spacer()
+                    Image(systemName: "chevron.right").font(.caption).foregroundColor(ColorTheme.tertiaryText)
                 }
+                .padding(14)
+                .background(ColorTheme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color.gray.opacity(0.06), lineWidth: 1)
+                )
+                .opacity(appeared ? 1 : 0)
+                .offset(y: appeared ? 0 : 10)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.3).delay(Double(index) * 0.05), value: appeared)
             }
         }
     }
-}
 
-private struct RadarVehicleRow: View {
-    let vehicle: DashboardCockpitVehicle
-    let showCapital: Bool
-
-    private var actionTitle: String {
-        switch vehicle.tone {
-        case .urgent:
-            return "dealer_radar_vehicle_action_critical".localizedString
-        case .warning, .opportunity:
-            return "dealer_radar_vehicle_action_watch".localizedString
-        case .calm:
-            return "dealer_radar_vehicle_action_calm".localizedString
-        }
-    }
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Circle()
-                .fill(vehicle.tone.color)
-                .frame(width: 10, height: 10)
-                .padding(.top, 6)
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(vehicle.title)
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(ColorTheme.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.74)
-
-                Text(String(format: "dealer_cockpit_oldest_days".localizedString, vehicle.daysInInventory))
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(ColorTheme.secondaryText)
-
-                Text(actionTitle)
-                    .font(.caption2.weight(.bold))
-                    .foregroundColor(vehicle.tone.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
+    private var reviewAllButton: some View {
+        Button(action: onReviewAll) {
+            HStack {
+                Text("radar_review_all".localizedString)
+                Image(systemName: "arrow.right")
             }
-
-            Spacer(minLength: 8)
-
-            if showCapital {
-                Text(vehicle.capital.asCurrencyCompact())
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(ColorTheme.primaryText)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.68)
-            }
+            .font(.subheadline.weight(.bold))
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(ColorTheme.primary)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
-        .padding(14)
-        .background(ColorTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(vehicle.tone.color.opacity(0.10), lineWidth: 1)
-        )
+        .buttonStyle(.hapticScale)
     }
 }
 
-private struct RadarEmptyState: View {
-    var body: some View {
-        VStack(spacing: 10) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 30, weight: .bold))
-                .foregroundColor(ColorTheme.success)
-
-            Text("dealer_radar_empty_title".localizedString)
-                .font(.headline.weight(.bold))
-                .foregroundColor(ColorTheme.primaryText)
-
-            Text("dealer_radar_empty_detail".localizedString)
-                .font(.subheadline)
-                .foregroundColor(ColorTheme.secondaryText)
-                .multilineTextAlignment(.center)
-                .lineLimit(3)
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .background(ColorTheme.cardBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-}
 
 extension DashboardCockpitTone {
     var color: Color {
