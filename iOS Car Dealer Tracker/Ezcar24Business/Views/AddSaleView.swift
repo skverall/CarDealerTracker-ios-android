@@ -533,20 +533,34 @@ private struct VehicleSaleForm: View {
             
             VStack(spacing: 0) {
                 // Amount Input
-                HStack(spacing: 12) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(regionSettings.selectedRegion.currencySymbol)
-                        .font(.headline)
-                        .foregroundColor(ColorTheme.tertiaryText)
-                        .frame(width: 40)
-                    
-                    TextField("sale_amount".localizedString, text: $amount)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(ColorTheme.success.opacity(0.8))
+
+                    TextField("0", text: $amount)
                         .keyboardType(.decimalPad)
-                        .font(.headline)
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundColor(ColorTheme.primaryText)
+                        .multilineTextAlignment(.center)
+                        .frame(minWidth: 80)
+                        .fixedSize(horizontal: true, vertical: false)
                         .onChange(of: amount) { old, new in
                             let filtered = new.filter { "0123456789.".contains($0) }
                             if filtered != new { amount = filtered }
                         }
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(ColorTheme.success.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(ColorTheme.success.opacity(0.25), lineWidth: 1)
+                )
                 .padding(16)
                 
                 Divider().padding(.leading, 20)
