@@ -123,16 +123,6 @@ enum PulseMood {
     }
 }
 
-struct DashboardCockpitMetric: Identifiable {
-    let id: String
-    let title: String
-    let value: String
-    let detail: String
-    let systemImage: String
-    let tone: DashboardCockpitTone
-    let requiresFinancials: Bool
-}
-
 struct DashboardCockpitVehicle: Identifiable {
     let id: NSManagedObjectID
     let title: String
@@ -159,15 +149,8 @@ private struct DashboardCockpitVehicleRisk {
 struct DashboardCockpitSnapshot {
     let pulseMood: PulseMood
     let pulseArcFraction: Double   // average days / 120, clamped 0...1
-    let title: String
-    let detail: String
-    let operationsTitle: String
-    let operationsDetail: String
-    let primaryActionTitle: String
     let activeVehicleCount: Int
-    let slowVehicleCount: Int
     let averageDaysInInventory: Int
-    let metrics: [DashboardCockpitMetric]
     let riskVehicles: [DashboardCockpitVehicle]
     let ageBuckets: [DashboardCockpitAgeBucket]
     let tone: DashboardCockpitTone
@@ -177,15 +160,8 @@ struct DashboardCockpitSnapshot {
         DashboardCockpitSnapshot(
             pulseMood: .calm,
             pulseArcFraction: 0,
-            title: "dealer_cockpit_empty_title".localizedString,
-            detail: "dealer_cockpit_empty_detail".localizedString,
-            operationsTitle: "dealer_cockpit_empty_title".localizedString,
-            operationsDetail: "dealer_cockpit_empty_detail".localizedString,
-            primaryActionTitle: "dealer_cockpit_review_inventory".localizedString,
             activeVehicleCount: 0,
-            slowVehicleCount: 0,
             averageDaysInInventory: 0,
-            metrics: [],
             riskVehicles: [],
             ageBuckets: [],
             tone: .calm
@@ -930,56 +906,21 @@ class DashboardViewModel: ObservableObject {
         let staleCount = risks.filter { $0.days >= 61 && $0.days < 90 }.count
         let agingCount = risks.filter { $0.days >= 31 && $0.days < 61 }.count
         let freshCount = max(0, activeVehicles.count - criticalCount - staleCount - agingCount)
-        let slowVehicleCount = criticalCount + staleCount
         let averageDays = risks.map(\.days).reduce(0, +) / max(risks.count, 1)
-        let netCash = totalCash + totalBank
-        let expensePressure = totalExpenses > 0 && periodSalesRevenue > 0 && totalExpenses > periodSalesRevenue
-        let hasCreditPressure = totalCredit > netCash && totalCredit > 0
 
         let pulseMood: PulseMood
-        if criticalCount > 0 {
-            pulseMood = .urgent
-        } else if staleCount > 0 || agingCount > 0 {
-            pulseMood = .watch
-        } else {
-            pulseMood = .calm
-        }
-        let pulseArcFraction = min(1.0, max(0.0, Double(averageDays) / 120.0))
-
-        let title: String
-        let detail: String
         let tone: DashboardCockpitTone
         if criticalCount > 0 {
-            title = String(format: "dealer_cockpit_status_stale_title".localizedString, criticalCount)
-            detail = oldestVehicleDetail(from: risks)
+            pulseMood = .urgent
             tone = .urgent
         } else if staleCount > 0 || agingCount > 0 {
-            title = "dealer_cockpit_status_watch_title".localizedString
-            detail = String(format: "dealer_cockpit_status_watch_detail".localizedString, slowVehicleCount + agingCount, averageDays)
+            pulseMood = .watch
             tone = .warning
-        } else if periodSalesProfit < 0 {
-            title = "dealer_cockpit_status_profit_title".localizedString
-            detail = "dealer_cockpit_status_profit_detail".localizedString
-            tone = .warning
-        } else if expensePressure {
-            title = "dealer_cockpit_status_expense_title".localizedString
-            detail = "dealer_cockpit_status_expense_detail".localizedString
-            tone = .opportunity
         } else {
-            title = "dealer_cockpit_status_calm_title".localizedString
-            detail = String(format: "dealer_cockpit_status_calm_detail".localizedString, activeVehicles.count, averageDays)
+            pulseMood = .calm
             tone = .calm
         }
-
-        let operationsTitle: String
-        let operationsDetail: String
-        if criticalCount > 0 || staleCount > 0 {
-            operationsTitle = String(format: "dealer_cockpit_status_stale_title".localizedString, max(criticalCount, staleCount))
-            operationsDetail = oldestVehicleDetail(from: risks)
-        } else {
-            operationsTitle = "dealer_cockpit_operations_calm_title".localizedString
-            operationsDetail = String(format: "dealer_cockpit_operations_calm_detail".localizedString, activeVehicles.count, averageDays)
-        }
+        let pulseArcFraction = min(1.0, max(0.0, Double(averageDays) / 120.0))
 
         let riskVehicles = risks
             .sorted {
@@ -1000,61 +941,8 @@ class DashboardViewModel: ObservableObject {
         cockpitSnapshot = DashboardCockpitSnapshot(
             pulseMood: pulseMood,
             pulseArcFraction: pulseArcFraction,
-            title: title,
-            detail: detail,
-            operationsTitle: operationsTitle,
-            operationsDetail: operationsDetail,
-            primaryActionTitle: "dealer_cockpit_review_inventory".localizedString,
             activeVehicleCount: activeVehicles.count,
-            slowVehicleCount: slowVehicleCount,
             averageDaysInInventory: averageDays,
-            metrics: [
-                DashboardCockpitMetric(
-                    id: "active-stock",
-                    title: "dealer_cockpit_active_stock".localizedString,
-                    value: "\(activeVehicles.count)",
-                    detail: String(format: "dealer_cockpit_slow_stock_count".localizedString, slowVehicleCount),
-                    systemImage: "car.2.fill",
-                    tone: slowVehicleCount > 0 ? .warning : .calm,
-                    requiresFinancials: false
-                ),
-                DashboardCockpitMetric(
-                    id: "inventory-exposure",
-                    title: "dealer_cockpit_inventory_exposure".localizedString,
-                    value: totalVehicleValue.asCurrencyCompact(),
-                    detail: String(format: "dealer_cockpit_average_age".localizedString, averageDays),
-                    systemImage: "square.stack.3d.up.fill",
-                    tone: slowVehicleCount > 0 ? .warning : .calm,
-                    requiresFinancials: true
-                ),
-                DashboardCockpitMetric(
-                    id: "cash-position",
-                    title: "dealer_cockpit_cash_position".localizedString,
-                    value: netCash.asCurrencyCompact(),
-                    detail: totalCredit > 0 ? String(format: "dealer_cockpit_credit_line".localizedString, totalCredit.asCurrencyCompact()) : "dealer_cockpit_no_credit_pressure".localizedString,
-                    systemImage: "building.columns.fill",
-                    tone: hasCreditPressure ? .warning : .calm,
-                    requiresFinancials: true
-                ),
-                DashboardCockpitMetric(
-                    id: "period-rhythm",
-                    title: "dealer_cockpit_period_rhythm".localizedString,
-                    value: periodSalesRevenue.asCurrencyCompact(),
-                    detail: String(format: "dealer_cockpit_profit_line".localizedString, periodSalesProfit.asCurrencyCompact()),
-                    systemImage: "waveform.path.ecg",
-                    tone: periodSalesProfit < 0 ? .urgent : .opportunity,
-                    requiresFinancials: true
-                ),
-                DashboardCockpitMetric(
-                    id: "sold-count",
-                    title: "vehicles_sold".localizedString,
-                    value: "\(soldCount)",
-                    detail: String(format: "dealer_cockpit_average_age".localizedString, averageDays),
-                    systemImage: "checkmark.seal.fill",
-                    tone: .opportunity,
-                    requiresFinancials: false
-                )
-            ],
             riskVehicles: riskVehicles,
             ageBuckets: [
                 DashboardCockpitAgeBucket(id: "fresh", title: "dealer_cockpit_bucket_fresh".localizedString, count: freshCount, tone: .calm),
