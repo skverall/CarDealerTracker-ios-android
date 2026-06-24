@@ -154,8 +154,9 @@ struct ClientListView: View {
                         if showFilters {
                             ForEach(groupedClientsByDate(clients), id: \.key) { bucket, bucketClients in
                                 Section(header: dateHeader(for: bucket, count: bucketClients.count)) {
-                                    ForEach(bucketClients, id: \.self) { client in
+                                    ForEach(Array(bucketClients.enumerated()), id: \.element) { index, client in
                                         clientRow(for: client)
+                                            .staggeredAppear(index: index)
                                     }
                                 }
                             }
@@ -164,8 +165,9 @@ struct ClientListView: View {
                                 let sectionClients = clients.filter { $0.clientStatus == status }
                                 if !sectionClients.isEmpty {
                                     Section(header: statusHeader(for: status, count: sectionClients.count)) {
-                                        ForEach(sectionClients, id: \.self) { client in
+                                        ForEach(Array(sectionClients.enumerated()), id: \.element) { index, client in
                                             clientRow(for: client)
+                                                .staggeredAppear(index: index)
                                         }
                                     }
                                 }
