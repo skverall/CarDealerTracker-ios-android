@@ -863,26 +863,33 @@ private struct InventoryPulseArc: View {
     let strokeColor: Color
     let centerValue: String
     let centerLabel: String
+    var showsCompletionRing: Bool = false
 
     @State private var displayedFraction: Double = 0
+    @State private var showCompletion = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.white.opacity(0.22), lineWidth: 7)
+                .stroke(Color.white.opacity(showsCompletionRing ? 0.16 : 0.22), lineWidth: 7)
+
+            if showsCompletionRing {
+                Circle()
+                    .stroke(Color.white.opacity(showCompletion ? 0.85 : 0.0), lineWidth: 7)
+            }
 
             Circle()
-                .trim(from: 0, to: displayedFraction)
+                .trim(from: 0, to: showsCompletionRing ? 1.0 : displayedFraction)
                 .stroke(
                     strokeColor,
-                    style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                    style: StrokeStyle(lineWidth: showsCompletionRing ? 0 : 7, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
 
             VStack(spacing: 1) {
                 Text(centerValue)
-                    .font(.system(size: 20, weight: .heavy, design: .rounded))
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundColor(.white)
                     .monospacedDigit()
                 Text(centerLabel)
@@ -892,8 +899,22 @@ private struct InventoryPulseArc: View {
             }
         }
         .frame(width: 76, height: 76)
-        .onAppear { animate(to: fraction) }
+        .onAppear {
+            animate(to: fraction)
+            animateCompletion()
+        }
         .onChange(of: fraction) { _, newValue in animate(to: newValue) }
+    }
+
+    private func animateCompletion() {
+        guard showsCompletionRing else { return }
+        if reduceMotion {
+            showCompletion = true
+        } else {
+            withAnimation(.easeOut(duration: 0.8).delay(0.2)) {
+                showCompletion = true
+            }
+        }
     }
 
     private func animate(to value: Double) {
@@ -951,19 +972,21 @@ private struct InventoryPulseCard: View {
                         Text(headline)
                             .font(.system(size: 22, weight: .heavy))
                             .foregroundColor(.white)
-                            .lineLimit(2)
-                            .minimumScaleFactor(0.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .minimumScaleFactor(0.7)
 
                         Text(subline)
                             .font(.subheadline)
                             .foregroundColor(.white.opacity(0.82))
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 12)
                     InventoryPulseArc(
                         fraction: snapshot.pulseArcFraction,
                         strokeColor: mood.arcColor,
                         centerValue: "\(snapshot.averageDaysInInventory)",
-                        centerLabel: "pulse_avg_days".localizedString
+                        centerLabel: "pulse_avg_days".localizedString,
+                        showsCompletionRing: mood == .calm
                     )
                 }
 
@@ -1006,30 +1029,35 @@ private struct InventoryPulseCard: View {
             let fresh = count(for: "fresh")
             let aging = count(for: "aging")
             let stale = count(for: "stale") + count(for: "critical")
-            let total = max(1, fresh + aging + stale)
-            let spacing: CGFloat = 4
-            let usable = max(0, proxy.size.width - spacing * 2)
+            let segments: [(Color, Int, String)] = [
+                (ColorTheme.ageFresh, fresh, "pulse_fresh"),
+                (ColorTheme.ageAging, aging, "pulse_aging"),
+                (ColorTheme.ageStale, stale, "pulse_stale")
+            ].filter { $0.1 > 0 }
+            let total = max(1, segments.reduce(0) { $0 + $1.1 })
+            let visibleCount = segments.count
+            let spacing: CGFloat = visibleCount > 1 ? 4 : 0
+            let usable = max(0, proxy.size.width - spacing * CGFloat(max(0, visibleCount - 1)))
             HStack(spacing: spacing) {
-                segment(ColorTheme.ageFresh, fresh, total, usable, spacing, "pulse_fresh")
-                segment(ColorTheme.ageAging, aging, total, usable, spacing, "pulse_aging")
-                segment(ColorTheme.ageStale, stale, total, usable, spacing, "pulse_stale")
+                ForEach(segments.indices, id: \.self) { index in
+                    let (color, count, labelKey) = segments[index]
+                    segment(color, count, total, usable, labelKey)
+                }
             }
         }
         .frame(height: 30)
         .animation(reduceMotion ? nil : .snappy(duration: 0.38, extraBounce: 0.04), value: snapshot.ageBuckets.map(\.count))
     }
 
-    private func segment(_ color: Color, _ count: Int, _ total: Int, _ width: CGFloat, _ spacing: CGFloat, _ labelKey: String) -> some View {
+    private func segment(_ color: Color, _ count: Int, _ total: Int, _ width: CGFloat, _ labelKey: String) -> some View {
         let w = max(0, width * CGFloat(count) / CGFloat(total))
         return RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(color)
-            .frame(width: count > 0 ? w : 0)
+            .frame(width: w)
             .overlay(
-                count > 0
-                    ? Text("\(count)")
-                        .font(.caption2.weight(.bold))
-                        .foregroundColor(.white)
-                    : nil
+                Text("\(count)")
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(.white)
             )
             .accessibilityLabel(String(format: "pulse_segment_accessibility".localizedString, labelKey.localizedString, count))
     }
