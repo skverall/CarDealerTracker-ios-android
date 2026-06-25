@@ -542,9 +542,8 @@ struct ExpenseListView: View {
                                 .listRowBackground(Color.clear)
 
                         if !collapsedDateGroups.contains(group.key) {
-                            ForEach(Array(group.items.enumerated()), id: \.element.objectID) { index, expense in
+                            ForEach(group.items, id: \.objectID) { expense in
                                     expenseListRow(expense)
-                                        .staggeredAppear(index: index)
                                         .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                         .listRowBackground(Color.clear)
                             }
@@ -578,9 +577,8 @@ struct ExpenseListView: View {
                                 .listRowBackground(Color.clear)
 
                                 if !collapsedCategories.contains(group.key) {
-                                    ForEach(Array(group.items.enumerated()), id: \.element.objectID) { index, expense in
+                                    ForEach(group.items, id: \.objectID) { expense in
                                         expenseListRow(expense)
-                                            .staggeredAppear(index: index)
                                             .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                             .listRowBackground(Color.clear)
                                     }
@@ -1102,22 +1100,7 @@ struct DealerExpenseDashboardView: View {
 
     @ViewBuilder
     private func iPhoneLayout(expensePresentation: ExpenseViewModel.ExpensePresentationSnapshot) -> some View {
-        VStack(spacing: 0) {
-            header
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    vehicleChip
-                    userChip
-                    categoryChip
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-            .background(ColorTheme.background)
-
-            expenseList(expensePresentation: expensePresentation)
-        }
+        expenseList(expensePresentation: expensePresentation)
     }
 
     @ViewBuilder
@@ -1175,6 +1158,27 @@ struct DealerExpenseDashboardView: View {
     @ViewBuilder
     private func expenseList(expensePresentation: ExpenseViewModel.ExpensePresentationSnapshot) -> some View {
         List {
+            if !isPadLayout {
+                header
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(ColorTheme.background)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        vehicleChip
+                        userChip
+                        categoryChip
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                }
+                .background(ColorTheme.background)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(ColorTheme.background)
+            }
+
             if expensePresentation.dateGroups.isEmpty {
                 emptyState
                     .listRowSeparator(.hidden)
@@ -1182,52 +1186,39 @@ struct DealerExpenseDashboardView: View {
                     .listRowBackground(Color.clear)
             } else {
                 ForEach(expensePresentation.dateGroups) { group in
-                    Section {
-                        ForEach(group.items, id: \.objectID) { expense in
+                    expenseGroupHeader(group)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(ColorTheme.background)
+
+                    ForEach(group.items, id: \.objectID) { expense in
+                        Button {
+                            editingExpense = expense
+                        } label: {
+                            CompactExpenseRow(expense: expense)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowInsets(EdgeInsets(top: 4, leading: isPadLayout ? 8 : 16, bottom: 4, trailing: isPadLayout ? 8 : 16))
+                        .listRowBackground(Color.clear)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            if canDeleteRecords {
+                                Button(role: .destructive) {
+                                    let account = expense.account
+                                    if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
+                                        deleteExpenseFromCloud(deletedId, account: account)
+                                    }
+                                } label: {
+                                    Label("delete".localizedString, systemImage: "trash")
+                                }
+                            }
+
                             Button {
                                 editingExpense = expense
                             } label: {
-                                CompactExpenseRow(expense: expense)
+                                Label("edit".localizedString, systemImage: "pencil")
                             }
-                            .buttonStyle(.plain)
-                            .listRowInsets(EdgeInsets(top: 4, leading: isPadLayout ? 8 : 16, bottom: 4, trailing: isPadLayout ? 8 : 16))
-                            .listRowBackground(Color.clear)
-                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                if canDeleteRecords {
-                                    Button(role: .destructive) {
-                                        let account = expense.account
-                                        if let deletedId = (mutateExpense { try viewModel.deleteExpense(expense) } ?? nil) {
-                                            deleteExpenseFromCloud(deletedId, account: account)
-                                        }
-                                    } label: {
-                                        Label("delete".localizedString, systemImage: "trash")
-                                    }
-                                }
-
-                                Button {
-                                    editingExpense = expense
-                                } label: {
-                                    Label("edit".localizedString, systemImage: "pencil")
-                                }
-                                .tint(ColorTheme.primary)
-                            }
+                            .tint(ColorTheme.primary)
                         }
-                    } header: {
-                        HStack {
-                            Text(group.key)
-                                .font(.body)
-                                .fontWeight(.bold)
-                                .foregroundColor(ColorTheme.primaryText)
-                            Spacer()
-                            Text(group.subtotal.asCurrency())
-                                .font(.subheadline)
-                                .fontWeight(.bold)
-                                .foregroundColor(ColorTheme.primary)
-                        }
-                        .padding(.horizontal, isPadLayout ? 12 : 20)
-                        .padding(.vertical, 12)
-                        .background(ColorTheme.background)
-                        .listRowInsets(EdgeInsets())
                     }
                 }
 
@@ -1246,6 +1237,24 @@ struct DealerExpenseDashboardView: View {
                 viewModel.fetchExpenses()
             }
         }
+    }
+
+    private func expenseGroupHeader(_ group: ExpenseViewModel.ExpenseGroup) -> some View {
+        HStack {
+            Text(group.key)
+                .font(.body)
+                .fontWeight(.bold)
+                .foregroundColor(ColorTheme.primaryText)
+            Spacer()
+            Text(group.subtotal.asCurrency())
+                .font(.subheadline)
+                .fontWeight(.bold)
+                .foregroundColor(ColorTheme.primary)
+        }
+        .padding(.horizontal, isPadLayout ? 12 : 20)
+        .padding(.top, 18)
+        .padding(.bottom, 8)
+        .background(ColorTheme.background)
     }
 
 

@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import AVFoundation
 import FirebaseAnalytics
 import FirebaseCore
 import RevenueCat
@@ -54,11 +55,18 @@ enum PaywallAnalytics {
 }
 
 enum PaywallPalette {
-    static let gold = Color(hex: "D6B36A")
-    static let goldLight = Color(hex: "F0DCA8")
-    static let goldDeep = Color(hex: "9C7B3C")
-    static let inkOnGold = Color(hex: "1C1507")
-    static let slate = Color(hex: "1C2230")
+    static let gold = Color(hex: "0F66FF")
+    static let goldLight = Color(hex: "4F91FF")
+    static let goldDeep = Color(hex: "0848C7")
+    static let inkOnGold = Color.white
+    static let slate = Color(hex: "DCEAFF")
+    static let background = Color(hex: "F7FAFF")
+    static let surface = Color.white
+    static let surfaceSoft = Color(hex: "F0F6FF")
+    static let text = Color(hex: "07142F")
+    static let mutedText = Color(hex: "69748C")
+    static let border = Color(hex: "DCE6F6")
+    static let success = Color(hex: "22C55E")
 }
 
 enum PaywallMode: String, Identifiable {
@@ -87,8 +95,7 @@ struct PaywallView: View {
     @State private var didCompletePurchase = false
 
     private let features = [
-        PaywallFeature(icon: "sparkles", title: "AI Advice", shortTitle: "paywall_feature_ai", subtitle: "paywall_feature_ai_detail"),
-        PaywallFeature(icon: "infinity.circle.fill", title: "Unlimited Inventory", shortTitle: "paywall_feature_unlimited", subtitle: "paywall_feature_unlimited_detail"),
+        PaywallFeature(icon: "car.fill", title: "Unlimited Inventory", shortTitle: "paywall_feature_unlimited", subtitle: "paywall_feature_unlimited_detail"),
         PaywallFeature(icon: "icloud.fill", title: "Cloud Sync", shortTitle: "Sync", subtitle: "paywall_feature_sync_detail"),
         PaywallFeature(icon: "doc.text.fill", title: "PDF Reports", shortTitle: "paywall_feature_reports", subtitle: "paywall_feature_reports_detail")
     ]
@@ -115,6 +122,10 @@ struct PaywallView: View {
         regionSettings.selectedLanguage == .arabic
     }
 
+    private var usesEmbeddedHeroText: Bool {
+        context.source == .vehicleLimit && !isProManagement
+    }
+
     var body: some View {
         GeometryReader { geometry in
             let layout = PaywallLayout(size: geometry.size, safeAreaInsets: geometry.safeAreaInsets)
@@ -126,12 +137,12 @@ struct PaywallView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: layout.contentSpacing) {
                             heroSection(layout: layout)
-                            featuresSection(layout: layout)
                             if isProManagement {
                                 proManagementSection(layout: layout)
                             } else {
                                 planSelectionSection(layout: layout)
                             }
+                            featuresSection(layout: layout)
 
                             if isGuest && !layout.isTiny && !isProManagement {
                                 guestSyncPrompt(layout: layout)
@@ -166,7 +177,7 @@ struct PaywallView: View {
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear {
             withAnimation(.spring(response: 0.8, dampingFraction: 0.82).delay(0.08)) {
                 animateContent = true
@@ -205,111 +216,126 @@ struct PaywallView: View {
 
     private var paywallBackground: some View {
         ZStack {
-            Color.black
+            PaywallPalette.background
 
             RadialGradient(
-                colors: [PaywallPalette.gold.opacity(0.14), .clear],
+                colors: [PaywallPalette.goldLight.opacity(0.24), .clear],
                 center: .topTrailing,
                 startRadius: 10,
                 endRadius: 420
             )
 
             RadialGradient(
-                colors: [PaywallPalette.slate.opacity(0.55), .clear],
+                colors: [PaywallPalette.slate.opacity(0.75), .clear],
                 center: .bottomLeading,
                 startRadius: 20,
                 endRadius: 520
+            )
+
+            LinearGradient(
+                colors: [Color.white.opacity(0.95), PaywallPalette.background.opacity(0.8)],
+                startPoint: .top,
+                endPoint: .bottom
             )
         }
         .ignoresSafeArea()
     }
 
     private func heroSection(layout: PaywallLayout) -> some View {
-        GeometryReader { geometry in
-            ZStack(alignment: .bottom) {
-                Image("PaywallNeonCar")
-                    .resizable()
-                    .scaledToFit()
-                    .saturation(0)
-                    .colorMultiply(Color(hex: "E6D8B8"))
-                    .frame(width: geometry.size.width * layout.carWidthScale)
-                    .offset(y: layout.carOffset)
-                    .opacity(0.92)
+        let heroHeight = usesEmbeddedHeroText ? layout.embeddedHeroHeight : layout.heroHeight
 
+        return ZStack(alignment: .top) {
+            ZStack {
                 LinearGradient(
-                    stops: [
-                        .init(color: .black, location: 0),
-                        .init(color: .black.opacity(0.34), location: 0.38),
-                        .init(color: .black.opacity(0.02), location: 0.68),
-                        .init(color: .black.opacity(0.9), location: 1)
+                    colors: [
+                        Color.white,
+                        PaywallPalette.surfaceSoft,
+                        PaywallPalette.goldLight.opacity(0.24)
                     ],
                     startPoint: .top,
                     endPoint: .bottom
                 )
 
+                PaywallHeroVideoView(resourceName: "PaywallHero911")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                LinearGradient(
+                    colors: [
+                        PaywallPalette.background.opacity(0),
+                        PaywallPalette.background.opacity(0.1),
+                        PaywallPalette.background.opacity(0.3)
+                    ],
+                    startPoint: .center,
+                    endPoint: .bottom
+                )
+                .allowsHitTesting(false)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: heroHeight)
+            .padding(.horizontal, -layout.horizontalPadding)
+            .clipShape(RoundedRectangle(cornerRadius: layout.heroMediaCornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: layout.heroMediaCornerRadius, style: .continuous)
+                    .stroke(PaywallPalette.border.opacity(0.72), lineWidth: 1)
+                    .allowsHitTesting(false)
+            )
+            .shadow(color: PaywallPalette.gold.opacity(0.12), radius: 22, y: 14)
+
+            if !usesEmbeddedHeroText {
                 VStack(spacing: layout.heroTextSpacing) {
                     HStack(spacing: 7) {
                         Image(systemName: "crown.fill")
                             .font(.system(size: layout.badgeIconSize, weight: .semibold))
                         Text(heroBadgeText)
                             .font(.system(size: layout.badgeFontSize, weight: .semibold))
-                            .tracking(isArabicLanguage ? 0 : 0.6)
+                            .tracking(isArabicLanguage ? 0 : 0.2)
                             .lineLimit(1)
                             .minimumScaleFactor(0.76)
                     }
-                    .foregroundStyle(PaywallPalette.goldLight)
+                    .foregroundStyle(PaywallPalette.gold)
                     .padding(.horizontal, layout.badgeHorizontalPadding)
                     .padding(.vertical, layout.badgeVerticalPadding)
-                    .background(
-                        Capsule()
-                            .fill(Color.black.opacity(0.5))
-                            .overlay(
-                                Capsule()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [PaywallPalette.gold.opacity(0.8), PaywallPalette.goldDeep.opacity(0.5)],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        ),
-                                        lineWidth: 1
-                                    )
-                            )
-                    )
-                    .shadow(color: PaywallPalette.gold.opacity(0.22), radius: 14, y: 6)
+                    .background(Capsule().fill(PaywallPalette.gold.opacity(0.1)))
+                    .overlay(Capsule().stroke(PaywallPalette.gold.opacity(0.14), lineWidth: 1))
 
                     heroTitle(layout: layout)
-
-                    Text(heroSubtitle)
-                        .font(.system(size: layout.subtitleFontSize, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.72))
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(layout.subtitleLineSpacing)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.74)
                 }
-                .padding(.top, layout.heroTextTopPadding)
+                .padding(.top, layout.heroOverlayTopPadding)
                 .padding(.horizontal, layout.heroTextHorizontalPadding)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .frame(maxWidth: layout.heroTextMaxWidth)
+                .padding(.horizontal, layout.heroTextBackdropHorizontalPadding)
+                .padding(.vertical, layout.heroTextBackdropVerticalPadding)
+                .background(
+                    RoundedRectangle(cornerRadius: layout.heroTextBackdropCornerRadius, style: .continuous)
+                        .fill(PaywallPalette.background.opacity(0.86))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: layout.heroTextBackdropCornerRadius, style: .continuous)
+                                .stroke(Color.white.opacity(0.72), lineWidth: 1)
+                        )
+                )
+                .shadow(color: Color.black.opacity(0.05), radius: 14, y: 8)
+                .frame(maxWidth: .infinity)
             }
-            .frame(width: geometry.size.width, height: geometry.size.height)
-            .clipped()
         }
-        .frame(height: layout.heroHeight)
+        .frame(maxWidth: .infinity)
+        .frame(height: heroHeight)
     }
 
     private func featuresSection(layout: PaywallLayout) -> some View {
         VStack(spacing: layout.sectionTitleSpacing) {
             paywallSectionTitle("WHAT YOU GET", layout: layout)
 
-            LazyVGrid(
-                columns: [GridItem(.flexible(), spacing: layout.featureSpacing), GridItem(.flexible(), spacing: layout.featureSpacing)],
-                spacing: layout.featureSpacing
-            ) {
+            VStack(spacing: 0) {
                 ForEach(Array(features.enumerated()), id: \.element.title) { index, feature in
                     PaywallFeatureCard(feature: feature, layout: layout)
                         .staggeredAppear(index: index, baseDelay: 0.15, step: 0.06)
+                    if index < features.count - 1 {
+                        Divider()
+                            .padding(.leading, layout.featureCardIconBox + 26)
+                    }
                 }
             }
+            .background(PaywallGlassBackground(cornerRadius: layout.planCornerRadius))
         }
     }
 
@@ -325,19 +351,19 @@ struct PaywallView: View {
 
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: layout.proStatusIconSize, weight: .bold))
-                        .foregroundStyle(Color(hex: "4ADE80"))
+                        .foregroundStyle(PaywallPalette.success)
                 }
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(proStatusTitle)
                         .font(.system(size: layout.proStatusTitleSize, weight: .bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(PaywallPalette.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.68)
 
                     Text(proStatusSubtitle)
                         .font(.system(size: layout.proStatusSubtitleSize, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.68))
+                        .foregroundStyle(PaywallPalette.mutedText)
                         .lineLimit(2)
                         .minimumScaleFactor(0.72)
                 }
@@ -346,7 +372,7 @@ struct PaywallView: View {
 
                 Text((subscriptionManager.isTrial ? "Trial" : "Active").localizedString)
                     .font(.system(size: layout.proStatusBadgeSize, weight: .heavy))
-                    .foregroundStyle(Color(hex: "86EFAC"))
+                    .foregroundStyle(PaywallPalette.success)
                     .lineLimit(1)
                     .padding(.horizontal, layout.proStatusBadgeHorizontalPadding)
                     .padding(.vertical, 6)
@@ -367,7 +393,7 @@ struct PaywallView: View {
 
             if subscriptionManager.isLoading && plans.isEmpty {
                 ProgressView()
-                    .tint(.white)
+                    .tint(PaywallPalette.gold)
                     .frame(height: layout.planCardHeight)
             } else if plans.isEmpty {
                 emptyPlansState(layout: layout)
@@ -384,7 +410,7 @@ struct PaywallView: View {
         VStack(spacing: 10) {
             Text("Unable to load plans".localizedString)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.78))
+                .foregroundStyle(PaywallPalette.text)
 
             Button("Retry".localizedString) {
                 subscriptionManager.fetchOfferings()
@@ -406,7 +432,7 @@ struct PaywallView: View {
 
             Text(text)
                 .font(.system(size: layout.savingsBannerFontSize, weight: .semibold))
-                .foregroundStyle(PaywallPalette.goldLight)
+                .foregroundStyle(PaywallPalette.goldDeep)
                 .multilineTextAlignment(isArabicLanguage ? .trailing : .leading)
                 .lineLimit(2)
                 .minimumScaleFactor(isArabicLanguage ? 0.62 : 0.72)
@@ -421,12 +447,12 @@ struct PaywallView: View {
         .frame(minHeight: layout.savingsBannerHeight)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(PaywallPalette.goldDeep.opacity(0.18))
+                .fill(PaywallPalette.gold.opacity(0.08))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .stroke(
                             LinearGradient(
-                                colors: [PaywallPalette.gold.opacity(0.5), PaywallPalette.goldDeep.opacity(0.2)],
+                                colors: [PaywallPalette.gold.opacity(0.32), PaywallPalette.goldDeep.opacity(0.12)],
                                 startPoint: .leading,
                                 endPoint: .trailing
                             ),
@@ -465,15 +491,15 @@ struct PaywallView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(PaywallPalette.gold)
                 .frame(width: 34, height: 34)
-                .background(Circle().fill(PaywallPalette.goldDeep.opacity(0.2)))
+                .background(Circle().fill(PaywallPalette.gold.opacity(0.09)))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Purchase without an account".localizedString)
                     .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(PaywallPalette.text)
                 Text("Sign in only for sync or restore on other devices.".localizedString)
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.64))
+                    .foregroundStyle(PaywallPalette.mutedText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
@@ -490,7 +516,7 @@ struct PaywallView: View {
                     .padding(.horizontal, 10)
                     .frame(height: 34)
                     .background(PaywallPalette.gold.opacity(0.14), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .foregroundStyle(PaywallPalette.goldLight)
+                    .foregroundStyle(PaywallPalette.gold)
             }
             .buttonStyle(.hapticScale)
         }
@@ -508,7 +534,7 @@ struct PaywallView: View {
             if let disclosure = selectedPlanDisclosure {
                 Text(disclosure)
                     .font(.system(size: layout.disclosureFontSize, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.64))
+                    .foregroundStyle(PaywallPalette.mutedText)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .minimumScaleFactor(0.72)
@@ -527,7 +553,7 @@ struct PaywallView: View {
             if let restoreMessage {
                 Text(restoreMessage)
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.58))
+                    .foregroundStyle(PaywallPalette.mutedText)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
             }
@@ -540,13 +566,13 @@ struct PaywallView: View {
         .background(
             VStack(spacing: 0) {
                 LinearGradient(
-                    colors: [.black.opacity(0), .black.opacity(0.9), .black],
+                    colors: [PaywallPalette.background.opacity(0), PaywallPalette.background.opacity(0.92), PaywallPalette.background],
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .frame(height: layout.bottomFadeHeight)
 
-                Color.black
+                PaywallPalette.background
             }
             .ignoresSafeArea()
         )
@@ -557,10 +583,10 @@ struct PaywallView: View {
             HStack(spacing: 8) {
                 Image(systemName: "crown.fill")
                     .font(.system(size: layout.trustIconSize, weight: .semibold))
-                    .foregroundStyle(Color(hex: "FACC15"))
+                    .foregroundStyle(PaywallPalette.gold)
                 Text("All Pro tools are unlocked on this account.".localizedString)
                     .font(.system(size: layout.trustFontSize, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.68))
+                    .foregroundStyle(PaywallPalette.mutedText)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
@@ -610,7 +636,7 @@ struct PaywallView: View {
             } label: {
                 Text((subscriptionManager.isRestoring ? "Restoring..." : "Restore Purchases").localizedString)
                     .font(.system(size: layout.restoreFontSize, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.68))
+                    .foregroundStyle(PaywallPalette.gold)
                     .frame(minHeight: 24)
             }
             .disabled(subscriptionManager.isRestoring)
@@ -618,7 +644,7 @@ struct PaywallView: View {
             if let restoreMessage {
                 Text(restoreMessage)
                     .font(.caption2)
-                    .foregroundStyle(.white.opacity(0.58))
+                    .foregroundStyle(PaywallPalette.mutedText)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
             }
@@ -629,13 +655,13 @@ struct PaywallView: View {
         .background(
             VStack(spacing: 0) {
                 LinearGradient(
-                    colors: [.black.opacity(0), .black.opacity(0.9), .black],
+                    colors: [PaywallPalette.background.opacity(0), PaywallPalette.background.opacity(0.92), PaywallPalette.background],
                     startPoint: .top,
                     endPoint: .bottom
                 )
                 .frame(height: layout.bottomFadeHeight)
 
-                Color.black
+                PaywallPalette.background
             }
             .ignoresSafeArea()
         )
@@ -648,7 +674,7 @@ struct PaywallView: View {
                 .foregroundStyle(PaywallPalette.gold)
             Text("Cancel anytime. No hidden fees.".localizedString)
                 .font(.system(size: layout.trustFontSize, weight: .medium))
-                .foregroundStyle(.white.opacity(0.68))
+                .foregroundStyle(PaywallPalette.mutedText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.74)
         }
@@ -701,7 +727,7 @@ struct PaywallView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: layout.ctaCornerRadius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.28), lineWidth: 0.8)
+                    .strokeBorder(Color.white.opacity(0.32), lineWidth: 0.8)
             )
             .shadow(color: PaywallPalette.gold.opacity(0.32), radius: layout.ctaShadowRadius, y: 7)
         }
@@ -714,11 +740,11 @@ struct PaywallView: View {
         HStack(spacing: 16) {
             Link("Terms of Use".localizedString, destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
             Text("|")
-                .foregroundStyle(.white.opacity(0.32))
+                .foregroundStyle(PaywallPalette.mutedText.opacity(0.45))
             Link("Privacy Policy".localizedString, destination: URL(string: "https://www.ezcar24.com/en/privacy-policy")!)
         }
         .font(.system(size: layout.legalFontSize, weight: .regular))
-        .foregroundStyle(.white.opacity(0.56))
+        .foregroundStyle(PaywallPalette.mutedText)
         .lineLimit(1)
         .minimumScaleFactor(0.8)
     }
@@ -730,10 +756,10 @@ struct PaywallView: View {
         } label: {
             Image(systemName: "xmark")
                 .font(.system(size: layout.closeIconSize, weight: .bold))
-                .foregroundStyle(.white)
+                .foregroundStyle(PaywallPalette.text)
                 .frame(width: layout.closeButtonSize, height: layout.closeButtonSize)
-                .background(Circle().fill(Color.white.opacity(0.08)))
-                .overlay(Circle().stroke(Color.white.opacity(0.15), lineWidth: 1))
+                .background(Circle().fill(Color.white.opacity(0.82)))
+                .overlay(Circle().stroke(PaywallPalette.border, lineWidth: 1))
         }
         .buttonStyle(.hapticScale)
         .padding(.top, layout.closeTopPadding)
@@ -764,10 +790,10 @@ struct PaywallView: View {
     private func heroTitle(layout: PaywallLayout) -> some View {
         if isArabicLanguage || context.source == .aiInsights {
             Text("\(heroTitlePrefix) \(heroTitleHighlight)")
-                .font(.system(size: layout.titleFontSize * (context.source == .aiInsights ? 0.86 : 0.9), weight: .bold, design: .serif))
+                .font(.system(size: layout.titleFontSize * (context.source == .aiInsights ? 0.86 : 0.9), weight: .black, design: .rounded))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [Color.white, PaywallPalette.goldLight],
+                        colors: [PaywallPalette.text, PaywallPalette.goldDeep],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -781,11 +807,11 @@ struct PaywallView: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 7) {
                     Text(heroTitlePrefix)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(PaywallPalette.text)
                     Text(heroTitleHighlight)
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [PaywallPalette.goldLight, PaywallPalette.gold, PaywallPalette.goldDeep],
+                                colors: [PaywallPalette.goldDeep, PaywallPalette.gold, PaywallPalette.goldLight],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
@@ -794,18 +820,18 @@ struct PaywallView: View {
 
                 VStack(spacing: layout.isCompact ? -2 : 0) {
                     Text(heroTitlePrefix)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(PaywallPalette.text)
                     Text(heroTitleHighlight)
                         .foregroundStyle(
                             LinearGradient(
-                                colors: [PaywallPalette.goldLight, PaywallPalette.gold, PaywallPalette.goldDeep],
+                                colors: [PaywallPalette.goldDeep, PaywallPalette.gold, PaywallPalette.goldLight],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                 }
             }
-            .font(.system(size: layout.titleFontSize, weight: .bold, design: .serif))
+            .font(.system(size: layout.titleFontSize, weight: .black, design: .rounded))
             .lineLimit(1)
             .minimumScaleFactor(0.52)
             .allowsTightening(true)
@@ -853,19 +879,6 @@ struct PaywallView: View {
         return "paywall_upgrade_title_highlight".localizedString
     }
 
-    private var heroSubtitle: String {
-        if isProManagement {
-            return "Your dealership tools are unlocked.\nKeep growing with Car Dealer Tracker.".localizedString
-        }
-        if context.source == .vehicleLimit {
-            return "paywall_vehicle_limit_subtitle".localizedString
-        }
-        if context.source == .aiInsights {
-            return "paywall_ai_subtitle".localizedString
-        }
-        return "Everything you need to grow\nyour dealership business.".localizedString
-    }
-
     private var hasRevenueCatSubscription: Bool {
         !(subscriptionManager.customerInfo?.entitlements.active.isEmpty ?? true)
     }
@@ -910,12 +923,12 @@ struct PaywallView: View {
     private func paywallSectionTitle(_ title: String, layout: PaywallLayout) -> some View {
         HStack(spacing: 10) {
             Rectangle()
-                .fill(Color.white.opacity(0.12))
+                .fill(PaywallPalette.border)
                 .frame(height: 1)
 
             Text(title.localizedString)
                 .font(.system(size: layout.sectionTitleFontSize, weight: .heavy))
-                .foregroundStyle(.white.opacity(0.58))
+                .foregroundStyle(PaywallPalette.mutedText)
                 .tracking(isArabicLanguage ? 0 : layout.sectionTitleTracking)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
@@ -923,7 +936,7 @@ struct PaywallView: View {
                 .layoutPriority(1)
 
             Rectangle()
-                .fill(Color.white.opacity(0.12))
+                .fill(PaywallPalette.border)
                 .frame(height: 1)
         }
     }
@@ -1183,16 +1196,20 @@ struct PaywallLayout {
     var isCompact: Bool { size.height < 800 || size.width < 390 }
 
     var horizontalPadding: CGFloat { isUltraTiny ? 12 : (size.width < 370 ? 14 : 18) }
-    var topPadding: CGFloat { isUltraTiny ? 28 : (isTiny ? 38 : (isCompact ? 44 : 54)) }
+    var topPadding: CGFloat { isUltraTiny ? 12 : (isTiny ? 16 : (isCompact ? 18 : 22)) }
     var mainSpacing: CGFloat { isUltraTiny ? 4 : (isTiny ? 6 : 8) }
-    var contentSpacing: CGFloat { isUltraTiny ? 5 : (isTiny ? 8 : (isCompact ? 10 : 12)) }
-    var heroHeight: CGFloat { isUltraTiny ? 158 : (isTiny ? 210 : (isCompact ? 238 : min(272, size.height * 0.30))) }
-    var heroTextTopPadding: CGFloat { isUltraTiny ? 14 : (isTiny ? 20 : (isCompact ? 24 : 30)) }
+    var contentSpacing: CGFloat { isUltraTiny ? 8 : (isTiny ? 10 : (isCompact ? 12 : 14)) }
+    var heroHeight: CGFloat { isUltraTiny ? 340 : (isTiny ? 392 : (isCompact ? 452 : min(540, size.height * 0.6))) }
+    var embeddedHeroHeight: CGFloat { isUltraTiny ? 380 : (isTiny ? 428 : (isCompact ? 468 : min(500, size.height * 0.62))) }
+    var heroOverlayTopPadding: CGFloat { isUltraTiny ? 20 : (isTiny ? 26 : (isCompact ? 32 : 38)) }
+    var heroMediaCornerRadius: CGFloat { isUltraTiny ? 28 : 36 }
     var heroTextHorizontalPadding: CGFloat { isUltraTiny ? 18 : (isTiny ? 20 : (isCompact ? 24 : 28)) }
+    var heroTextMaxWidth: CGFloat { min(size.width - horizontalPadding * 2 - 24, isUltraTiny ? 292 : 326) }
+    var heroTextBackdropHorizontalPadding: CGFloat { isUltraTiny ? 6 : (isTiny ? 8 : 10) }
+    var heroTextBackdropVerticalPadding: CGFloat { isUltraTiny ? 8 : (isTiny ? 10 : 12) }
+    var heroTextBackdropCornerRadius: CGFloat { isUltraTiny ? 20 : 26 }
     var heroTextSpacing: CGFloat { isUltraTiny ? 5 : (isTiny ? 7 : (isCompact ? 9 : 12)) }
     var titleFontSize: CGFloat { isUltraTiny ? 28 : (isTiny ? 34 : (isCompact ? 39 : 44)) }
-    var subtitleFontSize: CGFloat { isUltraTiny ? 12 : (isTiny ? 14 : (isCompact ? 15 : 17)) }
-    var subtitleLineSpacing: CGFloat { isUltraTiny ? 0 : (isTiny ? 1 : 2) }
     var badgeFontSize: CGFloat { isUltraTiny ? 11 : (isTiny ? 13 : (isCompact ? 15 : 17)) }
     var badgeIconSize: CGFloat { isUltraTiny ? 10 : (isTiny ? 12 : (isCompact ? 13 : 15)) }
     var badgeHorizontalPadding: CGFloat { isUltraTiny ? 10 : (isTiny ? 12 : 16) }
@@ -1206,8 +1223,8 @@ struct PaywallLayout {
     var featureHeight: CGFloat { isUltraTiny ? 32 : (isTiny ? 38 : 44) }
     var featureIconSize: CGFloat { isUltraTiny ? 11 : (isTiny ? 13 : 15) }
     var featureFontSize: CGFloat { isUltraTiny ? 9 : (isTiny ? 10 : 11) }
-    var featureCardHeight: CGFloat { isUltraTiny ? 60 : (isTiny ? 68 : (isCompact ? 74 : 80)) }
-    var featureCardIconBox: CGFloat { isUltraTiny ? 38 : (isTiny ? 42 : 48) }
+    var featureCardHeight: CGFloat { isUltraTiny ? 56 : (isTiny ? 62 : (isCompact ? 68 : 72)) }
+    var featureCardIconBox: CGFloat { isUltraTiny ? 34 : (isTiny ? 38 : 42) }
     var featureCardIconSize: CGFloat { isUltraTiny ? 16 : (isTiny ? 18 : 20) }
     var featureCardTitleSize: CGFloat { isUltraTiny ? 13 : (isTiny ? 14 : 15.5) }
     var featureCardSubtitleSize: CGFloat { isUltraTiny ? 11 : (isTiny ? 12 : 12.5) }
@@ -1219,7 +1236,7 @@ struct PaywallLayout {
     var proStatusBadgeHorizontalPadding: CGFloat { isUltraTiny ? 7 : 9 }
     var proStatusHorizontalPadding: CGFloat { isUltraTiny ? 10 : (isTiny ? 12 : 14) }
     var planCardSpacing: CGFloat { isUltraTiny ? 5 : (isTiny ? 6 : 8) }
-    var planCardHeight: CGFloat { isUltraTiny ? 46 : (isTiny ? 50 : (isCompact ? 54 : 56)) }
+    var planCardHeight: CGFloat { isUltraTiny ? 54 : (isTiny ? 58 : (isCompact ? 62 : 68)) }
     var scrollingPlanCardWidth: CGFloat { isUltraTiny ? 100 : (isTiny ? 112 : 124) }
     var planCornerRadius: CGFloat { isUltraTiny ? 16 : (isTiny ? 18 : 20) }
     var statusCardHeight: CGFloat { isUltraTiny ? 56 : (isTiny ? 62 : (isCompact ? 66 : 70)) }
@@ -1240,10 +1257,10 @@ struct PaywallLayout {
     var disclosureFontSize: CGFloat { isUltraTiny ? 10 : (isTiny ? 11 : 12) }
     var restoreFontSize: CGFloat { isUltraTiny ? 12 : (isTiny ? 13 : 15) }
     var legalFontSize: CGFloat { isUltraTiny ? 10 : (isTiny ? 11 : 12) }
-    var closeButtonSize: CGFloat { isUltraTiny ? 40 : (isTiny ? 46 : 52) }
-    var closeIconSize: CGFloat { isUltraTiny ? 14 : (isTiny ? 16 : 18) }
-    var closeTopPadding: CGFloat { isUltraTiny ? 12 : (isTiny ? 18 : 24) }
-    var closeTrailingPadding: CGFloat { isUltraTiny ? 12 : (isTiny ? 14 : 18) }
+    var closeButtonSize: CGFloat { isUltraTiny ? 34 : (isTiny ? 36 : 38) }
+    var closeIconSize: CGFloat { isUltraTiny ? 12 : (isTiny ? 13 : 14) }
+    var closeTopPadding: CGFloat { isUltraTiny ? 6 : (isTiny ? 8 : 10) }
+    var closeTrailingPadding: CGFloat { isUltraTiny ? 10 : 12 }
 }
 
 struct PaywallFeatureCard: View {
@@ -1258,7 +1275,7 @@ struct PaywallFeatureCard: View {
         HStack(alignment: .center, spacing: layout.isCompact ? 8 : 10) {
             ZStack {
                 RoundedRectangle(cornerRadius: layout.isCompact ? 10 : 12, style: .continuous)
-                    .fill(PaywallPalette.goldDeep.opacity(0.22))
+                    .fill(PaywallPalette.gold.opacity(0.09))
                     .frame(width: layout.featureCardIconBox, height: layout.featureCardIconBox)
                 Image(systemName: feature.icon)
                     .font(.system(size: layout.featureCardIconSize, weight: .semibold))
@@ -1268,12 +1285,12 @@ struct PaywallFeatureCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(feature.shortTitle.localizedString)
                     .font(.system(size: layout.featureCardTitleSize, weight: .semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(PaywallPalette.text)
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
                 Text(subtitleText)
                     .font(.system(size: layout.featureCardSubtitleSize, weight: .regular))
-                    .foregroundStyle(.white.opacity(0.58))
+                    .foregroundStyle(PaywallPalette.mutedText)
                     .lineLimit(2)
                     .minimumScaleFactor(0.64)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1284,7 +1301,7 @@ struct PaywallFeatureCard: View {
         .padding(.horizontal, layout.isCompact ? 9 : 10)
         .frame(maxWidth: .infinity)
         .frame(height: layout.featureCardHeight)
-        .background(PaywallGlassBackground(cornerRadius: 14))
+        .background(Color.clear)
     }
 }
 
@@ -1300,7 +1317,7 @@ struct PaywallFeatureChip: View {
 
             Text(feature.shortTitle.localizedString)
                 .font(.system(size: layout.featureFontSize, weight: .bold))
-                .foregroundStyle(.white.opacity(0.8))
+                .foregroundStyle(PaywallPalette.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.58)
         }
@@ -1363,8 +1380,8 @@ struct PaywallPlanCard: View {
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(planTitle)
-                            .font(.system(size: isCompact ? 13 : 14, weight: .semibold))
-                            .foregroundStyle(.white)
+                            .font(.system(size: isCompact ? 14 : 15.5, weight: .semibold))
+                            .foregroundStyle(PaywallPalette.text)
                             .lineLimit(1)
                             .minimumScaleFactor(0.74)
                             .layoutPriority(1)
@@ -1388,7 +1405,7 @@ struct PaywallPlanCard: View {
                     }
                     Text(plan.billingLine)
                         .font(.system(size: isCompact ? 10.5 : 11.5, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.48))
+                        .foregroundStyle(PaywallPalette.mutedText)
                         .lineLimit(1)
                         .minimumScaleFactor(0.72)
                 }
@@ -1398,13 +1415,13 @@ struct PaywallPlanCard: View {
 
                 VStack(alignment: .trailing, spacing: 1) {
                     Text(plan.priceText)
-                        .font(.system(size: isCompact ? 14 : 16, weight: .bold))
-                        .foregroundStyle(isSelected ? PaywallPalette.goldLight : .white)
+                        .font(.system(size: isCompact ? 17 : 20, weight: .bold))
+                        .foregroundStyle(isSelected ? PaywallPalette.gold : PaywallPalette.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Text(plan.periodLabel)
                         .font(.system(size: isCompact ? 10 : 11, weight: .regular))
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(PaywallPalette.mutedText)
                         .lineLimit(1)
                 }
             }
@@ -1417,12 +1434,12 @@ struct PaywallPlanCard: View {
                         isSelected
                             ? AnyShapeStyle(
                                 LinearGradient(
-                                    colors: [Color(hex: "221C10").opacity(0.95), Color(hex: "12100A").opacity(0.92)],
+                                    colors: [PaywallPalette.surface, PaywallPalette.surfaceSoft],
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            : AnyShapeStyle(Color.white.opacity(0.07))
+                            : AnyShapeStyle(PaywallPalette.surface)
                     )
             )
             .overlay(
@@ -1436,7 +1453,7 @@ struct PaywallPlanCard: View {
                                     endPoint: .topTrailing
                                 )
                             )
-                            : AnyShapeStyle(Color.white.opacity(0.12)),
+                            : AnyShapeStyle(PaywallPalette.border),
                         lineWidth: isSelected ? 1.5 : 1
                     )
             )
@@ -1457,7 +1474,7 @@ struct PaywallPlanCard: View {
                     .foregroundStyle(PaywallPalette.inkOnGold)
             } else {
                 Circle()
-                    .stroke(Color.white.opacity(0.44), lineWidth: 2)
+                    .stroke(PaywallPalette.border, lineWidth: 2)
                     .frame(width: isCompact ? 22 : 24, height: isCompact ? 22 : 24)
             }
         }
@@ -1479,24 +1496,78 @@ struct PaywallGlassBackground: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            .fill(
-                LinearGradient(
-                    colors: [Color.white.opacity(0.11), Color.white.opacity(0.055)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .fill(PaywallPalette.surface.opacity(0.92))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .stroke(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.22), Color.white.opacity(0.06)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        ),
-                        lineWidth: 1
-                    )
+                    .stroke(PaywallPalette.border.opacity(0.9), lineWidth: 1)
             )
+            .shadow(color: PaywallPalette.gold.opacity(0.07), radius: 12, y: 6)
+    }
+}
+
+struct PaywallHeroVideoView: UIViewRepresentable {
+    let resourceName: String
+
+    func makeUIView(context: Context) -> PaywallLoopingVideoUIView {
+        PaywallLoopingVideoUIView(resourceName: resourceName)
+    }
+
+    func updateUIView(_ uiView: PaywallLoopingVideoUIView, context: Context) {
+        uiView.resume()
+    }
+
+    static func dismantleUIView(_ uiView: PaywallLoopingVideoUIView, coordinator: ()) {
+        uiView.pause()
+    }
+}
+
+final class PaywallLoopingVideoUIView: UIView {
+    private let resourceName: String
+    private let playerLayer = AVPlayerLayer()
+    private var player: AVQueuePlayer?
+    private var looper: AVPlayerLooper?
+
+    init(resourceName: String) {
+        self.resourceName = resourceName
+        super.init(frame: .zero)
+        setupPlayer()
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        playerLayer.frame = bounds
+    }
+
+    func resume() {
+        player?.play()
+    }
+
+    func pause() {
+        player?.pause()
+    }
+
+    private func setupPlayer() {
+        backgroundColor = .clear
+        guard let url = Bundle.main.url(forResource: resourceName, withExtension: "mp4") else { return }
+
+        let item = AVPlayerItem(url: url)
+        let queuePlayer = AVQueuePlayer()
+        queuePlayer.isMuted = true
+        queuePlayer.actionAtItemEnd = .none
+        queuePlayer.automaticallyWaitsToMinimizeStalling = false
+
+        playerLayer.player = queuePlayer
+        playerLayer.videoGravity = .resizeAspectFill
+        layer.addSublayer(playerLayer)
+
+        looper = AVPlayerLooper(player: queuePlayer, templateItem: item)
+        player = queuePlayer
+        queuePlayer.play()
     }
 }
 

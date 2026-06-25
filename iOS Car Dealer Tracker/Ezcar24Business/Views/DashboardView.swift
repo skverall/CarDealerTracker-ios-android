@@ -74,10 +74,7 @@ struct DashboardView: View {
         NavigationStack(path: $navPath) {
             VStack(spacing: 0) {
                 topBar
-                if cloudSyncManager.isSyncing || offlineQueueCount > 0 {
-                    syncStatusBar
-                        .padding(.bottom, 10)
-                }
+                syncStatusBar
                 
                 ZStack(alignment: .bottom) {
                     if permissionService.didLoad {
@@ -140,14 +137,10 @@ struct DashboardView: View {
         .onChange(of: regionSettings.selectedLanguage) { _, _ in
             viewModel.fetchFinancialData(range: selectedRange)
         }
-        .onChange(of: cloudSyncManager.lastSyncAt) { _, _ in
-            Task { await refreshOfflineQueueCount() }
-        }
-        .onChange(of: cloudSyncManager.isSyncing) { _, _ in
-            Task { await refreshOfflineQueueCount() }
-        }
-        .task {
-            await refreshOfflineQueueCount()
+        .background {
+            DashboardSyncQueueObserver {
+                Task { await refreshOfflineQueueCount() }
+            }
         }
     }
 
@@ -176,6 +169,115 @@ struct DashboardView: View {
     }
 }
 
+private struct DashboardSyncSpinner: View {
+    @EnvironmentObject private var cloudSyncManager: CloudSyncManager
+
+    var body: some View {
+        if cloudSyncManager.isSyncing {
+            ProgressView()
+                .controlSize(.small)
+                .tint(ColorTheme.primary)
+        }
+    }
+}
+
+private struct DashboardSyncQueueObserver: View {
+    @EnvironmentObject private var cloudSyncManager: CloudSyncManager
+    let onRefresh: () -> Void
+
+    var body: some View {
+        Color.clear
+            .frame(width: 0, height: 0)
+            .task {
+                onRefresh()
+            }
+            .onChange(of: cloudSyncManager.lastSyncAt) { _, _ in
+                onRefresh()
+            }
+            .onChange(of: cloudSyncManager.isSyncing) { _, _ in
+                onRefresh()
+            }
+    }
+}
+
+private struct DashboardSyncStatusBar: View {
+    @EnvironmentObject private var cloudSyncManager: CloudSyncManager
+    let offlineQueueCount: Int
+    let onDataHealth: () -> Void
+    let onManualSync: () -> Void
+
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
+
+    var body: some View {
+        if cloudSyncManager.isSyncing || offlineQueueCount > 0 {
+            HStack(spacing: 8) {
+                if cloudSyncManager.isSyncing {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(ColorTheme.primary)
+                } else {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(ColorTheme.success)
+                        .font(.system(size: 14, weight: .semibold))
+                }
+
+                Text(syncStatusText)
+                    .font(.caption)
+                    .foregroundColor(ColorTheme.primaryText)
+
+                if offlineQueueCount > 0 {
+                    Text(String(format: "• %lld queued".localizedString, Int64(offlineQueueCount)))
+                        .font(.caption2)
+                        .foregroundColor(ColorTheme.secondaryText)
+                }
+
+                Spacer()
+
+                HStack(spacing: 14) {
+                    Button(action: onDataHealth) {
+                        Image(systemName: "stethoscope")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(offlineQueueCount > 0 ? ColorTheme.warning : ColorTheme.primary)
+                    }
+                    .buttonStyle(.plain)
+
+                    Button(action: onManualSync) {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(ColorTheme.primary)
+                            .opacity(cloudSyncManager.isSyncing ? 0.3 : 1.0)
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(cloudSyncManager.isSyncing)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .padding(.bottom, 10)
+            .background(ColorTheme.secondaryBackground)
+            .overlay(
+                Rectangle()
+                    .fill(ColorTheme.primary.opacity(0.05))
+                    .frame(height: 1),
+                alignment: .bottom
+            )
+        }
+    }
+
+    private var syncStatusText: String {
+        if cloudSyncManager.isSyncing {
+            return "syncing".localizedString
+        }
+        guard let date = cloudSyncManager.lastSyncAt else { return "never_synced".localizedString }
+        let relative = Self.relativeFormatter.localizedString(for: date, relativeTo: Date())
+        return String(format: "synced_ago".localizedString, relative)
+    }
+}
+
 // MARK: - Top Navigation
 
 private extension DashboardView {
@@ -194,11 +296,7 @@ private extension DashboardView {
             Spacer()
             
             HStack(spacing: 8) {
-                if cloudSyncManager.isSyncing {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(ColorTheme.primary)
-                }
+                DashboardSyncSpinner()
 
                 Button {
                     showingSearch = true
@@ -309,59 +407,10 @@ private extension DashboardView {
     }
 
     var syncStatusBar: some View {
-        HStack(spacing: 8) {
-            if cloudSyncManager.isSyncing {
-                ProgressView()
-                    .controlSize(.mini)
-                    .tint(ColorTheme.primary)
-            } else {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundColor(ColorTheme.success)
-                    .font(.system(size: 14, weight: .semibold))
-            }
-
-            Text(syncStatusText)
-                .font(.caption)
-                .foregroundColor(ColorTheme.primaryText)
-
-            if offlineQueueCount > 0 {
-                Text(String(format: "• %lld queued".localizedString, Int64(offlineQueueCount)))
-                    .font(.caption2)
-                    .foregroundColor(ColorTheme.secondaryText)
-            }
-
-            Spacer()
-
-            HStack(spacing: 14) {
-                Button {
-                    navPath.append(.dataHealth)
-                } label: {
-                    Image(systemName: "stethoscope")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(offlineQueueCount > 0 ? ColorTheme.warning : ColorTheme.primary)
-                }
-                .buttonStyle(.plain)
-
-                Button {
-                    Task { await runManualSync() }
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(ColorTheme.primary)
-                        .opacity(cloudSyncManager.isSyncing ? 0.3 : 1.0)
-                }
-                .buttonStyle(.plain)
-                .disabled(cloudSyncManager.isSyncing)
-            }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(ColorTheme.secondaryBackground)
-        .overlay(
-            Rectangle()
-                .fill(ColorTheme.primary.opacity(0.05))
-                .frame(height: 1),
-            alignment: .bottom
+        DashboardSyncStatusBar(
+            offlineQueueCount: offlineQueueCount,
+            onDataHealth: { navPath.append(.dataHealth) },
+            onManualSync: { Task { await runManualSync() } }
         )
     }
     
@@ -373,17 +422,6 @@ private extension DashboardView {
         case 12..<17: return "good_afternoon".localizedString
         default: return "good_evening".localizedString
         }
-    }
-
-    private var syncStatusText: String {
-        if cloudSyncManager.isSyncing {
-            return "syncing".localizedString
-        }
-        guard let date = cloudSyncManager.lastSyncAt else { return "never_synced".localizedString }
-        let formatter = RelativeDateTimeFormatter()
-        formatter.unitsStyle = .short
-        let relative = formatter.localizedString(for: date, relativeTo: Date())
-        return String(format: "synced_ago".localizedString, relative)
     }
 
     private func refreshOfflineQueueCount() async {
@@ -2115,7 +2153,7 @@ private struct DrivingCarLane: View {
     var duration: Double = 6.5
 
     @AppStorage(dashboardCarEnabledKey) private var enabled = true
-    @AppStorage("dashboard_car_moving") private var moving = true
+    @AppStorage("dashboard_car_moving") private var moving = false
     @AppStorage("dashboard_car_progress") private var pausedProgress = 0.5
 
     @State private var runStart = Date()
@@ -2149,25 +2187,13 @@ private struct DrivingCarLane: View {
         let carHeight = max(laneHeight - 2, 10)
         let carWidth = carHeight * (112.0 / 72.0)
         let baseY = (laneHeight - carHeight) / 2
-        return TimelineView(.animation) { timeline in
-            GeometryReader { geo in
-                let now = timeline.date
-                let t = now.timeIntervalSinceReferenceDate
-                let laneWidth = geo.size.width
-                let travel = laneWidth + carWidth * 2
-                let progress = moving
-                    ? (now.timeIntervalSince(runStart) / duration).truncatingRemainder(dividingBy: 1)
-                    : pausedProgress
-                let x = -carWidth + CGFloat(progress) * travel
-                let bob = moving ? CGFloat(sin(t * 7)) * 1.0 : CGFloat(sin(t * 3)) * 0.5
-                let wheelAngle = progress * 44
-
-                CartoonCar(wheelAngle: wheelAngle, moving: moving, time: t)
-                    .frame(width: carWidth, height: carHeight)
-                    .contentShape(Rectangle())
-                    .offset(x: x, y: baseY + bob)
-                    .onTapGesture { toggleMoving(at: progress) }
-                    .onLongPressGesture(minimumDuration: 0.45) { requestParking() }
+        return GeometryReader { geo in
+            if moving {
+                TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+                    carView(in: geo.size, date: timeline.date, carHeight: carHeight, carWidth: carWidth, baseY: baseY)
+                }
+            } else {
+                carView(in: geo.size, date: runStart, carHeight: carHeight, carWidth: carWidth, baseY: baseY)
             }
         }
         .frame(height: laneHeight)
@@ -2177,6 +2203,24 @@ private struct DrivingCarLane: View {
             didStart = true
             runStart = Date().addingTimeInterval(-pausedProgress * duration)
         }
+    }
+
+    private func carView(in size: CGSize, date: Date, carHeight: CGFloat, carWidth: CGFloat, baseY: CGFloat) -> some View {
+        let t = date.timeIntervalSinceReferenceDate
+        let travel = size.width + carWidth * 2
+        let progress = moving
+            ? (date.timeIntervalSince(runStart) / duration).truncatingRemainder(dividingBy: 1)
+            : pausedProgress
+        let x = -carWidth + CGFloat(progress) * travel
+        let bob = moving ? CGFloat(sin(t * 7)) * 1.0 : 0
+        let wheelAngle = moving ? progress * 44 : pausedProgress * 44
+
+        return CartoonCar(wheelAngle: wheelAngle, moving: moving, time: t)
+            .frame(width: carWidth, height: carHeight)
+            .contentShape(Rectangle())
+            .offset(x: x, y: baseY + bob)
+            .onTapGesture { toggleMoving(at: progress) }
+            .onLongPressGesture(minimumDuration: 0.45) { requestParking() }
     }
 
     private func toggleMoving(at progress: Double) {

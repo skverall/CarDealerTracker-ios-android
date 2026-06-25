@@ -13,6 +13,7 @@ import Combine
 class VehicleViewModel: ObservableObject {
     @Published var displayMode: DisplayMode = .inventory
     @Published var vehicles: [Vehicle] = []
+    @Published private var vehicleExpenseSummaries: [NSManagedObjectID: VehicleExpenseSummary] = [:]
     @Published var selectedStatus: String = "all"
     @Published var searchText: String = ""
     @Published var sortOption: SortOption = .dateDesc
@@ -63,6 +64,7 @@ class VehicleViewModel: ObservableObject {
 
     private let context: NSManagedObjectContext
     private var cancellables = Set<AnyCancellable>()
+    private var pendingRefreshWorkItem: DispatchWorkItem?
     private var vehicleFetchGeneration = 0
     private var statsFetchGeneration = 0
 
@@ -72,7 +74,6 @@ class VehicleViewModel: ObservableObject {
         fetchVehicles()
         fetchStats()
         observeContextChanges()
-        observeExpenseChanges()
         
         // Debounce search
         $searchText
@@ -203,6 +204,8 @@ class VehicleViewModel: ObservableObject {
 
         do {
             let fetchedVehicles = try context.fetch(request)
+            let expenseSummaries = fetchVehicleExpenseSummaries()
+            vehicleExpenseSummaries = expenseSummaries
             scheduleVehiclesPublish(fetchedVehicles)
         } catch {
             print("Error fetching vehicles: \(error)")
@@ -390,30 +393,15 @@ class VehicleViewModel: ObservableObject {
 
     func totalCost(for vehicle: Vehicle) -> Decimal {
         let purchasePrice = vehicle.purchasePrice?.decimalValue ?? 0
-
-        // Always fetch to avoid stale relationship caching.
-        let request: NSFetchRequest<Expense> = Expense.fetchRequest()
-        request.predicate = NSPredicate(format: "vehicle == %@ AND deletedAt == nil", vehicle)
-        
-        do {
-            let fetchedExpenses = try context.fetch(request)
-            let expensesTotal = fetchedExpenses.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
-            return purchasePrice + expensesTotal
-        } catch {
-            print("Error fetching expenses for total cost: \(error)")
-            return purchasePrice
-        }
+        return purchasePrice + expenseTotal(for: vehicle)
     }
 
     func expenseCount(for vehicle: Vehicle) -> Int {
-        let request: NSFetchRequest<Expense> = Expense.fetchRequest()
-        request.predicate = NSPredicate(format: "vehicle == %@ AND deletedAt == nil", vehicle)
-        
-        do {
-            return try context.count(for: request)
-        } catch {
-            return 0
-        }
+        vehicleExpenseSummaries[vehicle.objectID]?.count ?? 0
+    }
+
+    func expenseTotal(for vehicle: Vehicle) -> Decimal {
+        vehicleExpenseSummaries[vehicle.objectID]?.total ?? 0
     }
 
     private func observeContextChanges() {
@@ -422,30 +410,7 @@ class VehicleViewModel: ObservableObject {
             .sink { [weak self] notification in
                 guard let self, let userInfo = notification.userInfo else { return }
                 if Self.shouldRefreshVehicles(userInfo: userInfo) {
-                    self.fetchVehicles()
-                    self.fetchStats()
-                }
-            }
-            .store(in: &cancellables)
-    }
-
-    private func observeExpenseChanges() {
-        NotificationCenter.default
-            .publisher(for: .NSManagedObjectContextObjectsDidChange, object: context)
-            .compactMap(\.userInfo)
-            .filter { userInfo in
-                let keys = [NSInsertedObjectsKey, NSUpdatedObjectsKey, NSDeletedObjectsKey]
-                return keys.contains { key in
-                    guard let objects = userInfo[key] as? Set<NSManagedObject> else { return false }
-                    return objects.contains { $0 is Expense }
-                }
-            }
-            .debounce(for: .milliseconds(150), scheduler: RunLoop.main)
-            .sink { [weak self] _ in
-                // Re-render any views calling `totalCost(for:)` without forcing a full vehicle re-fetch.
-                Task { @MainActor [weak self] in
-                    await Task.yield()
-                    self?.objectWillChange.send()
+                    self.scheduleRefresh()
                 }
             }
             .store(in: &cancellables)
@@ -460,6 +425,39 @@ class VehicleViewModel: ObservableObject {
             }
         }
         return false
+    }
+
+    private func scheduleRefresh() {
+        pendingRefreshWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.fetchVehicles()
+            self?.fetchStats()
+        }
+        pendingRefreshWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: workItem)
+    }
+
+    private func fetchVehicleExpenseSummaries() -> [NSManagedObjectID: VehicleExpenseSummary] {
+        let request: NSFetchRequest<Expense> = Expense.fetchRequest()
+        request.predicate = NSPredicate(format: "deletedAt == nil AND vehicle != nil")
+
+        do {
+            let expenses = try context.fetch(request)
+            var summaries: [NSManagedObjectID: VehicleExpenseSummary] = [:]
+            summaries.reserveCapacity(expenses.count)
+            for expense in expenses {
+                guard let vehicle = expense.vehicle else { continue }
+                let current = summaries[vehicle.objectID] ?? .zero
+                summaries[vehicle.objectID] = VehicleExpenseSummary(
+                    count: current.count + 1,
+                    total: current.total + (expense.amount?.decimalValue ?? 0)
+                )
+            }
+            return summaries
+        } catch {
+            print("Error fetching vehicle expense summaries: \(error)")
+            return vehicleExpenseSummaries
+        }
     }
 
     private func scheduleVehiclesPublish(_ fetchedVehicles: [Vehicle]) {
@@ -506,6 +504,13 @@ class VehicleViewModel: ObservableObject {
         let inGarageCount: Int
         let inTransitCount: Int
         let underServiceCount: Int
+    }
+
+    private struct VehicleExpenseSummary {
+        let count: Int
+        let total: Decimal
+
+        static let zero = VehicleExpenseSummary(count: 0, total: 0)
     }
 }
 

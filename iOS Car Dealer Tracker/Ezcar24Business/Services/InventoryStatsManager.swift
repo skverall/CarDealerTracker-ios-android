@@ -25,11 +25,12 @@ class InventoryStatsManager: ObservableObject {
         var totalHolding: Decimal = 0
         
         let settings = fetchHoldingCostSettings()
+        let expensesByVehicleId = fetchExpensesGroupedByVehicle()
         
         for vehicle in vehicles {
             guard let vehicleId = vehicle.id else { continue }
             
-            let expenses = fetchExpenses(for: vehicle)
+            let expenses = expensesByVehicleId[vehicleId] ?? []
             
             let stats = InventoryMetricsCalculator.calculateInventoryStats(
                 vehicle: vehicle,
@@ -259,6 +260,25 @@ class InventoryStatsManager: ObservableObject {
         } catch {
             print("Error fetching expenses: \(error)")
             return []
+        }
+    }
+
+    private func fetchExpensesGroupedByVehicle() -> [UUID: [Expense]] {
+        let request = Expense.fetchRequest()
+        request.predicate = NSPredicate(format: "vehicle != nil AND deletedAt == nil")
+
+        do {
+            let expenses = try context.fetch(request)
+            var grouped: [UUID: [Expense]] = [:]
+            grouped.reserveCapacity(expenses.count)
+            for expense in expenses {
+                guard let vehicleId = expense.vehicle?.id else { continue }
+                grouped[vehicleId, default: []].append(expense)
+            }
+            return grouped
+        } catch {
+            print("Error fetching grouped expenses: \(error)")
+            return [:]
         }
     }
     

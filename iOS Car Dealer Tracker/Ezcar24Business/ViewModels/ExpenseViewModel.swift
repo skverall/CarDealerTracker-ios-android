@@ -76,6 +76,8 @@ class ExpenseViewModel: ObservableObject {
     @Published var sortOption: SortOption = .dateDesc
     private var cancellables = Set<AnyCancellable>()
     private var pendingSearchWorkItem: DispatchWorkItem?
+    private var pendingExpenseRefreshWorkItem: DispatchWorkItem?
+    private var pendingFilterRefreshWorkItem: DispatchWorkItem?
     private var presentationCache: ExpensePresentationCache?
 
     private let context: NSManagedObjectContext
@@ -88,6 +90,8 @@ class ExpenseViewModel: ObservableObject {
     }
 
     func fetchExpenses() {
+        pendingExpenseRefreshWorkItem?.cancel()
+        pendingExpenseRefreshWorkItem = nil
         pendingSearchWorkItem?.cancel()
         pendingSearchWorkItem = nil
 
@@ -160,6 +164,8 @@ class ExpenseViewModel: ObservableObject {
     }
 
     func fetchFilters() {
+        pendingFilterRefreshWorkItem?.cancel()
+        pendingFilterRefreshWorkItem = nil
         do {
             let vReq: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
             vReq.predicate = NSPredicate(format: "deletedAt == nil")
@@ -441,10 +447,31 @@ class ExpenseViewModel: ObservableObject {
             .sink { [weak self] notification in
                 guard let self, let info = notification.userInfo else { return }
                 if Self.shouldRefreshFilters(userInfo: info) {
-                    self.fetchFilters()
+                    self.scheduleFilterRefresh()
+                }
+                if Self.shouldRefreshExpenses(userInfo: info) {
+                    self.scheduleExpenseRefresh()
                 }
             }
             .store(in: &cancellables)
+    }
+
+    private func scheduleExpenseRefresh() {
+        pendingExpenseRefreshWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.fetchExpenses()
+        }
+        pendingExpenseRefreshWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18, execute: workItem)
+    }
+
+    private func scheduleFilterRefresh() {
+        pendingFilterRefreshWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.fetchFilters()
+        }
+        pendingFilterRefreshWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.22, execute: workItem)
     }
 
     private static func shouldRefreshFilters(userInfo: [AnyHashable: Any]) -> Bool {
@@ -453,6 +480,19 @@ class ExpenseViewModel: ObservableObject {
             guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
             if objects.contains(where: { obj in
                 obj is Vehicle || obj is User || obj is FinancialAccount
+            }) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private static func shouldRefreshExpenses(userInfo: [AnyHashable: Any]) -> Bool {
+        let keys = [NSInsertedObjectsKey, NSDeletedObjectsKey, NSUpdatedObjectsKey]
+        for key in keys {
+            guard let objects = userInfo[key] as? Set<NSManagedObject> else { continue }
+            if objects.contains(where: { obj in
+                obj is Expense || obj is Vehicle || obj is User || obj is FinancialAccount
             }) {
                 return true
             }

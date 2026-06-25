@@ -109,32 +109,16 @@ struct VehicleListView: View {
             if isPadLayout {
                 iPadVehicleContent
             } else {
-                ColorTheme.secondaryBackground.ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    displayModePicker
-                    VehicleStatusDashboard(viewModel: viewModel)
-                    searchAndFilterHeader
-                    if showAgingInventoryFocusBanner {
-                        agingInventoryFocusBanner
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
-                    }
-                    vehicleList
-                }
+                mobileVehicleContent
             }
             }
-            .navigationTitle(isPadLayout ? "" : "vehicles".localizedString)
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(isPadLayout ? .visible : .hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if permissionService.can(.viewInventory), permissionService.canViewVehicleCost() {
-                        Button(action: {
-                            if !subscriptionManager.isProAccessActive && !subscriptionManager.isCheckingStatus && viewModel.vehicles.count >= 3 {
-                                handleUpgradeRequest()
-                            } else {
-                                showingAddVehicle = true
-                            }
-                        }) {
+                    if isPadLayout, permissionService.can(.viewInventory), permissionService.canViewVehicleCost() {
+                        Button(action: handleAddVehicleTap) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 28))
                                 .foregroundColor(ColorTheme.primary)
@@ -359,6 +343,14 @@ struct VehicleListView: View {
         }
     }
 
+    private func handleAddVehicleTap() {
+        if !subscriptionManager.isProAccessActive && !subscriptionManager.isCheckingStatus && viewModel.vehicles.count >= 3 {
+            handleUpgradeRequest()
+        } else {
+            showingAddVehicle = true
+        }
+    }
+
     private func applyDefaultSellAccountIfNeeded() {
         guard sellAccount == nil, !accounts.isEmpty else { return }
         sellAccount = accounts.first(where: { $0.kind == .cash }) ?? accounts.first
@@ -458,6 +450,191 @@ private struct iPadVehicleCanvas: View {
     }
 }
 
+private struct VehiclePortfolioHeroCard: View {
+    @ObservedObject var viewModel: VehicleViewModel
+    @ObservedObject private var inventoryStats = InventoryStatsManager.shared
+    @ObservedObject private var permissionService = PermissionService.shared
+
+    private var canSeeFinancials: Bool {
+        permissionService.canViewVehicleCost()
+    }
+
+    private var inventoryValue: Decimal {
+        guard canSeeFinancials else { return 0 }
+        return inventoryStats.calculateTotalInventoryValue()
+    }
+
+    private var avgDays: Int {
+        InventoryMetricsCalculator.calculateAverageDaysInInventory(stats: Array(inventoryStats.getAllStats().values))
+    }
+
+    private var activeCount: Int {
+        viewModel.totalVehiclesCount
+    }
+
+    private var trendPoints: [CGFloat] {
+        let total = max(1, activeCount)
+        let saleRatio = CGFloat(viewModel.onSaleCount) / CGFloat(total)
+        let transitRatio = CGFloat(viewModel.inTransitCount) / CGFloat(total)
+        let agingPressure = min(0.24, CGFloat(avgDays) / 500)
+        return [
+            0.26,
+            0.38 + saleRatio * 0.08,
+            0.33 + transitRatio * 0.08,
+            0.46,
+            0.50 + agingPressure,
+            0.45,
+            0.58,
+            0.54 + saleRatio * 0.08,
+            0.74
+        ].map { min(0.88, max(0.12, $0)) }
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(canSeeFinancials ? "inventory_value".localizedString : "inventory".localizedString)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .lineLimit(1)
+
+                Text(canSeeFinancials ? inventoryValue.asCurrency() : "\(activeCount)")
+                    .font(.system(size: 29, weight: .black, design: .rounded))
+                    .foregroundColor(ColorTheme.primaryText)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.52)
+
+                HStack(spacing: 6) {
+                    Image(systemName: avgDays >= 90 ? "exclamationmark.triangle.fill" : "arrow.up.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(avgDays >= 90 ? ColorTheme.danger : ColorTheme.success)
+
+                    Text(String(format: "%lld vehicles in stock".localizedString, Int64(activeCount)))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            VStack(alignment: .trailing, spacing: 7) {
+                Text(String(format: "%d %@", avgDays, "avg_days".localizedStringFallback))
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                PortfolioSparklineChart(points: trendPoints, color: ColorTheme.secondary)
+                    .frame(width: 130, height: 52)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 94, alignment: .leading)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 9, x: 0, y: 4)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct PortfolioSparklineChart: View {
+    let points: [CGFloat]
+    let color: Color
+
+    private let markerSize: CGFloat = 8
+
+    var body: some View {
+        GeometryReader { proxy in
+            let markerRadius = markerSize / 2
+            let chartSize = CGSize(
+                width: max(0, proxy.size.width - markerSize),
+                height: max(0, proxy.size.height - markerRadius)
+            )
+            let chartOrigin = CGPoint(x: markerRadius, y: markerRadius / 2)
+            let chartRect = CGRect(origin: chartOrigin, size: chartSize)
+            let endPoint = PortfolioSparkline.endpoint(in: chartRect, points: points)
+
+            ZStack {
+                PortfolioSparklineArea(points: points)
+                    .fill(
+                        LinearGradient(
+                            colors: [color.opacity(0.18), color.opacity(0.02)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .frame(width: chartSize.width, height: chartSize.height)
+                    .position(x: chartRect.midX, y: chartRect.midY)
+
+                PortfolioSparkline(points: points)
+                    .stroke(color, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
+                    .frame(width: chartSize.width, height: chartSize.height)
+                    .position(x: chartRect.midX, y: chartRect.midY)
+
+                if let endPoint {
+                    Circle()
+                        .fill(color)
+                        .frame(width: markerSize, height: markerSize)
+                        .shadow(color: color.opacity(0.25), radius: 5, y: 2)
+                        .position(endPoint)
+                }
+            }
+        }
+    }
+}
+
+private struct PortfolioSparkline: Shape {
+    let points: [CGFloat]
+
+    static func endpoint(in rect: CGRect, points: [CGFloat]) -> CGPoint? {
+        guard let last = points.last else { return nil }
+        let yRatio = min(0.95, max(0.05, last))
+        return CGPoint(
+            x: rect.maxX,
+            y: rect.maxY - yRatio * rect.height
+        )
+    }
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        guard points.count > 1 else { return path }
+        let step = rect.width / CGFloat(points.count - 1)
+
+        for index in points.indices {
+            let x = CGFloat(index) * step
+            let y = rect.maxY - points[index] * rect.height
+            if index == 0 {
+                path.move(to: CGPoint(x: x, y: y))
+            } else {
+                path.addLine(to: CGPoint(x: x, y: y))
+            }
+        }
+
+        return path
+    }
+}
+
+private struct PortfolioSparklineArea: Shape {
+    let points: [CGFloat]
+
+    func path(in rect: CGRect) -> Path {
+        var path = PortfolioSparkline(points: points).path(in: rect)
+        guard points.count > 1 else { return path }
+
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
 struct VehicleCard: View {
     @ObservedObject private var permissionService = PermissionService.shared
     @ObservedObject private var inventoryStats = InventoryStatsManager.shared
@@ -475,11 +652,6 @@ struct VehicleCard: View {
         return stats?.holdingCostAccumulated?.decimalValue ?? 0
     }
     
-    private var dailyHoldingCost: Decimal {
-        guard daysInInventory > 0 else { return 0 }
-        return holdingCost / Decimal(daysInInventory)
-    }
-
     var body: some View {
         if UIDevice.current.userInterfaceIdiom == .pad {
             iPadBody
@@ -491,174 +663,206 @@ struct VehicleCard: View {
     private var ageAccentColor: Color {
         guard vehicle.status != "sold" else { return ColorTheme.secondary }
         switch daysInInventory {
-        case 90...: return ColorTheme.ageStale
-        case 60..<90: return ColorTheme.ageStale.opacity(0.8)
-        case 30..<60: return ColorTheme.ageAging
-        default: return ColorTheme.ageFresh
+        case 90...: return Color(red: 0.88, green: 0.27, blue: 0.32)
+        case 60..<90: return Color(red: 0.93, green: 0.46, blue: 0.20)
+        case 30..<60: return Color(red: 0.93, green: 0.62, blue: 0.14)
+        default: return Color(red: 0.17, green: 0.68, blue: 0.23)
         }
     }
 
     private var compactBody: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 12) {
-                if let id = vehicle.id {
-                    VehicleThumbnailView(vehicleID: id)
-                        .frame(width: 72, height: 72)
-                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                .stroke(Color.black.opacity(0.06), lineWidth: 0.5)
-                        )
-                        .shadow(color: Color.black.opacity(0.06), radius: 3, y: 2)
-                }
+        let canSeeCost = permissionService.canViewVehicleCost()
+        let canSeeProfit = permissionService.canViewVehicleProfit()
 
-                VStack(alignment: .leading, spacing: 5) {
-                    HStack(alignment: .top) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(vehicle.displayNameWithInventory)
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(ColorTheme.primaryText)
-                                .lineLimit(1)
+        return HStack(alignment: .top, spacing: 10) {
+            if let id = vehicle.id {
+                VehicleThumbnailView(vehicleID: id)
+                    .frame(width: 110, height: 104)
+                    .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                            .stroke(Color.black.opacity(0.06), lineWidth: 0.5)
+                    )
+                    .shadow(color: Color.black.opacity(0.07), radius: 5, y: 3)
+            }
 
-                            HStack(spacing: 6) {
-                                Text(vehicle.year.asYear())
-                                    .fontWeight(.medium)
-                                if vehicle.mileage > 0 {
-                                    Text("•")
-                                        .foregroundColor(ColorTheme.secondaryText.opacity(0.5))
-                                    Text("\(vehicle.mileage) km")
-                                }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .top, spacing: 7) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(vehicle.displayNameWithInventory)
+                            .font(.system(size: 16, weight: .black, design: .rounded))
+                            .foregroundColor(ColorTheme.primaryText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.68)
+
+                        HStack(spacing: 6) {
+                            Text(vehicle.year.asYear())
+                                .fontWeight(.bold)
+                                .foregroundColor(ColorTheme.secondary)
+
+                            if vehicle.mileage > 0 {
+                                Text("•")
+                                    .foregroundColor(ColorTheme.secondaryText.opacity(0.55))
+                                Text("\(vehicle.mileage) km")
                             }
-                            .font(.caption)
-                            .foregroundColor(ColorTheme.secondary)
                         }
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .lineLimit(1)
+                    }
 
-                        Spacer()
+                    Spacer(minLength: 0)
 
+                    VStack(alignment: .trailing, spacing: 4) {
                         if vehicle.status != "sold" && daysInInventory > 0 {
                             DaysInInventoryBadge(days: daysInInventory)
+                                .scaleEffect(0.88, anchor: .trailing)
                         }
-
                         StatusBadge(status: vehicle.status ?? "")
-                            .scaleEffect(0.9)
-                    }
-
-                    HStack(spacing: 8) {
-                        if let inventoryLabel = vehicle.inventoryOrVINLabel {
-                            Text(inventoryLabel)
-                                .font(.caption2)
-                                .monospacedDigit()
-                                .foregroundColor(ColorTheme.tertiaryText)
-                        }
-
-                        if vehicle.inventoryIDValue != nil, let vin = vehicle.vinValue {
-                            Text("VIN: \(vin)")
-                                .font(.caption2)
-                                .monospacedDigit()
-                                .foregroundColor(ColorTheme.tertiaryText)
-                        }
-
-                        if permissionService.canViewVehicleCost() {
-                            Label(String(format: "%lld exp".localizedString, Int64(viewModel.expenseCount(for: vehicle))), systemImage: "wrench.and.screwdriver.fill")
-                                .font(.caption2)
-                                .foregroundColor(ColorTheme.tertiaryText)
-                        }
-                    }
-
-                    if vehicle.status != "sold", vehicle.purchaseDate != nil {
-                        if holdingCost > 0 {}
-                    } else if let date = vehicle.purchaseDate {
-                         Text(String(format: "Added: %@".localizedString, dateFormatter.string(from: date)))
-                            .font(.caption2)
-                            .foregroundColor(ColorTheme.tertiaryText)
-                            .padding(.top, 2)
+                            .scaleEffect(0.92, anchor: .trailing)
                     }
                 }
-            }
-            .padding(14)
 
-            Divider()
-                .padding(.horizontal, 14)
-
-            let canSeeCost = permissionService.canViewVehicleCost()
-            let canSeeProfit = permissionService.canViewVehicleProfit()
-
-            if canSeeCost || canSeeProfit {
-                HStack(alignment: .firstTextBaseline) {
-                    if canSeeCost {
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("purchase_price".localizedString.uppercased())
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(ColorTheme.secondaryText)
-                                .tracking(0.5)
-
-                            Text((vehicle.purchasePrice as Decimal? ?? 0).asCurrency())
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundColor(ColorTheme.primaryText)
-                        }
+                HStack(spacing: 6) {
+                    if let inventoryLabel = vehicle.inventoryOrVINLabel {
+                        metadataPill(inventoryLabel)
                     }
 
-                    if canSeeCost && (holdingCost > 0 || daysInInventory > 0) {
-                        Spacer()
-                        VStack(alignment: .center, spacing: 1) {
-                            Text("holding_cost".localizedString.uppercased())
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(holdingCost > 0 ? ColorTheme.warning : ColorTheme.secondaryText)
-                                .tracking(0.5)
-
-                            Text(holdingCost.asCurrency())
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundColor(holdingCost > 0 ? ColorTheme.warning : ColorTheme.secondaryText)
-                        }
+                    if permissionService.canViewVehicleCost() {
+                        metadataPill(
+                            String(format: "%lld exp".localizedString, Int64(viewModel.expenseCount(for: vehicle))),
+                            icon: "wrench.and.screwdriver.fill"
+                        )
                     }
+                }
 
-                    Spacer()
+                if canSeeCost || canSeeProfit {
+                    Divider()
+                        .padding(.top, 1)
 
-                    if canSeeCost {
-                        VStack(alignment: .trailing, spacing: 1) {
-                            Text("total_cost".localizedString.uppercased())
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(ColorTheme.secondaryText)
-                                .tracking(0.5)
-
-                            let totalCost = viewModel.totalCost(for: vehicle) + holdingCost
-                            Text(totalCost.asCurrency())
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(ColorTheme.primary)
+                    HStack(spacing: 0) {
+                        if canSeeCost {
+                            compactFinancialMetric(
+                                title: "purchase_price".localizedString.uppercased(),
+                                value: (vehicle.purchasePrice as Decimal? ?? 0).asCurrency(),
+                                color: ColorTheme.primaryText,
+                                alignment: .leading,
+                                frameAlignment: .leading
+                            )
                         }
-                    }
 
-                    if canSeeProfit, let p = profitValue() {
-                        let adjustedProfit = p - holdingCost
-                        Spacer()
-                        VStack(alignment: .trailing, spacing: 1) {
-                            Text("profit".localizedString.uppercased())
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundColor(ColorTheme.secondaryText)
-                                .tracking(0.5)
+                        if canSeeCost && (holdingCost > 0 || daysInInventory > 0) {
+                            verticalDivider
+                            compactFinancialMetric(
+                                title: "holding_cost".localizedString.uppercased(),
+                                value: holdingCost.asCurrency(),
+                                color: holdingCost > 0 ? ColorTheme.warning : ColorTheme.primaryText,
+                                alignment: .center,
+                                frameAlignment: .center
+                            )
+                        }
 
-                            Text(adjustedProfit.asCurrency())
-                                .font(.system(size: 14, weight: .black))
-                                .foregroundColor(adjustedProfit >= 0 ? ColorTheme.success : ColorTheme.danger)
+                        if canSeeProfit, let p = profitValue() {
+                            verticalDivider
+                            compactFinancialMetric(
+                                title: "profit".localizedString.uppercased(),
+                                value: (p - holdingCost).asCurrency(),
+                                color: (p - holdingCost) >= 0 ? ColorTheme.success : ColorTheme.danger,
+                                alignment: .trailing,
+                                frameAlignment: .trailing
+                            )
+                        } else if canSeeCost {
+                            verticalDivider
+                            compactFinancialMetric(
+                                title: "total_cost".localizedString.uppercased(),
+                                value: (viewModel.totalCost(for: vehicle) + holdingCost).asCurrency(),
+                                color: ColorTheme.secondary,
+                                alignment: .trailing,
+                                frameAlignment: .trailing
+                            )
                         }
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 9)
-                .background(ColorTheme.secondaryBackground.opacity(0.3))
             }
         }
-        .background(ColorTheme.background)
+        .padding(10)
+        .background(ColorTheme.cardBackground)
         .overlay(alignment: .leading) {
             if vehicle.status != "sold" {
-                Rectangle()
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(ageAccentColor)
                     .frame(width: 3)
-                    .padding(.vertical, 6)
+                    .padding(.vertical, 9)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 3)
+    }
+
+    private var verticalDivider: some View {
+        Rectangle()
+            .fill(Color.black.opacity(0.08))
+            .frame(width: 1, height: 28)
+            .padding(.horizontal, 6)
+    }
+
+    private func metadataPill(_ text: String, icon: String? = nil) -> some View {
+        HStack(spacing: 4) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            Text(text)
+                .lineLimit(1)
+        }
+        .font(.system(size: 10, weight: .medium))
+        .foregroundColor(ColorTheme.secondaryText)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(ColorTheme.background)
+        .clipShape(Capsule())
+    }
+
+    private func compactFinancialMetric(title: String, value: String, color: Color, alignment: HorizontalAlignment, frameAlignment: Alignment) -> some View {
+        VStack(alignment: alignment, spacing: 3) {
+            Text(title)
+                .font(.system(size: 7, weight: .bold))
+                .foregroundColor(ColorTheme.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.58)
+
+            Text(value)
+                .font(.system(size: 11, weight: .black, design: .rounded))
+                .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.54)
+        }
+        .frame(maxWidth: .infinity, alignment: frameAlignment)
+    }
+
+    private func financialColumn(
+        title: String,
+        value: String,
+        color: Color,
+        weight: Font.Weight,
+        alignment: HorizontalAlignment
+    ) -> some View {
+        VStack(alignment: alignment, spacing: 2) {
+            Text(title)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundColor(ColorTheme.secondaryText)
+                .tracking(0.5)
+
+            Text(value)
+                .font(.system(size: 15, weight: weight))
+                .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
     }
 
     private var iPadBody: some View {
@@ -866,24 +1070,21 @@ struct VehicleThumbnailView: View {
 
     var body: some View {
         ZStack {
-            Rectangle()
-                .fill(Color.gray.opacity(0.1))
-                .frame(width: 80, height: 60)
-                .cornerRadius(10)
+            RoundedRectangle(cornerRadius: 17, style: .continuous)
+                .fill(ColorTheme.background)
 
             if let image {
                 image
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 80, height: 60)
                     .clipped()
-                    .cornerRadius(10)
             } else {
                 Image(systemName: "car.fill")
-                    .font(.system(size: 24))
+                    .font(.system(size: 30, weight: .semibold))
                     .foregroundColor(ColorTheme.secondaryText.opacity(0.5))
             }
         }
+        .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
         .onAppear {
             loadImage()
         }
@@ -958,12 +1159,12 @@ struct StatusBadge: View {
     
     var statusColor: Color {
         switch status {
-        case "reserved": return Color.blue
-        case "on_sale", "available": return Color.green
-        case "sold": return Color.green
-        case "in_transit": return Color.purple
-        case "under_service": return Color.red
-        default: return Color.gray
+        case "reserved": return Color(red: 0.55, green: 0.36, blue: 0.92)
+        case "on_sale", "available": return Color(red: 0.18, green: 0.32, blue: 0.99)
+        case "sold": return Color(red: 0.13, green: 0.62, blue: 0.30)
+        case "in_transit": return Color(red: 0.93, green: 0.62, blue: 0.14)
+        case "under_service": return Color(red: 0.88, green: 0.27, blue: 0.32)
+        default: return Color(red: 0.45, green: 0.47, blue: 0.56)
         }
     }
 
@@ -971,14 +1172,10 @@ struct StatusBadge: View {
         Text(statusText)
             .font(.system(size: 10, weight: .bold))
             .foregroundColor(statusColor)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 9)
             .padding(.vertical, 4)
-            .background(statusColor.opacity(0.15))
-            .cornerRadius(8)
-            .overlay(
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(statusColor.opacity(0.3), lineWidth: 1)
-            )
+            .background(statusColor.opacity(0.12))
+            .clipShape(Capsule())
     }
 }
 
@@ -1012,6 +1209,121 @@ struct FilterChip: View {
 }
 
 extension VehicleListView {
+    private var mobileVehicleContent: some View {
+        ZStack {
+            ColorTheme.background.ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 10) {
+                    mobileHeader
+                        .padding(.horizontal, 14)
+
+                    VehiclePortfolioHeroCard(viewModel: viewModel)
+                        .padding(.horizontal, 14)
+
+                    displayModePicker
+                        .padding(.horizontal, 14)
+
+                    VehicleStatusDashboard(viewModel: viewModel)
+                        .padding(.horizontal, 14)
+
+                    searchAndFilterHeader
+                        .padding(.horizontal, 14)
+
+                    if showAgingInventoryFocusBanner {
+                        agingInventoryFocusBanner
+                            .padding(.horizontal, 14)
+                    }
+
+                    vehicleList
+                        .padding(.horizontal, 14)
+                        .padding(.top, 2)
+                }
+                .padding(.top, 4)
+                .padding(.bottom, listBottomPadding + 14)
+            }
+            .refreshable {
+                if case .signedIn(let user) = sessionStore.status {
+                    await cloudSyncManager.manualSync(user: user, force: true)
+                    viewModel.fetchVehicles()
+                }
+            }
+        }
+    }
+
+    private var mobileHeader: some View {
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("vehicles".localizedString)
+                    .font(.system(size: 32, weight: .black, design: .rounded))
+                    .foregroundColor(ColorTheme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                Text(String(format: "%lld vehicles in stock".localizedString, Int64(viewModel.totalVehiclesCount)))
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.78)
+            }
+
+            Spacer(minLength: 12)
+
+            if permissionService.can(.viewInventory), permissionService.canViewVehicleCost() {
+                Button(action: handleAddVehicleTap) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 21, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(width: 46, height: 46)
+                        .background(
+                            LinearGradient(
+                                colors: [ColorTheme.secondary, ColorTheme.primary],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .clipShape(Circle())
+                        .shadow(color: ColorTheme.primary.opacity(0.24), radius: 9, x: 0, y: 5)
+                }
+                .buttonStyle(.hapticScale)
+                .accessibilityLabel("add_vehicle".localizedString)
+            }
+        }
+    }
+
+    private var displayModePicker: some View {
+        HStack(spacing: 0) {
+            ForEach(VehicleViewModel.DisplayMode.allCases) { mode in
+                Button {
+                    viewModel.displayMode = mode
+                } label: {
+                    Text(mode.title)
+                        .font(.system(size: 14, weight: viewModel.displayMode == mode ? .bold : .medium))
+                        .foregroundColor(viewModel.displayMode == mode ? ColorTheme.secondary : ColorTheme.secondaryText)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(
+                            Group {
+                                if viewModel.displayMode == mode {
+                                    Capsule()
+                                        .fill(ColorTheme.cardBackground)
+                                        .shadow(color: Color.black.opacity(0.06), radius: 7, x: 0, y: 3)
+                                }
+                            }
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(3)
+        .background(ColorTheme.secondaryBackground.opacity(0.76))
+        .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
+    }
+
     private var iPadVehicleContent: some View {
         ZStack {
             iPadVehicleCanvas()
@@ -1035,9 +1347,8 @@ extension VehicleListView {
                             columns: [GridItem(.adaptive(minimum: 460), spacing: 14)],
                             spacing: 14
                         ) {
-                            ForEach(Array(viewModel.vehicles.enumerated()), id: \.element.id) { index, vehicle in
+                            ForEach(viewModel.vehicles, id: \.objectID) { vehicle in
                                 iPadVehicleRow(vehicle)
-                                    .staggeredAppear(index: index)
                             }
                         }
                     }
@@ -1473,36 +1784,26 @@ extension VehicleListView {
         .buttonStyle(.hapticScale)
     }
 
-    private var displayModePicker: some View {
-        Picker("Display Mode".localizedString, selection: $viewModel.displayMode) {
-            ForEach(VehicleViewModel.DisplayMode.allCases) { mode in
-                Text(mode.title).tag(mode)
-            }
-        }
-        .pickerStyle(.segmented)
-        .padding(.horizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
-    }
-
     private var searchAndFilterHeader: some View {
-        HStack(spacing: 12) {
-            // Search Bar
-            HStack {
+        HStack(spacing: 8) {
+            HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .foregroundColor(.gray)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(ColorTheme.secondaryText)
+
                 TextField("search_vehicle_placeholder".localizedString, text: $viewModel.searchText)
                     .textFieldStyle(.plain)
+                    .font(.system(size: 14, weight: .medium))
             }
-            .padding(10)
-            .background(ColorTheme.background)
-            .cornerRadius(10)
+            .padding(.horizontal, 13)
+            .frame(height: 42)
+            .background(ColorTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
             )
-            
-            // Sort Menu
+
             Menu {
                 Picker("Sort By".localizedString, selection: $viewModel.sortOption) {
                     ForEach(VehicleViewModel.SortOption.allCases) { option in
@@ -1510,19 +1811,10 @@ extension VehicleListView {
                     }
                 }
             } label: {
-                Image(systemName: "arrow.up.arrow.down")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(ColorTheme.primary)
-                    .padding(10)
-                    .background(ColorTheme.background)
-                    .cornerRadius(10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                    )
+                toolbarChip(icon: "arrow.up.arrow.down", title: "Sort".localizedString, color: ColorTheme.secondary)
+                    .frame(width: 76)
             }
-            
-            // Filter Menu (Only visible in Inventory mode)
+
             if viewModel.displayMode == .inventory {
                 Menu {
                     Picker("Filter By".localizedString, selection: $viewModel.selectedStatus) {
@@ -1534,129 +1826,85 @@ extension VehicleListView {
                         Text("under_service".localizedString).tag("under_service")
                     }
                 } label: {
-                    Image(systemName: viewModel.selectedStatus == "all" ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(viewModel.selectedStatus == "all" ? ColorTheme.primary : .blue)
-                        .padding(10)
-                        .background(ColorTheme.background)
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(viewModel.selectedStatus == "all" ? Color.gray.opacity(0.2) : Color.blue.opacity(0.5), lineWidth: 1)
-                        )
+                    toolbarChip(
+                        icon: "slider.horizontal.3",
+                        title: "filters".localizedString,
+                        color: viewModel.selectedStatus == "all" ? ColorTheme.primary : ColorTheme.secondary,
+                        badge: viewModel.selectedStatus == "all" ? nil : "1"
+                    )
+                    .frame(width: viewModel.selectedStatus == "all" ? 92 : 104)
                 }
-                
-                // Burning Inventory Quick Filter
-                Menu {
-                    Button(action: {
-                        viewModel.sortOption = .daysDesc
-                        viewModel.selectedStatus = "all"
-                        viewModel.fetchVehicles()
-                    }) {
-                        Label("all_vehicles".localizedString, systemImage: "car.fill")
-                    }
-                    
-                    Button(action: {
-                        viewModel.sortOption = .daysDesc
-                        viewModel.selectedStatus = "all"
-                        viewModel.fetchVehicles()
-                    }) {
-                        Label("burning_inventory".localizedString, systemImage: "flame.fill")
-                    }
+
+                Button {
+                    viewModel.sortOption = .daysDesc
+                    viewModel.selectedStatus = "all"
+                    viewModel.fetchVehicles()
                 } label: {
-                    Image(systemName: "flame")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(ColorTheme.warning)
-                        .padding(10)
-                        .background(ColorTheme.background)
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
-                        )
+                    toolbarIcon(icon: "flame.fill", color: ColorTheme.accent)
                 }
+                .buttonStyle(.hapticScale)
             }
         }
-        .padding(.horizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 12)
+    }
+
+    private func toolbarChip(icon: String, title: String, color: Color, badge: String? = nil) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.68)
+
+            if let badge {
+                Text(badge)
+                    .font(.caption2.weight(.bold))
+                    .foregroundColor(.white)
+                    .frame(width: 19, height: 19)
+                    .background(ColorTheme.secondary)
+                    .clipShape(Circle())
+            }
+        }
+        .foregroundColor(color)
+        .padding(.horizontal, 9)
+        .frame(height: 42)
+        .background(ColorTheme.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+        )
+    }
+
+    private func toolbarIcon(icon: String, color: Color) -> some View {
+        Image(systemName: icon)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(color)
+            .frame(width: 42, height: 42)
+            .background(ColorTheme.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .stroke(Color.black.opacity(0.05), lineWidth: 1)
+            )
     }
 
     @ViewBuilder
     private var vehicleList: some View {
         if viewModel.vehicles.isEmpty {
-            ScrollView {
-                emptyStateView
-                    .frame(minHeight: UIScreen.main.bounds.height - 200) // Ensure it fills screen to be scrollable
-            }
-            .refreshable {
-                if case .signedIn(let user) = sessionStore.status {
-                    await cloudSyncManager.manualSync(user: user, force: true)
-                    viewModel.fetchVehicles()
-                }
-            }
+            emptyStateView
+                .frame(minHeight: 320)
         } else {
-            List {
-                ForEach(Array(viewModel.vehicles.enumerated()), id: \.element.id) { index, vehicle in
-                    ZStack {
+            LazyVStack(spacing: 10) {
+                ForEach(viewModel.vehicles, id: \.objectID) { vehicle in
+                    NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
                         VehicleCard(vehicle: vehicle, viewModel: viewModel)
-                        NavigationLink(destination: VehicleDetailView(vehicle: vehicle)) {
-                            EmptyView()
-                        }
-                        .opacity(0)
-                        .buttonStyle(PlainButtonStyle()) // Important to keep interaction working correctly
                     }
-                    .staggeredAppear(index: index)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .buttonStyle(.plain)
                     .contextMenu {
-                        if permissionService.can(.viewInventory) {
-                            Button { editingVehicle = vehicle } label: { Label("edit".localizedString, systemImage: "pencil") }
-                            Button { viewModel.duplicateVehicle(vehicle) } label: { Label("duplicate".localizedString, systemImage: "doc.on.doc") }
-                            if canDeleteRecords {
-                                Divider()
-                                Button(role: .destructive) { vehicleToDelete = vehicle; showDeleteAlert = true } label: { Label("delete".localizedString, systemImage: "trash") }
-                            }
-                        }
+                        vehicleContextMenu(for: vehicle)
                     }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        if permissionService.can(.viewInventory) {
-                            if canDeleteRecords {
-                                Button(role: .destructive) {
-                                    vehicleToDelete = vehicle; showDeleteAlert = true
-                                } label: { Label("delete".localizedString, systemImage: "trash") }
-                            }
-                            
-                            Button { editingVehicle = vehicle } label: { Label("edit".localizedString, systemImage: "pencil") }
-                                .tint(ColorTheme.primary)
-                        }
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                        if vehicle.status != "sold", permissionService.can(.createSale) {
-                            Button {
-                                sellingVehicle = vehicle
-                                sellPriceText = ""
-                                sellDate = Date()
-                                buyerName = ""
-                                buyerPhone = ""
-                                paymentMethod = "Cash"
-                                sellAccount = nil
-                            } label: {
-                                Label("sold".localizedString, systemImage: "checkmark.circle")
-                            }
-                            .tint(.green)
-                        }
-                    }
-                }
-            }
-            .listStyle(.plain)
-            .padding(.bottom, listBottomPadding)
-            .scrollContentBackground(.hidden)
-            .refreshable {
-                if case .signedIn(let user) = sessionStore.status {
-                    await cloudSyncManager.manualSync(user: user, force: true)
-                    viewModel.fetchVehicles()
                 }
             }
         }
@@ -1665,82 +1913,79 @@ extension VehicleListView {
 
 struct VehicleStatusDashboard: View {
     @ObservedObject var viewModel: VehicleViewModel
-    
+
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 5) {
-                // Total -> Inventory Mode, All Status
-                Button {
+        HStack(spacing: 8) {
+            if viewModel.displayMode == .sold {
+                statusButton(
+                    title: "sold".localizedString,
+                    count: viewModel.soldCount,
+                    color: ColorTheme.success,
+                    icon: "checkmark.seal.fill",
+                    isActive: true
+                ) {
+                    viewModel.displayMode = .sold
+                }
+            } else {
+                statusButton(
+                    title: "total".localizedString,
+                    count: viewModel.totalVehiclesCount,
+                    color: ColorTheme.secondary,
+                    icon: "car.2.fill",
+                    isActive: viewModel.selectedStatus == "all"
+                ) {
                     viewModel.displayMode = .inventory
                     viewModel.selectedStatus = "all"
-                } label: {
-                    StatCard(
-                        title: "total".localizedString,
-                        count: viewModel.totalVehiclesCount,
-                        color: ColorTheme.primary,
-                        icon: "car.2.fill",
-                        isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "all"
-                    )
-                }
-                
-                // On Sale -> Inventory Mode, On Sale Status
-                Button {
-                    viewModel.displayMode = .inventory
-                    viewModel.selectedStatus = "on_sale"
-                } label: {
-                    StatCard(
-                        title: "on_sale".localizedString,
-                        count: viewModel.onSaleCount,
-                        color: .green,
-                        icon: "tag.fill",
-                        isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "on_sale"
-                    )
-                }
-
-                // In Garage -> Inventory Mode, Reserved Status
-                Button {
-                    viewModel.displayMode = .inventory
-                    viewModel.selectedStatus = "reserved"
-                } label: {
-                    StatCard(
-                        title: "reserved".localizedString,
-                        count: viewModel.inGarageCount,
-                        color: .orange,
-                        icon: "house.fill",
-                        isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "reserved"
-                    )
-                }
-                
-                // In Transit
-                Button {
-                    viewModel.displayMode = .inventory
-                    viewModel.selectedStatus = "in_transit"
-                } label: {
-                    StatCard(
-                        title: "in_transit".localizedString,
-                        count: viewModel.inTransitCount,
-                        color: .purple,
-                        icon: "airplane",
-                        isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "in_transit"
-                    )
-                }
-
-                // Sold -> Sold Mode
-                Button {
-                    viewModel.displayMode = .sold
-                } label: {
-                    StatCard(
-                        title: "sold".localizedString,
-                        count: viewModel.soldCount,
-                        color: .blue,
-                        icon: "checkmark.circle.fill",
-                        isActive: viewModel.displayMode == .sold
-                    )
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
+
+            statusButton(
+                title: "on_sale".localizedString,
+                count: viewModel.onSaleCount,
+                color: ColorTheme.success,
+                icon: "tag.fill",
+                isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "on_sale"
+            ) {
+                viewModel.displayMode = .inventory
+                viewModel.selectedStatus = "on_sale"
+            }
+
+            statusButton(
+                title: "reserved".localizedString,
+                count: viewModel.inGarageCount,
+                color: ColorTheme.accent,
+                icon: "lock.fill",
+                isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "reserved"
+            ) {
+                viewModel.displayMode = .inventory
+                viewModel.selectedStatus = "reserved"
+            }
+
+            statusButton(
+                title: "in_transit".localizedString,
+                count: viewModel.inTransitCount,
+                color: ColorTheme.purple,
+                icon: "box.truck.fill",
+                isActive: viewModel.displayMode == .inventory && viewModel.selectedStatus == "in_transit"
+            ) {
+                viewModel.displayMode = .inventory
+                viewModel.selectedStatus = "in_transit"
+            }
         }
+    }
+
+    private func statusButton(
+        title: String,
+        count: Int,
+        color: Color,
+        icon: String,
+        isActive: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            StatCard(title: title, count: count, color: color, icon: icon, isActive: isActive)
+        }
+        .buttonStyle(.hapticScale)
     }
 }
 
@@ -1750,37 +1995,50 @@ struct StatCard: View {
     let color: Color
     let icon: String
     var isActive: Bool = false
-    
+
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 7) {
             Image(systemName: icon)
-                .font(.caption2)
+                .font(.system(size: 15, weight: .bold))
                 .foregroundColor(isActive ? .white : color)
-                .frame(width: 24, height: 24)
-                .background(isActive ? .white.opacity(0.2) : color.opacity(0.1))
-                .clipShape(Circle())
-            
+                .frame(width: 30, height: 30)
+                .background(isActive ? Color.white.opacity(0.24) : color.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)
-                    .font(.caption2)
+                    .font(.system(size: 10, weight: .medium))
                     .foregroundColor(isActive ? .white.opacity(0.9) : ColorTheme.secondaryText)
-                    .fixedSize()
-                
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.55)
+
                 Text("\(count)")
-                    .font(.subheadline)
-                    .fontWeight(.bold)
+                    .font(.system(size: 19, weight: .black, design: .rounded))
                     .foregroundColor(isActive ? .white : ColorTheme.primaryText)
+                    .monospacedDigit()
+                    .lineLimit(1)
             }
-            .padding(.trailing, 4)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 6)
-        .background(isActive ? color : ColorTheme.background)
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(isActive ? Color.clear : Color.gray.opacity(0.1), lineWidth: 1)
+        .padding(8)
+        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+        .background(
+            Group {
+                if isActive {
+                    LinearGradient(
+                        colors: [color, ColorTheme.secondary],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                } else {
+                    ColorTheme.cardBackground
+                }
+            }
         )
-        .shadow(color: isActive ? color.opacity(0.3) : Color.black.opacity(0.03), radius: 3, x: 0, y: 1)
+        .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .stroke(isActive ? color.opacity(0.15) : Color.black.opacity(0.05), lineWidth: 1)
+        )
+        .shadow(color: isActive ? color.opacity(0.16) : Color.black.opacity(0.03), radius: 6, x: 0, y: 3)
     }
 }
