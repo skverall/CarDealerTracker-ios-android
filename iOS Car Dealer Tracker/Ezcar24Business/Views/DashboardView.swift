@@ -41,15 +41,20 @@ struct DashboardView: View {
     @Environment(\.managedObjectContext) private var viewContext
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var sessionStore: SessionStore
+    @EnvironmentObject private var appSessionState: AppSessionState
     @EnvironmentObject private var cloudSyncManager: CloudSyncManager
     @EnvironmentObject private var regionSettings: RegionSettingsManager
     @StateObject private var viewModel: DashboardViewModel
     @StateObject private var expenseEntryViewModel: ExpenseViewModel
+    @StateObject private var vehicleEntryViewModel: VehicleViewModel
     @StateObject private var subscriptionManager = SubscriptionManager.shared
     @ObservedObject private var permissionService = PermissionService.shared
 
     @State private var selectedRange: DashboardTimeRange = .week
     @State private var showingAddExpense: Bool = false
+    @State private var showingAddVehicle: Bool = false
+    @State private var showingVehicleLimitPaywall: Bool = false
+    @State private var paywallVehicleCount: Int = 0
     @State private var showingSearch: Bool = false
     @State private var selectedExpense: Expense? = nil
     @State private var editingExpense: Expense? = nil
@@ -64,10 +69,40 @@ struct DashboardView: View {
         return true
     }
 
+    private var isSignedIn: Bool {
+        if case .signedIn = sessionStore.status {
+            return true
+        }
+        return false
+    }
+
     init() {
         let context = PersistenceController.shared.container.viewContext
         _viewModel = StateObject(wrappedValue: DashboardViewModel(context: context, initialRange: .week))
         _expenseEntryViewModel = StateObject(wrappedValue: ExpenseViewModel(context: context))
+        _vehicleEntryViewModel = StateObject(wrappedValue: VehicleViewModel(context: context))
+    }
+
+    private func handleAddVehicleTap() {
+        vehicleEntryViewModel.fetchVehicles()
+
+        if !subscriptionManager.isProAccessActive &&
+            !subscriptionManager.isCheckingStatus &&
+            vehicleEntryViewModel.vehicles.count >= 3 {
+            handleVehicleLimitGate()
+        } else {
+            showingAddVehicle = true
+        }
+    }
+
+    private func handleVehicleLimitGate() {
+        if isSignedIn {
+            paywallVehicleCount = vehicleEntryViewModel.vehicles.count
+            PaywallAnalytics.logVehicleLimitGate(vehicleCount: vehicleEntryViewModel.vehicles.count, freeLimit: 3, entryPoint: "dashboard_quick_add")
+            showingVehicleLimitPaywall = true
+        } else {
+            appSessionState.exitGuestModeForLogin()
+        }
     }
 
     var body: some View {
@@ -98,6 +133,13 @@ struct DashboardView: View {
         .adaptiveFormPresentation(isPresented: $showingAddExpense) {
             AddExpenseView(viewModel: expenseEntryViewModel)
                 .environment(\.managedObjectContext, viewContext)
+        }
+        .adaptiveFormPresentation(isPresented: $showingAddVehicle) {
+            AddVehicleView(viewModel: vehicleEntryViewModel)
+                .environment(\.managedObjectContext, viewContext)
+        }
+        .sheet(isPresented: $showingVehicleLimitPaywall) {
+            PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: 3)
         }
         .sheet(item: $selectedExpense) { expense in
             ExpenseDetailSheet(expense: expense)
@@ -333,11 +375,9 @@ private extension DashboardView {
                         }
                     }
                     
-                    if permissionService.can(.viewInventory) {
-                        Button {
-                            navPath.append(.assets)
-                        } label: {
-                            Label("view_vehicles".localizedString, systemImage: "car")
+                    if permissionService.can(.viewInventory), permissionService.canViewVehicleCost() {
+                        Button(action: handleAddVehicleTap) {
+                            Label("add_vehicle".localizedString, systemImage: "car.badge.plus")
                         }
                     }
                 } label: {

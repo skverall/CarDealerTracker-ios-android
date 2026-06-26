@@ -114,7 +114,7 @@ struct VehicleListView: View {
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(isPadLayout ? .visible : .hidden, for: .navigationBar)
+            .toolbar(isPadLayout || !showNavigation ? .visible : .hidden, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if isPadLayout, permissionService.can(.viewInventory), permissionService.canViewVehicleCost() {
