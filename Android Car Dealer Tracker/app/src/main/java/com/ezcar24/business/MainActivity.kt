@@ -22,6 +22,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.lifecycle.lifecycleScope
+import com.ezcar24.business.analytics.OnboardingAnalytics
 import com.ezcar24.business.data.repository.AuthRepository
 import com.ezcar24.business.data.repository.AuthDeepLinkResult
 import com.ezcar24.business.data.version.PlayStoreVersionChecker
@@ -77,13 +78,23 @@ class MainActivity : ComponentActivity() {
                     versionChecker.checkForUpdate()
                 }
 
+                LaunchedEffect(regionState) {
+                    OnboardingAnalytics.updateRegionState(regionState)
+                }
+
                 // Show force update screen if update is required
                 if (isUpdateRequired) {
                     ForceUpdateScreen(versionChecker = versionChecker)
                 } else if (!regionState.hasSelectedRegion) {
+                    LaunchedEffect(Unit) {
+                        OnboardingAnalytics.trackStarted("region_selection")
+                    }
                     RegionSelectionScreen(
                         initialRegion = regionState.selectedRegion,
-                        onContinue = regionSettingsManager::updateRegion
+                        onContinue = { region ->
+                            OnboardingAnalytics.trackRegionSelected(region)
+                            regionSettingsManager.updateRegion(region)
+                        }
                     )
                 } else {
                     Surface(

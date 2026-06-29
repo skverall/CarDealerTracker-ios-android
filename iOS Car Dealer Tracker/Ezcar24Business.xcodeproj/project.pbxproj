@@ -75,6 +75,8 @@
 		E2A08AAF2F10532C0071352E /* RemoteConfigService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */; };
 		E2A08AB12F1056F00071352E /* PermissionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AB02F1056F00071352E /* PermissionService.swift */; };
 		E2A08AB32F105B580071352E /* TeamManagementView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2A08AB22F105B580071352E /* TeamManagementView.swift */; };
+		E2AA10012F4A000000000001 /* OnboardingAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2AA10002F4A000000000001 /* OnboardingAnalytics.swift */; };
+		E2AA10022F4A000000000001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = E2AA10042F4A000000000001 /* PostHog */; };
 		E2C37EE62F06A39E00EA13C1 /* AppReviewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */; };
 		E2C37EE82F06A77C00EA13C1 /* VehicleSelectionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */; };
 		E2DC15452F1A1AB500068680 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */; };
@@ -211,6 +213,7 @@
 		E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteConfigService.swift; sourceTree = "<group>"; };
 		E2A08AB02F1056F00071352E /* PermissionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermissionService.swift; sourceTree = "<group>"; };
 		E2A08AB22F105B580071352E /* TeamManagementView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeamManagementView.swift; sourceTree = "<group>"; };
+		E2AA10002F4A000000000001 /* OnboardingAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingAnalytics.swift; sourceTree = "<group>"; };
 		E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReviewManager.swift; sourceTree = "<group>"; };
 		E2C37EE72F06A77C00EA13C1 /* VehicleSelectionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VehicleSelectionSheet.swift; sourceTree = "<group>"; };
 		E2DC15442F1A1AB500068680 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -277,6 +280,7 @@
 				B2000106 /* Supabase in Frameworks */,
 				10FA8DD82ECF6BE000ECC6F9 /* RevenueCat in Frameworks */,
 				F1REBA5E0000000000000003 /* FirebaseAnalytics in Frameworks */,
+				E2AA10022F4A000000000001 /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -479,6 +483,7 @@
 				E2A08AB02F1056F00071352E /* PermissionService.swift */,
 				E2A08AAE2F10532C0071352E /* RemoteConfigService.swift */,
 				E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */,
+				E2AA10002F4A000000000001 /* OnboardingAnalytics.swift */,
 				10FA8DE22ECF800000ECC6F9 /* RevenueCatKeyProvider.swift */,
 				10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */,
 				D0000004 /* InventoryStatsManager.swift */,
@@ -569,6 +574,7 @@
 				10FA8DD72ECF6BE000ECC6F9 /* RevenueCat */,
 				10FA8DD92ECF6BE000ECC6F9 /* RevenueCatUI */,
 				F1REBA5E0000000000000002 /* FirebaseAnalytics */,
+				E2AA10042F4A000000000001 /* PostHog */,
 			);
 			productName = Ezcar24Business;
 			productReference = A0FFFFFF /* Ezcar24Business.app */;
@@ -631,6 +637,7 @@
 				B20001FF /* XCRemoteSwiftPackageReference "supabase-swift" */,
 				10FA8DD42ECF6BE000ECC6F9 /* XCRemoteSwiftPackageReference "purchases-ios" */,
 				F1REBA5E0000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				E2AA10032F4A000000000001 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			productRefGroup = A0FFFFFD /* Products */;
 			projectDirPath = "";
@@ -736,6 +743,7 @@
 				F2000105 /* AddDebtView.swift in Sources */,
 				F2000106 /* AddDebtPaymentView.swift in Sources */,
 				E2A08AAF2F10532C0071352E /* RemoteConfigService.swift in Sources */,
+				E2AA10012F4A000000000001 /* OnboardingAnalytics.swift in Sources */,
 				F3000101 /* AccountTransaction+Extensions.swift in Sources */,
 				F3000102 /* AccountTransactionsViewModel.swift in Sources */,
 				F3000103 /* AddAccountTransactionView.swift in Sources */,
@@ -1096,6 +1104,14 @@
 				minimumVersion = 12.0.0;
 			};
 		};
+		E2AA10032F4A000000000001 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.62.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1118,6 +1134,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = F1REBA5E0000000000000001 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseAnalytics;
+		};
+		E2AA10042F4A000000000001 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = E2AA10032F4A000000000001 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
 		};
 /* End XCSwiftPackageProductDependency section */
 

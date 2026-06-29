@@ -14,6 +14,7 @@ struct LoginView: View {
     @State private var showPassword = false
     @State private var showingOptionalCodes = false
     @State private var appleSignInNonce: String?
+    @State private var didTrackAuthScreen = false
     @FocusState private var focusedField: Field?
 
     init(isGuest: Binding<Bool> = .constant(false)) {
@@ -77,6 +78,14 @@ struct LoginView: View {
                 .scrollDismissesKeyboard(.interactively)
             }
             .navigationBarHidden(true)
+            .onAppear {
+                guard !didTrackAuthScreen else { return }
+                didTrackAuthScreen = true
+                OnboardingAnalytics.capture(
+                    .authScreenViewed,
+                    properties: ["auth_mode": appSessionState.mode.analyticsName]
+                )
+            }
             .onReceive(sessionStore.$pendingReferralCode) { code in
                 guard appSessionState.mode == .signUp else { return }
                 if let code, !code.isEmpty, appSessionState.referralCode.isEmpty {
@@ -91,6 +100,7 @@ struct LoginView: View {
             }
             .onChange(of: appSessionState.mode) { _, newMode in
                 sessionStore.resetError()
+                OnboardingAnalytics.capture(.authModeChanged, properties: ["auth_mode": newMode.analyticsName])
                 syncOptionalCodeVisibility(forceOpen: newMode == .signUp && hasOptionalCodes)
             }
             .sheet(isPresented: $showingPaywall) {
@@ -480,6 +490,10 @@ struct LoginView: View {
     }
 
     private func handlePasswordReset() {
+        OnboardingAnalytics.capture(
+            .passwordResetRequested,
+            properties: ["has_email": !appSessionState.email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty]
+        )
         if appSessionState.email.isEmpty {
             sessionStore.errorMessage = "auth_reset_email_required".localizedString
         } else {
@@ -494,19 +508,24 @@ struct LoginView: View {
     }
 
     private func handleGoogleSignIn() {
+        let properties = socialAuthProperties(method: "google")
+        OnboardingAnalytics.capture(.authSubmitted, properties: properties)
         prepareSocialAuthContext()
         sessionStore.resetError()
         Task {
             do {
                 try await sessionStore.signInWithGoogle()
                 appSessionState.isGuestMode = false
+                trackSocialAuthCompleted(properties: properties)
                 clearSocialSensitiveFields()
             } catch {
+                OnboardingAnalytics.capture(.authFailed, properties: properties)
             }
         }
     }
 
     private func configureAppleSignIn(_ request: ASAuthorizationAppleIDRequest) {
+        OnboardingAnalytics.capture(.authSubmitted, properties: socialAuthProperties(method: "apple"))
         prepareSocialAuthContext()
         let nonce = Self.randomNonceString()
         appleSignInNonce = nonce
@@ -515,6 +534,7 @@ struct LoginView: View {
     }
 
     private func handleAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+        let properties = socialAuthProperties(method: "apple")
         switch result {
         case .success(let authorization):
             guard
@@ -524,6 +544,7 @@ struct LoginView: View {
                 let idToken = String(data: tokenData, encoding: .utf8)
             else {
                 sessionStore.errorMessage = "social_sign_in_failed".localizedString
+                OnboardingAnalytics.capture(.authFailed, properties: properties)
                 return
             }
 
@@ -531,8 +552,10 @@ struct LoginView: View {
                 do {
                     try await sessionStore.signInWithApple(idToken: idToken, nonce: nonce, fullName: credential.fullName)
                     appSessionState.isGuestMode = false
+                    trackSocialAuthCompleted(properties: properties)
                     clearSocialSensitiveFields()
                 } catch {
+                    OnboardingAnalytics.capture(.authFailed, properties: properties)
                 }
             }
         case .failure(let error):
@@ -540,6 +563,7 @@ struct LoginView: View {
                 sessionStore.resetError()
             } else {
                 sessionStore.errorMessage = "social_sign_in_failed".localizedString
+                OnboardingAnalytics.capture(.authFailed, properties: properties)
             }
         }
     }
@@ -576,6 +600,22 @@ struct LoginView: View {
         Task {
             await appSessionState.authenticate()
         }
+    }
+
+    private func socialAuthProperties(method: String) -> [String: Any] {
+        [
+            "auth_mode": appSessionState.mode.analyticsName,
+            "auth_method": method,
+            "has_referral_code": !trimmedReferralCode.isEmpty,
+            "has_team_invite_code": !trimmedTeamInviteCode.isEmpty
+        ]
+    }
+
+    private func trackSocialAuthCompleted(properties: [String: Any]) {
+        if case .signedIn(let user) = sessionStore.status {
+            OnboardingAnalytics.identifyUser(user.id)
+        }
+        OnboardingAnalytics.capture(.authCompleted, properties: properties)
     }
 
     private static func randomNonceString(length: Int = 32) -> String {

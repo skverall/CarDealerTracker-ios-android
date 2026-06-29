@@ -73,6 +73,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ezcar24.business.analytics.OnboardingAnalytics
 import com.ezcar24.business.ui.components.AppBrandMark
 import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.ui.theme.EzcarSuccess
@@ -97,6 +98,10 @@ fun LoginScreen(
                 onLoginSuccess()
             }
         }
+    }
+
+    LaunchedEffect(Unit) {
+        OnboardingAnalytics.trackAuthScreenViewed(uiState.mode.analyticsName)
     }
 
     LaunchedEffect(uiState.mode, uiState.referralCode, uiState.teamInviteCode) {

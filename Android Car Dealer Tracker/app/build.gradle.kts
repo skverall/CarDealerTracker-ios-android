@@ -35,6 +35,20 @@ val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")
     .orElse(providers.environmentVariable("GOOGLE_WEB_CLIENT_ID"))
     .getOrElse((keystoreProperties["googleWebClientId"] as? String).orEmpty())
 
+val postHogProjectToken = providers.gradleProperty("POSTHOG_PROJECT_TOKEN")
+    .orElse(providers.environmentVariable("POSTHOG_PROJECT_TOKEN"))
+    .orElse(providers.environmentVariable("POSTHOG_API_KEY"))
+    .getOrElse((keystoreProperties["postHogProjectToken"] as? String).orEmpty())
+
+val postHogHost = providers.gradleProperty("POSTHOG_HOST")
+    .orElse(providers.environmentVariable("POSTHOG_HOST"))
+    .getOrElse((keystoreProperties["postHogHost"] as? String) ?: "https://us.i.posthog.com")
+
+val postHogDebug = providers.gradleProperty("POSTHOG_DEBUG")
+    .orElse(providers.environmentVariable("POSTHOG_DEBUG"))
+    .getOrElse("false")
+    .let { it.equals("true", ignoreCase = true) || it == "1" }
+
 val playStorePackageName = "com.ezcar24.business"
 
 val hasGoogleServicesFile = listOf(
@@ -77,6 +91,9 @@ android {
         buildConfigField("String", "SUPABASE_ANON_KEY", supabaseAnonKey.asBuildConfigString())
         buildConfigField("String", "REVENUECAT_ANDROID_API_KEY", revenueCatAndroidApiKey.asBuildConfigString())
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", googleWebClientId.asBuildConfigString())
+        buildConfigField("String", "POSTHOG_PROJECT_TOKEN", postHogProjectToken.asBuildConfigString())
+        buildConfigField("String", "POSTHOG_HOST", postHogHost.asBuildConfigString())
+        buildConfigField("boolean", "POSTHOG_DEBUG", postHogDebug.toString())
         buildConfigField("String", "PLAY_STORE_PACKAGE_NAME", playStorePackageName.asBuildConfigString())
         buildConfigField("boolean", "FIREBASE_ENABLED", enablesReleaseGoogleServices.toString())
     }
@@ -174,6 +191,8 @@ dependencies {
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.crashlytics)
     implementation(libs.googleid)
+
+    implementation(libs.posthog.android)
 
     // Subscriptions
     implementation(libs.revenuecat.purchases)

@@ -10,6 +10,7 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.BuildConfig
+import com.ezcar24.business.analytics.OnboardingAnalytics
 import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.repository.AuthDeepLinkResult
 import com.ezcar24.business.data.repository.AuthRepository
@@ -29,6 +30,12 @@ enum class AuthMode {
     SIGN_IN,
     SIGN_UP
 }
+
+val AuthMode.analyticsName: String
+    get() = when (this) {
+        AuthMode.SIGN_IN -> "sign_in"
+        AuthMode.SIGN_UP -> "sign_up"
+    }
 
 data class AuthUiState(
     val email: String = "",
@@ -54,6 +61,15 @@ data class AuthUiState(
 
     val hasOptionalCodes: Boolean
         get() = referralCode.trim().isNotEmpty() || teamInviteCode.trim().isNotEmpty()
+
+    val hasReferralCode: Boolean
+        get() = referralCode.trim().isNotEmpty()
+
+    val hasTeamInviteCode: Boolean
+        get() = teamInviteCode.trim().isNotEmpty()
+
+    val hasPhone: Boolean
+        get() = phone.trim().isNotEmpty()
 
     val pendingInviteMessage: String?
         get() {
@@ -150,12 +166,19 @@ class AuthViewModel @Inject constructor(
     }
 
     fun onModeChange(mode: AuthMode) {
+        OnboardingAnalytics.trackAuthModeChanged(mode.analyticsName)
         _uiState.value = _uiState.value.copy(mode = mode, error = null, message = null)
     }
 
     fun login() {
         viewModelScope.launch {
             val currentState = _uiState.value
+            OnboardingAnalytics.trackAuthSubmitted(
+                mode = AuthMode.SIGN_IN.analyticsName,
+                method = "email",
+                hasReferralCode = currentState.hasReferralCode,
+                hasTeamInviteCode = currentState.hasTeamInviteCode
+            )
             _uiState.value = currentState.copy(isLoading = true, error = null, message = null)
             try {
                 authRepository.login(
@@ -165,7 +188,15 @@ class AuthViewModel @Inject constructor(
                 authRepository.applyPendingPostAuthActions(
                     teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                 )
-                subscriptionManager.logIn(authRepository.getDealerId())
+                val dealerId = authRepository.getDealerId()
+                subscriptionManager.logIn(dealerId)
+                OnboardingAnalytics.trackAuthCompleted(
+                    mode = AuthMode.SIGN_IN.analyticsName,
+                    method = "email",
+                    distinctId = dealerId,
+                    hasReferralCode = currentState.hasReferralCode,
+                    hasTeamInviteCode = currentState.hasTeamInviteCode
+                )
                 _uiState.value = currentState.copy(
                     password = "",
                     phone = "",
@@ -179,6 +210,12 @@ class AuthViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Sign in failed", e)
+                OnboardingAnalytics.trackAuthFailed(
+                    mode = AuthMode.SIGN_IN.analyticsName,
+                    method = "email",
+                    hasReferralCode = currentState.hasReferralCode,
+                    hasTeamInviteCode = currentState.hasTeamInviteCode
+                )
                 _uiState.value = currentState.copy(
                     isLoading = false,
                     error = AuthErrorMapper.map(e, AuthFailureContext.SIGN_IN)
@@ -190,6 +227,13 @@ class AuthViewModel @Inject constructor(
     fun signUp() {
         viewModelScope.launch {
             val currentState = _uiState.value
+            OnboardingAnalytics.trackAuthSubmitted(
+                mode = AuthMode.SIGN_UP.analyticsName,
+                method = "email",
+                hasReferralCode = currentState.hasReferralCode,
+                hasTeamInviteCode = currentState.hasTeamInviteCode,
+                hasPhone = currentState.hasPhone
+            )
             _uiState.value = currentState.copy(isLoading = true, error = null, message = null)
             try {
                 when (
@@ -210,7 +254,16 @@ class AuthViewModel @Inject constructor(
                         authRepository.applyPendingPostAuthActions(
                             teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                         )
-                        subscriptionManager.logIn(authRepository.getDealerId())
+                        val dealerId = authRepository.getDealerId()
+                        subscriptionManager.logIn(dealerId)
+                        OnboardingAnalytics.trackAuthCompleted(
+                            mode = AuthMode.SIGN_UP.analyticsName,
+                            method = "email",
+                            distinctId = dealerId,
+                            hasReferralCode = currentState.hasReferralCode,
+                            hasTeamInviteCode = currentState.hasTeamInviteCode,
+                            hasPhone = currentState.hasPhone
+                        )
                         _uiState.value = currentState.copy(
                             password = "",
                             phone = "",
@@ -228,6 +281,12 @@ class AuthViewModel @Inject constructor(
                         currentState.teamInviteCode.trim().ifNotEmpty {
                             authRepository.savePendingTeamInviteCode(it)
                         }
+                        OnboardingAnalytics.trackAuthPendingConfirmation(
+                            mode = AuthMode.SIGN_UP.analyticsName,
+                            hasReferralCode = currentState.hasReferralCode,
+                            hasTeamInviteCode = currentState.hasTeamInviteCode,
+                            hasPhone = currentState.hasPhone
+                        )
                         _uiState.value = currentState.copy(
                             password = "",
                             isLoading = false,
@@ -242,6 +301,13 @@ class AuthViewModel @Inject constructor(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Sign up failed", e)
+                OnboardingAnalytics.trackAuthFailed(
+                    mode = AuthMode.SIGN_UP.analyticsName,
+                    method = "email",
+                    hasReferralCode = currentState.hasReferralCode,
+                    hasTeamInviteCode = currentState.hasTeamInviteCode,
+                    hasPhone = currentState.hasPhone
+                )
                 _uiState.value = currentState.copy(
                     isLoading = false,
                     error = AuthErrorMapper.map(e, AuthFailureContext.SIGN_UP)
@@ -260,9 +326,23 @@ class AuthViewModel @Inject constructor(
     fun signInWithGoogle(context: Context) {
         viewModelScope.launch {
             val currentState = _uiState.value
+            OnboardingAnalytics.trackAuthSubmitted(
+                mode = currentState.mode.analyticsName,
+                method = "google",
+                hasReferralCode = currentState.hasReferralCode,
+                hasTeamInviteCode = currentState.hasTeamInviteCode,
+                hasPhone = currentState.hasPhone
+            )
             _uiState.value = currentState.copy(isLoading = true, error = null, message = null)
             try {
                 if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
+                    OnboardingAnalytics.trackAuthFailed(
+                        mode = currentState.mode.analyticsName,
+                        method = "google",
+                        hasReferralCode = currentState.hasReferralCode,
+                        hasTeamInviteCode = currentState.hasTeamInviteCode,
+                        hasPhone = currentState.hasPhone
+                    )
                     _uiState.value = currentState.copy(
                         isLoading = false,
                         error = "Google Sign-In is not configured yet."
@@ -282,7 +362,16 @@ class AuthViewModel @Inject constructor(
                 authRepository.applyPendingPostAuthActions(
                     teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                 )
-                subscriptionManager.logIn(authRepository.getDealerId())
+                val dealerId = authRepository.getDealerId()
+                subscriptionManager.logIn(dealerId)
+                OnboardingAnalytics.trackAuthCompleted(
+                    mode = currentState.mode.analyticsName,
+                    method = "google",
+                    distinctId = dealerId,
+                    hasReferralCode = currentState.hasReferralCode,
+                    hasTeamInviteCode = currentState.hasTeamInviteCode,
+                    hasPhone = currentState.hasPhone
+                )
                 _uiState.value = currentState.copy(
                     password = "",
                     phone = "",
@@ -303,6 +392,13 @@ class AuthViewModel @Inject constructor(
                 )
             } catch (e: Exception) {
                 Log.e(TAG, "Google sign-in failed", e)
+                OnboardingAnalytics.trackAuthFailed(
+                    mode = currentState.mode.analyticsName,
+                    method = "google",
+                    hasReferralCode = currentState.hasReferralCode,
+                    hasTeamInviteCode = currentState.hasTeamInviteCode,
+                    hasPhone = currentState.hasPhone
+                )
                 _uiState.value = currentState.copy(
                     isLoading = false,
                     error = AuthErrorMapper.map(e, AuthFailureContext.SOCIAL_SIGN_IN)
@@ -313,6 +409,7 @@ class AuthViewModel @Inject constructor(
 
     fun startGuestMode() {
         subscriptionManager.logOut()
+        OnboardingAnalytics.trackGuestStarted()
         _uiState.value = AuthUiState(
             isGuestMode = true,
             isSuccess = true
@@ -321,6 +418,7 @@ class AuthViewModel @Inject constructor(
 
     fun requestPasswordReset() {
         val email = _uiState.value.email.trim()
+        OnboardingAnalytics.trackPasswordResetRequested(hasEmail = email.isNotEmpty())
         if (email.isEmpty()) {
             _uiState.value = _uiState.value.copy(
                 error = "Please enter your email address to reset your password."

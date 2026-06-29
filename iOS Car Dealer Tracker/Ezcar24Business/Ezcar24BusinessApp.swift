@@ -63,6 +63,7 @@ struct Ezcar24BusinessApp: App {
     @StateObject private var persistenceController = PersistenceController.shared
     
     @State private var showRegionSelection = false
+    @State private var didTrackInitialRegionSelection = false
 
     init() {
         // Initialize Supabase and Core Data
@@ -83,6 +84,7 @@ struct Ezcar24BusinessApp: App {
         _cloudSyncManager = StateObject(wrappedValue: syncManager)
 
         if !AppRuntime.isRunningTests {
+            OnboardingAnalytics.configure()
             _ = LocalNotificationManager.shared
             #if DEBUG
             Purchases.logLevel = ProcessInfo.processInfo.environment["REVENUECAT_DEBUG_LOGS"] == "1" ? .debug : .error
@@ -153,6 +155,10 @@ struct Ezcar24BusinessApp: App {
                 }
                 .onAppear {
                     if !regionSettings.hasSelectedRegion {
+                        if !didTrackInitialRegionSelection {
+                            didTrackInitialRegionSelection = true
+                            OnboardingAnalytics.capture(.started, properties: ["step": "region_selection"])
+                        }
                         showRegionSelection = true
                     }
                 }

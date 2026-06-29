@@ -110,6 +110,14 @@ struct RegionSelectionSheet: View {
 
     private var continueBar: some View {
         Button {
+            OnboardingAnalytics.capture(
+                .regionSelected,
+                properties: [
+                    "selected_region_id": selectedRegion.rawValue,
+                    "selected_currency_code": selectedRegion.currencyCode,
+                    "selected_uses_kilometers": selectedRegion.usesKilometers
+                ]
+            )
             regionSettings.selectedRegion = selectedRegion
             regionSettings.hasSelectedRegion = true
             dismiss()

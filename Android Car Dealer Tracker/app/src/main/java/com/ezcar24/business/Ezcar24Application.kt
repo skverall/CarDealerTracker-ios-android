@@ -1,6 +1,7 @@
 package com.ezcar24.business
 
 import android.app.Application
+import com.ezcar24.business.analytics.OnboardingAnalytics
 import com.ezcar24.business.util.RegionSettingsEntryPoint
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.hilt.android.EntryPointAccessors
@@ -15,9 +16,11 @@ class Ezcar24Application : Application() {
             FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
         }
 
-        EntryPointAccessors.fromApplication(
+        val regionSettingsManager = EntryPointAccessors.fromApplication(
             this,
             RegionSettingsEntryPoint::class.java
-        ).regionSettingsManager().initialize()
+        ).regionSettingsManager()
+        regionSettingsManager.initialize()
+        OnboardingAnalytics.configure(this, regionSettingsManager.state.value)
     }
 }

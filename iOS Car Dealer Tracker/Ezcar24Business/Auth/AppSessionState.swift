@@ -35,6 +35,9 @@ final class AppSessionState: ObservableObject {
 
     func authenticate() async {
         guard isFormValid else { return }
+        let submittedMode = mode
+        let submittedProperties = analyticsProperties(for: submittedMode)
+        OnboardingAnalytics.capture(.authSubmitted, properties: submittedProperties)
         isProcessing = true
         defer { isProcessing = false }
         sessionStore.resetError()
@@ -53,9 +56,15 @@ final class AppSessionState: ObservableObject {
                 _ = await sessionStore.submitTeamInviteCode(inviteCodeValue)
             }
             isGuestMode = false
+            if case .signedIn(let user) = sessionStore.status {
+                OnboardingAnalytics.identifyUser(user.id)
+                OnboardingAnalytics.capture(.authCompleted, properties: submittedProperties)
+            } else {
+                OnboardingAnalytics.capture(.authPendingConfirmation, properties: submittedProperties)
+            }
             clearSensitiveFields()
         } catch {
-            // Error already handled in sessionStore
+            OnboardingAnalytics.capture(.authFailed, properties: submittedProperties)
         }
     }
 
@@ -65,6 +74,7 @@ final class AppSessionState: ObservableObject {
     }
 
     func startGuestMode() {
+        OnboardingAnalytics.resetIdentity()
         isGuestMode = true
         mode = .signIn
         email = ""
@@ -72,8 +82,8 @@ final class AppSessionState: ObservableObject {
         phone = ""
         referralCode = ""
         teamInviteCode = ""
-        // Drop any cached RevenueCat state so guests never inherit a previous user's subscription
         SubscriptionManager.shared.logOut()
+        OnboardingAnalytics.capture(.guestStarted)
     }
 
     func exitGuestModeForLogin() {
@@ -104,5 +114,24 @@ final class AppSessionState: ObservableObject {
 
     private var trimmedTeamInviteCode: String {
         teamInviteCode.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func analyticsProperties(for mode: Mode) -> [String: Any] {
+        [
+            "auth_mode": mode.analyticsName,
+            "auth_method": "email",
+            "has_referral_code": !trimmedReferralCode.isEmpty,
+            "has_team_invite_code": !trimmedTeamInviteCode.isEmpty,
+            "has_phone": !trimmedPhone.isEmpty
+        ]
+    }
+}
+
+extension AppSessionState.Mode {
+    var analyticsName: String {
+        switch self {
+        case .signIn: return "sign_in"
+        case .signUp: return "sign_up"
+        }
     }
 }
