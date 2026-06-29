@@ -56,7 +56,13 @@ class GlobalSearchViewModel @Inject constructor(
             val vehicles = withContext(Dispatchers.IO) { vehicleDao.searchActive(wildcard) }
             val clients = withContext(Dispatchers.IO) { clientDao.searchActive(wildcard) }
             val expenses = withContext(Dispatchers.IO) { expenseDao.searchActive(wildcard) }
-            _uiState.update { it.copy(vehicleResults = vehicles, clientResults = clients, expenseResults = expenses) }
+            _uiState.update {
+                it.copy(
+                    vehicleResults = vehicles.take(5),
+                    clientResults = clients.take(5),
+                    expenseResults = expenses.take(5)
+                )
+            }
         }
     }
 }

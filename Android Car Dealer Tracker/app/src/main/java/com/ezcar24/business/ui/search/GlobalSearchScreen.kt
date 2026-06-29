@@ -60,7 +60,6 @@ fun GlobalSearchScreen(
     val uiState by viewModel.uiState.collectAsState()
     val expenseUiState by expenseViewModel.uiState.collectAsState()
     val regionSettingsManager = rememberRegionSettingsManager()
-    val regionState by regionSettingsManager.state.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
     val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
     var selectedExpense by remember { mutableStateOf<Expense?>(null) }
@@ -180,6 +179,7 @@ private fun VehicleSearchRow(vehicle: Vehicle, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -197,6 +197,7 @@ private fun ClientSearchRow(client: Client, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -205,7 +206,7 @@ private fun ClientSearchRow(client: Client, onClick: () -> Unit) {
             Text(client.name, fontWeight = FontWeight.Bold)
             val subtitle = listOfNotNull(client.phone, client.email).joinToString(" • ")
             if (subtitle.isNotBlank()) {
-                Text(localizedUiString(subtitle), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             }
         }
         TextButtonInline(text = "Open", onClick = onClick)
