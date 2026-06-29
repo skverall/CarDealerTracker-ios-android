@@ -90,6 +90,8 @@ fun DashboardScreen(
     onNavigateToSales: () -> Unit = {},
     onNavigateToExpenses: () -> Unit = {},
     onNavigateToLeadFunnel: () -> Unit = {},
+    onNavigateToLeadManagement: () -> Unit = {},
+    onNavigateToAnalyticsHub: () -> Unit = {},
     onNavigateToInventoryAnalytics: () -> Unit = {},
     onNavigateToDataHealth: () -> Unit = {}
 ) {
@@ -197,7 +199,7 @@ fun DashboardScreen(
             }
 
             item {
-                AIInsightsEntryCard(onClick = onNavigateToInventoryAnalytics)
+                AIInsightsEntryCard(onClick = onNavigateToAnalyticsHub)
             }
 
             // --- Today's Expenses ---
@@ -237,7 +239,8 @@ fun DashboardScreen(
                     callsMadeToday = uiState.callsMadeToday,
                     pipelineValue = uiState.pipelineValue,
                     conversionRate = uiState.conversionRate,
-                    onNavigateToLeadFunnel = onNavigateToLeadFunnel
+                    onNavigateToLeadFunnel = onNavigateToLeadFunnel,
+                    onNavigateToLeadManagement = onNavigateToLeadManagement
                 )
             }
 
@@ -1861,7 +1864,8 @@ fun CRMSummaryCard(
     callsMadeToday: Int,
     pipelineValue: BigDecimal,
     conversionRate: Double,
-    onNavigateToLeadFunnel: () -> Unit
+    onNavigateToLeadFunnel: () -> Unit,
+    onNavigateToLeadManagement: () -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
@@ -1925,6 +1929,68 @@ fun CRMSummaryCard(
                     color = EzcarSuccess
                 )
             }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                CRMActionChip(
+                    title = localizedUiString("Lead Funnel"),
+                    icon = Icons.AutoMirrored.Filled.TrendingUp,
+                    onClick = onNavigateToLeadFunnel,
+                    modifier = Modifier.weight(1f)
+                )
+                CRMActionChip(
+                    title = localizedUiString("Lead Management"),
+                    icon = Icons.Default.PersonSearch,
+                    onClick = onNavigateToLeadManagement,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CRMActionChip(
+    title: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .heightIn(min = 44.dp)
+            .clickable(onClick = onClick),
+        color = Color.White.copy(alpha = 0.12f),
+        contentColor = Color.White,
+        shape = CircleShape,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.16f))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(7.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

@@ -90,6 +90,18 @@ fun PartsDashboardScreen(
     var preferredReceiveStockPartId by remember { mutableStateOf<UUID?>(null) }
     var preferredSalePartId by remember { mutableStateOf<UUID?>(null) }
 
+    LaunchedEffect(showReceiveStockDialog, inventoryState.accounts.size) {
+        if (showReceiveStockDialog && inventoryState.accounts.isEmpty()) {
+            inventoryViewModel.createDefaultAccountsIfNeeded()
+        }
+    }
+
+    LaunchedEffect(showAddPartDialog, inventoryState.accounts.size) {
+        if (showAddPartDialog && inventoryState.accounts.isEmpty()) {
+            inventoryViewModel.createDefaultAccountsIfNeeded()
+        }
+    }
+
     Scaffold(
         containerColor = EzcarBackground,
         floatingActionButton = {
@@ -1053,7 +1065,12 @@ private fun AddPartDialog(
     var quantity by remember { mutableStateOf("") }
     var unitCost by remember { mutableStateOf("") }
     var batchLabel by remember { mutableStateOf("") }
-    var selectedAccountId by remember { mutableStateOf<UUID?>(accounts.firstOrNull()?.id) }
+    var selectedAccountId by remember(accounts) {
+        mutableStateOf(
+            accounts.firstOrNull { it.accountType.equals("cash", ignoreCase = true) }?.id
+                ?: accounts.firstOrNull()?.id
+        )
+    }
 
     // Validation
     val hasName = name.trim().isNotEmpty()
@@ -1667,13 +1684,24 @@ private fun ReceiveStockDialog(
     var selectedPartId by remember(preferredPartId, parts) {
         mutableStateOf(preferredPartId ?: parts.firstOrNull()?.id)
     }
-    var selectedAccountId by remember { mutableStateOf<UUID?>(accounts.firstOrNull()?.id) }
+    var selectedAccountId by remember(accounts) {
+        mutableStateOf(
+            accounts.firstOrNull { it.accountType.equals("cash", ignoreCase = true) }?.id
+                ?: accounts.firstOrNull()?.id
+        )
+    }
     var quantity by remember { mutableStateOf("") }
     var unitCost by remember { mutableStateOf("") }
     var batchLabel by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
     var purchaseDate by remember { mutableStateOf(Date()) }
     var showDatePicker by remember { mutableStateOf(false) }
+    val quantityValue = quantity.toBigDecimalOrZero()
+    val unitCostValue = unitCost.toBigDecimalOrZero()
+    val isFormValid = selectedPartId != null &&
+        selectedAccountId != null &&
+        quantityValue > BigDecimal.ZERO &&
+        unitCostValue >= BigDecimal.ZERO
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1709,21 +1737,32 @@ private fun ReceiveStockDialog(
                     selectedAccountId = selectedAccountId,
                     onSelected = { selectedAccountId = it }
                 )
+                if (accounts.isEmpty()) {
+                    Text(
+                        text = localizedUiString("Creating Cash and Bank accounts..."),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                val partId = selectedPartId ?: return@TextButton
-                onSave(
-                    partId,
-                    quantity.toBigDecimalOrZero(),
-                    unitCost.toBigDecimalOrZero(),
-                    batchLabel.ifBlank { null },
-                    notes.ifBlank { null },
-                    purchaseDate,
-                    selectedAccountId
-                )
-            }) {
+            TextButton(
+                enabled = isFormValid,
+                onClick = {
+                    val partId = selectedPartId ?: return@TextButton
+                    onSave(
+                        partId,
+                        quantityValue,
+                        unitCostValue,
+                        batchLabel.ifBlank { null },
+                        notes.ifBlank { null },
+                        purchaseDate,
+                        selectedAccountId
+                    )
+                }
+            ) {
                 Text(localizedUiString("Save"))
             }
         },

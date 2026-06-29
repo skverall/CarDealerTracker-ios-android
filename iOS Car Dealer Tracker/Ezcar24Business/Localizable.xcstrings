@@ -27704,7 +27704,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Editar arquivo Pro"
+            "value" : "Editar perfil"
           }
         },
         "ru" : {
@@ -32449,7 +32449,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Em Progress"
+            "value" : "Em andamento"
           }
         },
         "ru" : {
@@ -38573,7 +38573,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Em Progress"
+            "value" : "Em andamento"
           }
         },
         "ru" : {
@@ -43103,6 +43103,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pochta ilovasini ochib boʻlmadi. Iltimos, %@ raqami orqali biz bilan bogʻlaning"
+          }
+        }
+      }
+    },
+    "Maintenance" : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Manutenção"
           }
         }
       }
@@ -57090,7 +57100,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desbloquear AI"
+            "value" : "Desbloquear IA"
           }
         },
         "ru" : {
@@ -58742,7 +58752,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Salvar %d%%"
+            "value" : "Economize %d%%"
           }
         },
         "ru" : {
@@ -71077,6 +71087,16 @@
         }
       }
     },
+    "Schedule automatic monthly report emails." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Agende e-mails automáticos com relatórios mensais."
+          }
+        }
+      }
+    },
     "Scheduled" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -75478,7 +75498,7 @@
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ASSINATURA DETAILS"
+            "value" : "Detalhes da assinatura"
           }
         },
         "ru" : {
@@ -76212,6 +76232,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Sinxronizatsiya diagnostikasi"
+          }
+        }
+      }
+    },
+    "Sync your data with the cloud or clean up duplicate records." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sincronize seus dados com a nuvem ou limpe registros duplicados."
+          }
+        }
+      }
+    },
+    "Syncing..." : {
+      "localizations" : {
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sincronizando..."
           }
         }
       }

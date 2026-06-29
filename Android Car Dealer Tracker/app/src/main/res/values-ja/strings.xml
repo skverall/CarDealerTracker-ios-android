@@ -261,6 +261,7 @@
     <string name="l10n_no_inventory_available_yet_5380356e1d" formatted="false">利用可能な在庫はまだありません</string>
     <string name="l10n_no_organizations_yet_e932e617af" formatted="false">組織はまだありません</string>
     <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">支払い履歴はありません</string>
+    <string name="l10n_no_debts_found_b05c7df2ea" formatted="false">債務が見つかりません</string>
     <string name="l10n_no_photo_available_26ee476cf8" formatted="false">写真はありません</string>
     <string name="l10n_no_photos_selected_dde0dad3af" formatted="false">写真が選択されていません</string>
     <string name="l10n_no_reminders_set_deaccb44c3" formatted="false">リマインダーは設定されていません</string>
@@ -283,6 +284,7 @@
     <string name="l10n_open_receipt_29074b8045" formatted="false">領収書を開く</string>
     <string name="l10n_operational_8459f93535" formatted="false">運営費</string>
     <string name="l10n_owes_you_855addac0e" formatted="false">相手が支払い</string>
+    <string name="l10n_payment_b41a92bed0" formatted="false">支払い</string>
     <string name="l10n_owned_b62ff5ccd1" formatted="false">在庫保管中</string>
     <string name="l10n_paid_by_2e06e8e0d2" formatted="false">支払者</string>
     <string name="l10n_part_88be9d62d7" formatted="false">部品</string>
@@ -935,5 +937,37 @@
     <string name="l10n_or_1758356db2" formatted="false">または</string>
     <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">現在、ソーシャルサインインを完了できませんでした。もう一度お試しください。</string>
     <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Googleログインはまだ設定されていません。</string>
+    <string name="l10n_open_vehicle_aging_holding_cost_and_roi_si_1a73786264" formatted="false">車両の滞留期間、保有コスト、ROIのシグナルを開きます。</string>
+    <string name="l10n_finance_snapshot_2a993f5e06" formatted="false">財務スナップショット</string>
+    <string name="l10n_review_revenue_expenses_and_profit_movemen_ffbb4162fc" formatted="false">売上、経費、利益の動きを確認します。</string>
+    <string name="l10n_crm_analytics_3f5f0f4552" formatted="false">CRM分析</string>
+    <string name="l10n_queued_6a599877d7" formatted="false">キュー済み</string>
+    <string name="l10n_sync_attention_857a34603f" formatted="false">同期の注意</string>
+    <string name="l10n_there_are_queued_changes_waiting_to_reach__1f98dedb63" formatted="false">クラウド送信待ちの変更があります。レポートを信頼する前にデータヘルスを確認してください。</string>
+    <string name="l10n_inventory_attention_f204593437" formatted="false">在庫の注意</string>
+    <string name="l10n_aging_units_or_holding_cost_pressure_need__4b72cdac90" formatted="false">長期在庫または保有コストの圧力を確認してください。在庫分析から始めます。</string>
+    <string name="l10n_expenses_are_outrunning_revenue_for_the_se_1c7a99d297" formatted="false">選択した期間で経費が売上を上回っています。販売と経費の動きを確認してください。</string>
+    <string name="l10n_crm_watch_001ad9da5e" formatted="false">CRM監視</string>
+    <string name="l10n_pipeline_exists_but_conversion_is_still_lo_7d307c0bb9" formatted="false">パイプラインはありますが、コンバージョンがまだ低いです。CRMのフォローアップとリード段階を確認してください。</string>
+    <string name="l10n_revenue_inventory_and_crm_signals_are_stab_e4c62c9dc4" formatted="false">選択した期間の売上、在庫、CRMシグナルは安定しています。</string>
+    <string name="l10n_delete_transaction_ce9cb62331" formatted="false">取引を削除</string>
+    <string name="l10n_this_will_remove_the_transaction_and_updat_243629f81a" formatted="false">この取引を削除し、口座残高を更新します。</string>
+    <string name="l10n_starting_balance_s_823d004e37">開始残高（%1$s）</string>
+    <string name="l10n_current_balance_s_ee7eabd82f">現在残高: %1$s</string>
+    <string name="l10n_creating_cash_and_bank_accounts_d7a2228d7f" formatted="false">現金口座と銀行口座を作成しています...</string>
+    <string name="l10n_create_accounts_to_track_cash_bank_balance_5c1eb5de8b" formatted="false">現金、銀行残高、すべての取引を追跡するために口座を作成します。</string>
+    <string name="l10n_create_cash_bank_e970c895a2" formatted="false">現金 + 銀行を作成</string>
+    <string name="l10n_add_custom_account_aaf8939b49" formatted="false">カスタム口座を追加</string>
+    <string name="l10n_no_accounts_found_db53013601" formatted="false">口座が見つかりません</string>
+    <string name="l10n_recording_payment_for_s_c4769926cb">%1$s の支払いを記録</string>
+    <string name="l10n_record_payment_received_4fbb57dfa9" formatted="false">受領した支払いを記録</string>
+    <string name="l10n_record_payment_sent_1f1e116bac" formatted="false">送金した支払いを記録</string>
+    <string name="l10n_history_f6dc58f5e8" formatted="false">履歴</string>
+    <string name="l10n_method_88306943fe" formatted="false">方法</string>
+    <string name="l10n_delete_payment_caff4afdb9" formatted="false">支払いを削除</string>
+    <string name="l10n_due_date_a1b308ec70" formatted="false">期日</string>
+    <string name="l10n_due_date_s_ea44bba7be">期日: %1$s</string>
+    <string name="l10n_they_owe_me_453c6f6dea" formatted="false">相手が自分に支払う</string>
+    <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">自分が相手に支払う</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">南アフリカ</string>
 </resources>

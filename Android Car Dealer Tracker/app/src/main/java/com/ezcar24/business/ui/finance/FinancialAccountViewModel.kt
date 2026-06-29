@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 
@@ -75,8 +76,7 @@ class FinancialAccountViewModel @Inject constructor(
             val account = if (id != null) {
                 val existing = accountDao.getById(UUID.fromString(id)) ?: return@launch
                 existing.copy(
-                    accountType = name, // Using accountType as Name per schema
-                    balance = initialBalance,
+                    accountType = name,
                     updatedAt = now
                 )
             } else {
@@ -89,6 +89,51 @@ class FinancialAccountViewModel @Inject constructor(
                 )
             }
             upsertAccountSafely(account)
+            _uiState.update { state ->
+                if (state.selectedAccount?.id == account.id) {
+                    state.copy(selectedAccount = account)
+                } else {
+                    state
+                }
+            }
+        }
+    }
+
+    fun createDefaultAccounts() {
+        viewModelScope.launch {
+            val activeTypes = accountDao.getAllIncludingDeleted()
+                .filter { it.deletedAt == null }
+                .map { it.accountType.trim().lowercase(Locale.US) }
+                .toSet()
+            val now = Date()
+            val defaults = buildList {
+                if ("cash" !in activeTypes) {
+                    add(
+                        FinancialAccount(
+                            id = UUID.randomUUID(),
+                            accountType = "Cash",
+                            balance = BigDecimal.ZERO,
+                            updatedAt = now,
+                            deletedAt = null
+                        )
+                    )
+                }
+                if ("bank" !in activeTypes) {
+                    add(
+                        FinancialAccount(
+                            id = UUID.randomUUID(),
+                            accountType = "Bank",
+                            balance = BigDecimal.ZERO,
+                            updatedAt = now,
+                            deletedAt = null
+                        )
+                    )
+                }
+            }
+
+            defaults.forEach { account ->
+                upsertAccountSafely(account)
+            }
         }
     }
 
@@ -101,14 +146,16 @@ class FinancialAccountViewModel @Inject constructor(
         }
     }
     
-    fun addTransaction(accountId: UUID, amount: BigDecimal, type: String, note: String) {
+    fun addTransaction(accountId: UUID, amount: BigDecimal, type: String, date: Date, note: String) {
         viewModelScope.launch {
+            if (amount <= BigDecimal.ZERO) return@launch
+
             val now = Date()
             val transaction = AccountTransaction(
                 id = UUID.randomUUID(),
                 accountId = accountId,
                 amount = amount,
-                date = now,
+                date = date,
                 transactionType = type,
                 note = note,
                 createdAt = now,
@@ -124,9 +171,30 @@ class FinancialAccountViewModel @Inject constructor(
                 } else {
                     account.balance.subtract(amount)
                 }
-                upsertAccountSafely(account.copy(balance = newBalance, updatedAt = now))
+                val updatedAccount = account.copy(balance = newBalance, updatedAt = now)
+                upsertAccountSafely(updatedAccount)
+                _uiState.update { it.copy(selectedAccount = updatedAccount) }
             }
             
+            loadTransactions(accountId)
+        }
+    }
+
+    fun deleteTransaction(transaction: AccountTransaction) {
+        viewModelScope.launch {
+            val accountId = transaction.accountId ?: return@launch
+            val account = accountDao.getById(accountId) ?: return@launch
+            val now = Date()
+            val reversedBalance = if (transaction.transactionType == "deposit") {
+                account.balance.subtract(transaction.amount)
+            } else {
+                account.balance.add(transaction.amount)
+            }
+            val updatedAccount = account.copy(balance = reversedBalance, updatedAt = now)
+
+            upsertAccountSafely(updatedAccount)
+            deleteTransactionSafely(transaction)
+            _uiState.update { it.copy(selectedAccount = updatedAccount) }
             loadTransactions(accountId)
         }
     }
@@ -170,6 +238,21 @@ class FinancialAccountViewModel @Inject constructor(
         } catch (e: Exception) {
             Log.e(tag, "upsertAccountTransaction failed: ${e.message}", e)
             transactionDao.upsert(transaction)
+        }
+    }
+
+    private suspend fun deleteTransactionSafely(transaction: AccountTransaction) {
+        val deleted = transaction.copy(deletedAt = Date(), updatedAt = Date())
+        if (CloudSyncEnvironment.currentDealerId == null) {
+            transactionDao.upsert(deleted)
+            return
+        }
+
+        try {
+            cloudSyncManager.deleteAccountTransaction(transaction)
+        } catch (e: Exception) {
+            Log.e(tag, "deleteAccountTransaction failed: ${e.message}", e)
+            transactionDao.upsert(deleted)
         }
     }
 }

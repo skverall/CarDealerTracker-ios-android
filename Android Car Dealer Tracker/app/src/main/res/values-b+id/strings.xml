@@ -261,6 +261,7 @@
     <string name="l10n_no_inventory_available_yet_5380356e1d" formatted="false">Belum ada inventaris yang tersedia</string>
     <string name="l10n_no_organizations_yet_e932e617af" formatted="false">Belum ada organisasi</string>
     <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">Tidak ada riwayat pembayaran</string>
+    <string name="l10n_no_debts_found_b05c7df2ea" formatted="false">Tidak ada utang ditemukan</string>
     <string name="l10n_no_photo_available_26ee476cf8" formatted="false">Tidak ada foto yang tersedia</string>
     <string name="l10n_no_photos_selected_dde0dad3af" formatted="false">Tidak ada foto yang dipilih</string>
     <string name="l10n_no_reminders_set_deaccb44c3" formatted="false">Tidak ada pengingat yang disetel</string>
@@ -282,7 +283,8 @@
     <string name="l10n_on_sale_684df04fff" formatted="false">Dijual</string>
     <string name="l10n_open_receipt_29074b8045" formatted="false">Buka tanda terima</string>
     <string name="l10n_operational_8459f93535" formatted="false">Operasional</string>
-    <string name="l10n_owes_you_855addac0e" formatted="false">OWES YOU</string>
+    <string name="l10n_owes_you_855addac0e" formatted="false">BERUTANG KEPADA ANDA</string>
+    <string name="l10n_payment_b41a92bed0" formatted="false">Pembayaran</string>
     <string name="l10n_owned_b62ff5ccd1" formatted="false">Dimiliki</string>
     <string name="l10n_paid_by_2e06e8e0d2" formatted="false">Dibayar Oleh</string>
     <string name="l10n_part_88be9d62d7" formatted="false">Bagian</string>
@@ -458,7 +460,7 @@
     <string name="l10n_withdraw_funds_3e29e33238" formatted="false">Penarikan Dana</string>
     <string name="l10n_year_newest_f5b725e08b" formatted="false">Tahun: Terbaru</string>
     <string name="l10n_yes_5397e0583f" formatted="false">Ya</string>
-    <string name="l10n_you_owe_aeb436abf8" formatted="false">YOU OWE</string>
+    <string name="l10n_you_owe_aeb436abf8" formatted="false">ANDA BERUTANG</string>
     <string name="l10n_you_re_all_set_058a813016">Anda sudah siap!</string>
     <string name="l10n_your_pro_subscription_is_active_enjoy_full_bf224961b4">Langganan Pro Anda aktif. Nikmati akses penuh.</string>
     <string name="l10n_preview_mode_5eadd20cb9" formatted="false">Modus pratinjau</string>
@@ -959,5 +961,37 @@
     <string name="l10n_data_health_is_the_first_stop_if_sync_or_d_9295fd2b51" formatted="false">Kesehatan Data adalah tempat pertama untuk memeriksa masalah sinkronisasi atau duplikat.</string>
     <string name="l10n_use_contact_developer_from_account_for_syn_2355e141d9" formatted="false">Gunakan Hubungi Developer di Akun untuk masalah sinkronisasi atau langganan.</string>
     <string name="l10n_privacy_policy_and_terms_of_use_are_availa_02e4ee4595" formatted="false">Kebijakan Privasi dan Ketentuan Penggunaan tersedia di bagian Legal.</string>
+    <string name="l10n_open_vehicle_aging_holding_cost_and_roi_si_1a73786264" formatted="false">Buka sinyal usia kendaraan, biaya penyimpanan, dan ROI.</string>
+    <string name="l10n_finance_snapshot_2a993f5e06" formatted="false">Ringkasan Keuangan</string>
+    <string name="l10n_review_revenue_expenses_and_profit_movemen_ffbb4162fc" formatted="false">Tinjau pergerakan pendapatan, pengeluaran, dan laba.</string>
+    <string name="l10n_crm_analytics_3f5f0f4552" formatted="false">Analitik CRM</string>
+    <string name="l10n_queued_6a599877d7" formatted="false">Dalam antrean</string>
+    <string name="l10n_sync_attention_857a34603f" formatted="false">Perhatian sinkronisasi</string>
+    <string name="l10n_there_are_queued_changes_waiting_to_reach__1f98dedb63" formatted="false">Ada perubahan dalam antrean yang menunggu dikirim ke cloud. Buka Kesehatan Data sebelum mengandalkan laporan.</string>
+    <string name="l10n_inventory_attention_f204593437" formatted="false">Perhatian inventaris</string>
+    <string name="l10n_aging_units_or_holding_cost_pressure_need__4b72cdac90" formatted="false">Unit yang menua atau tekanan biaya penyimpanan perlu ditinjau. Mulai dari analitik inventaris.</string>
+    <string name="l10n_expenses_are_outrunning_revenue_for_the_se_1c7a99d297" formatted="false">Pengeluaran melampaui pendapatan pada periode yang dipilih. Tinjau pergerakan penjualan dan pengeluaran.</string>
+    <string name="l10n_crm_watch_001ad9da5e" formatted="false">Pantauan CRM</string>
+    <string name="l10n_pipeline_exists_but_conversion_is_still_lo_7d307c0bb9" formatted="false">Pipeline ada, tetapi konversi masih rendah. Buka follow-up CRM dan tahap lead.</string>
+    <string name="l10n_revenue_inventory_and_crm_signals_are_stab_e4c62c9dc4" formatted="false">Sinyal pendapatan, inventaris, dan CRM stabil untuk periode yang dipilih.</string>
+    <string name="l10n_delete_transaction_ce9cb62331" formatted="false">Hapus Transaksi</string>
+    <string name="l10n_this_will_remove_the_transaction_and_updat_243629f81a" formatted="false">Ini akan menghapus transaksi dan memperbarui saldo akun.</string>
+    <string name="l10n_starting_balance_s_823d004e37">Saldo Awal (%1$s)</string>
+    <string name="l10n_current_balance_s_ee7eabd82f">Saldo Saat Ini: %1$s</string>
+    <string name="l10n_creating_cash_and_bank_accounts_d7a2228d7f" formatted="false">Membuat akun Kas dan Bank...</string>
+    <string name="l10n_create_accounts_to_track_cash_bank_balance_5c1eb5de8b" formatted="false">Buat akun untuk melacak kas, saldo bank, dan setiap transaksi.</string>
+    <string name="l10n_create_cash_bank_e970c895a2" formatted="false">Buat Kas + Bank</string>
+    <string name="l10n_add_custom_account_aaf8939b49" formatted="false">Tambah Akun Kustom</string>
+    <string name="l10n_no_accounts_found_db53013601" formatted="false">Akun Tidak Ditemukan</string>
+    <string name="l10n_recording_payment_for_s_c4769926cb">Mencatat pembayaran untuk %1$s</string>
+    <string name="l10n_record_payment_received_4fbb57dfa9" formatted="false">Catat Pembayaran Diterima</string>
+    <string name="l10n_record_payment_sent_1f1e116bac" formatted="false">Catat Pembayaran Dikirim</string>
+    <string name="l10n_history_f6dc58f5e8" formatted="false">RIWAYAT</string>
+    <string name="l10n_method_88306943fe" formatted="false">Metode</string>
+    <string name="l10n_delete_payment_caff4afdb9" formatted="false">Hapus Pembayaran</string>
+    <string name="l10n_due_date_a1b308ec70" formatted="false">Tanggal jatuh tempo</string>
+    <string name="l10n_due_date_s_ea44bba7be">Jatuh tempo: %1$s</string>
+    <string name="l10n_they_owe_me_453c6f6dea" formatted="false">Mereka Berutang kepada Saya</string>
+    <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">Saya Berutang kepada Mereka</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">Afrika Selatan</string>
 </resources>

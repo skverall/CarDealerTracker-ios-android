@@ -261,6 +261,7 @@
     <string name="l10n_no_inventory_available_yet_5380356e1d" formatted="false">Nenhum estoque disponível ainda</string>
     <string name="l10n_no_organizations_yet_e932e617af" formatted="false">Nenhuma organização ainda</string>
     <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">Sem histórico de pagamentos</string>
+    <string name="l10n_no_debts_found_b05c7df2ea" formatted="false">Nenhuma dívida encontrada</string>
     <string name="l10n_no_photo_available_26ee476cf8" formatted="false">Nenhuma foto disponível</string>
     <string name="l10n_no_photos_selected_dde0dad3af" formatted="false">Nenhuma foto selecionada</string>
     <string name="l10n_no_reminders_set_deaccb44c3" formatted="false">Nenhum lembrete definido</string>
@@ -283,6 +284,7 @@
     <string name="l10n_open_receipt_29074b8045" formatted="false">Abrir recibo</string>
     <string name="l10n_operational_8459f93535" formatted="false">Operacional</string>
     <string name="l10n_owes_you_855addac0e" formatted="false">DEVO A VOCÊ</string>
+    <string name="l10n_payment_b41a92bed0" formatted="false">Pagamento</string>
     <string name="l10n_owned_b62ff5ccd1" formatted="false">Propriedade</string>
     <string name="l10n_paid_by_2e06e8e0d2" formatted="false">Pago por</string>
     <string name="l10n_part_88be9d62d7" formatted="false">Peça</string>
@@ -948,5 +950,37 @@
     <string name="l10n_or_1758356db2" formatted="false">ou</string>
     <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">Não foi possível concluir o login social agora. Tente novamente.</string>
     <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">O login com Google ainda não está configurado.</string>
+    <string name="l10n_open_vehicle_aging_holding_cost_and_roi_si_1a73786264" formatted="false">Abra os sinais de envelhecimento dos veículos, custo de estoque e ROI.</string>
+    <string name="l10n_finance_snapshot_2a993f5e06" formatted="false">Visão financeira</string>
+    <string name="l10n_review_revenue_expenses_and_profit_movemen_ffbb4162fc" formatted="false">Revise a movimentação de receita, despesas e lucro.</string>
+    <string name="l10n_crm_analytics_3f5f0f4552" formatted="false">Análises de CRM</string>
+    <string name="l10n_queued_6a599877d7" formatted="false">Na fila</string>
+    <string name="l10n_sync_attention_857a34603f" formatted="false">Atenção à sincronização</string>
+    <string name="l10n_there_are_queued_changes_waiting_to_reach__1f98dedb63" formatted="false">Há alterações na fila aguardando envio para a nuvem. Abra a Saúde dos Dados antes de confiar nos relatórios.</string>
+    <string name="l10n_inventory_attention_f204593437" formatted="false">Atenção ao estoque</string>
+    <string name="l10n_aging_units_or_holding_cost_pressure_need__4b72cdac90" formatted="false">Unidades envelhecidas ou pressão de custo de estoque precisam de revisão. Comece pela análise de estoque.</string>
+    <string name="l10n_expenses_are_outrunning_revenue_for_the_se_1c7a99d297" formatted="false">As despesas estão superando a receita no período selecionado. Revise vendas e despesas.</string>
+    <string name="l10n_crm_watch_001ad9da5e" formatted="false">Atenção ao CRM</string>
+    <string name="l10n_pipeline_exists_but_conversion_is_still_lo_7d307c0bb9" formatted="false">Há pipeline, mas a conversão ainda está baixa. Abra follow-ups de CRM e etapas dos leads.</string>
+    <string name="l10n_revenue_inventory_and_crm_signals_are_stab_e4c62c9dc4" formatted="false">Receita, estoque e sinais de CRM estão estáveis no período selecionado.</string>
+    <string name="l10n_delete_transaction_ce9cb62331" formatted="false">Excluir transação</string>
+    <string name="l10n_this_will_remove_the_transaction_and_updat_243629f81a" formatted="false">Isso removerá a transação e atualizará o saldo da conta.</string>
+    <string name="l10n_starting_balance_s_823d004e37">Saldo inicial (%1$s)</string>
+    <string name="l10n_current_balance_s_ee7eabd82f">Saldo atual: %1$s</string>
+    <string name="l10n_creating_cash_and_bank_accounts_d7a2228d7f" formatted="false">Criando contas de caixa e banco...</string>
+    <string name="l10n_create_accounts_to_track_cash_bank_balance_5c1eb5de8b" formatted="false">Crie contas para acompanhar caixa, saldos bancários e cada transação.</string>
+    <string name="l10n_create_cash_bank_e970c895a2" formatted="false">Criar caixa + banco</string>
+    <string name="l10n_add_custom_account_aaf8939b49" formatted="false">Adicionar conta personalizada</string>
+    <string name="l10n_no_accounts_found_db53013601" formatted="false">Nenhuma conta encontrada</string>
+    <string name="l10n_recording_payment_for_s_c4769926cb">Registrando pagamento para %1$s</string>
+    <string name="l10n_record_payment_received_4fbb57dfa9" formatted="false">Registrar pagamento recebido</string>
+    <string name="l10n_record_payment_sent_1f1e116bac" formatted="false">Registrar pagamento enviado</string>
+    <string name="l10n_history_f6dc58f5e8" formatted="false">HISTÓRICO</string>
+    <string name="l10n_method_88306943fe" formatted="false">Método</string>
+    <string name="l10n_delete_payment_caff4afdb9" formatted="false">Excluir pagamento</string>
+    <string name="l10n_due_date_a1b308ec70" formatted="false">Data de vencimento</string>
+    <string name="l10n_due_date_s_ea44bba7be">Vencimento: %1$s</string>
+    <string name="l10n_they_owe_me_453c6f6dea" formatted="false">Devem para mim</string>
+    <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">Eu devo</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">África do Sul</string>
 </resources>

@@ -261,6 +261,7 @@
     <string name="l10n_no_inventory_available_yet_5380356e1d" formatted="false">No inventory available yet</string>
     <string name="l10n_no_organizations_yet_e932e617af" formatted="false">No organizations yet</string>
     <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">No payment history</string>
+    <string name="l10n_no_debts_found_b05c7df2ea" formatted="false">No debts found</string>
     <string name="l10n_no_photo_available_26ee476cf8" formatted="false">No photo available</string>
     <string name="l10n_no_photos_selected_dde0dad3af" formatted="false">No photos selected</string>
     <string name="l10n_no_reminders_set_deaccb44c3" formatted="false">No reminders set</string>
@@ -283,6 +284,7 @@
     <string name="l10n_open_receipt_29074b8045" formatted="false">Open receipt</string>
     <string name="l10n_operational_8459f93535" formatted="false">Operational</string>
     <string name="l10n_owes_you_855addac0e" formatted="false">OWES YOU</string>
+    <string name="l10n_payment_b41a92bed0" formatted="false">Payment</string>
     <string name="l10n_owned_b62ff5ccd1" formatted="false">Owned</string>
     <string name="l10n_paid_by_2e06e8e0d2" formatted="false">Paid By</string>
     <string name="l10n_part_88be9d62d7" formatted="false">Part</string>
@@ -959,5 +961,37 @@
     <string name="l10n_data_health_is_the_first_stop_if_sync_or_d_9295fd2b51" formatted="false">Data Health is the first stop if sync or duplicate issues appear.</string>
     <string name="l10n_use_contact_developer_from_account_for_syn_2355e141d9" formatted="false">Use Contact Developer from Account for sync or subscription issues.</string>
     <string name="l10n_privacy_policy_and_terms_of_use_are_availa_02e4ee4595" formatted="false">Privacy Policy and Terms of Use are available from the Legal section.</string>
+    <string name="l10n_open_vehicle_aging_holding_cost_and_roi_si_1a73786264" formatted="false">Open vehicle aging, holding cost and ROI signals.</string>
+    <string name="l10n_finance_snapshot_2a993f5e06" formatted="false">Finance Snapshot</string>
+    <string name="l10n_review_revenue_expenses_and_profit_movemen_ffbb4162fc" formatted="false">Review revenue, expenses and profit movement.</string>
+    <string name="l10n_crm_analytics_3f5f0f4552" formatted="false">CRM Analytics</string>
+    <string name="l10n_queued_6a599877d7" formatted="false">Queued</string>
+    <string name="l10n_sync_attention_857a34603f" formatted="false">Sync attention</string>
+    <string name="l10n_there_are_queued_changes_waiting_to_reach__1f98dedb63" formatted="false">There are queued changes waiting to reach the cloud. Open Data Health before relying on reports.</string>
+    <string name="l10n_inventory_attention_f204593437" formatted="false">Inventory attention</string>
+    <string name="l10n_aging_units_or_holding_cost_pressure_need__4b72cdac90" formatted="false">Aging units or holding cost pressure need review. Start with inventory analytics.</string>
+    <string name="l10n_expenses_are_outrunning_revenue_for_the_se_1c7a99d297" formatted="false">Expenses are outrunning revenue for the selected period. Review sales and expense movement.</string>
+    <string name="l10n_crm_watch_001ad9da5e" formatted="false">CRM watch</string>
+    <string name="l10n_pipeline_exists_but_conversion_is_still_lo_7d307c0bb9" formatted="false">Pipeline exists, but conversion is still low. Open CRM follow-ups and lead stages.</string>
+    <string name="l10n_revenue_inventory_and_crm_signals_are_stab_e4c62c9dc4" formatted="false">Revenue, inventory and CRM signals are stable for the selected range.</string>
+    <string name="l10n_delete_transaction_ce9cb62331" formatted="false">Delete Transaction</string>
+    <string name="l10n_this_will_remove_the_transaction_and_updat_243629f81a" formatted="false">This will remove the transaction and update the account balance.</string>
+    <string name="l10n_starting_balance_s_823d004e37">Starting Balance (%1$s)</string>
+    <string name="l10n_current_balance_s_ee7eabd82f">Current Balance: %1$s</string>
+    <string name="l10n_creating_cash_and_bank_accounts_d7a2228d7f" formatted="false">Creating Cash and Bank accounts...</string>
+    <string name="l10n_create_accounts_to_track_cash_bank_balance_5c1eb5de8b" formatted="false">Create accounts to track cash, bank balances and every transaction.</string>
+    <string name="l10n_create_cash_bank_e970c895a2" formatted="false">Create Cash + Bank</string>
+    <string name="l10n_add_custom_account_aaf8939b49" formatted="false">Add Custom Account</string>
+    <string name="l10n_no_accounts_found_db53013601" formatted="false">No Accounts Found</string>
+    <string name="l10n_recording_payment_for_s_c4769926cb">Recording payment for %1$s</string>
+    <string name="l10n_record_payment_received_4fbb57dfa9" formatted="false">Record Payment Received</string>
+    <string name="l10n_record_payment_sent_1f1e116bac" formatted="false">Record Payment Sent</string>
+    <string name="l10n_history_f6dc58f5e8" formatted="false">HISTORY</string>
+    <string name="l10n_method_88306943fe" formatted="false">Method</string>
+    <string name="l10n_delete_payment_caff4afdb9" formatted="false">Delete Payment</string>
+    <string name="l10n_due_date_a1b308ec70" formatted="false">Due Date</string>
+    <string name="l10n_due_date_s_ea44bba7be">Due Date: %1$s</string>
+    <string name="l10n_they_owe_me_453c6f6dea" formatted="false">They Owe Me</string>
+    <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">I Owe Them</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">South Africa</string>
 </resources>

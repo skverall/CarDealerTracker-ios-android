@@ -53,6 +53,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.ezcar24.business.ui.analytics.AnalyticsHubScreen
 import com.ezcar24.business.ui.client.ClientListScreen
 import com.ezcar24.business.ui.crm.LeadFunnelScreen
 import com.ezcar24.business.ui.crm.LeadManagementScreen
@@ -197,6 +198,8 @@ fun MainScreen(
                             }
                         },
                         onNavigateToLeadFunnel = { navController.navigate("lead_funnel") },
+                        onNavigateToLeadManagement = { navController.navigate("lead_management") },
+                        onNavigateToAnalyticsHub = { navController.navigate("analytics_hub") },
                         onNavigateToInventoryAnalytics = { navController.navigate("inventory_analytics") },
                         onNavigateToDataHealth = onNavigateToDataHealth
                     )
@@ -296,7 +299,10 @@ fun MainScreen(
                     onRefreshPermissions = onRefreshPermissions,
                     onGuestAccountRequested = onGuestAccountRequested
                 ) {
-                    ClientListScreen(onNavigateToDetail = onNavigateToClientDetail)
+                    ClientListScreen(
+                        onNavigateToDetail = onNavigateToClientDetail,
+                        onNavigateToLeadManagement = { navController.navigate("lead_management") }
+                    )
                 }
             }
             composable("search") {
@@ -304,6 +310,33 @@ fun MainScreen(
                     onBack = { navController.popBackStack() },
                     onOpenVehicle = onNavigateToVehicleDetail,
                     onOpenClient = onNavigateToClientDetail
+                )
+            }
+            composable("analytics_hub") {
+                AnalyticsHubScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToInventoryAnalytics = { navController.navigate("inventory_analytics") },
+                    onNavigateToLeadFunnel = { navController.navigate("lead_funnel") },
+                    onNavigateToLeadManagement = { navController.navigate("lead_management") },
+                    onNavigateToDataHealth = onNavigateToDataHealth,
+                    onNavigateToSales = {
+                        navController.navigate(MainTab.Sales.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    onNavigateToExpenses = {
+                        navController.navigate(MainTab.Expenses.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
                 )
             }
             composable("lead_funnel") {

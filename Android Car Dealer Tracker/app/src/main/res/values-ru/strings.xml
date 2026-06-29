@@ -39,5 +39,45 @@
     <string name="l10n_or_1758356db2" formatted="false">или</string>
     <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">Не удалось завершить вход через соцсервис. Попробуйте еще раз.</string>
     <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Вход через Google еще не настроен.</string>
+    <string name="l10n_open_vehicle_aging_holding_cost_and_roi_si_1a73786264" formatted="false">Откройте сигналы по возрасту автомобилей, затратам хранения и ROI.</string>
+    <string name="l10n_finance_snapshot_2a993f5e06" formatted="false">Финансовый срез</string>
+    <string name="l10n_review_revenue_expenses_and_profit_movemen_ffbb4162fc" formatted="false">Проверьте выручку, расходы и движение прибыли.</string>
+    <string name="l10n_crm_analytics_3f5f0f4552" formatted="false">CRM-аналитика</string>
+    <string name="l10n_queued_6a599877d7" formatted="false">В очереди</string>
+    <string name="l10n_sync_attention_857a34603f" formatted="false">Внимание к синхронизации</string>
+    <string name="l10n_there_are_queued_changes_waiting_to_reach__1f98dedb63" formatted="false">Есть изменения в очереди, ожидающие отправки в облако. Откройте «Здоровье данных» перед использованием отчетов.</string>
+    <string name="l10n_inventory_attention_f204593437" formatted="false">Внимание к складу</string>
+    <string name="l10n_aging_units_or_holding_cost_pressure_need__4b72cdac90" formatted="false">Стареющие автомобили или давление затрат хранения требуют проверки. Начните с аналитики склада.</string>
+    <string name="l10n_expenses_are_outrunning_revenue_for_the_se_1c7a99d297" formatted="false">Расходы превышают выручку за выбранный период. Проверьте продажи и движение расходов.</string>
+    <string name="l10n_crm_watch_001ad9da5e" formatted="false">CRM под наблюдением</string>
+    <string name="l10n_pipeline_exists_but_conversion_is_still_lo_7d307c0bb9" formatted="false">Воронка есть, но конверсия все еще низкая. Откройте follow-up и этапы лидов.</string>
+    <string name="l10n_revenue_inventory_and_crm_signals_are_stab_e4c62c9dc4" formatted="false">Выручка, склад и CRM-сигналы стабильны за выбранный период.</string>
+    <string name="l10n_delete_transaction_ce9cb62331" formatted="false">Удалить транзакцию</string>
+    <string name="l10n_this_will_remove_the_transaction_and_updat_243629f81a" formatted="false">Это удалит транзакцию и обновит баланс аккаунта.</string>
+    <string name="l10n_edit_account_a7bbd29ef8" formatted="false">Редактировать аккаунт</string>
+    <string name="l10n_starting_balance_s_823d004e37">Начальный баланс (%1$s)</string>
+    <string name="l10n_current_balance_s_ee7eabd82f">Текущий баланс: %1$s</string>
+    <string name="l10n_creating_cash_and_bank_accounts_d7a2228d7f" formatted="false">Создаем аккаунты Cash и Bank...</string>
+    <string name="l10n_create_accounts_to_track_cash_bank_balance_5c1eb5de8b" formatted="false">Создайте счета для отслеживания наличных, банковских балансов и всех транзакций.</string>
+    <string name="l10n_create_cash_bank_e970c895a2" formatted="false">Создать Cash + Bank</string>
+    <string name="l10n_add_custom_account_aaf8939b49" formatted="false">Добавить пользовательский аккаунт</string>
+    <string name="l10n_no_accounts_found_db53013601" formatted="false">Аккаунты не найдены</string>
+    <string name="l10n_recording_payment_for_s_c4769926cb">Платеж для %1$s</string>
+    <string name="l10n_record_payment_received_4fbb57dfa9" formatted="false">Записать полученный платеж</string>
+    <string name="l10n_record_payment_sent_1f1e116bac" formatted="false">Записать отправленный платеж</string>
+    <string name="l10n_history_f6dc58f5e8" formatted="false">ИСТОРИЯ</string>
+    <string name="l10n_method_88306943fe" formatted="false">Метод</string>
+    <string name="l10n_delete_payment_caff4afdb9" formatted="false">Удалить платеж</string>
+    <string name="l10n_due_s_be08cc1da0">Срок: %1$s</string>
+    <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">Истории платежей нет</string>
+    <string name="l10n_no_debts_found_b05c7df2ea" formatted="false">Долги не найдены</string>
+    <string name="l10n_owes_you_855addac0e" formatted="false">ВАМ ДОЛЖНЫ</string>
+    <string name="l10n_you_owe_aeb436abf8" formatted="false">ВЫ ДОЛЖНЫ</string>
+    <string name="l10n_payment_b41a92bed0" formatted="false">Платеж</string>
+    <string name="l10n_due_date_a1b308ec70" formatted="false">Срок оплаты</string>
+    <string name="l10n_due_date_s_ea44bba7be">Срок оплаты: %1$s</string>
+    <string name="l10n_new_debt_acf70a9a2b" formatted="false">Новый долг</string>
+    <string name="l10n_they_owe_me_453c6f6dea" formatted="false">Мне должны</string>
+    <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">Я должен</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">Южная Африка</string>
 </resources>

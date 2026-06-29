@@ -40,6 +40,7 @@ import com.ezcar24.business.util.localizedUiString
 @Composable
 fun ClientListScreen(
     onNavigateToDetail: (String?) -> Unit,
+    onNavigateToLeadManagement: () -> Unit = {},
     viewModel: ClientViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -59,6 +60,7 @@ fun ClientListScreen(
         topBar = {
             ClientTopBar(
                 onFilterClick = { showFilters = !showFilters },
+                onLeadManagementClick = onNavigateToLeadManagement,
                 onAddClick = { onNavigateToDetail(null) }
             )
         }
@@ -118,7 +120,11 @@ fun ClientListScreen(
 }
 
 @Composable
-fun ClientTopBar(onFilterClick: () -> Unit, onAddClick: () -> Unit) {
+fun ClientTopBar(
+    onFilterClick: () -> Unit,
+    onLeadManagementClick: () -> Unit,
+    onAddClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -144,17 +150,35 @@ fun ClientTopBar(onFilterClick: () -> Unit, onAddClick: () -> Unit) {
             }
         }
 
-        IconButton(
-            onClick = onAddClick,
-            modifier = Modifier
-                .size(48.dp)
-                .background(EzcarNavy, CircleShape)
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = localizedUiString("Add Client"),
-                tint = Color.White
-            )
+            IconButton(
+                onClick = onLeadManagementClick,
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(EzcarBlueBright.copy(alpha = 0.12f), CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PersonSearch,
+                    contentDescription = localizedUiString("Lead Management"),
+                    tint = EzcarBlueBright
+                )
+            }
+
+            IconButton(
+                onClick = onAddClick,
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(EzcarNavy, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = localizedUiString("Add Client"),
+                    tint = Color.White
+                )
+            }
         }
     }
 }

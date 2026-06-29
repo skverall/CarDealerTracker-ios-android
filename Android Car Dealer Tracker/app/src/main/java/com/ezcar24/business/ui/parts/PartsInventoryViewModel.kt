@@ -120,6 +120,44 @@ class PartsInventoryViewModel @Inject constructor(
         applyFilters()
     }
 
+    fun createDefaultAccountsIfNeeded() {
+        viewModelScope.launch {
+            val activeTypes = financialAccountDao.getAllIncludingDeleted()
+                .filter { it.deletedAt == null }
+                .map { it.accountType.trim().lowercase(Locale.US) }
+                .toSet()
+            val now = Date()
+            val defaults = buildList {
+                if ("cash" !in activeTypes) {
+                    add(
+                        FinancialAccount(
+                            id = UUID.randomUUID(),
+                            accountType = "Cash",
+                            balance = BigDecimal.ZERO,
+                            updatedAt = now,
+                            deletedAt = null
+                        )
+                    )
+                }
+                if ("bank" !in activeTypes) {
+                    add(
+                        FinancialAccount(
+                            id = UUID.randomUUID(),
+                            accountType = "Bank",
+                            balance = BigDecimal.ZERO,
+                            updatedAt = now,
+                            deletedAt = null
+                        )
+                    )
+                }
+            }
+
+            defaults.forEach { account ->
+                upsertAccountSafely(account)
+            }
+        }
+    }
+
     private fun applyFilters() {
         val state = _uiState.value
         val query = state.searchQuery.trim().lowercase(Locale.US)
@@ -280,6 +318,17 @@ class PartsInventoryViewModel @Inject constructor(
                     Log.e(tag, "receiveStock sync failed: ${e.message}", e)
                 }
             }
+        }
+    }
+
+    private suspend fun upsertAccountSafely(account: FinancialAccount) {
+        financialAccountDao.upsert(account)
+        if (CloudSyncEnvironment.currentDealerId == null) return
+
+        try {
+            cloudSyncManager.upsertFinancialAccount(account)
+        } catch (e: Exception) {
+            Log.e(tag, "upsertFinancialAccount failed: ${e.message}", e)
         }
     }
 }

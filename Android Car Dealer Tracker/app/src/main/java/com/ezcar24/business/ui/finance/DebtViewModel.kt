@@ -23,6 +23,7 @@ data class DebtUiState(
     val selectedDebt: Debt? = null,
     val isLoading: Boolean = false,
     val selectedTab: String = "owed_to_me",
+    val selectedStatusFilter: String = "open",
     val searchText: String = "",
     val debtPayments: List<DebtPayment> = emptyList()
 )
@@ -97,14 +98,26 @@ class DebtViewModel @Inject constructor(
         applyFilter()
     }
 
+    fun setStatusFilter(filter: String) {
+        _uiState.update { it.copy(selectedStatusFilter = filter) }
+        applyFilter()
+    }
+
     private fun applyFilter() {
         val current = _uiState.value
         var filtered = current.debts.filter { it.direction == current.selectedTab }
+
+        filtered = when (current.selectedStatusFilter) {
+            "open" -> filtered.filter { it.amount > BigDecimal.ZERO }
+            "paid" -> filtered.filter { it.amount <= BigDecimal.ZERO }
+            else -> filtered
+        }
         
         if (current.searchText.isNotBlank()) {
             val query = current.searchText.lowercase()
             filtered = filtered.filter { 
                 it.counterpartyName.lowercase().contains(query) ||
+                (it.counterpartyPhone?.lowercase()?.contains(query) == true) ||
                 (it.notes?.lowercase()?.contains(query) == true)
             }
         }
@@ -123,6 +136,7 @@ class DebtViewModel @Inject constructor(
         phone: String,
         amount: BigDecimal,
         direction: String,
+        dueDate: Date?,
         notes: String
     ) {
         viewModelScope.launch {
@@ -134,6 +148,7 @@ class DebtViewModel @Inject constructor(
                     counterpartyPhone = phone,
                     amount = amount,
                     direction = direction,
+                    dueDate = dueDate,
                     notes = notes,
                     updatedAt = now
                 )
@@ -145,7 +160,7 @@ class DebtViewModel @Inject constructor(
                     amount = amount,
                     direction = direction,
                     notes = notes,
-                    dueDate = null,
+                    dueDate = dueDate,
                     createdAt = now,
                     updatedAt = now,
                     deletedAt = null
@@ -185,24 +200,34 @@ class DebtViewModel @Inject constructor(
         }
     }
 
-    fun recordPayment(debtId: UUID, amount: BigDecimal, accountId: UUID) {
+    fun recordPayment(
+        debtId: UUID,
+        amount: BigDecimal,
+        accountId: UUID,
+        date: Date = Date(),
+        paymentMethod: String = "transfer",
+        note: String = "Payment"
+    ) {
         viewModelScope.launch {
+            if (amount <= BigDecimal.ZERO) return@launch
             val now = Date()
+            val debt = debtDao.getById(debtId) ?: return@launch
+            if (amount > debt.amount) return@launch
+
             val payment = DebtPayment(
                 id = UUID.randomUUID(),
                 debtId = debtId,
                 accountId = accountId,
                 amount = amount,
-                date = now,
-                note = "Payment",
-                paymentMethod = "transfer",
+                date = date,
+                note = note.trim().takeIf { it.isNotEmpty() },
+                paymentMethod = paymentMethod,
                 createdAt = now,
                 updatedAt = now,
                 deletedAt = null
             )
             upsertDebtPaymentSafely(payment)
             
-            val debt = debtDao.getById(debtId) ?: return@launch
             val newAmount = debt.amount.subtract(amount)
             upsertDebtSafely(debt.copy(amount = newAmount, updatedAt = Date()))
             
@@ -215,6 +240,44 @@ class DebtViewModel @Inject constructor(
             val allPayments = debtPaymentDao.getAllIncludingDeleted()
             val filtered = allPayments.filter { it.debtId == debtId && it.deletedAt == null }.sortedByDescending { it.date }
             _uiState.update { it.copy(debtPayments = filtered) }
+        }
+    }
+
+    fun deletePayment(payment: DebtPayment) {
+        viewModelScope.launch {
+            val debtId = payment.debtId ?: return@launch
+            val debt = debtDao.getById(debtId) ?: return@launch
+            val now = Date()
+
+            val restoredDebt = debt.copy(
+                amount = debt.amount.add(payment.amount),
+                updatedAt = now
+            )
+            upsertDebtSafely(restoredDebt)
+
+            val accountId = payment.accountId
+            if (accountId != null) {
+                val account = accountDao.getById(accountId)
+                if (account != null) {
+                    val balanceChange = debtPaymentDeletionBalanceChange(payment.amount, debt.direction)
+                    upsertAccountSafely(
+                        account.copy(
+                            balance = account.balance.add(balanceChange),
+                            updatedAt = now
+                        )
+                    )
+                }
+            }
+
+            deleteDebtPaymentSafely(payment)
+            val allPayments = debtPaymentDao.getAllIncludingDeleted()
+            val filtered = allPayments.filter { it.debtId == debtId && it.deletedAt == null }.sortedByDescending { it.date }
+            _uiState.update {
+                it.copy(
+                    selectedDebt = restoredDebt,
+                    debtPayments = filtered
+                )
+            }
         }
     }
 

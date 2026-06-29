@@ -261,6 +261,7 @@
     <string name="l10n_no_inventory_available_yet_5380356e1d" formatted="false">لا يوجد مخزون متاح حتى الآن</string>
     <string name="l10n_no_organizations_yet_e932e617af" formatted="false">لا توجد مؤسسات بعد</string>
     <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">لا يوجد سجل الدفع</string>
+    <string name="l10n_no_debts_found_b05c7df2ea" formatted="false">لم يتم العثور على ديون</string>
     <string name="l10n_no_photo_available_26ee476cf8" formatted="false">لا توجد صورة متاحة</string>
     <string name="l10n_no_photos_selected_dde0dad3af" formatted="false">لم يتم تحديد أي صور</string>
     <string name="l10n_no_reminders_set_deaccb44c3" formatted="false">لم يتم ضبط أي تذكيرات</string>
@@ -283,6 +284,7 @@
     <string name="l10n_open_receipt_29074b8045" formatted="false">فتح الإيصال</string>
     <string name="l10n_operational_8459f93535" formatted="false">التشغيلية</string>
     <string name="l10n_owes_you_855addac0e" formatted="false">مستحق لك</string>
+    <string name="l10n_payment_b41a92bed0" formatted="false">دفعة</string>
     <string name="l10n_owned_b62ff5ccd1" formatted="false">مملوكة</string>
     <string name="l10n_paid_by_2e06e8e0d2" formatted="false">المدفوعة بواسطة</string>
     <string name="l10n_part_88be9d62d7" formatted="false">جزء</string>
@@ -935,5 +937,37 @@
     <string name="l10n_or_1758356db2" formatted="false">أو</string>
     <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">تعذر إكمال تسجيل الدخول الاجتماعي الآن. حاول مرة أخرى.</string>
     <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">لم يتم إعداد تسجيل الدخول عبر Google بعد.</string>
+    <string name="l10n_open_vehicle_aging_holding_cost_and_roi_si_1a73786264" formatted="false">افتح إشارات عمر المركبات وتكلفة الاحتفاظ والعائد على الاستثمار.</string>
+    <string name="l10n_finance_snapshot_2a993f5e06" formatted="false">لقطة مالية</string>
+    <string name="l10n_review_revenue_expenses_and_profit_movemen_ffbb4162fc" formatted="false">راجع حركة الإيرادات والمصروفات والأرباح.</string>
+    <string name="l10n_crm_analytics_3f5f0f4552" formatted="false">تحليلات CRM</string>
+    <string name="l10n_queued_6a599877d7" formatted="false">في الانتظار</string>
+    <string name="l10n_sync_attention_857a34603f" formatted="false">تنبيه المزامنة</string>
+    <string name="l10n_there_are_queued_changes_waiting_to_reach__1f98dedb63" formatted="false">توجد تغييرات في قائمة الانتظار تنتظر الوصول إلى السحابة. افتح صحة البيانات قبل الاعتماد على التقارير.</string>
+    <string name="l10n_inventory_attention_f204593437" formatted="false">تنبيه المخزون</string>
+    <string name="l10n_aging_units_or_holding_cost_pressure_need__4b72cdac90" formatted="false">الوحدات القديمة أو ضغط تكلفة الاحتفاظ يحتاج إلى مراجعة. ابدأ بتحليلات المخزون.</string>
+    <string name="l10n_expenses_are_outrunning_revenue_for_the_se_1c7a99d297" formatted="false">المصروفات تتجاوز الإيرادات للفترة المحددة. راجع حركة المبيعات والمصروفات.</string>
+    <string name="l10n_crm_watch_001ad9da5e" formatted="false">مراقبة CRM</string>
+    <string name="l10n_pipeline_exists_but_conversion_is_still_lo_7d307c0bb9" formatted="false">توجد فرص في المسار، لكن التحويل لا يزال منخفضًا. افتح متابعات CRM ومراحل العملاء المحتملين.</string>
+    <string name="l10n_revenue_inventory_and_crm_signals_are_stab_e4c62c9dc4" formatted="false">إشارات الإيرادات والمخزون وCRM مستقرة للفترة المحددة.</string>
+    <string name="l10n_delete_transaction_ce9cb62331" formatted="false">حذف المعاملة</string>
+    <string name="l10n_this_will_remove_the_transaction_and_updat_243629f81a" formatted="false">سيؤدي ذلك إلى إزالة المعاملة وتحديث رصيد الحساب.</string>
+    <string name="l10n_starting_balance_s_823d004e37">الرصيد الافتتاحي (%1$s)</string>
+    <string name="l10n_current_balance_s_ee7eabd82f">الرصيد الحالي: %1$s</string>
+    <string name="l10n_creating_cash_and_bank_accounts_d7a2228d7f" formatted="false">جارٍ إنشاء حسابي النقد والبنك...</string>
+    <string name="l10n_create_accounts_to_track_cash_bank_balance_5c1eb5de8b" formatted="false">أنشئ حسابات لتتبع النقد والأرصدة البنكية وكل معاملة.</string>
+    <string name="l10n_create_cash_bank_e970c895a2" formatted="false">إنشاء النقد + البنك</string>
+    <string name="l10n_add_custom_account_aaf8939b49" formatted="false">إضافة حساب مخصص</string>
+    <string name="l10n_no_accounts_found_db53013601" formatted="false">لم يتم العثور على حسابات</string>
+    <string name="l10n_recording_payment_for_s_c4769926cb">تسجيل دفعة لـ %1$s</string>
+    <string name="l10n_record_payment_received_4fbb57dfa9" formatted="false">تسجيل دفعة مستلمة</string>
+    <string name="l10n_record_payment_sent_1f1e116bac" formatted="false">تسجيل دفعة مرسلة</string>
+    <string name="l10n_history_f6dc58f5e8" formatted="false">السجل</string>
+    <string name="l10n_method_88306943fe" formatted="false">الطريقة</string>
+    <string name="l10n_delete_payment_caff4afdb9" formatted="false">حذف الدفعة</string>
+    <string name="l10n_due_date_a1b308ec70" formatted="false">تاريخ الاستحقاق</string>
+    <string name="l10n_due_date_s_ea44bba7be">تاريخ الاستحقاق: %1$s</string>
+    <string name="l10n_they_owe_me_453c6f6dea" formatted="false">هم مدينون لي</string>
+    <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">أنا مدين لهم</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">جنوب أفريقيا</string>
 </resources>

@@ -261,6 +261,7 @@
     <string name="l10n_no_inventory_available_yet_5380356e1d" formatted="false">Hozircha inventar mavjud emas</string>
     <string name="l10n_no_organizations_yet_e932e617af" formatted="false">Hozircha tashkilot yoʻq</string>
     <string name="l10n_no_payment_history_26a1fce3d4" formatted="false">Toʻlov tarixi yoʻq</string>
+    <string name="l10n_no_debts_found_b05c7df2ea" formatted="false">Qarzlar topilmadi</string>
     <string name="l10n_no_photo_available_26ee476cf8" formatted="false">Hech qanday surat mavjud emas</string>
     <string name="l10n_no_photos_selected_dde0dad3af" formatted="false">Hech qanday surat tanlanmagan</string>
     <string name="l10n_no_reminders_set_deaccb44c3" formatted="false">Eslatmalar oʻrnatilmagan</string>
@@ -283,6 +284,7 @@
     <string name="l10n_open_receipt_29074b8045" formatted="false">Ochiq kvitansiya</string>
     <string name="l10n_operational_8459f93535" formatted="false">Operatsion</string>
     <string name="l10n_owes_you_855addac0e" formatted="false">SIZGA QARZDOR</string>
+    <string name="l10n_payment_b41a92bed0" formatted="false">To‘lov</string>
     <string name="l10n_owned_b62ff5ccd1" formatted="false">Egalik</string>
     <string name="l10n_paid_by_2e06e8e0d2" formatted="false">Toʻlangan</string>
     <string name="l10n_part_88be9d62d7" formatted="false">Qism</string>
@@ -935,5 +937,37 @@
     <string name="l10n_or_1758356db2" formatted="false">yoki</string>
     <string name="l10n_we_couldn_t_complete_social_sign_in_right__4cd1e75e49" formatted="false">Hozir ijtimoiy tarmoq orqali kirishni yakunlab bo‘lmadi. Qayta urinib ko‘ring.</string>
     <string name="l10n_google_sign_in_is_not_configured_yet_95b7f25cb3" formatted="false">Google orqali kirish hali sozlanmagan.</string>
+    <string name="l10n_open_vehicle_aging_holding_cost_and_roi_si_1a73786264" formatted="false">Avtomobillar yoshi, saqlash xarajati va ROI signallarini oching.</string>
+    <string name="l10n_finance_snapshot_2a993f5e06" formatted="false">Moliya kesimi</string>
+    <string name="l10n_review_revenue_expenses_and_profit_movemen_ffbb4162fc" formatted="false">Daromad, xarajatlar va foyda harakatini ko‘rib chiqing.</string>
+    <string name="l10n_crm_analytics_3f5f0f4552" formatted="false">CRM analitikasi</string>
+    <string name="l10n_queued_6a599877d7" formatted="false">Navbatda</string>
+    <string name="l10n_sync_attention_857a34603f" formatted="false">Sinxronlashga eʼtibor</string>
+    <string name="l10n_there_are_queued_changes_waiting_to_reach__1f98dedb63" formatted="false">Bulutga yuborilishini kutayotgan o‘zgarishlar navbatda turibdi. Hisobotlarga tayanishdan oldin Data Health ni oching.</string>
+    <string name="l10n_inventory_attention_f204593437" formatted="false">Inventarga eʼtibor</string>
+    <string name="l10n_aging_units_or_holding_cost_pressure_need__4b72cdac90" formatted="false">Eskirayotgan birliklar yoki saqlash xarajati bosimi tekshiruv talab qiladi. Inventory analytics dan boshlang.</string>
+    <string name="l10n_expenses_are_outrunning_revenue_for_the_se_1c7a99d297" formatted="false">Tanlangan davrda xarajatlar daromaddan oshib ketmoqda. Savdolar va xarajatlar harakatini ko‘rib chiqing.</string>
+    <string name="l10n_crm_watch_001ad9da5e" formatted="false">CRM nazorati</string>
+    <string name="l10n_pipeline_exists_but_conversion_is_still_lo_7d307c0bb9" formatted="false">Pipeline mavjud, lekin konversiya hali past. CRM follow-up va lid bosqichlarini oching.</string>
+    <string name="l10n_revenue_inventory_and_crm_signals_are_stab_e4c62c9dc4" formatted="false">Daromad, inventar va CRM signallari tanlangan davr uchun barqaror.</string>
+    <string name="l10n_delete_transaction_ce9cb62331" formatted="false">Tranzaksiyani o‘chirish</string>
+    <string name="l10n_this_will_remove_the_transaction_and_updat_243629f81a" formatted="false">Bu tranzaksiyani olib tashlaydi va hisob balansini yangilaydi.</string>
+    <string name="l10n_starting_balance_s_823d004e37">Boshlang‘ich balans (%1$s)</string>
+    <string name="l10n_current_balance_s_ee7eabd82f">Joriy balans: %1$s</string>
+    <string name="l10n_creating_cash_and_bank_accounts_d7a2228d7f" formatted="false">Cash va Bank hisoblari yaratilmoqda...</string>
+    <string name="l10n_create_accounts_to_track_cash_bank_balance_5c1eb5de8b" formatted="false">Naqd pul, bank balanslari va har bir tranzaksiyani kuzatish uchun hisoblar yarating.</string>
+    <string name="l10n_create_cash_bank_e970c895a2" formatted="false">Cash + Bank yaratish</string>
+    <string name="l10n_add_custom_account_aaf8939b49" formatted="false">Maxsus hisob qo‘shish</string>
+    <string name="l10n_no_accounts_found_db53013601" formatted="false">Hisoblar topilmadi</string>
+    <string name="l10n_recording_payment_for_s_c4769926cb">%1$s uchun to‘lov qayd etilmoqda</string>
+    <string name="l10n_record_payment_received_4fbb57dfa9" formatted="false">Qabul qilingan to‘lovni qayd etish</string>
+    <string name="l10n_record_payment_sent_1f1e116bac" formatted="false">Yuborilgan to‘lovni qayd etish</string>
+    <string name="l10n_history_f6dc58f5e8" formatted="false">TARIX</string>
+    <string name="l10n_method_88306943fe" formatted="false">Usul</string>
+    <string name="l10n_delete_payment_caff4afdb9" formatted="false">To‘lovni o‘chirish</string>
+    <string name="l10n_due_date_a1b308ec70" formatted="false">Muddat sanasi</string>
+    <string name="l10n_due_date_s_ea44bba7be">Muddat sanasi: %1$s</string>
+    <string name="l10n_they_owe_me_453c6f6dea" formatted="false">Menga qarzdor</string>
+    <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">Men qarzdorman</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">Janubiy Afrika</string>
 </resources>
