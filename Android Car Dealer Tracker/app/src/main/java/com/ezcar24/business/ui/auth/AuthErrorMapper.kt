@@ -73,6 +73,22 @@ object AuthErrorMapper {
                 messageBlob.contains("for security purposes") ->
                 "Too many attempts. Please wait a moment and try again."
 
+            context == AuthFailureContext.SOCIAL_SIGN_IN &&
+                (
+                    messageBlob.contains("unregistered_on_api_console") ||
+                        messageBlob.contains("not registered to use oauth2") ||
+                        messageBlob.contains("api console") ||
+                        messageBlob.contains("developer_error") ||
+                        messageBlob.contains("package name and sha") ||
+                        messageBlob.contains("getcredentialresponse error returned from framework") ||
+                        messageBlob.contains("account reauth failed")
+                    ) ->
+                "Google Sign-In is not configured for this Android build. Check the package name and SHA-1 in Firebase or Google Cloud."
+
+            context == AuthFailureContext.SOCIAL_SIGN_IN &&
+                messageBlob.contains("credential") ->
+                "Google Sign-In could not be completed. Check Google Play Services and try again."
+
             context == AuthFailureContext.PASSWORD_RESET_COMPLETE &&
                 (
                     messageBlob.contains("recovery session") ||

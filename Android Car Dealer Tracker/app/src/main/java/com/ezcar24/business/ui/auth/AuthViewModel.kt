@@ -295,7 +295,12 @@ class AuthViewModel @Inject constructor(
                     message = null
                 )
             } catch (e: GetCredentialCancellationException) {
-                _uiState.value = currentState.copy(isLoading = false, error = null, message = null)
+                Log.w(TAG, "Google credential flow did not complete", e)
+                _uiState.value = currentState.copy(
+                    isLoading = false,
+                    error = AuthErrorMapper.map(e, AuthFailureContext.SOCIAL_SIGN_IN),
+                    message = null
+                )
             } catch (e: Exception) {
                 Log.e(TAG, "Google sign-in failed", e)
                 _uiState.value = currentState.copy(
