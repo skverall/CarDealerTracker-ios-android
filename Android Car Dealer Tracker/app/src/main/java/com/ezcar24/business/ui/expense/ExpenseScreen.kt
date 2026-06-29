@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -69,22 +69,6 @@ fun ExpenseScreen(
 
     Scaffold(
         containerColor = EzcarBackgroundLight,
-        topBar = {
-            Column {
-                ExpenseHeader(
-                    totalAmount = uiState.totalAmount,
-                    dateFilter = uiState.dateFilter
-                )
-                ExpenseFilters(
-                    uiState = uiState,
-                    onDateFilterSelect = viewModel::setDateFilter,
-                    onCategorySelect = viewModel::setCategoryFilter,
-                    onExpenseTypeSelect = viewModel::setExpenseTypeFilter,
-                    onVehicleSelect = viewModel::setVehicleFilter,
-                    onUserSelect = viewModel::setUserFilter
-                )
-            }
-        },
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { showAddSheet = true },
@@ -101,41 +85,26 @@ fun ExpenseScreen(
                 .padding(padding)
                 .pullRefresh(pullRefreshState)
         ) {
-            if (uiState.filteredExpenses.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.MonetizationOn,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp),
-                            tint = Color.Gray.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = localizedUiString("No expenses found"),
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.Gray
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = localizedUiString("Add your first expense to start tracking spending."),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.Gray.copy(alpha = 0.72f)
-                        )
-                    }
+            ExpenseList(
+                expenses = uiState.filteredExpenses,
+                padding = PaddingValues(top = 0.dp),
+                onExpenseClick = { selectedExpense = it },
+                userNamesById = userNamesById,
+                header = {
+                    ExpenseHeader(
+                        totalAmount = uiState.totalAmount,
+                        dateFilter = uiState.dateFilter
+                    )
+                    ExpenseFilters(
+                        uiState = uiState,
+                        onDateFilterSelect = viewModel::setDateFilter,
+                        onCategorySelect = viewModel::setCategoryFilter,
+                        onExpenseTypeSelect = viewModel::setExpenseTypeFilter,
+                        onVehicleSelect = viewModel::setVehicleFilter,
+                        onUserSelect = viewModel::setUserFilter
+                    )
                 }
-            } else {
-                ExpenseList(
-                    expenses = uiState.filteredExpenses,
-                    padding = PaddingValues(top = 0.dp),
-                    onDelete = viewModel::deleteExpense,
-                    onExpenseClick = { selectedExpense = it },
-                    userNamesById = userNamesById
-                )
-            }
+            )
             PullRefreshIndicator(
                 refreshing = uiState.isLoading,
                 state = pullRefreshState,
@@ -584,11 +553,13 @@ fun ExpenseFilters(
 fun ExpenseList(
     expenses: List<Expense>,
     padding: PaddingValues,
-    onDelete: (Expense) -> Unit,
     onExpenseClick: (Expense) -> Unit,
-    userNamesById: Map<UUID, String>
+    userNamesById: Map<UUID, String>,
+    header: @Composable () -> Unit = {}
 ) {
-    val grouped = remember(expenses) { expenses.groupBy { getDateBucket(it.date) } }
+    val grouped = remember(expenses) {
+        expenses.groupBy { getDateBucket(expenseDisplayDateTime(it)) }.toList()
+    }
     val regionSettingsManager = rememberRegionSettingsManager()
 
     LazyColumn(
@@ -598,8 +569,18 @@ fun ExpenseList(
             bottom = 100.dp
         )
     ) {
+        item(key = "expense-header") {
+            header()
+        }
+
+        if (expenses.isEmpty()) {
+            item(key = "expense-empty") {
+                ExpenseEmptyState()
+            }
+        }
+
         grouped.forEach { (bucket, list) ->
-            item {
+            item(key = "expense-bucket-$bucket") {
                 val subtotal = remember(list) {
                     list.map { it.amount }.fold(java.math.BigDecimal.ZERO, java.math.BigDecimal::add)
                 }
@@ -625,31 +606,40 @@ fun ExpenseList(
                 }
             }
 
-            item {
-                Card(
+            itemsIndexed(
+                items = list,
+                key = { _, expense -> expense.id }
+            ) { index, expense ->
+                val userName = expense.userId?.let { userNamesById[it] }.orEmpty()
+                val shape = when {
+                    list.size == 1 -> RoundedCornerShape(16.dp)
+                    index == 0 -> RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+                    index == list.lastIndex -> RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp)
+                    else -> RoundedCornerShape(0.dp)
+                }
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        .padding(horizontal = 20.dp)
+                        .padding(top = if (index == 0) 4.dp else 0.dp, bottom = if (index == list.lastIndex) 4.dp else 0.dp),
+                    shape = shape,
+                    color = Color.White,
+                    shadowElevation = if (index == 0) 2.dp else 0.dp,
                     border = BorderStroke(1.dp, Color.Black.copy(alpha = 0.03f))
                 ) {
                     Column {
-                        list.forEachIndexed { index, expense ->
-                            val userName = expense.userId?.let { userNamesById[it] }.orEmpty()
-                            ExpenseItemRow(
-                                expense = expense,
-                                userName = userName,
-                                onClick = onExpenseClick
+                        ExpenseItemRow(
+                            expense = expense,
+                            userName = userName,
+                            formattedAmount = regionSettingsManager.formatCurrency(expense.amount),
+                            onClick = onExpenseClick
+                        )
+                        if (index < list.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = Color.Gray.copy(alpha = 0.12f),
+                                thickness = 0.5.dp
                             )
-                            if (index < list.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = Color.Gray.copy(alpha = 0.12f),
-                                    thickness = 0.5.dp
-                                )
-                            }
                         }
                     }
                 }
@@ -662,10 +652,10 @@ fun ExpenseList(
 fun ExpenseItemRow(
     expense: Expense,
     userName: String,
+    formattedAmount: String,
     onClick: (Expense) -> Unit
 ) {
-    val regionSettingsManager = rememberRegionSettingsManager()
-    val subtitleDateFormat = SimpleDateFormat("d MMM, h:mm a", Locale.getDefault())
+    val subtitleDateFormat = remember { SimpleDateFormat("d MMM, h:mm a", Locale.getDefault()) }
     val displayDateTime = remember(expense.date, expense.createdAt) { expenseDisplayDateTime(expense) }
     val expenseTypeText = localizedUiString(getExpenseTypeLabel(expense.expenseType))
 
@@ -723,7 +713,7 @@ fun ExpenseItemRow(
             verticalArrangement = Arrangement.Center
         ) {
             Text(
-                text = regionSettingsManager.formatCurrency(expense.amount),
+                text = formattedAmount,
                 style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
                 fontWeight = FontWeight.SemiBold,
                 color = Color.Black
@@ -741,6 +731,37 @@ fun ExpenseItemRow(
                     fontWeight = FontWeight.Bold
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ExpenseEmptyState() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp, vertical = 96.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Default.MonetizationOn,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = Color.Gray.copy(alpha = 0.5f)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = localizedUiString("No expenses found"),
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = localizedUiString("Add your first expense to start tracking spending."),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray.copy(alpha = 0.72f)
+            )
         }
     }
 }

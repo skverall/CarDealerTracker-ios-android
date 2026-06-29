@@ -97,7 +97,13 @@ data class FinancialAccount(
         ForeignKey(entity = User::class, parentColumns = ["id"], childColumns = ["userId"], onDelete = ForeignKey.SET_NULL),
         ForeignKey(entity = FinancialAccount::class, parentColumns = ["id"], childColumns = ["accountId"], onDelete = ForeignKey.SET_NULL)
     ],
-    indices = [Index("vehicleId"), Index("userId"), Index("accountId")]
+    indices = [
+        Index("vehicleId"),
+        Index("userId"),
+        Index("accountId"),
+        Index(value = ["deletedAt", "date"], name = "index_expenses_deletedAt_date"),
+        Index(value = ["vehicleId", "deletedAt", "date"], name = "index_expenses_vehicleId_deletedAt_date")
+    ]
 )
 data class Expense(
     @PrimaryKey val id: UUID,

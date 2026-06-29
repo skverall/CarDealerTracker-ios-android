@@ -477,7 +477,7 @@ interface InventoryAlertDao : BaseDao<InventoryAlert> {
         SyncQueueItem::class, HoldingCostSettings::class,
         VehicleInventoryStats::class, InventoryAlert::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -712,6 +712,13 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE sales ADD COLUMN vatRefundPercent TEXT")
                 db.execSQL("ALTER TABLE sales ADD COLUMN vatRefundAmount TEXT")
+            }
+        }
+
+        val MIGRATION_10_11 = object : androidx.room.migration.Migration(10, 11) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_deletedAt_date` ON `expenses` (`deletedAt`, `date`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_vehicleId_deletedAt_date` ON `expenses` (`vehicleId`, `deletedAt`, `date`)")
             }
         }
     }

@@ -12,11 +12,8 @@ import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.BuildConfig
 import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.repository.AuthDeepLinkResult
-import com.ezcar24.business.data.repository.AccountRepository
 import com.ezcar24.business.data.repository.AuthRepository
 import com.ezcar24.business.data.repository.SignUpResult
-import com.ezcar24.business.data.sync.CloudSyncEnvironment
-import com.ezcar24.business.data.sync.CloudSyncManager
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
@@ -76,9 +73,7 @@ private data class GoogleCredentialResult(
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val accountRepository: AccountRepository,
     private val authRepository: AuthRepository,
-    private val cloudSyncManager: CloudSyncManager,
     private val subscriptionManager: SubscriptionManager
 ) : ViewModel() {
 
@@ -171,7 +166,6 @@ class AuthViewModel @Inject constructor(
                     teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                 )
                 subscriptionManager.logIn(authRepository.getDealerId())
-                triggerSync()
                 _uiState.value = currentState.copy(
                     password = "",
                     phone = "",
@@ -217,7 +211,6 @@ class AuthViewModel @Inject constructor(
                             teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                         )
                         subscriptionManager.logIn(authRepository.getDealerId())
-                        triggerSync()
                         _uiState.value = currentState.copy(
                             password = "",
                             phone = "",
@@ -290,7 +283,6 @@ class AuthViewModel @Inject constructor(
                     teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                 )
                 subscriptionManager.logIn(authRepository.getDealerId())
-                triggerSync()
                 _uiState.value = currentState.copy(
                     password = "",
                     phone = "",
@@ -401,14 +393,6 @@ class AuthViewModel @Inject constructor(
                 referralCode = authRepository.getPendingReferralCode().orEmpty(),
                 teamInviteCode = authRepository.getPendingTeamInviteCode().orEmpty()
             )
-        }
-    }
-
-    private suspend fun triggerSync() {
-        val dealerId = accountRepository.bootstrapActiveOrganization()
-        if (dealerId != null) {
-            CloudSyncEnvironment.currentDealerId = dealerId
-            cloudSyncManager.syncAfterLogin(dealerId, forceRefresh = true)
         }
     }
 

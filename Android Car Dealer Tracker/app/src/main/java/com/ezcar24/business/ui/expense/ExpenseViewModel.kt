@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.ezcar24.business.util.localizedUiString
+import com.ezcar24.business.util.expenseDisplayDateTime
 
 enum class DateFilter(val label: String) {
     ALL("All"),
@@ -51,6 +52,20 @@ data class ExpenseUiState(
     val expenseTypeBreakdown: Map<ExpenseCategoryType, BigDecimal> = emptyMap(),
 
     val isLoading: Boolean = false
+)
+
+private data class ExpenseDataSnapshot(
+    val expenses: List<Expense>,
+    val templates: List<ExpenseTemplate>,
+    val vehicles: List<Vehicle>,
+    val users: List<User>,
+    val accounts: List<FinancialAccount>
+)
+
+private data class ExpenseFilterSnapshot(
+    val expenses: List<Expense>,
+    val totalAmount: BigDecimal,
+    val expenseTypeBreakdown: Map<ExpenseCategoryType, BigDecimal>
 )
 
 @HiltViewModel
@@ -97,37 +112,45 @@ class ExpenseViewModel @Inject constructor(
     }
     
     fun setDateFilter(filter: DateFilter) {
-        _uiState.update { it.copy(dateFilter = filter) }
-        applyFilters()
+        updateFilters { it.copy(dateFilter = filter) }
     }
 
     fun setCategoryFilter(category: String) {
-        _uiState.update { it.copy(selectedCategory = category) }
-        applyFilters()
+        updateFilters { it.copy(selectedCategory = category) }
     }
 
     fun setExpenseTypeFilter(expenseType: ExpenseCategoryType?) {
-        _uiState.update { it.copy(selectedExpenseType = expenseType) }
-        applyFilters()
+        updateFilters { it.copy(selectedExpenseType = expenseType) }
     }
     
     fun setVehicleFilter(vehicle: Vehicle?) {
-        _uiState.update { it.copy(selectedVehicle = vehicle) }
-        applyFilters()
+        updateFilters { it.copy(selectedVehicle = vehicle) }
     }
 
     fun setUserFilter(user: User?) {
-        _uiState.update { it.copy(selectedUser = user) }
-        applyFilters()
+        updateFilters { it.copy(selectedUser = user) }
     }
 
     fun setSearchQuery(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
-        applyFilters()
+        updateFilters { it.copy(searchQuery = query) }
     }
 
-    private fun applyFilters() {
-        val currentState = _uiState.value
+    private fun updateFilters(transform: (ExpenseUiState) -> ExpenseUiState) {
+        _uiState.update { currentState ->
+            transform(currentState).withAppliedFilters()
+        }
+    }
+
+    private fun ExpenseUiState.withAppliedFilters(): ExpenseUiState {
+        val filtered = filterExpenses(this)
+        return copy(
+            filteredExpenses = filtered.expenses,
+            totalAmount = filtered.totalAmount,
+            expenseTypeBreakdown = filtered.expenseTypeBreakdown
+        )
+    }
+
+    private fun filterExpenses(currentState: ExpenseUiState): ExpenseFilterSnapshot {
         val now = System.currentTimeMillis()
         val dayMillis = 86400000L
         val query = currentState.searchQuery.trim().lowercase()
@@ -170,21 +193,19 @@ class ExpenseViewModel @Inject constructor(
             }
         }
 
-        // Calculate breakdown by expense type
-        val expenseTypeBreakdown = result
+        val sortedResult = result.sortedByDescending { expenseDisplayDateTime(it).time }
+        val expenseTypeBreakdown = sortedResult
             .groupBy { it.expenseType }
             .mapValues { (_, expenses) ->
-                expenses.sumOf { it.amount }
+                expenses.fold(BigDecimal.ZERO) { total, expense -> total.add(expense.amount) }
             }
 
-        val totalAmount = result.sumOf { it.amount }
-        _uiState.update {
-            it.copy(
-                filteredExpenses = result,
-                totalAmount = totalAmount,
-                expenseTypeBreakdown = expenseTypeBreakdown
-            )
-        }
+        val totalAmount = sortedResult.fold(BigDecimal.ZERO) { total, expense -> total.add(expense.amount) }
+        return ExpenseFilterSnapshot(
+            expenses = sortedResult,
+            totalAmount = totalAmount,
+            expenseTypeBreakdown = expenseTypeBreakdown
+        )
     }
 
     private fun loadDataInternal() {
@@ -197,18 +218,25 @@ class ExpenseViewModel @Inject constructor(
                 userDao.getAllActive(),
                 financialAccountDao.getAll()
             ) { expenses, templates, vehicles, users, accounts ->
+                ExpenseDataSnapshot(
+                    expenses = expenses,
+                    templates = templates,
+                    vehicles = vehicles,
+                    users = users,
+                    accounts = accounts
+                )
+            }.collect { snapshot ->
                 _uiState.update { currentState ->
                     currentState.copy(
-                        expenses = expenses,
-                        templates = templates,
-                        vehicles = vehicles,
-                        accounts = accounts,
-                        users = users,
+                        expenses = snapshot.expenses,
+                        templates = snapshot.templates,
+                        vehicles = snapshot.vehicles,
+                        accounts = snapshot.accounts,
+                        users = snapshot.users,
                         isLoading = false
-                    )
+                    ).withAppliedFilters()
                 }
-                applyFilters()
-            }.collect { }
+            }
         }
     }
 
