@@ -38,13 +38,13 @@ import java.util.UUID
 
 // Time range enum matching iOS DashboardTimeRange
 // Time range enum matching iOS DashboardTimeRange
-enum class DashboardTimeRange(val displayLabel: String) {
-    ONE_DAY("1D"),
-    ONE_WEEK("1W"),
-    ONE_MONTH("1M"),
-    THREE_MONTHS("3M"),
-    SIX_MONTHS("6M"),
-    ALL_TIME("All");
+enum class DashboardTimeRange(val displayLabel: String, val periodValue: String) {
+    ONE_DAY("1D", "today"),
+    ONE_WEEK("1W", "week"),
+    ONE_MONTH("1M", "month"),
+    THREE_MONTHS("3M", "threeMonths"),
+    SIX_MONTHS("6M", "sixMonths"),
+    ALL_TIME("All", "all");
 
     fun getStartDate(): Date {
         val cal = Calendar.getInstance()

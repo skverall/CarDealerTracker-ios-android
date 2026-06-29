@@ -336,7 +336,8 @@ fun MainScreen(
                             launchSingleTop = true
                             restoreState = true
                         }
-                    }
+                    },
+                    onNavigateToPaywall = onNavigateToPaywall
                 )
             }
             composable("lead_funnel") {

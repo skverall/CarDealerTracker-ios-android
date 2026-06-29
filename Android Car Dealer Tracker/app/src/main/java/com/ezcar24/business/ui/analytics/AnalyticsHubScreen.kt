@@ -34,20 +34,25 @@ import androidx.compose.material.icons.filled.MonitorHeart
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -60,6 +65,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ezcar24.business.data.repository.AIInsightsReport
+import com.ezcar24.business.data.repository.AIInsightsUsage
 import com.ezcar24.business.ui.components.AutoResizingText
 import com.ezcar24.business.ui.dashboard.DashboardTimeRange
 import com.ezcar24.business.ui.dashboard.DashboardUiState
@@ -86,10 +93,19 @@ fun AnalyticsHubScreen(
     onNavigateToDataHealth: () -> Unit,
     onNavigateToSales: () -> Unit,
     onNavigateToExpenses: () -> Unit,
-    viewModel: DashboardViewModel = hiltViewModel()
+    onNavigateToPaywall: () -> Unit,
+    viewModel: DashboardViewModel = hiltViewModel(),
+    aiInsightsViewModel: AIInsightsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val aiInsightsState by aiInsightsViewModel.uiState.collectAsState()
     val regionSettingsManager = rememberRegionSettingsManager()
+
+    LaunchedEffect(uiState.selectedRange, uiState.isLoading) {
+        if (!uiState.isLoading) {
+            aiInsightsViewModel.prepare(uiState.selectedRange)
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -139,6 +155,23 @@ fun AnalyticsHubScreen(
 
             item {
                 InsightHeroCard(uiState = uiState)
+            }
+
+            item {
+                AIInsightsPremiumCard(
+                    periodTitle = uiState.selectedRange.displayLabel,
+                    state = aiInsightsState,
+                    onAction = {
+                        if (!aiInsightsState.hasProAccess) {
+                            onNavigateToPaywall()
+                        } else {
+                            aiInsightsViewModel.onPrimaryAction(uiState.selectedRange)
+                        }
+                    },
+                    onSelectReport = aiInsightsViewModel::selectReport,
+                    onConfirmRegeneration = { aiInsightsViewModel.confirmRegeneration(uiState.selectedRange) },
+                    onCancelRegeneration = aiInsightsViewModel::cancelRegeneration
+                )
             }
 
             item {
@@ -389,6 +422,469 @@ private fun PulsePill(label: String, value: String) {
             )
         }
     }
+}
+
+@Composable
+private fun AIInsightsPremiumCard(
+    periodTitle: String,
+    state: AIInsightsUiState,
+    onAction: () -> Unit,
+    onSelectReport: (AIInsightsReport) -> Unit,
+    onConfirmRegeneration: () -> Unit,
+    onCancelRegeneration: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        shadowElevation = 3.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            AIInsightsHeader(
+                periodTitle = periodTitle,
+                hasResponse = state.response != null,
+                isLoading = state.isLoading,
+                generatedAtMillis = state.generatedAtMillis,
+                hasProAccess = state.hasProAccess,
+                isCheckingAccess = state.isCheckingAccess
+            )
+
+            state.usage?.takeIf { state.hasProAccess }?.let {
+                AIInsightsUsageBar(usage = it)
+            }
+
+            if (state.isLoading && state.response != null) {
+                AIInsightsStatusRow(
+                    title = localizedUiString("Generating a fresh report"),
+                    subtitle = localizedUiString("Keeping your previous report visible while the new one is prepared."),
+                    color = EzcarBlueBright
+                )
+            }
+
+            if (state.isConfirmingRegeneration && state.response != null && !state.isLoading) {
+                AIInsightsRegenerationPrompt(
+                    onConfirm = onConfirmRegeneration,
+                    onCancel = onCancelRegeneration
+                )
+            }
+
+            if (state.history.isNotEmpty()) {
+                AIInsightsHistorySection(
+                    reports = state.history,
+                    selectedReportId = state.selectedReportId,
+                    onSelectReport = onSelectReport
+                )
+            }
+
+            when {
+                state.isLoading && state.response == null -> AIInsightsLoadingPreview()
+                state.response != null -> {
+                    AIInsightsSummaryPanel(summary = state.response.summary)
+                    AIInsightsTextSection(
+                        title = localizedUiString("Insights"),
+                        items = state.response.insights
+                    )
+                    AIInsightsTextSection(
+                        title = localizedUiString("Recommendations"),
+                        items = state.response.recommendations
+                    )
+                }
+                else -> AIInsightsEmptyState(
+                    isSignedIn = state.isSignedIn,
+                    hasProAccess = state.hasProAccess,
+                    hasData = state.hasData
+                )
+            }
+
+            state.errorMessage?.let {
+                AIInsightsErrorMessage(message = it)
+            }
+
+            if (!state.isConfirmingRegeneration) {
+                AIInsightsActionButton(
+                    title = aiInsightsButtonTitle(state),
+                    isLoading = state.isLoading,
+                    isEnabled = aiInsightsActionEnabled(state),
+                    onClick = onAction
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AIInsightsHeader(
+    periodTitle: String,
+    hasResponse: Boolean,
+    isLoading: Boolean,
+    generatedAtMillis: Long?,
+    hasProAccess: Boolean,
+    isCheckingAccess: Boolean
+) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(EzcarPurple.copy(alpha = 0.14f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.AutoAwesome,
+                contentDescription = null,
+                tint = EzcarPurple,
+                modifier = Modifier.size(22.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = localizedUiString("AI business report"),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            val subtitle = when {
+                isCheckingAccess -> localizedUiString("Checking Pro access")
+                !hasProAccess -> localizedUiString("Unlock AI-generated dealer insights")
+                isLoading -> localizedUiString("Generating for %s", periodTitle)
+                hasResponse && generatedAtMillis != null -> localizedUiString("Generated %s", generatedAtMillis.displayGeneratedAtText())
+                else -> localizedUiString("Ready for %s", periodTitle)
+            }
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun AIInsightsUsageBar(usage: AIInsightsUsage) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = localizedUiString("AI usage: %d/%d", usage.used, usage.limit),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = localizedUiString("%d left", usage.remaining),
+                style = MaterialTheme.typography.labelMedium,
+                color = if (usage.remaining > 0) MaterialTheme.colorScheme.onSurfaceVariant else EzcarWarning
+            )
+        }
+        LinearProgressIndicator(
+            progress = { usage.progress },
+            modifier = Modifier.fillMaxWidth(),
+            color = if (usage.remaining > 0) EzcarPurple else EzcarWarning,
+            trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        )
+        usage.resetDisplayText()?.let {
+            Text(
+                text = localizedUiString("Resets %s", it),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun AIInsightsStatusRow(title: String, subtitle: String, color: Color) {
+    Surface(
+        color = color.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+                color = color
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AIInsightsRegenerationPrompt(
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit
+) {
+    Surface(
+        color = EzcarOrange.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, EzcarOrange.copy(alpha = 0.22f))
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = localizedUiString("Generate a new report?"),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = localizedUiString("This uses one AI request and replaces the report for the selected range."),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(localizedUiString("Cancel"))
+                }
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(localizedUiString("Generate"))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AIInsightsHistorySection(
+    reports: List<AIInsightsReport>,
+    selectedReportId: String?,
+    onSelectReport: (AIInsightsReport) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = localizedUiString("Recent reports"),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            reports.take(8).forEach { report ->
+                val selected = selectedReportId == report.id
+                Surface(
+                    modifier = Modifier
+                        .width(220.dp)
+                        .clickable { onSelectReport(report) },
+                    color = if (selected) EzcarPurple.copy(alpha = 0.14f) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        if (selected) EzcarPurple.copy(alpha = 0.45f) else MaterialTheme.colorScheme.outline
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Text(
+                            text = report.summary,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = report.displayDateText(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AIInsightsSummaryPanel(summary: String) {
+    Surface(
+        color = EzcarNavy.copy(alpha = 0.08f),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Text(
+            text = summary,
+            modifier = Modifier.padding(16.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun AIInsightsTextSection(title: String, items: List<String>) {
+    if (items.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        items.take(5).forEachIndexed { index, item ->
+            Row(verticalAlignment = Alignment.Top) {
+                Surface(
+                    color = EzcarPurple.copy(alpha = 0.12f),
+                    contentColor = EzcarPurple,
+                    shape = CircleShape
+                ) {
+                    Text(
+                        text = (index + 1).toString(),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text = item,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AIInsightsEmptyState(
+    isSignedIn: Boolean,
+    hasProAccess: Boolean,
+    hasData: Boolean
+) {
+    val message = when {
+        !hasProAccess -> "AI reports are available with Pro access."
+        !isSignedIn -> "Sign in to generate reports for your dealership data."
+        !hasData -> "Add vehicles, expenses, or sales before generating AI insights."
+        else -> "Generate a report to get AI insights for this period."
+    }
+    Surface(
+        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.04f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+    ) {
+        Text(
+            text = localizedUiString(message),
+            modifier = Modifier.padding(16.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
+private fun AIInsightsLoadingPreview() {
+    AIInsightsStatusRow(
+        title = localizedUiString("Generating AI report"),
+        subtitle = localizedUiString("Analyzing sales, expenses and inventory for this period."),
+        color = EzcarPurple
+    )
+}
+
+@Composable
+private fun AIInsightsErrorMessage(message: String) {
+    Surface(
+        color = EzcarDanger.copy(alpha = 0.10f),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Text(
+            text = localizedUiString(message),
+            modifier = Modifier.padding(14.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = EzcarDanger
+        )
+    }
+}
+
+@Composable
+private fun AIInsightsActionButton(
+    title: String,
+    isLoading: Boolean,
+    isEnabled: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = isEnabled,
+        modifier = Modifier.fillMaxWidth(),
+        shape = CircleShape
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+        }
+        Text(
+            text = title,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+private fun aiInsightsButtonTitle(state: AIInsightsUiState): String {
+    return when {
+        state.isLoading -> "Generating..."
+        state.isCheckingAccess -> "Checking..."
+        !state.hasProAccess -> "Unlock AI Insights"
+        !state.isSignedIn -> "Sign in to generate"
+        state.usage?.remaining == 0 -> "Daily limit reached"
+        state.response != null -> "Generate new report"
+        else -> "Generate report"
+    }
+}
+
+private fun aiInsightsActionEnabled(state: AIInsightsUiState): Boolean {
+    if (state.isLoading || state.isCheckingAccess) return false
+    if (!state.hasProAccess) return true
+    if (!state.isSignedIn) return false
+    if (!state.hasData) return false
+    if (state.usage?.remaining == 0) return false
+    return true
 }
 
 @Composable
