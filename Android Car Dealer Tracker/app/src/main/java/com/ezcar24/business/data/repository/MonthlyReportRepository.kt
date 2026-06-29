@@ -329,6 +329,18 @@ class MonthlyReportRepository @Inject constructor(
     }
 
     suspend fun loadLocalSnapshot(month: ReportMonth): MonthlyReportSnapshot = withContext(Dispatchers.IO) {
+        buildLocalSnapshot(month = month, interval = month.dateInterval())
+    }
+
+    suspend fun loadLocalSnapshot(startDate: Date, endDate: Date): MonthlyReportSnapshot = withContext(Dispatchers.IO) {
+        val interval = dateRangeInterval(startDate, endDate)
+        buildLocalSnapshot(month = interval.first.reportMonth(), interval = interval)
+    }
+
+    private suspend fun buildLocalSnapshot(
+        month: ReportMonth,
+        interval: Pair<Date, Date>
+    ): MonthlyReportSnapshot {
         val db = databaseProvider.currentDatabase()
         val allVehicles = db.vehicleDao().getAllIncludingDeleted().filter { it.deletedAt == null }
         val vehiclesById = allVehicles.associateBy { it.id }
@@ -343,7 +355,6 @@ class MonthlyReportRepository @Inject constructor(
             db.holdingCostSettingsDao().getByDealerId(dealerId)
         } ?: db.holdingCostSettingsDao().getAllIncludingDeleted().maxByOrNull { it.updatedAt ?: it.createdAt }
 
-        val interval = month.dateInterval()
         val expensesInMonth = allExpenses.filter { it.date.inRange(interval) }
         val vehicleSales = allSales
             .filter { (it.date ?: vehiclesById[it.vehicleId]?.saleDate)?.inRange(interval) == true }
@@ -373,7 +384,7 @@ class MonthlyReportRepository @Inject constructor(
                 .thenByDescending { it.soldAt }
         )
 
-        MonthlyReportSnapshot(
+        return MonthlyReportSnapshot(
             reportMonth = month,
             periodLabel = interval.periodLabel(),
             generatedAt = Date(),
@@ -474,6 +485,22 @@ class MonthlyReportRepository @Inject constructor(
         val start = YearMonth.of(year, month).atDay(1).atStartOfDay(zone).toInstant()
         val end = YearMonth.of(year, month).plusMonths(1).atDay(1).atStartOfDay(zone).toInstant()
         return Date.from(start) to Date.from(end)
+    }
+
+    private fun dateRangeInterval(startDate: Date, endDate: Date): Pair<Date, Date> {
+        val zone = ZoneId.systemDefault()
+        val start = startDate.toInstant().atZone(zone).toLocalDate().atStartOfDay(zone).toInstant()
+        val end = endDate.toInstant().atZone(zone).toLocalDate().plusDays(1).atStartOfDay(zone).toInstant()
+        val startValue = Date.from(start)
+        val endValue = Date.from(end)
+        require(endValue.after(startValue)) { "Start date must be before end date." }
+        return startValue to endValue
+    }
+
+    private fun Date.reportMonth(): ReportMonth {
+        val zone = ZoneId.systemDefault()
+        val localDate = toInstant().atZone(zone).toLocalDate()
+        return ReportMonth(year = localDate.year, month = localDate.monthValue)
     }
 
     private fun Date.inRange(interval: Pair<Date, Date>): Boolean {

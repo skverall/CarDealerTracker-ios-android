@@ -99,7 +99,7 @@ class TeamMembersViewModel @Inject constructor(
                     createAccount = createAccount,
                     permissions = TeamPermissionCatalog.resolvedPermissions(permissions, role)
                 )
-                val members = accountRepository.fetchTeamMembers(organization.organizationId)
+                val members = accountRepository.fetchTeamMembers(organization.organizationId, forceRefresh = true)
                 _uiState.update {
                     it.copy(
                         isSaving = false,
@@ -147,7 +147,7 @@ class TeamMembersViewModel @Inject constructor(
                         TeamPermissionCatalog.resolvedPermissions(permissions, role)
                     )
                 }
-                val members = accountRepository.fetchTeamMembers(organization.organizationId)
+                val members = accountRepository.fetchTeamMembers(organization.organizationId, forceRefresh = true)
                 _uiState.update {
                     it.copy(
                         isSaving = false,
@@ -178,7 +178,7 @@ class TeamMembersViewModel @Inject constructor(
                 } else {
                     accountRepository.removeMember(organization.organizationId, member.id)
                 }
-                val members = accountRepository.fetchTeamMembers(organization.organizationId)
+                val members = accountRepository.fetchTeamMembers(organization.organizationId, forceRefresh = true)
                 _uiState.update {
                     it.copy(
                         isSaving = false,

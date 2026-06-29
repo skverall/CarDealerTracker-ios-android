@@ -309,7 +309,8 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable("backup_center") {
                                     com.ezcar24.business.ui.settings.BackupCenterScreen(
-                                        onBack = { navController.popBackStack() }
+                                        onBack = { navController.popBackStack() },
+                                        onNavigateToMonthlyReports = { navController.navigate("monthly_report_settings") }
                                     )
                                 }
                                 composable("monthly_report_settings") {

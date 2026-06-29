@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Share
@@ -60,12 +61,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.ui.theme.EzcarBackground
 import com.ezcar24.business.ui.theme.EzcarBlueBright
+import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.ui.theme.EzcarSurfaceMutedLight
 import com.ezcar24.business.ui.theme.EzcarTextSecondaryLight
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import com.ezcar24.business.util.localizedUiString
@@ -74,15 +77,29 @@ import com.ezcar24.business.util.localizedUiString
 @Composable
 fun BackupCenterScreen(
     onBack: () -> Unit,
+    onNavigateToMonthlyReports: () -> Unit,
     viewModel: BackupCenterViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-    var startDate by remember { mutableStateOf(Date()) }
+    var startDate by remember {
+        mutableStateOf(
+            Calendar.getInstance().apply {
+                add(Calendar.MONTH, -1)
+            }.time
+        )
+    }
     var endDate by remember { mutableStateOf(Date()) }
     var showStartPicker by remember { mutableStateOf(false) }
     var showEndPicker by remember { mutableStateOf(false) }
     val dateFormatter = remember { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()) }
+    val dateRangeError = remember(startDate, endDate) {
+        if (startDate.after(endDate)) {
+            "Start date must be before end date."
+        } else {
+            null
+        }
+    }
 
     LaunchedEffect(uiState.shareUri) {
         val uri = uiState.shareUri ?: return@LaunchedEffect
@@ -100,7 +117,7 @@ fun BackupCenterScreen(
         containerColor = EzcarBackground,
         topBar = {
             TopAppBar(
-                title = { Text(localizedUiString("Backup & Export")) },
+                title = { Text(localizedUiString("Reports & Data Export")) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
@@ -119,6 +136,19 @@ fun BackupCenterScreen(
         ) {
             item {
                 BackupHeader()
+            }
+
+            item {
+                BackupSection(title = "Scheduled Reports") {
+                    ExportActionRow(
+                        title = "Email Reports",
+                        subtitle = "Schedule automatic monthly report emails.",
+                        icon = Icons.Default.Email,
+                        color = EzcarPurple,
+                        isLoading = false,
+                        onClick = onNavigateToMonthlyReports
+                    )
+                }
             }
 
             item {
@@ -171,13 +201,19 @@ fun BackupCenterScreen(
                                 modifier = Modifier.weight(1f)
                             )
                         }
+                        if (dateRangeError != null) {
+                            Text(
+                                text = localizedUiString(dateRangeError),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = EzcarDanger,
+                                modifier = Modifier.padding(top = 10.dp)
+                            )
+                        }
                         Button(
                             onClick = {
-                                val normalizedStart = if (startDate.after(endDate)) endDate else startDate
-                                val normalizedEnd = if (startDate.after(endDate)) startDate else endDate
-                                viewModel.exportReportPdf(normalizedStart, normalizedEnd)
+                                viewModel.exportReportPdf(startDate, endDate)
                             },
-                            enabled = !uiState.isProcessing,
+                            enabled = !uiState.isProcessing && dateRangeError == null,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(top = 14.dp)
@@ -215,9 +251,9 @@ fun BackupCenterScreen(
                         color = EzcarGreen,
                         isLoading = uiState.isProcessing,
                         onClick = {
-                            val normalizedStart = if (startDate.after(endDate)) endDate else startDate
-                            val normalizedEnd = if (startDate.after(endDate)) startDate else endDate
-                            viewModel.buildArchive(normalizedStart, normalizedEnd)
+                            if (dateRangeError == null) {
+                                viewModel.buildArchive(startDate, endDate)
+                            }
                         }
                     )
                     Text(

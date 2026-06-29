@@ -2,10 +2,6 @@ package com.ezcar24.business.ui.settings
 
 import android.content.ContentValues
 import android.content.Context
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Typeface
-import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
@@ -13,15 +9,17 @@ import android.util.Base64
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ezcar24.business.data.local.ActiveDatabaseProvider
+import com.ezcar24.business.data.repository.AccountRepository
+import com.ezcar24.business.data.repository.MonthlyReportRepository
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import com.ezcar24.business.util.DateUtils
 import com.ezcar24.business.util.RegionSettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.ByteArrayOutputStream
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import javax.inject.Inject
@@ -48,7 +46,9 @@ class BackupCenterViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val databaseProvider: ActiveDatabaseProvider,
     private val cloudSyncManager: CloudSyncManager,
-    private val regionSettingsManager: RegionSettingsManager
+    private val regionSettingsManager: RegionSettingsManager,
+    private val accountRepository: AccountRepository,
+    private val monthlyReportRepository: MonthlyReportRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BackupCenterUiState())
@@ -212,61 +212,15 @@ class BackupCenterViewModel @Inject constructor(
     }
 
     private suspend fun buildReportPdf(startDate: Date, endDate: Date): ByteArray {
-        val data = prepareReportData(startDate, endDate)
-        val pdf = PdfDocument()
-        val pageInfo = PdfDocument.PageInfo.Builder(612, 792, 1).create()
-        val page = pdf.startPage(pageInfo)
-        val canvas = page.canvas
-
-        val titlePaint = Paint().apply {
-            textSize = 22f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        }
-        val sectionPaint = Paint().apply {
-            textSize = 14f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        }
-        val bodyPaint = Paint().apply {
-            textSize = 12f
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
-        }
-
-        var y = 50f
-        canvas.drawText(context.localizedUiString("Car Dealer Tracker"), 40f, y, bodyPaint)
-        y += 20f
-        canvas.drawText(context.localizedUiString("Executive Summary"), 40f, y, titlePaint)
-        y += 30f
-
-        val rangeText = "Period: ${data.rangeLabel}"
-        canvas.drawText(rangeText, 40f, y, bodyPaint)
-        y += 24f
-
-        canvas.drawText(context.localizedUiString("Financial Overview"), 40f, y, sectionPaint)
-        y += 20f
-        drawKeyValue(canvas, "Total Sales", data.totalSales, 40f, y, bodyPaint)
-        y += 18f
-        drawKeyValue(canvas, "Total Expenses", data.totalExpenses, 40f, y, bodyPaint)
-        y += 18f
-        drawKeyValue(canvas, "Estimated Profit", data.totalProfit, 40f, y, bodyPaint)
-        y += 18f
-        drawKeyValue(canvas, "Sold Vehicles", data.soldCount.toString(), 40f, y, bodyPaint)
-        y += 18f
-        drawKeyValue(canvas, "Inventory Count", data.inventoryCount.toString(), 40f, y, bodyPaint)
-        y += 28f
-
-        canvas.drawText(context.localizedUiString("Top Sold Vehicles"), 40f, y, sectionPaint)
-        y += 20f
-        data.topSoldVehicles.take(5).forEach { line ->
-            canvas.drawText(line, 40f, y, bodyPaint)
-            y += 16f
-        }
-
-        pdf.finishPage(page)
-
-        val output = ByteArrayOutputStream()
-        pdf.writeTo(output)
-        pdf.close()
-        return output.toByteArray()
+        val snapshot = monthlyReportRepository.loadLocalSnapshot(startDate, endDate)
+        return MonthlyReportPdfRenderer.build(
+            context = context,
+            regionSettingsManager = regionSettingsManager,
+            snapshot = snapshot,
+            organizationName = accountRepository.activeOrganization.value?.organizationName,
+            reportTitle = context.localizedUiString("Custom Range Report"),
+            periodPrefix = context.localizedUiString("Period")
+        )
     }
 
     private suspend fun buildArchiveJson(startDate: Date, endDate: Date): ByteArray {
@@ -317,17 +271,18 @@ class BackupCenterViewModel @Inject constructor(
     }
 
     private suspend fun prepareReportData(startDate: Date, endDate: Date): ReportData {
+        val (rangeStart, rangeEnd) = calendarDayRange(startDate, endDate)
         val db = databaseProvider.currentDatabase()
         val expenses = db.expenseDao().getAllIncludingDeleted()
             .filter { it.deletedAt == null }
-            .filter { !it.date.before(startDate) && !it.date.after(endDate) }
+            .filter { !it.date.before(rangeStart) && !it.date.after(rangeEnd) }
         val vehicles = db.vehicleDao().getAllIncludingDeleted().filter { it.deletedAt == null }
 
         val inventoryCount = vehicles.count { it.status != "sold" }
         val soldVehicles = vehicles.filter { it.status == "sold" && it.saleDate != null }
             .filter { sale ->
                 val date = sale.saleDate ?: return@filter false
-                !date.before(startDate) && !date.after(endDate)
+                !date.before(rangeStart) && !date.after(rangeEnd)
             }
 
         val totalExpenses = expenses.fold(BigDecimal.ZERO) { total, expense -> total + expense.amount }
@@ -344,7 +299,7 @@ class BackupCenterViewModel @Inject constructor(
         }
 
         val dateFormatter = SimpleDateFormat("MMM d, yyyy", Locale.getDefault())
-        val rangeLabel = "${dateFormatter.format(startDate)} - ${dateFormatter.format(endDate)}"
+        val rangeLabel = "${dateFormatter.format(rangeStart)} - ${dateFormatter.format(rangeEnd)}"
         val topSold = soldVehicles.sortedByDescending { it.salePrice ?: BigDecimal.ZERO }.map { vehicle ->
             val title = listOfNotNull(vehicle.make, vehicle.model).joinToString(" ").ifBlank { vehicle.vin }
             val price = regionSettingsManager.formatCurrency(vehicle.salePrice ?: BigDecimal.ZERO)
@@ -362,10 +317,20 @@ class BackupCenterViewModel @Inject constructor(
         )
     }
 
-    private fun drawKeyValue(canvas: Canvas, label: String, value: String, x: Float, y: Float, paint: Paint) {
-        canvas.drawText(label, x, y, paint)
-        val textWidth = paint.measureText(value)
-        canvas.drawText(value, 560f - textWidth, y, paint)
+    private fun calendarDayRange(startDate: Date, endDate: Date): Pair<Date, Date> {
+        val calendar = Calendar.getInstance()
+        calendar.time = startDate
+        calendar.set(Calendar.HOUR_OF_DAY, 0)
+        calendar.set(Calendar.MINUTE, 0)
+        calendar.set(Calendar.SECOND, 0)
+        calendar.set(Calendar.MILLISECOND, 0)
+        val start = calendar.time
+        calendar.time = endDate
+        calendar.set(Calendar.HOUR_OF_DAY, 23)
+        calendar.set(Calendar.MINUTE, 59)
+        calendar.set(Calendar.SECOND, 59)
+        calendar.set(Calendar.MILLISECOND, 999)
+        return start to calendar.time
     }
 
     private fun buildCsv(header: List<String>, rows: List<List<String>>): String {

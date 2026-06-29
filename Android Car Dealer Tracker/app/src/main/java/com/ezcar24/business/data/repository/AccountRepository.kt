@@ -37,6 +37,7 @@ import com.ezcar24.business.util.TeamPermissionCatalog
 private const val ACCOUNT_PREFS = "ezcar24_account"
 private const val ACTIVE_ORGANIZATION_KEY_PREFIX = "activeOrganization"
 private const val ACCOUNT_TAG = "AccountRepository"
+private const val TEAM_MEMBERS_CACHE_TTL_MS = 60_000L
 
 data class OrganizationMembership(
     val organizationId: UUID,
@@ -138,6 +139,7 @@ class AccountRepository @Inject constructor(
     private val json = Json { ignoreUnknownKeys = true }
     private val _organizations = MutableStateFlow<List<OrganizationMembership>>(emptyList())
     private val _activeOrganization = MutableStateFlow<OrganizationMembership?>(null)
+    private val teamMembersCache = mutableMapOf<UUID?, Pair<Long, List<TeamMemberAccess>>>()
 
     val organizations = _organizations.asStateFlow()
     val activeOrganization = _activeOrganization.asStateFlow()
@@ -220,7 +222,16 @@ class AccountRepository @Inject constructor(
         }.getOrNull()
     }
 
-    suspend fun fetchTeamMembers(organizationId: UUID?): List<TeamMemberAccess> = withContext(Dispatchers.IO) {
+    suspend fun fetchTeamMembers(
+        organizationId: UUID?,
+        forceRefresh: Boolean = false
+    ): List<TeamMemberAccess> = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        val cached = teamMembersCache[organizationId]
+        if (!forceRefresh && cached != null && now - cached.first < TEAM_MEMBERS_CACHE_TTL_MS) {
+            return@withContext cached.second
+        }
+
         val result = if (organizationId == null) {
             client.postgrest.rpc("get_team_members_secure")
         } else {
@@ -229,13 +240,15 @@ class AccountRepository @Inject constructor(
             }
             client.postgrest.rpc("get_team_members_secure", params)
         }
-        json.decodeFromString<List<TeamMemberAccessDto>>(result.data)
+        val members = json.decodeFromString<List<TeamMemberAccessDto>>(result.data)
             .mapNotNull { it.toModel() }
             .sortedWith(
                 compareBy<TeamMemberAccess> { it.isInvited }
                     .thenBy { it.role != "owner" }
                     .thenBy { it.email.orEmpty().lowercase(Locale.US) }
             )
+        teamMembersCache[organizationId] = now to members
+        members
     }
 
     suspend fun inviteMember(
@@ -350,6 +363,7 @@ class AccountRepository @Inject constructor(
     fun clearSessionState() {
         _organizations.value = emptyList()
         _activeOrganization.value = null
+        teamMembersCache.clear()
         CloudSyncEnvironment.currentDealerId = null
     }
 

@@ -58,7 +58,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.ezcar24.business.ui.components.AutoResizingText
 import com.ezcar24.business.ui.dashboard.DashboardTimeRange
 import com.ezcar24.business.ui.dashboard.DashboardUiState
 import com.ezcar24.business.ui.dashboard.DashboardViewModel
@@ -336,7 +338,12 @@ private fun InsightHeroCard(uiState: DashboardUiState) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     PulsePill(
                         label = localizedUiString("Inventory"),
                         value = "${uiState.inventoryHealthScore}"
@@ -415,13 +422,15 @@ private fun MetricTile(
                     modifier = Modifier.size(17.dp)
                 )
             }
-            Text(
+            AutoResizingText(
                 text = value,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = MaterialTheme.colorScheme.onSurface,
+                minFontSize = 12.sp,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth()
             )
             Text(
                 text = label,
@@ -502,13 +511,15 @@ private fun InsightDestinationCard(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
+                    AutoResizingText(
                         text = value,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.ExtraBold,
                         color = color,
+                        minFontSize = 12.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth()
                     )
                     Text(
                         text = valueLabel,

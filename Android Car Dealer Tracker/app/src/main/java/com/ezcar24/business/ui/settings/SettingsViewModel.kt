@@ -99,10 +99,16 @@ class SettingsViewModel @Inject constructor(
             try {
                 val user = authRepository.getCurrentUser()
                 val localUser = user?.id?.toUUID()?.let { userDao.getById(it) }
-                val organizations = accountRepository.refreshOrganizations()
-                val activeOrganization = accountRepository.activeOrganization.value
+                val cachedOrganizations = accountRepository.organizations.value
+                val cachedActiveOrganization = accountRepository.activeOrganization.value
+                val organizations = if (cachedOrganizations.isNotEmpty() && cachedActiveOrganization != null) {
+                    cachedOrganizations
+                } else {
+                    accountRepository.refreshOrganizations()
+                }
+                val activeOrganization = accountRepository.activeOrganization.value ?: cachedActiveOrganization
                 val referralStats = if (activeOrganization != null) {
-                    accountRepository.getReferralStats()
+                    _uiState.value.referralStats ?: accountRepository.getReferralStats()
                 } else {
                     null
                 }
