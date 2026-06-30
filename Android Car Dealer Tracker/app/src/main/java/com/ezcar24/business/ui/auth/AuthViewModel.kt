@@ -22,7 +22,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.security.MessageDigest
 import java.security.SecureRandom
 import javax.inject.Inject
 
@@ -499,7 +498,7 @@ class AuthViewModel @Inject constructor(
     private suspend fun requestGoogleCredential(context: Context): GoogleCredentialResult {
         val nonce = generateSecureRandomNonce()
         val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID)
-            .setNonce(sha256(nonce))
+            .setNonce(nonce)
             .build()
 
         val request = GetCredentialRequest.Builder()
@@ -512,7 +511,10 @@ class AuthViewModel @Inject constructor(
         )
         val credential = result.credential
         if (credential is CustomCredential &&
-            credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
+            (
+                credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL ||
+                    credential.type == GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_SIWG_CREDENTIAL
+                )
         ) {
             try {
                 val googleCredential = GoogleIdTokenCredential.createFrom(credential.data)
@@ -532,12 +534,6 @@ class AuthViewModel @Inject constructor(
             randomBytes,
             Base64.NO_WRAP or Base64.URL_SAFE or Base64.NO_PADDING
         )
-    }
-
-    private fun sha256(value: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-            .digest(value.toByteArray(Charsets.UTF_8))
-        return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
     }
 
     private fun notifyAuthCompletedAsync(state: AuthUiState, method: String) {

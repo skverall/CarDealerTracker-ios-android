@@ -12,6 +12,7 @@
 		10F075372ED4B66F00740D2D /* PasswordResetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10F075362ED4B66F00740D2D /* PasswordResetView.swift */; };
 		10FA8DD82ECF6BE000ECC6F9 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 10FA8DD72ECF6BE000ECC6F9 /* RevenueCat */; };
 		10FA8DDA2ECF6BE000ECC6F9 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 10FA8DD92ECF6BE000ECC6F9 /* RevenueCatUI */; };
+		E2B700012F520000071352E /* AppleSearchAdsAttributionReporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B700002F520000071352E /* AppleSearchAdsAttributionReporter.swift */; };
 		10FA8DDF2ECF7ED400ECC6F9 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */; };
 		10FA8DE12ECF7F7D00ECC6F9 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */; };
 		10FA8DE32ECF800000ECC6F9 /* RevenueCatKeyProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10FA8DE22ECF800000ECC6F9 /* RevenueCatKeyProvider.swift */; };
@@ -151,6 +152,7 @@
 		10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		10FA8DE02ECF7F7D00ECC6F9 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		10FA8DE22ECF800000ECC6F9 /* RevenueCatKeyProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevenueCatKeyProvider.swift; sourceTree = "<group>"; };
+		E2B700002F520000071352E /* AppleSearchAdsAttributionReporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleSearchAdsAttributionReporter.swift; sourceTree = "<group>"; };
 		10FA910F2F45A12000ECC6F9 /* PaywallHero911.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = PaywallHero911.mp4; sourceTree = "<group>"; };
 		A0FFFFFF /* Ezcar24Business.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Ezcar24Business.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000 /* Ezcar24BusinessApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Ezcar24BusinessApp.swift; sourceTree = "<group>"; };
@@ -485,6 +487,7 @@
 				E2C37EE52F06A39E00EA13C1 /* AppReviewManager.swift */,
 				E2AA10002F4A000000000001 /* OnboardingAnalytics.swift */,
 				10FA8DE22ECF800000ECC6F9 /* RevenueCatKeyProvider.swift */,
+				E2B700002F520000071352E /* AppleSearchAdsAttributionReporter.swift */,
 				10FA8DDE2ECF7ED400ECC6F9 /* SubscriptionManager.swift */,
 				D0000004 /* InventoryStatsManager.swift */,
 				D0000001 /* CloudSyncManager.swift */,
@@ -748,6 +751,7 @@
 				F3000102 /* AccountTransactionsViewModel.swift in Sources */,
 				F3000103 /* AddAccountTransactionView.swift in Sources */,
 				E2A08AB32F105B580071352E /* TeamManagementView.swift in Sources */,
+				E2B700012F520000071352E /* AppleSearchAdsAttributionReporter.swift in Sources */,
 				10FA8DDF2ECF7ED400ECC6F9 /* SubscriptionManager.swift in Sources */,
 				10FA8DE32ECF800000ECC6F9 /* RevenueCatKeyProvider.swift in Sources */,
 				G0000101 /* BackupExportManager.swift in Sources */,

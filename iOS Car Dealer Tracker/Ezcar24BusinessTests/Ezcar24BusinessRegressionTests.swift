@@ -489,6 +489,45 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertFalse(manager.isCheckingStatus)
     }
 
+    func testAppleSearchAdsAttributionMapsRevenueCatAttributes() {
+        let metadata = AppleSearchAdsAttributionMetadata(
+            response: [
+                "attribution": true,
+                "campaignId": 12345,
+                "adGroupId": "23456",
+                "adId": 34567,
+                "keywordId": "45678",
+                "countryOrRegion": "US",
+                "claimType": "Click"
+            ]
+        )
+
+        let attributes = metadata.revenueCatAttributes
+
+        XCTAssertEqual(attributes["$mediaSource"], "Apple Search Ads")
+        XCTAssertEqual(attributes["$campaign"], "12345")
+        XCTAssertEqual(attributes["$adGroup"], "23456")
+        XCTAssertEqual(attributes["$ad"], "34567")
+        XCTAssertEqual(attributes["$keyword"], "45678")
+        XCTAssertEqual(attributes["apple_search_ads_campaign_id"], "12345")
+        XCTAssertEqual(attributes["apple_search_ads_ad_group_id"], "23456")
+        XCTAssertEqual(attributes["apple_search_ads_ad_id"], "34567")
+        XCTAssertEqual(attributes["apple_search_ads_keyword_id"], "45678")
+        XCTAssertEqual(attributes["apple_search_ads_country_or_region"], "US")
+        XCTAssertEqual(attributes["apple_search_ads_claim_type"], "Click")
+    }
+
+    func testAppleSearchAdsAttributionSkipsOrganicResponses() {
+        let metadata = AppleSearchAdsAttributionMetadata(
+            response: [
+                "attribution": false,
+                "countryOrRegion": "US"
+            ]
+        )
+
+        XCTAssertTrue(metadata.revenueCatAttributes.isEmpty)
+    }
+
     func testSubscriptionManagerKeepsBonusFallbackWithoutRevenueCatConfiguration() async {
         let manager = await prepareSubscriptionManager()
         let bonusUntil = Date().addingTimeInterval(3_600)

@@ -94,6 +94,7 @@ struct Ezcar24BusinessApp: App {
             let currentAppUserId = provider.client.auth.currentSession?.user.id.uuidString
             Purchases.configure(withAPIKey: RevenueCatKeyProvider.currentKey, appUserID: currentAppUserId)
             Purchases.shared.attribution.enableAdServicesAttributionTokenCollection()
+            AppleSearchAdsAttributionReporter.reportIfAvailable()
         }
     }
 

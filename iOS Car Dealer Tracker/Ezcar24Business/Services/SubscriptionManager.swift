@@ -243,6 +243,7 @@ class SubscriptionManager: ObservableObject {
                 self.clearCachedStatus()
             } else if let customerInfo = customerInfo {
                 self.updateProStatus(from: customerInfo)
+                AppleSearchAdsAttributionReporter.reportIfAvailable()
             } else {
                 self.clearCachedStatus()
             }
