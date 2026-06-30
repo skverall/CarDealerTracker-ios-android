@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.FinancialAccount
+import com.ezcar24.business.ui.components.PremiumPaywallButton
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.SubscriptionAccess
 import com.ezcar24.business.util.localizedUiString
@@ -745,15 +746,16 @@ fun VehicleAddEditScreen(
                 )
             },
             confirmButton = {
-                Button(
+                PremiumPaywallButton(
+                    text = localizedUiString("Upgrade to Pro"),
                     onClick = {
                         showVehicleLimitDialog = false
                         onNavigateToPaywall()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy)
-                ) {
-                    Text(localizedUiString("Upgrade to Pro"))
-                }
+                    height = 48.dp,
+                    cornerRadius = 18.dp,
+                    fontSize = 15.sp
+                )
             },
             dismissButton = {
                 TextButton(onClick = { showVehicleLimitDialog = false }) {

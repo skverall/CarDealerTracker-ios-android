@@ -66,6 +66,18 @@ class AuthErrorMapperTest {
     }
 
     @Test
+    fun `map returns nonce verification message for Google social sign in mismatch`() {
+        val error = IllegalStateException("invalid nonce: Nonces mismatch")
+
+        val message = AuthErrorMapper.map(error, AuthFailureContext.SOCIAL_SIGN_IN)
+
+        assertEquals(
+            "Google Sign-In could not verify this request. Please update the app and try again.",
+            message
+        )
+    }
+
+    @Test
     fun `map returns password change fallback for generic password update failures`() {
         val error = IllegalStateException("Unexpected upstream failure")
 

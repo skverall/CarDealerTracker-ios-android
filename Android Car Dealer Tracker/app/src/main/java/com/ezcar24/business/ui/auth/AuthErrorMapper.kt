@@ -75,6 +75,14 @@ object AuthErrorMapper {
 
             context == AuthFailureContext.SOCIAL_SIGN_IN &&
                 (
+                    messageBlob.contains("invalid nonce") ||
+                        messageBlob.contains("nonces mismatch") ||
+                        messageBlob.contains("nonce mismatch")
+                    ) ->
+                "Google Sign-In could not verify this request. Please update the app and try again."
+
+            context == AuthFailureContext.SOCIAL_SIGN_IN &&
+                (
                     messageBlob.contains("unregistered_on_api_console") ||
                         messageBlob.contains("not registered to use oauth2") ||
                         messageBlob.contains("api console") ||

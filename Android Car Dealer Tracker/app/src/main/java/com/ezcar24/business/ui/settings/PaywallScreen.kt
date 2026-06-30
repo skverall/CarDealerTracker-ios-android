@@ -80,6 +80,7 @@ import com.ezcar24.business.BuildConfig
 import com.ezcar24.business.R
 import com.ezcar24.business.data.billing.SubscriptionManager
 import com.ezcar24.business.data.billing.SubscriptionOffer
+import com.ezcar24.business.ui.components.PremiumPaywallButton
 import com.ezcar24.business.util.localizedUiString
 
 enum class PaywallScreenSource(val routeValue: String) {
@@ -188,7 +189,10 @@ fun PaywallScreen(
                                 modifier = Modifier.padding(28.dp)
                             )
                         } else if (displayOffers.isEmpty()) {
-                            EmptyPlansState(onRetry = subscriptionManager::queryProducts, layout = layout)
+                            EmptyPlansState(
+                                onRetry = subscriptionManager::queryProducts,
+                                layout = layout
+                            )
                         } else {
                             PlanSelection(
                                 offers = displayOffers,
@@ -515,6 +519,7 @@ private fun SectionTitle(title: String, layout: PaywallLayout) {
 
 @Composable
 private fun EmptyPlansState(onRetry: () -> Unit, layout: PaywallLayout) {
+    val isDebugPackage = BuildConfig.APPLICATION_ID.endsWith(".debug")
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -530,11 +535,26 @@ private fun EmptyPlansState(onRetry: () -> Unit, layout: PaywallLayout) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Text(
-                text = localizedUiString("Unable to load plans"),
+                text = localizedUiString(
+                    if (isDebugPackage) {
+                        "Live prices need the Google Play build"
+                    } else {
+                        "Unable to load plans"
+                    }
+                ),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = PaywallText
             )
+            if (isDebugPackage) {
+                Text(
+                    text = localizedUiString("Open the Play Store or billing debug build to load RevenueCat prices."),
+                    fontSize = 11.5.sp,
+                    lineHeight = 15.sp,
+                    color = PaywallMutedText,
+                    textAlign = TextAlign.Center
+                )
+            }
             TextButton(onClick = onRetry) {
                 Text(
                     text = localizedUiString("Retry"),
@@ -828,46 +848,18 @@ private fun PaywallBottomBar(
             )
         }
 
-        Button(
+        PremiumPaywallButton(
+            text = localizedUiString(if (isLoading) "Processing..." else ctaText(selectedOffer)),
             onClick = { activity?.let(onSubscribe) },
             enabled = selectedOffer != null && !isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .widthIn(max = 560.dp)
-                .height(layout.ctaHeight),
-            shape = RoundedCornerShape(if (layout.isTiny) 18.dp else 20.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.Transparent,
-                disabledContainerColor = Color.Transparent,
-                contentColor = Color.White,
-                disabledContentColor = Color.White.copy(alpha = 0.6f)
-            ),
-            contentPadding = ButtonDefaults.ContentPadding
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.linearGradient(listOf(PaywallBlueLight, PaywallBlue, PaywallBlueDeep)),
-                        RoundedCornerShape(if (layout.isTiny) 18.dp else 20.dp)
-                    )
-                    .border(
-                        1.dp,
-                        Color.White.copy(alpha = 0.32f),
-                        RoundedCornerShape(if (layout.isTiny) 18.dp else 20.dp)
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = localizedUiString(if (isLoading) "Processing..." else ctaText(selectedOffer)),
-                    fontSize = if (layout.isTiny) 17.sp else 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
+                .widthIn(max = 560.dp),
+            isLoading = isLoading,
+            height = layout.ctaHeight,
+            cornerRadius = if (layout.isTiny) 18.dp else 20.dp,
+            fontSize = if (layout.isTiny) 17.sp else 18.sp
+        )
 
         selectedOffer?.let { offer ->
             Text(
