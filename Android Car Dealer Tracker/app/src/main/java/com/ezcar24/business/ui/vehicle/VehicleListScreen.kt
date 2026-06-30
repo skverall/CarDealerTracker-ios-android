@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Build
@@ -32,7 +33,6 @@ import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material.icons.filled.Whatshot
 import androidx.compose.material.icons.outlined.Garage
 import androidx.compose.material.icons.outlined.LocalOffer
@@ -59,8 +59,11 @@ import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.local.VehicleWithFinancials
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.SubscriptionAccess
+import com.ezcar24.business.util.isVehicleOnSaleStatus
+import com.ezcar24.business.util.isVehicleReservedGroupStatus
 import com.ezcar24.business.util.localizedUiString
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import com.ezcar24.business.util.vehicleStatusLabelSource
 import kotlinx.coroutines.launch
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
@@ -173,8 +176,8 @@ fun VehicleListScreen(
 
                 // 2. Vehicle Status Dashboard (iOS-style horizontal scroll)
                 val totalCount = allVehicles.count { it.vehicle.status != "sold" }
-                val onSaleCount = allVehicles.count { it.vehicle.status == "on_sale" }
-                val inGarageCount = allVehicles.count { it.vehicle.status == "owned" || it.vehicle.status == "under_service" }
+                val onSaleCount = allVehicles.count { isVehicleOnSaleStatus(it.vehicle.status) }
+                val inGarageCount = allVehicles.count { isVehicleReservedGroupStatus(it.vehicle.status) }
                 val inTransitCount = allVehicles.count { it.vehicle.status == "in_transit" }
                 val soldCount = allVehicles.count { it.vehicle.status == "sold" }
                 val currentFilter = uiState.filterStatus
@@ -210,8 +213,8 @@ fun VehicleListScreen(
                             count = inGarageCount,
                             icon = Icons.Default.Home, // house.fill equivalent
                             color = EzcarOrange,
-                            isActive = currentFilter == "owned",
-                            onClick = { viewModel.setStatusFilter("owned") }
+                            isActive = currentFilter == "reserved",
+                            onClick = { viewModel.setStatusFilter("reserved") }
                         )
                     }
                     item {
@@ -247,8 +250,24 @@ fun VehicleListScreen(
                     TextField(
                         value = uiState.searchQuery,
                         onValueChange = { viewModel.onSearchQueryChanged(it) },
-                        placeholder = { Text(localizedUiString("Search vehicles..."), color = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+                        placeholder = {
+                            Text(
+                                text = localizedUiString("Search vehicles"),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        },
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
                         colors = TextFieldDefaults.colors(
                             focusedContainerColor = Color.White,
                             unfocusedContainerColor = Color.White,
@@ -278,7 +297,7 @@ fun VehicleListScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Sort,
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
                                 contentDescription = localizedUiString("Sort"),
                                 tint = EzcarNavy,
                                 modifier = Modifier.size(20.dp)
@@ -525,10 +544,10 @@ fun VehicleListScreen(
                     tint = EzcarNavy
                 )
             },
-            title = { Text(localizedUiString("3-car free limit")) },
+            title = { Text(localizedUiString("2-car free limit")) },
             text = {
                 Text(
-                    localizedUiString("Free plan includes up to 3 vehicles. Upgrade to Pro to add unlimited inventory.")
+                    localizedUiString("Free plan includes up to 2 vehicles. Upgrade to Pro to add unlimited inventory.")
                 )
             },
             confirmButton = {
@@ -927,22 +946,18 @@ fun StatusCard(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val backgroundColor = if (isActive) color else Color.White
+    val backgroundColor = if (isActive) color else color.copy(alpha = 0.08f)
     val contentColor = if (isActive) Color.White else color
-    val textColor = if (isActive) Color.White.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant
+    val textColor = if (isActive) Color.White.copy(alpha = 0.9f) else color.copy(alpha = 0.9f)
     val valueColor = if (isActive) Color.White else MaterialTheme.colorScheme.onSurface
+    val borderColor = if (isActive) Color.Transparent else color.copy(alpha = 0.22f)
 
     Row(
         modifier = Modifier
+            .shadow(elevation = if (isActive) 3.dp else 0.dp, shape = CircleShape)
             .clip(CircleShape)
             .background(backgroundColor)
-            .shadow(elevation = if (isActive) 3.dp else 1.dp, shape = CircleShape)
-            .then(
-                if (isActive) Modifier else Modifier.border(
-                    BorderStroke(1.dp, Color.Gray.copy(alpha = 0.12f)),
-                    shape = CircleShape
-                )
-            )
+            .border(BorderStroke(1.dp, borderColor), shape = CircleShape)
             .clickable(onClick = onClick)
             .padding(vertical = 6.dp, horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -1122,13 +1137,24 @@ fun VehicleItem(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "${vehicle.make ?: ""} ${vehicle.model ?: ""}",
+                                text = "${vehicle.make ?: ""} ${vehicle.model ?: ""}".trim()
+                                    .ifEmpty { localizedUiString("Vehicle") },
                                 style = MaterialTheme.typography.bodyLarge,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
+
+                            vehicle.inventoryId?.takeIf { it.isNotBlank() }?.let { inventoryId ->
+                                Text(
+                                    text = localizedUiString("ID: %s", inventoryId),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Gray,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
 
                             Row(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1189,14 +1215,7 @@ fun VehicleItem(
 
                             val statusBg = vehicleStatusColor(vehicle.status).copy(alpha = 0.15f)
                             val statusColor = vehicleStatusColor(vehicle.status)
-                            val statusText = when(vehicle.status) {
-                                 "sold" -> "Sold"
-                                 "owned" -> "Owned"
-                                 "on_sale" -> "On Sale"
-                                 "in_transit" -> "In Transit"
-                                 "under_service" -> "Service"
-                                 else -> "On Sale"
-                            }
+                            val statusText = vehicleStatusLabelSource(vehicle.status)
                             Text(
                                 text = localizedUiString(statusText),
                                 modifier = Modifier

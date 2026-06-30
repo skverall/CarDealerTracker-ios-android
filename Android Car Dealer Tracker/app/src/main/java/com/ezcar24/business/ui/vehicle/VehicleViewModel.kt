@@ -27,6 +27,10 @@ import com.ezcar24.business.data.local.VehicleWithFinancials
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import com.ezcar24.business.util.SubscriptionAccess
+import com.ezcar24.business.util.RegionSettingsManager
+import com.ezcar24.business.util.isVehicleOnSaleStatus
+import com.ezcar24.business.util.isVehicleReservedGroupStatus
+import com.ezcar24.business.util.vehiclePurchaseAccountBalanceDeltas
 import com.ezcar24.business.util.calculator.HoldingCostCalculator
 import com.ezcar24.business.util.calculator.InventoryMetricsCalculator
 import com.ezcar24.business.util.calculator.VehicleFinancialsCalculator
@@ -105,6 +109,7 @@ class VehicleViewModel @Inject constructor(
     private val inventoryAlertDao: InventoryAlertDao,
     private val vehicleInventoryStatsDao: VehicleInventoryStatsDao,
     private val subscriptionManager: SubscriptionManager,
+    private val regionSettingsManager: RegionSettingsManager,
     private val cloudSyncManager: CloudSyncManager
 ) : ViewModel() {
 
@@ -293,8 +298,8 @@ class VehicleViewModel @Inject constructor(
             // Status Filter - matches iOS VehicleStatusDashboard logic
             val matchesStatus = when (status) {
                 "sold" -> item.vehicle.status == "sold"
-                "on_sale" -> item.vehicle.status == "on_sale"
-                "owned" -> item.vehicle.status == "owned" || item.vehicle.status == "under_service"
+                "on_sale" -> isVehicleOnSaleStatus(item.vehicle.status)
+                "reserved" -> isVehicleReservedGroupStatus(item.vehicle.status)
                 "in_transit" -> item.vehicle.status == "in_transit"
                 "all" -> item.vehicle.status != "sold" // All inventory (non-sold)
                 null -> item.vehicle.status != "sold" // Default: show inventory
@@ -306,6 +311,7 @@ class VehicleViewModel @Inject constructor(
                 val v = item.vehicle
                 (v.make?.lowercase()?.contains(query) == true) ||
                 (v.model?.lowercase()?.contains(query) == true) ||
+                (v.inventoryId?.lowercase()?.contains(query) == true) ||
                 (v.vin.lowercase().contains(query)) ||
                 (v.year?.toString()?.contains(query) == true)
             }
@@ -578,6 +584,8 @@ class VehicleViewModel @Inject constructor(
     suspend fun saveVehicle(
         id: String?,
         vin: String,
+        inventoryId: String? = null,
+        purchaseAccountId: UUID? = null,
         make: String,
         model: String,
         year: Int?,
@@ -604,12 +612,13 @@ class VehicleViewModel @Inject constructor(
                     vehicleCount = activeVehicleCount
                 )
             ) {
-                error("Free plan includes up to 3 vehicles. Upgrade to Pro to add unlimited inventory.")
+                error("Free plan includes up to 2 vehicles. Upgrade to Pro to add unlimited inventory.")
             }
         }
 
         val now = Date()
         val normalizedNotes = notes.trim().takeIf { it.isNotEmpty() }
+        val normalizedInventoryId = inventoryId?.trim()?.takeIf { it.isNotEmpty() }
         val normalizedBuyerName = buyerName?.trim()?.takeIf { it.isNotEmpty() }
         val normalizedBuyerPhone = buyerPhone?.trim()?.takeIf { it.isNotEmpty() }
         val normalizedPaymentMethod = paymentMethod?.trim()?.takeIf { it.isNotEmpty() }
@@ -623,6 +632,10 @@ class VehicleViewModel @Inject constructor(
         val existingClient = clientDao.getByVehicleId(vehicleId)
         val previousSaleAmount = existingSale?.amount ?: BigDecimal.ZERO
         val previousSaleAccount = existingSale?.accountId?.let { financialAccountDao.getById(it) }
+        val targetPurchaseAccount = purchaseAccountId?.let { financialAccountDao.getById(it) }
+        if (purchaseAccountId != null && targetPurchaseAccount == null) {
+            error("A financial account is required for vehicle purchases.")
+        }
         val isExistingDealDeskSale = existingSale?.isDealDeskSale == true
         val resolvedStatus = if (isExistingDealDeskSale) "sold" else status
         val resolvedSalePrice = if (resolvedStatus == "sold" && isExistingDealDeskSale) {
@@ -639,6 +652,12 @@ class VehicleViewModel @Inject constructor(
         val vehicle = if (existingVehicle != null) {
             existingVehicle.copy(
                 vin = vin,
+                inventoryId = normalizedInventoryId,
+                purchaseAccountId = if (existingVehicle.purchaseAccountId == null) {
+                    null
+                } else {
+                    targetPurchaseAccount?.id ?: existingVehicle.purchaseAccountId
+                },
                 make = make,
                 model = model,
                 year = year,
@@ -660,6 +679,8 @@ class VehicleViewModel @Inject constructor(
             Vehicle(
                 id = vehicleId,
                 vin = vin,
+                inventoryId = normalizedInventoryId,
+                purchaseAccountId = targetPurchaseAccount?.id,
                 make = make,
                 model = model,
                 year = year,
@@ -682,6 +703,12 @@ class VehicleViewModel @Inject constructor(
         }
 
         cloudSyncManager.upsertVehicle(vehicle)
+        applyPurchaseAccountBalanceDelta(
+            existingVehicle = existingVehicle,
+            targetPurchaseAccountId = vehicle.purchaseAccountId,
+            newPurchasePrice = purchasePrice,
+            now = now
+        )
 
         if (resolvedStatus == "sold") {
             val normalizedSalePrice = resolvedSalePrice?.takeIf { it > BigDecimal.ZERO }
@@ -835,12 +862,37 @@ class VehicleViewModel @Inject constructor(
             ?: accounts.firstOrNull()
     }
 
+    private suspend fun applyPurchaseAccountBalanceDelta(
+        existingVehicle: Vehicle?,
+        targetPurchaseAccountId: UUID?,
+        newPurchasePrice: BigDecimal,
+        now: Date
+    ) {
+        val deltas = vehiclePurchaseAccountBalanceDeltas(
+            isNewVehicle = existingVehicle == null,
+            previousAccountId = existingVehicle?.purchaseAccountId,
+            previousPurchasePrice = existingVehicle?.purchasePrice ?: BigDecimal.ZERO,
+            targetAccountId = targetPurchaseAccountId,
+            newPurchasePrice = newPurchasePrice
+        )
+
+        deltas.forEach { (accountId, delta) ->
+            val account = financialAccountDao.getById(accountId) ?: return@forEach
+            cloudSyncManager.upsertFinancialAccount(
+                account.copy(
+                    balance = account.balance.add(delta),
+                    updatedAt = now
+                )
+            )
+        }
+    }
+
     private fun buildClientPurchaseNote(vehicle: Vehicle): String {
         return "Purchased ${buildVehicleDisplayName(vehicle)}"
     }
 
     private fun buildClientInteractionDetail(vehicle: Vehicle, saleAmount: BigDecimal): String {
-        return "Purchased ${buildVehicleDisplayName(vehicle)} for ${saleAmount.stripTrailingZeros().toPlainString()}"
+        return "Purchased ${buildVehicleDisplayName(vehicle)} for ${regionSettingsManager.formatCurrency(saleAmount)}"
     }
 
     private fun buildVehicleDisplayName(vehicle: Vehicle): String {

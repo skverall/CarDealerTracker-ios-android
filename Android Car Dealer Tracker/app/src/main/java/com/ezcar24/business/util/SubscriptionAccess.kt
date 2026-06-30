@@ -1,7 +1,7 @@
 package com.ezcar24.business.util
 
 object SubscriptionAccess {
-    const val FREE_VEHICLE_LIMIT = 3
+    const val FREE_VEHICLE_LIMIT = 2
 
     fun shouldGateVehicleCreation(
         isProAccessActive: Boolean,

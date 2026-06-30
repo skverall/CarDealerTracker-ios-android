@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ezcar24 Business</string>
+    <string name="l10n_welcome_to_car_dealer_tracker_252eab0535" formatted="false">Car Dealer Tracker में आपका स्वागत है</string>
+    <string name="l10n_select_your_currency_5f5eb3f8a8" formatted="false">अपनी मुद्रा चुनें</string>
+    <string name="l10n_continue_2e02623966" formatted="false">जारी रखें</string>
+    <string name="l10n_back_b52b36b726" formatted="false">वापस</string>
+    <string name="l10n_done_e9b450d14b" formatted="false">हो गया</string>
+    <string name="l10n_region_language_61abc4a8c8" formatted="false">क्षेत्र और भाषा</string>
+    <string name="l10n_this_affects_currency_formatting_mileage_u_cc8c13f997" formatted="false">यह मुद्रा प्रारूप, दूरी इकाइयों और ऐप भाषा को प्रभावित करता है.</string>
+    <string name="l10n_currency_region_c9a9ff05aa" formatted="false">मुद्रा / क्षेत्र</string>
+    <string name="l10n_language_89b86ab0e6" formatted="false">भाषा</string>
+    <string name="l10n_system_fallback_language_6c4f089b7b" formatted="false">सिस्टम fallback भाषा</string>
+    <string name="l10n_app_content_language_ee2302ebc9" formatted="false">ऐप सामग्री की भाषा</string>
+    <string name="l10n_preview_f1fbb2b43d" formatted="false">पूर्वावलोकन</string>
+    <string name="l10n_currency_e070de2244" formatted="false">मुद्रा</string>
+    <string name="l10n_mileage_f67a0513bc" formatted="false">माइलेज</string>
+    <string name="l10n_kilometers_87bafdbb82" formatted="false">किलोमीटर</string>
+    <string name="l10n_miles_5fa6c4032b" formatted="false">मील</string>
+    <string name="l10n_km_7a5f8e7779" formatted="false">किमी</string>
+
+    <string name="l10n_uae_26c1f8eb11" formatted="false">यूएई</string>
+    <string name="l10n_usa_18bc5956db" formatted="false">यूएसए</string>
+    <string name="l10n_canada_cd6a7b8768" formatted="false">कनाडा</string>
+    <string name="l10n_uk_7770d04c7b" formatted="false">यूके</string>
+    <string name="l10n_europe_576347ec82" formatted="false">यूरोप</string>
+    <string name="l10n_brazil_37497aa5a2" formatted="false">ब्राज़ील</string>
+    <string name="l10n_indonesia_35536a41b2" formatted="false">इंडोनेशिया</string>
+    <string name="l10n_south_africa_35fda17ff0" formatted="false">दक्षिण अफ्रीका</string>
+    <string name="l10n_russia_6754fe3cd8" formatted="false">रूस</string>
+    <string name="l10n_turkey_d7153e6702" formatted="false">तुर्की</string>
+    <string name="l10n_uzbekistan_db800e86e9" formatted="false">उज़्बेकिस्तान</string>
+    <string name="l10n_japan_fcf29f6cad" formatted="false">जापान</string>
+    <string name="l10n_india_967ce367d8" formatted="false">भारत</string>
+    <string name="l10n_korea_4e8bd0474c" formatted="false">कोरिया</string>
+
+    <string name="l10n_dashboard_d1b677924c" formatted="false">डैशबोर्ड</string>
+    <string name="l10n_expenses_334c4a4c42" formatted="false">खर्च</string>
+    <string name="l10n_vehicles_60261ed275" formatted="false">वाहन</string>
+    <string name="l10n_parts_a1ef55f4b8" formatted="false">पार्ट्स</string>
+    <string name="l10n_sales_11ff9f68af" formatted="false">बिक्री</string>
+    <string name="l10n_clients_37f0c247a5" formatted="false">ग्राहक</string>
+    <string name="l10n_dashboard_tab_d5d9a84817" formatted="false">डैशबोर्ड</string>
+    <string name="l10n_expenses_tab_2b6b3b7ef2" formatted="false">खर्च</string>
+    <string name="l10n_vehicles_tab_75e325b56e" formatted="false">वाहन</string>
+    <string name="l10n_parts_tab_6063ae5802" formatted="false">पार्ट्स</string>
+    <string name="l10n_sales_tab_23a45a3c28" formatted="false">बिक्री</string>
+    <string name="l10n_clients_tab_2dc1a26fd0" formatted="false">ग्राहक</string>
+
+    <string name="l10n_search_vehicles_5780b5d6bf" formatted="false">वाहन खोजें</string>
+    <string name="l10n_inventory_pulse_today_a4e6597155" formatted="false">इन्वेंटरी स्थिति · आज</string>
+    <string name="l10n_d_need_attention_08cfe92ef8">%1$d पर ध्यान चाहिए</string>
+    <string name="l10n_all_stock_healthy_7110af3c2c" formatted="false">सारा स्टॉक ठीक है</string>
+    <string name="l10n_d_cars_avg_d_days_in_stock_820e9d8195">%1$d वाहन · औसत %2$d दिन</string>
+    <string name="l10n_avg_days_2f7f876e55" formatted="false">औसत दिन</string>
+    <string name="l10n_account_balances_39fb72cd6f" formatted="false">खाता शेष</string>
+    <string name="l10n_cash_5b75340774" formatted="false">नकद</string>
+    <string name="l10n_bank_c7a925fc8d" formatted="false">बैंक</string>
+    <string name="l10n_credit_card_69ed5aaf16" formatted="false">क्रेडिट कार्ड</string>
+    <string name="l10n_performance_profit_e812b8a075" formatted="false">प्रदर्शन और लाभ</string>
+    <string name="l10n_total_revenue_f3a8370f38" formatted="false">कुल आय</string>
+    <string name="l10n_sales_profit_668d2b49c9" formatted="false">बिक्री लाभ</string>
+    <string name="l10n_operations_a1fdaa6b2a" formatted="false">ऑपरेशन</string>
+    <string name="l10n_inventory_300d29fd5f" formatted="false">इन्वेंटरी</string>
+    <string name="l10n_vehicles_sold_e1b0e92bdf" formatted="false">बेचे गए वाहन</string>
+    <string name="l10n_2_car_free_limit_7c9efc1d56" formatted="false">2-कार मुक्त सीमा</string>
+    <string name="l10n_free_plan_includes_up_to_2_vehicles_upgrad_5acd35df01" formatted="false">मुफ़्त योजना में 2 वाहनों तक शामिल हैं। असीमित इन्वेंट्री जोड़ने के लिए Pro में अपग्रेड करें।</string>
+    <string name="l10n_ai_insights_38f991a383" formatted="false">AI इनसाइट्स</string>
+    <string name="l10n_go_unlimited_1431864fac" formatted="false">असीमित करें</string>
+    <string name="l10n_ai_powered_reports_bbe4878162" formatted="false">AI-संचालित रिपोर्ट</string>
+    <string name="l10n_unlock_unlimited_inventory_profit_per_vehi_9d7305a3fd" formatted="false">असीमित इन्वेंट्री, प्रति कार लाभ, क्लाउड सिंक और रिपोर्ट अनलॉक करें।</string>
+    <string name="l10n_unlimited_inventory_profit_tracking_cloud__def0d61597" formatted="false">असीमित इन्वेंट्री, लाभ ट्रैकिंग, क्लाउड सिंक, रिपोर्ट और AI टूल।</string>
+    <string name="l10n_what_you_get_8ac7aa173f" formatted="false">आपको क्या मिलेगा</string>
+    <string name="l10n_choose_your_plan_12a7bc47d4" formatted="false">अपना प्लान चुनें</string>
+    <string name="l10n_unlimited_b8bef37b71" formatted="false">असीमित</string>
+    <string name="l10n_cloud_sync_d997d8d3a9" formatted="false">क्लाउड सिंक</string>
+    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">आपके सभी डिवाइसों पर समन्वयित किया गया</string>
+    <string name="l10n_pdf_reports_480784f9c8" formatted="false">रिपोर्ट</string>
+    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">पेशेवर PDF रिपोर्ट निर्यात करें</string>
+    <string name="l10n_best_value_8173c2a946" formatted="false">सबसे बेहतर डील</string>
+    <string name="l10n_billed_yearly_a27b9b1a41" formatted="false">सालाना बिलिंग</string>
+    <string name="l10n_billed_monthly_cad51bd438" formatted="false">मासिक बिल भेजा गया</string>
+    <string name="l10n_billed_weekly_9308de9e56" formatted="false">साप्ताहिक बिल भेजा गया</string>
+    <string name="l10n_billed_quarterly_5e8cc7f1b2" formatted="false">त्रैमासिक बिल भेजा गया</string>
+    <string name="l10n_billed_automatically_973d205477" formatted="false">स्वचालित रूप से बिल किया गया</string>
+    <string name="l10n_week_1d0b523139" formatted="false">/ सप्ताह</string>
+    <string name="l10n_month_f7fa5df80f" formatted="false">/ महीना</string>
+    <string name="l10n_year_416b18b454" formatted="false">/ वर्ष</string>
+    <string name="l10n_3_months_3f937154ec" formatted="false">/ 3 महीने</string>
+    <string name="l10n_renews_at_s_cancel_anytime_c025047110">%s पर नवीनीकृत होगा। कभी भी रद्द करें।</string>
+    <string name="l10n_renews_at_s_year_cancel_anytime_da392a4f18">%s/वर्ष पर नवीनीकृत होगा। कभी भी रद्द करें।</string>
+    <string name="l10n_7_days_free_then_yearly_ae3f5de10c" formatted="false">7 दिन मुफ़्त, फिर वार्षिक प्लान</string>
+    <string name="l10n_pro_access_active_3d77e7d54a" formatted="false">Pro पहुंच सक्रिय है</string>
+    <string name="l10n_you_re_all_set_058a813016" formatted="false">सब तैयार है!</string>
+    <string name="l10n_your_pro_subscription_is_active_enjoy_full_bf224961b4" formatted="false">आपकी Pro सदस्यता सक्रिय है। पूर्ण पहुंच का आनंद लें।</string>
+    <string name="l10n_start_free_trial_22c637aa3f" formatted="false">मुफ़्त ट्रायल शुरू करें</string>
+    <string name="l10n_processing_272bc02ec5" formatted="false">प्रसंस्करण...</string>
+    <string name="l10n_select_a_plan_c83a303956" formatted="false">एक योजना चुनें</string>
+    <string name="l10n_trial_5f7537cf06" formatted="false">परीक्षण</string>
+    <string name="l10n_restore_purchases_2d5574135f" formatted="false">खरीदारी पुनर्स्थापित करें</string>
+    <string name="l10n_terms_of_use_97738411d6" formatted="false">उपयोग की शर्तें</string>
+    <string name="l10n_privacy_policy_9db108ba6b" formatted="false">गोपनीयता नीति</string>
+    <string name="l10n_unable_to_load_plans_12c3ee13be" formatted="false">योजनाएँ लोड करने में असमर्थ</string>
+    <string name="l10n_retry_9f5cd8a2e8" formatted="false">पुनः प्रयास करें</string>
+    <string name="l10n_add_unlimited_cars_no_restrictions_b5571f0a46" formatted="false">असीमित कारें जोड़ें, कोई प्रतिबंध नहीं</string>
+    <string name="l10n_weekly_158f3da592" formatted="false">साप्ताहिक</string>
+    <string name="l10n_monthly_d31edb7b8a" formatted="false">मासिक</string>
+    <string name="l10n_yearly_7622eb5aa4" formatted="false">वार्षिक</string>
+    <string name="l10n_quarterly_8a34f70880" formatted="false">त्रैमासिक</string>
+    <string name="l10n_unlock_full_potential_1c078f3769" formatted="false">पूरी क्षमता अनलॉक करें</string>
+    <string name="l10n_upgrade_to_pro_24de9364ba" formatted="false">Pro में अपग्रेड करें</string>
+    <string name="l10n_cancel_anytime_no_hidden_fees_d8bea9fd42" formatted="false">किसी भी समय रद्द करें. कोई छिपी हुई फीस नहीं.</string>
+    <string name="l10n_close_bbfa773e5a" formatted="false">बंद करें</string>
+</resources>

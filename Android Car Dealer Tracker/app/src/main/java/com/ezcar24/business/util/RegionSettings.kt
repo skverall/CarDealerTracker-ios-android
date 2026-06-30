@@ -1,6 +1,7 @@
 package com.ezcar24.business.util
 
 import android.content.Context
+import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -41,6 +42,7 @@ enum class AppRegion(
     SOUTH_AFRICA("South Africa", "ZAR", "R", "en-ZA", true, 2),
     RUSSIA("Russia", "RUB", "₽", "ru-RU", true, 2),
     TURKEY("Turkey", "TRY", "₺", "tr-TR", true, 2),
+    UZBEKISTAN("Uzbekistan", "UZS", "soʻm", "uz-UZ", true, 0),
     JAPAN("Japan", "JPY", "¥", "ja-JP", true, 0),
     INDIA("India", "INR", "₹", "en-IN", true, 2),
     KOREA("Korea", "KRW", "₩", "ko-KR", true, 0);
@@ -52,16 +54,18 @@ enum class AppRegion(
 enum class AppLanguage(
     val tag: String,
     val nativeName: String,
+    val listIcon: String,
     val isRtl: Boolean
 ) {
-    ENGLISH("en", "English", false),
-    RUSSIAN("ru", "Русский", false),
-    ARABIC("ar", "العربية", true),
-    INDONESIAN("id", "Bahasa Indonesia", false),
-    JAPANESE("ja", "日本語", false),
-    KOREAN("ko", "한국어", false),
-    UZBEK("uz", "Oʻzbekcha", false),
-    PORTUGUESE_BRAZIL("pt-BR", "Português (Brasil)", false)
+    ENGLISH("en", "English", "🇬🇧", false),
+    RUSSIAN("ru", "Русский", "🇷🇺", false),
+    ARABIC("ar", "العربية", "🇦🇪", true),
+    INDONESIAN("id", "Bahasa Indonesia", "🇮🇩", false),
+    JAPANESE("ja", "日本語", "🇯🇵", false),
+    KOREAN("ko", "한국어", "🇰🇷", false),
+    UZBEK("uz", "Oʻzbekcha", "🇺🇿", false),
+    HINDI("hi", "हिन्दी", "🇮🇳", false),
+    PORTUGUESE_BRAZIL("pt-BR", "Português (Brasil)", "🇧🇷", false)
 }
 
 enum class AppTheme {
@@ -178,6 +182,7 @@ class RegionSettingsManager @Inject constructor(
     }
 
     private fun applyLanguage(language: AppLanguage) {
+        Locale.setDefault(Locale.forLanguageTag(language.tag))
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(language.tag))
     }
 
@@ -205,6 +210,14 @@ class RegionSettingsManager @Inject constructor(
         private const val THEME_KEY = "app_selected_theme"
         private const val KILOMETERS_TO_MILES = 0.621371
     }
+}
+
+fun Context.withAppLanguage(language: AppLanguage): Context {
+    val locale = Locale.forLanguageTag(language.tag)
+    val config = Configuration(resources.configuration)
+    config.setLocale(locale)
+    config.setLayoutDirection(locale)
+    return createConfigurationContext(config)
 }
 
 @EntryPoint

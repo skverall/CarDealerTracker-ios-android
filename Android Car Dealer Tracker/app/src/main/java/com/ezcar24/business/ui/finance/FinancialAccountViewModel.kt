@@ -25,7 +25,8 @@ data class FinancialAccountUiState(
     val isLoading: Boolean = false,
     val totalBalance: BigDecimal = BigDecimal.ZERO,
     val transactions: List<AccountTransaction> = emptyList(),
-    val selectedAccount: FinancialAccount? = null
+    val selectedAccount: FinancialAccount? = null,
+    val errorMessage: String? = null
 )
 
 @HiltViewModel
@@ -62,6 +63,10 @@ class FinancialAccountViewModel @Inject constructor(
         _uiState.update { it.copy(selectedAccount = null, transactions = emptyList()) }
     }
 
+    fun clearErrorMessage() {
+        _uiState.update { it.copy(errorMessage = null) }
+    }
+
     private fun loadTransactions(accountId: UUID) {
         viewModelScope.launch {
              val all = transactionDao.getAllIncludingDeleted()
@@ -70,19 +75,42 @@ class FinancialAccountViewModel @Inject constructor(
         }
     }
 
-    fun saveAccount(id: String?, name: String, initialBalance: BigDecimal) {
+    fun saveAccount(
+        id: String?,
+        name: String,
+        initialBalance: BigDecimal,
+        onSaved: () -> Unit = {}
+    ) {
         viewModelScope.launch {
+            val trimmedName = name.trim()
+            val accountId = id?.let { UUID.fromString(it) }
+            val normalizedName = trimmedName.lowercase(Locale.US)
+            if (normalizedName.isEmpty()) {
+                _uiState.update { it.copy(errorMessage = "Account name is required.") }
+                return@launch
+            }
+            val duplicateExists = accountDao.getAllIncludingDeleted()
+                .any { account ->
+                    account.deletedAt == null &&
+                        account.id != accountId &&
+                        account.accountType.trim().lowercase(Locale.US) == normalizedName
+                }
+            if (duplicateExists) {
+                _uiState.update { it.copy(errorMessage = "An account with this name already exists.") }
+                return@launch
+            }
+
             val now = Date()
-            val account = if (id != null) {
-                val existing = accountDao.getById(UUID.fromString(id)) ?: return@launch
+            val account = if (accountId != null) {
+                val existing = accountDao.getById(accountId) ?: return@launch
                 existing.copy(
-                    accountType = name,
+                    accountType = trimmedName,
                     updatedAt = now
                 )
             } else {
                 FinancialAccount(
                     id = UUID.randomUUID(),
-                    accountType = name,
+                    accountType = trimmedName,
                     balance = initialBalance,
                     updatedAt = now,
                     deletedAt = null
@@ -96,6 +124,7 @@ class FinancialAccountViewModel @Inject constructor(
                     state
                 }
             }
+            onSaved()
         }
     }
 

@@ -77,6 +77,7 @@ interface VehicleDao : BaseDao<Vehicle> {
         SELECT * FROM vehicles
         WHERE deletedAt IS NULL AND (
             LOWER(vin) LIKE :query OR
+            LOWER(inventoryId) LIKE :query OR
             LOWER(make) LIKE :query OR
             LOWER(model) LIKE :query OR
             CAST(year AS TEXT) LIKE :query
@@ -477,7 +478,7 @@ interface InventoryAlertDao : BaseDao<InventoryAlert> {
         SyncQueueItem::class, HoldingCostSettings::class,
         VehicleInventoryStats::class, InventoryAlert::class
     ],
-    version = 11,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -719,6 +720,18 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_deletedAt_date` ON `expenses` (`deletedAt`, `date`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_vehicleId_deletedAt_date` ON `expenses` (`vehicleId`, `deletedAt`, `date`)")
+            }
+        }
+
+        val MIGRATION_11_12 = object : androidx.room.migration.Migration(11, 12) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE vehicles ADD COLUMN inventoryId TEXT")
+            }
+        }
+
+        val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE vehicles ADD COLUMN purchaseAccountId TEXT")
             }
         }
     }

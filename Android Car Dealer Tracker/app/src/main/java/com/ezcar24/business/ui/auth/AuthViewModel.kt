@@ -190,6 +190,7 @@ class AuthViewModel @Inject constructor(
                 )
                 val dealerId = authRepository.getDealerId()
                 subscriptionManager.logIn(dealerId)
+                notifyAuthCompletedAsync(currentState, "email")
                 OnboardingAnalytics.trackAuthCompleted(
                     mode = AuthMode.SIGN_IN.analyticsName,
                     method = "email",
@@ -245,12 +246,7 @@ class AuthViewModel @Inject constructor(
                     )
                 ) {
                     SignUpResult.AUTHENTICATED -> {
-                        viewModelScope.launch {
-                            authRepository.notifySignupCompleted(
-                                referralCode = currentState.referralCode.trim().ifBlank { null },
-                                teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
-                            )
-                        }
+                        notifyAuthCompletedAsync(currentState, "email")
                         authRepository.applyPendingPostAuthActions(
                             teamInviteCode = currentState.teamInviteCode.trim().ifBlank { null }
                         )
@@ -364,6 +360,7 @@ class AuthViewModel @Inject constructor(
                 )
                 val dealerId = authRepository.getDealerId()
                 subscriptionManager.logIn(dealerId)
+                notifyAuthCompletedAsync(currentState, "google")
                 OnboardingAnalytics.trackAuthCompleted(
                     mode = currentState.mode.analyticsName,
                     method = "google",
@@ -541,6 +538,17 @@ class AuthViewModel @Inject constructor(
         val digest = MessageDigest.getInstance("SHA-256")
             .digest(value.toByteArray(Charsets.UTF_8))
         return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
+    }
+
+    private fun notifyAuthCompletedAsync(state: AuthUiState, method: String) {
+        viewModelScope.launch {
+            authRepository.notifyAuthCompleted(
+                authMode = state.mode.analyticsName,
+                authMethod = method,
+                referralCode = state.referralCode.trim().ifBlank { null },
+                teamInviteCode = state.teamInviteCode.trim().ifBlank { null }
+            )
+        }
     }
 }
 

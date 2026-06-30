@@ -221,7 +221,8 @@ fun SalesScreen(
             onSave = {
                 salesViewModel.loadData()
                 showAddSheet = false
-            }
+            },
+            partSalesViewModel = partSalesViewModel
         )
     }
 }

@@ -53,7 +53,16 @@ fun RegionLanguageSettingsScreen(
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     val languageOptions = remember {
-        listOf(AppLanguage.ENGLISH, AppLanguage.INDONESIAN, AppLanguage.PORTUGUESE_BRAZIL, AppLanguage.RUSSIAN, AppLanguage.ARABIC, AppLanguage.JAPANESE, AppLanguage.UZBEK)
+        listOf(
+            AppLanguage.ENGLISH,
+            AppLanguage.INDONESIAN,
+            AppLanguage.PORTUGUESE_BRAZIL,
+            AppLanguage.RUSSIAN,
+            AppLanguage.ARABIC,
+            AppLanguage.JAPANESE,
+            AppLanguage.UZBEK,
+            AppLanguage.HINDI
+        )
     }
 
     Scaffold(
@@ -116,8 +125,8 @@ fun RegionLanguageSettingsScreen(
                     AppRegion.entries.forEachIndexed { index, region ->
                         RegionOptionRow(
                             symbol = region.currencySymbol,
-                            title = region.displayName,
-                            subtitle = "${region.currencyCode} • ${if (region.usesKilometers) "km" else "miles"}",
+                            title = localizedUiString(region.displayName),
+                            subtitle = "${region.currencyCode} • ${if (region.usesKilometers) localizedUiString("km") else localizedUiString("Miles")}",
                             isSelected = regionState.selectedRegion == region,
                             onClick = { regionSettingsManager.updateRegion(region) }
                         )
@@ -132,13 +141,9 @@ fun RegionLanguageSettingsScreen(
                 SettingsSection(title = "Language") {
                     languageOptions.forEachIndexed { index, language ->
                         RegionOptionRow(
-                            symbol = language.nativeName.take(1),
+                            symbol = language.listIcon,
                             title = language.nativeName,
-                            subtitle = if (language == AppLanguage.ENGLISH) {
-                                "System fallback language"
-                            } else {
-                                "App content language"
-                            },
+                            subtitle = null,
                             isSelected = regionState.selectedLanguage == language,
                             onClick = { regionSettingsManager.updateLanguage(language) }
                         )
@@ -158,7 +163,7 @@ fun RegionLanguageSettingsScreen(
                     SectionDivider()
                     PreviewValueRow(
                         label = "Mileage",
-                        value = if (regionState.selectedRegion.usesKilometers) "Kilometers" else "Miles"
+                        value = if (regionState.selectedRegion.usesKilometers) localizedUiString("Kilometers") else localizedUiString("Miles")
                     )
                     SectionDivider()
                     PreviewValueRow(
@@ -175,7 +180,7 @@ fun RegionLanguageSettingsScreen(
 private fun RegionOptionRow(
     symbol: String,
     title: String,
-    subtitle: String,
+    subtitle: String?,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
@@ -202,15 +207,17 @@ private fun RegionOptionRow(
         Spacer(modifier = Modifier.size(14.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = localizedUiString(title),
+                text = title,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
-            Text(
-                text = localizedUiString(subtitle),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         if (isSelected) {
             Icon(
@@ -240,7 +247,7 @@ private fun PreviewValueRow(
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = localizedUiString(value),
+            text = value,
             style = MaterialTheme.typography.bodyMedium,
             color = Color.Gray
         )

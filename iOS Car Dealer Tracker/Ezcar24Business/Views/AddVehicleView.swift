@@ -168,7 +168,7 @@ struct AddVehicleView: View {
                 }
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: 3)
+                PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: SubscriptionAccessPolicy.freeVehicleLimit)
             }
         }
         .onAppear {
@@ -294,9 +294,11 @@ struct AddVehicleView: View {
     }
     
     private var isOverFreeLimit: Bool {
-        !subscriptionManager.isProAccessActive &&
-        !subscriptionManager.isCheckingStatus &&
-        viewModel.vehicles.count >= 3
+        SubscriptionAccessPolicy.shouldGateVehicleCreation(
+            isProAccessActive: subscriptionManager.isProAccessActive,
+            isCheckingStatus: subscriptionManager.isCheckingStatus,
+            vehicleCount: viewModel.vehicles.count
+        )
     }
     
     private func ensureCanAddVehicle() -> Bool {
@@ -310,7 +312,7 @@ struct AddVehicleView: View {
     private func handleUpgradeRequest() {
         if case .signedIn = sessionStore.status {
             paywallVehicleCount = viewModel.vehicles.count
-            PaywallAnalytics.logVehicleLimitGate(vehicleCount: viewModel.vehicles.count, freeLimit: 3, entryPoint: "add_vehicle")
+            PaywallAnalytics.logVehicleLimitGate(vehicleCount: viewModel.vehicles.count, freeLimit: SubscriptionAccessPolicy.freeVehicleLimit, entryPoint: "add_vehicle")
             showingPaywall = true
         } else {
             appSessionState.exitGuestModeForLogin()

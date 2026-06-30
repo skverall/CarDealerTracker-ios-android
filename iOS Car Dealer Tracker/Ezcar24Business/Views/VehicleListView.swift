@@ -130,7 +130,7 @@ struct VehicleListView: View {
                 AddVehicleView(viewModel: viewModel)
             }
             .sheet(isPresented: $showingPaywall) {
-                PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: 3)
+                PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: SubscriptionAccessPolicy.freeVehicleLimit)
             }
             .sheet(item: $editingVehicle) { v in
                 VehicleDetailView(vehicle: v, startEditing: true)
@@ -336,7 +336,7 @@ struct VehicleListView: View {
     private func handleUpgradeRequest() {
         if isSignedIn {
             paywallVehicleCount = viewModel.vehicles.count
-            PaywallAnalytics.logVehicleLimitGate(vehicleCount: viewModel.vehicles.count, freeLimit: 3, entryPoint: "vehicle_list")
+            PaywallAnalytics.logVehicleLimitGate(vehicleCount: viewModel.vehicles.count, freeLimit: SubscriptionAccessPolicy.freeVehicleLimit, entryPoint: "vehicle_list")
             showingPaywall = true
         } else {
             appSessionState.exitGuestModeForLogin()
@@ -344,7 +344,11 @@ struct VehicleListView: View {
     }
 
     private func handleAddVehicleTap() {
-        if !subscriptionManager.isProAccessActive && !subscriptionManager.isCheckingStatus && viewModel.vehicles.count >= 3 {
+        if SubscriptionAccessPolicy.shouldGateVehicleCreation(
+            isProAccessActive: subscriptionManager.isProAccessActive,
+            isCheckingStatus: subscriptionManager.isCheckingStatus,
+            vehicleCount: viewModel.vehicles.count
+        ) {
             handleUpgradeRequest()
         } else {
             showingAddVehicle = true
@@ -401,7 +405,11 @@ struct VehicleListView: View {
             
             if viewModel.displayMode == .inventory && permissionService.can(.viewInventory) {
                 Button(action: {
-                    if !subscriptionManager.isProAccessActive && !subscriptionManager.isCheckingStatus && viewModel.vehicles.count >= 3 {
+                    if SubscriptionAccessPolicy.shouldGateVehicleCreation(
+                        isProAccessActive: subscriptionManager.isProAccessActive,
+                        isCheckingStatus: subscriptionManager.isCheckingStatus,
+                        vehicleCount: viewModel.vehicles.count
+                    ) {
                         handleUpgradeRequest()
                     } else {
                         showingAddVehicle = true

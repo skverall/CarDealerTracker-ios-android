@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="l10n_welcome_to_car_dealer_tracker_252eab0535" formatted="false">Car Dealer Tracker ga xush kelibsiz</string>
+    <string name="l10n_select_your_currency_5f5eb3f8a8" formatted="false">Valyutangizni tanlang</string>
+    <string name="l10n_please_select_a_vehicle_before_saving_531cbc9364" formatted="false">Saqlashdan oldin avtomobilni tanlang.</string>
+    <string name="l10n_new_expense_7c3ae05c17" formatted="false">Yangi xarajat</string>
     <string name="app_name">Car Dealer Tracker</string>
     <string name="l10n_0_30_days_79c8f34c8d" formatted="false">0-30 kun</string>
     <string name="l10n_10_1df30ffd07" formatted="false">10%</string>
@@ -433,7 +437,7 @@
     <string name="l10n_vehicle_has_been_in_inventory_for_d_days_r_66c29937e3">Avtomobil %d kundan beri inventarda. Narxlar strategiyasini koʻrib chiqing.</string>
     <string name="l10n_vehicle_has_healthy_margin_consider_a_smal_ea30eb4520" formatted="false">Avtomobilda yaxshi marja bor. Sotishni tezlashtirish uchun narxni biroz pasaytirishni koʻrib chiqing.</string>
     <string name="l10n_vehicle_interest_077f79a86a" formatted="false">Avtomobilga qiziqish</string>
-    <string name="l10n_vehicle_interest_ba912fc45c" formatted="false">AVTOMOBILGA QIZIQAT</string>
+    <string name="l10n_vehicle_interest_ba912fc45c" formatted="false">AVTOMOBILGA QIZIQISH</string>
     <string name="l10n_vehicle_not_found_6e96578c6e" formatted="false">Avtomobil topilmadi</string>
     <string name="l10n_vehicle_photo_fd45ffbd9b" formatted="false">Avtomobil fotosurati</string>
     <string name="l10n_vehicles_60261ed275" formatted="false">Avtomobillar</string>
@@ -503,8 +507,6 @@
     <string name="l10n_batches_30925eece3" formatted="false">Partiyalar</string>
     <string name="l10n_no_stock_batches_recorded_yet_aca34dec1b" formatted="false">Hali stok partiyalari yozilmagan</string>
     <string name="l10n_unnamed_batch_f0c334f4ce" formatted="false">Nomsiz partiya</string>
-    <string name="l10n_3_car_free_limit_5db2950cc0" formatted="false">Bepul reja limiti: 3 ta avtomobil</string>
-    <string name="l10n_free_plan_includes_up_to_3_vehicles_upgrad_384f6af203" formatted="false">Bepul rejada 3 tagacha avtomobil qo‘shish mumkin. Cheksiz inventar uchun Pro versiyasiga o‘ting.</string>
     <string name="l10n_not_now_e457149073" formatted="false">Hozir emas</string>
     <string name="l10n_team_management_f603b9592c" formatted="false">Jamoa boshqaruvi</string>
     <string name="l10n_no_active_business_1a7c7a70d3" formatted="false">Faol biznes yo‘q</string>
@@ -576,11 +578,8 @@
     <string name="l10n_what_you_get_f31727ff20" formatted="false">NIMA OLASIZ</string>
     <string name="l10n_ai_tips_c45d03315e" formatted="false">AI maslahat</string>
     <string name="l10n_instant_insights_for_smarter_deals_d21846c08b" formatted="false">Aqlli bitimlar uchun tezkor tavsiyalar</string>
-    <string name="l10n_unlimited_b8bef37b71" formatted="false">Cheksiz</string>
     <string name="l10n_add_unlimited_cars_no_restrictions_b5571f0a46" formatted="false">Cheksiz avtomobillar qo‘shing, cheklovsiz</string>
-    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">Barcha qurilmalaringizda sinxronlangan</string>
     <string name="l10n_reports_88bc3fe3da" formatted="false">Hisobotlar</string>
-    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">Professional PDF hisobotlarini eksport qiling</string>
     <string name="l10n_only_owners_and_admins_can_manage_email_re_dba756724c" formatted="false">Email hisobotlarni faqat egalar va adminlar boshqara oladi.</string>
     <string name="l10n_monthly_report_settings_saved_8d9bf71863" formatted="false">Oylik hisobot sozlamalari saqlandi.</string>
     <string name="l10n_email_reports_are_available_to_owners_and__4f05c35dc3" formatted="false">Email hisobotlar faqat egalar va adminlar uchun mavjud.</string>
@@ -970,4 +969,111 @@
     <string name="l10n_they_owe_me_453c6f6dea" formatted="false">Menga qarzdor</string>
     <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">Men qarzdorman</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">Janubiy Afrika</string>
+    <string name="l10n_add_item_4dba3be550" formatted="false">Element qoʻshish</string>
+    <string name="l10n_could_not_save_sale_af3013f57d" formatted="false">Sotishni saqlab boʻlmadi.</string>
+    <string name="l10n_not_enough_stock_for_some_items_0adb5f42f0" formatted="false">Ayrim mahsulotlar uchun zaxira yetarli emas.</string>
+    <string name="l10n_contacted_b5e4809ecb" formatted="false">Aloqa qilindi</string>
+    <string name="l10n_viewing_80862a89e6" formatted="false">Koʻrish</string>
+    <string name="l10n_credit_card_69ed5aaf16" formatted="false">Kredit karta</string>
+    <string name="l10n_account_type_ff69626f5c" formatted="false">Hisob turi</string>
+    <string name="l10n_current_balance_61a6163ed3" formatted="false">Joriy balans</string>
+    <string name="l10n_no_s_accounts_found_3885cef163">%1$s hisoblari topilmadi</string>
+    <string name="l10n_tap_add_account_to_create_a_s_account_a57c17b101">%1$s hisobini yaratish uchun Hisob qoʻshish tugmasini bosing.</string>
+    <string name="l10n_add_s_e4fb25be04">%1$s qoʻshish</string>
+    <string name="l10n_tap_an_account_to_view_transactions_2e1b5f5e27" formatted="false">Tranzaksiyalarni ko‘rish uchun hisobni bosing.</string>
+    <string name="l10n_app_settings_09439e4249" formatted="false">Ilova sozlamalari</string>
+    <string name="l10n_business_d6663dda5f" formatted="false">Biznes</string>
+    <string name="l10n_reports_data_export_d6092d5e8f" formatted="false">Hisobotlar va maʼlumot eksporti</string>
+    <string name="l10n_sync_maintenance_045eef9b8c" formatted="false">Sinxronlash va xizmat koʻrsatish</string>
+    <string name="l10n_snapshots_scheduled_reports_export_and_rec_ad94c9c3fa" formatted="false">Snapshotlar, rejalashtirilgan hisobotlar, eksport va tiklash</string>
+    <string name="l10n_cleaning_duplicates_9c61b0f95e" formatted="false">Dublikatlar tozalanmoqda...</string>
+    <string name="l10n_account_error_8fb4a9b799" formatted="false">Hisob xatosi</string>
+    <string name="l10n_account_name_is_required_1fb86fae61" formatted="false">Hisob nomi majburiy.</string>
+    <string name="l10n_an_account_with_this_name_already_exists_ec5d7d5b5a" formatted="false">Bu nomdagi hisob allaqachon mavjud.</string>
+    <string name="l10n_inventory_id_b907283fdc" formatted="false">Inventar ID</string>
+    <string name="l10n_inventory_id_a5b07d67f5" formatted="false">Inventar ID:</string>
+    <string name="l10n_id_s_9dc9419586">ID: %1$s</string>
+    <string name="l10n_financial_summary_8cfc2d82a9" formatted="false">Moliyaviy xulosa</string>
+    <string name="l10n_purchase_price_c36eef8a1e" formatted="false">Xarid narxi</string>
+    <string name="l10n_projected_roi_ea3d2569b6" formatted="false">Kutilgan ROI</string>
+    <string name="l10n_actual_roi_b44d191a81" formatted="false">Haqiqiy ROI</string>
+    <string name="l10n_pricing_recommendations_094112c79a" formatted="false">Narx tavsiyalari</string>
+    <string name="l10n_break_even_price_7c69f0726c" formatted="false">Zararsizlik narxi</string>
+    <string name="l10n_recommended_20_roi_7894099066" formatted="false">Tavsiya etiladi (20% ROI)</string>
+    <string name="l10n_current_asking_price_b5d84f0957" formatted="false">Joriy so‘ralgan narx</string>
+    <string name="l10n_recommended_1_s_662d447b9d">Tavsiya: %1$s</string>
+    <string name="l10n_inspection_report_8430a4e379" formatted="false">Tekshiruv hisoboti</string>
+    <string name="l10n_view_report_52bc93f4eb" formatted="false">Hisobotni ko‘rish</string>
+    <string name="l10n_improvements_df66ef4f9f" formatted="false">Yaxshilashlar</string>
+    <string name="l10n_1_s_2_d_days_efa96e1d09">%1$s (%2$d kun)</string>
+    <string name="l10n_1_s_above_recommended_e3024ddb06">%1$s tavsiyadan yuqori</string>
+    <string name="l10n_1_s_below_recommended_0fbc79d812">%1$s tavsiyadan past</string>
+    <string name="l10n_holding_cost_day_76cfe388d8" formatted="false">Saqlash xarajati / kun</string>
+    <string name="l10n_dashboard_car_838fae3233" formatted="false">Boshqaruv paneli mashinasi</string>
+    <string name="l10n_tap_to_pause_hold_to_park_fda407e713" formatted="false">To‘xtatish uchun bosing · park qilish uchun bosib turing</string>
+    <string name="l10n_send_the_car_to_parking_9b4a9f0f62" formatted="false">Mashinani park joyiga yuborilsinmi?</string>
+    <string name="l10n_send_to_parking_9956a87554" formatted="false">Park joyiga yuborish</string>
+    <string name="l10n_keep_driving_36c472938d" formatted="false">Harakatda qoldirish</string>
+    <string name="l10n_this_hides_the_dashboard_car_you_can_bring_9ff479a834" formatted="false">Bu boshqaruv panelidagi mashinani yashiradi. Uni istalgan vaqtda sozlamalardan qaytarishingiz mumkin.</string>
+    <string name="l10n_search_vehicles_5780b5d6bf" formatted="false">Avtomobillarni qidirish</string>
+    <string name="l10n_dashboard_tab_d5d9a84817" formatted="false">Boshqaruv</string>
+    <string name="l10n_expenses_tab_2b6b3b7ef2" formatted="false">Xarajat</string>
+    <string name="l10n_vehicles_tab_75e325b56e" formatted="false">Avto</string>
+    <string name="l10n_parts_tab_6063ae5802" formatted="false">Qismlar</string>
+    <string name="l10n_sales_tab_23a45a3c28" formatted="false">Sotuv</string>
+    <string name="l10n_clients_tab_2dc1a26fd0" formatted="false">Mijozlar</string>
+    <string name="l10n_uzbekistan_db800e86e9" formatted="false">Oʻzbekiston</string>
+    <string name="l10n_inventory_pulse_today_a4e6597155" formatted="false">Inventar holati · bugun</string>
+    <string name="l10n_d_need_attention_08cfe92ef8">%1$d ta eʼtibor talab qiladi</string>
+    <string name="l10n_all_stock_healthy_7110af3c2c" formatted="false">Barcha zaxira yaxshi</string>
+    <string name="l10n_d_cars_avg_d_days_in_stock_820e9d8195">%1$d avto · oʻrt. %2$d kun</string>
+    <string name="l10n_avg_days_2f7f876e55" formatted="false">oʻrt. kun</string>
+    <string name="l10n_account_balances_39fb72cd6f" formatted="false">Hisob balanslari</string>
+    <string name="l10n_performance_profit_e812b8a075" formatted="false">Natija va foyda</string>
+    <string name="l10n_sales_profit_668d2b49c9" formatted="false">Sotuv foydasi</string>
+    <string name="l10n_operations_a1fdaa6b2a" formatted="false">Operatsiyalar</string>
+    <string name="l10n_vehicles_sold_e1b0e92bdf" formatted="false">Sotilgan avto</string>
+    <string name="l10n_uae_26c1f8eb11" formatted="false">BAA</string>
+    <string name="l10n_usa_18bc5956db" formatted="false">AQSH</string>
+    <string name="l10n_canada_cd6a7b8768" formatted="false">Kanada</string>
+    <string name="l10n_uk_7770d04c7b" formatted="false">Buyuk Britaniya</string>
+    <string name="l10n_europe_576347ec82" formatted="false">Yevropa</string>
+    <string name="l10n_brazil_37497aa5a2" formatted="false">Braziliya</string>
+    <string name="l10n_indonesia_35536a41b2" formatted="false">Indoneziya</string>
+    <string name="l10n_russia_6754fe3cd8" formatted="false">Rossiya</string>
+    <string name="l10n_turkey_d7153e6702" formatted="false">Turkiya</string>
+    <string name="l10n_japan_fcf29f6cad" formatted="false">Yaponiya</string>
+    <string name="l10n_india_967ce367d8" formatted="false">Hindiston</string>
+    <string name="l10n_korea_4e8bd0474c" formatted="false">Koreya</string>
+    <string name="l10n_2_car_free_limit_7c9efc1d56" formatted="false">Bepul reja limiti: 2 ta avtomobil</string>
+    <string name="l10n_free_plan_includes_up_to_2_vehicles_upgrad_5acd35df01" formatted="false">Bepul rejada 2 tagacha avtomobil qo‘shish mumkin. Cheksiz inventar uchun Pro versiyasiga o‘ting.</string>
+    <string name="l10n_ai_insights_38f991a383" formatted="false">AI tahlillar</string>
+    <string name="l10n_go_unlimited_1431864fac" formatted="false">Limitlarsiz ishlang</string>
+    <string name="l10n_ai_powered_reports_bbe4878162" formatted="false">AI hisobotlari</string>
+    <string name="l10n_unlock_unlimited_inventory_profit_per_vehi_9d7305a3fd" formatted="false">Cheksiz inventar, har bir avtomobildan foyda, bulutli sinxronizatsiya va hisobotlarni faollashtiring.</string>
+    <string name="l10n_unlimited_inventory_profit_tracking_cloud__def0d61597" formatted="false">Cheksiz inventar, foyda nazorati, bulutli sinxronizatsiya, hisobotlar va AI.</string>
+    <string name="l10n_what_you_get_8ac7aa173f" formatted="false">Nimalar kiradi</string>
+    <string name="l10n_choose_your_plan_12a7bc47d4" formatted="false">Rejani tanlang</string>
+    <string name="l10n_unlimited_b8bef37b71" formatted="false">Cheksiz</string>
+    <string name="l10n_cloud_sync_d997d8d3a9" formatted="false">Bulutli sinxronizatsiya</string>
+    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">Barcha qurilmalaringizda sinxronlangan</string>
+    <string name="l10n_pdf_reports_480784f9c8" formatted="false">Hisobotlar</string>
+    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">Professional PDF hisobotlarini eksport qiling</string>
+    <string name="l10n_best_value_8173c2a946" formatted="false">Eng yaxshi taklif</string>
+    <string name="l10n_billed_yearly_a27b9b1a41" formatted="false">Yillik toʻlov</string>
+    <string name="l10n_billed_monthly_cad51bd438" formatted="false">Oylik toʻlov</string>
+    <string name="l10n_billed_weekly_9308de9e56" formatted="false">Har hafta toʻlanadi</string>
+    <string name="l10n_billed_quarterly_5e8cc7f1b2" formatted="false">Har chorakda toʻlanadi</string>
+    <string name="l10n_billed_automatically_973d205477" formatted="false">Avtomatik hisob-kitob qilinadi</string>
+    <string name="l10n_week_1d0b523139" formatted="false">/ hafta</string>
+    <string name="l10n_month_f7fa5df80f" formatted="false">/ oy</string>
+    <string name="l10n_year_416b18b454" formatted="false">/ yil</string>
+    <string name="l10n_3_months_3f937154ec" formatted="false">/ 3 oy</string>
+    <string name="l10n_renews_at_s_cancel_anytime_c025047110">%s narxda yangilanadi. Istalgan vaqtda bekor qiling.</string>
+    <string name="l10n_renews_at_s_year_cancel_anytime_da392a4f18">%s/yil narxda yangilanadi. Istalgan vaqtda bekor qiling.</string>
+    <string name="l10n_7_days_free_then_yearly_ae3f5de10c" formatted="false">7 kun bepul, keyin yillik reja</string>
+    <string name="l10n_pro_access_active_3d77e7d54a" formatted="false">Pro kirish faol</string>
+    <string name="l10n_weekly_158f3da592" formatted="false">Haftalik</string>
+    <string name="l10n_yearly_7622eb5aa4" formatted="false">Yillik</string>
+    <string name="l10n_quarterly_8a34f70880" formatted="false">Choraklik</string>
 </resources>

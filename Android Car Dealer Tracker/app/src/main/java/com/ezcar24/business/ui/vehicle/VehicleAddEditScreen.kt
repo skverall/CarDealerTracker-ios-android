@@ -23,11 +23,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.FinancialAccount
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.SubscriptionAccess
 import com.ezcar24.business.util.localizedUiString
+import com.ezcar24.business.util.normalizeVehicleStatus
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
@@ -36,6 +38,11 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 
 data class StatusOption(val value: String, val label: String)
+
+private enum class VehicleAccountPickerTarget {
+    PURCHASE,
+    SALE
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +73,7 @@ fun VehicleAddEditScreen(
 
     // Status options matching iOS
     val statusOptions = listOf(
-        StatusOption("owned", "Reserved"),
+        StatusOption("reserved", "Reserved"),
         StatusOption("on_sale", "On Sale"),
         StatusOption("in_transit", "In Transit"),
         StatusOption("under_service", "Under Service"),
@@ -75,6 +82,7 @@ fun VehicleAddEditScreen(
 
     // Form State
     var vin by remember { mutableStateOf("") }
+    var inventoryId by remember { mutableStateOf("") }
     var make by remember { mutableStateOf("") }
     var model by remember { mutableStateOf("") }
     var year by remember { mutableStateOf("") }
@@ -82,11 +90,12 @@ fun VehicleAddEditScreen(
     var purchasePrice by remember { mutableStateOf("") }
     var purchaseDate by remember { mutableStateOf(Date()) }
     var askingPrice by remember { mutableStateOf("") }
-    var status by remember { mutableStateOf("owned") }
+    var status by remember { mutableStateOf("reserved") }
     var notes by remember { mutableStateOf("") }
     var salePrice by remember { mutableStateOf("") }
     var saleDate by remember { mutableStateOf(Date()) }
-    var selectedAccount by remember { mutableStateOf<FinancialAccount?>(null) }
+    var selectedPurchaseAccount by remember { mutableStateOf<FinancialAccount?>(null) }
+    var selectedSaleAccount by remember { mutableStateOf<FinancialAccount?>(null) }
     var selectedImageUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
     var replaceCoverOnUpload by remember { mutableStateOf(!isEditing) }
     var populatedVehicleId by remember { mutableStateOf<String?>(null) }
@@ -102,15 +111,18 @@ fun VehicleAddEditScreen(
     // Date picker states
     var showPurchaseDatePicker by remember { mutableStateOf(false) }
     var showSaleDatePicker by remember { mutableStateOf(false) }
-    var showAccountPicker by remember { mutableStateOf(false) }
+    var accountPickerTarget by remember { mutableStateOf<VehicleAccountPickerTarget?>(null) }
     var showVehicleLimitDialog by remember { mutableStateOf(false) }
+    var didAutoGateVehicleLimit by remember(vehicleId) { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
 
     // Set default account when accounts load
     LaunchedEffect(accounts) {
-        if (selectedAccount == null && accounts.isNotEmpty()) {
-            selectedAccount = accounts.find { it.accountType.lowercase() == "cash" } ?: accounts.first()
+        if (accounts.isNotEmpty()) {
+            val defaultAccount = accounts.find { it.accountType.lowercase() == "cash" } ?: accounts.first()
+            if (selectedPurchaseAccount == null) selectedPurchaseAccount = defaultAccount
+            if (selectedSaleAccount == null) selectedSaleAccount = defaultAccount
         }
     }
 
@@ -118,6 +130,7 @@ fun VehicleAddEditScreen(
     LaunchedEffect(selectedVehicle?.id) {
         if (selectedVehicle != null && isEditing && populatedVehicleId != selectedVehicle.id.toString()) {
             vin = selectedVehicle.vin
+            inventoryId = selectedVehicle.inventoryId ?: ""
             make = selectedVehicle.make ?: ""
             model = selectedVehicle.model ?: ""
             year = selectedVehicle.year?.toString() ?: ""
@@ -128,7 +141,7 @@ fun VehicleAddEditScreen(
             purchasePrice = selectedVehicle.purchasePrice.toPlainString()
             purchaseDate = selectedVehicle.purchaseDate
             askingPrice = selectedVehicle.askingPrice?.toPlainString() ?: ""
-            status = selectedVehicle.status
+            status = normalizeVehicleStatus(selectedVehicle.status)
             notes = selectedVehicle.notes ?: ""
             salePrice = selectedVehicle.salePrice?.toPlainString() ?: ""
             saleDate = selectedVehicle.saleDate ?: Date()
@@ -136,13 +149,23 @@ fun VehicleAddEditScreen(
             buyerPhone = selectedVehicle.buyerPhone ?: ""
             paymentMethod = selectedVehicle.paymentMethod ?: "Cash"
             reportURL = selectedVehicle.reportURL ?: ""
+            selectedVehicle.purchaseAccountId?.let { accountId ->
+                selectedPurchaseAccount = accounts.firstOrNull { it.id == accountId } ?: selectedPurchaseAccount
+            }
             populatedVehicleId = selectedVehicle.id.toString()
         }
     }
 
     LaunchedEffect(selectedVehicle?.status, detailState.saleAccount?.id) {
         if (selectedVehicle?.status == "sold" && detailState.saleAccount != null) {
-            selectedAccount = detailState.saleAccount
+            selectedSaleAccount = detailState.saleAccount
+        }
+    }
+
+    LaunchedEffect(isEditing, selectedVehicle?.purchaseAccountId, accounts) {
+        val accountId = selectedVehicle?.purchaseAccountId
+        if (isEditing && accountId != null) {
+            selectedPurchaseAccount = accounts.firstOrNull { it.id == accountId } ?: selectedPurchaseAccount
         }
     }
 
@@ -158,19 +181,48 @@ fun VehicleAddEditScreen(
                       model.isNotBlank() && 
                       year.isNotBlank() && 
                       purchasePrice.isNotBlank() &&
-                      selectedAccount != null &&
-                      (status != "sold" || salePrice.isNotBlank())
+                      selectedPurchaseAccount != null &&
+                      (status != "sold" || (salePrice.isNotBlank() && selectedSaleAccount != null))
     
     val context = androidx.compose.ui.platform.LocalContext.current
     val currencyCode = regionState.selectedRegion.currencyCode
 
+    LaunchedEffect(
+        isEditing,
+        uiState.isProAccessActive,
+        uiState.isSubscriptionStatusLoading,
+        uiState.vehicles.size
+    ) {
+        if (!isEditing &&
+            !didAutoGateVehicleLimit &&
+            SubscriptionAccess.shouldGateVehicleCreation(
+                isProAccessActive = uiState.isProAccessActive,
+                isCheckingStatus = uiState.isSubscriptionStatusLoading,
+                vehicleCount = uiState.vehicles.size
+            )
+        ) {
+            didAutoGateVehicleLimit = true
+            onNavigateToPaywall()
+        }
+    }
+
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text(localizedUiString(if (isEditing) "Edit Vehicle" else "Add Vehicle")) },
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        text = localizedUiString(if (isEditing) "Edit Vehicle" else "Add Vehicle"),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 22.sp),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.Close, contentDescription = localizedUiString("Cancel"))
+                    TextButton(onClick = onBack) {
+                        Text(
+                            localizedUiString("Cancel"),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
                     }
                 },
                 actions = {
@@ -190,6 +242,8 @@ fun VehicleAddEditScreen(
                                     val result = viewModel.saveVehicle(
                                         id = vehicleId,
                                         vin = vin,
+                                        inventoryId = inventoryId,
+                                        purchaseAccountId = selectedPurchaseAccount?.id,
                                         make = make,
                                         model = model,
                                         year = year.toIntOrNull(),
@@ -205,7 +259,7 @@ fun VehicleAddEditScreen(
                                         buyerPhone = buyerPhone,
                                         paymentMethod = paymentMethod,
                                         reportURL = reportURL,
-                                        saleAccountId = if (status == "sold") selectedAccount?.id else null
+                                        saleAccountId = if (status == "sold") selectedSaleAccount?.id else null
                                     )
 
                                     result.onSuccess { savedVehicleId ->
@@ -238,13 +292,14 @@ fun VehicleAddEditScreen(
                         } else {
                             Text(
                                 localizedUiString("Save"),
+                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (isFormValid) EzcarGreen else Color.Gray
                             )
                         }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = EzcarBackgroundLight
                 )
             )
@@ -264,7 +319,8 @@ fun VehicleAddEditScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // --- Photo Section ---
             val existingImageUrl = if (isEditing) {
@@ -273,10 +329,10 @@ fun VehicleAddEditScreen(
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .size(if (selectedImageUris.isNotEmpty() || existingImageUrl != null) 128.dp else 112.dp)
+                    .clip(RoundedCornerShape(18.dp))
                     .background(Color(0xFFF2F2F7))
+                    .border(1.dp, Color.Gray.copy(alpha = 0.28f), RoundedCornerShape(18.dp))
                     .clickable { photoPickerLauncher.launch("image/*") },
                 contentAlignment = Alignment.Center
             ) {
@@ -341,11 +397,15 @@ fun VehicleAddEditScreen(
                         Icon(
                             Icons.Default.CameraAlt,
                             contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = Color.Gray
+                            modifier = Modifier.size(32.dp),
+                            tint = EzcarNavy
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(localizedUiString("Tap to add photo"), color = Color.Gray)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = localizedUiString("Add Photo"),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.Gray
+                        )
                     }
                 }
             }
@@ -388,6 +448,14 @@ fun VehicleAddEditScreen(
                     onValueChange = { vin = it.uppercase() },
                     icon = Icons.Default.Numbers,
                     placeholder = "Enter VIN number"
+                )
+
+                CustomFormField(
+                    label = "Inventory ID",
+                    value = inventoryId,
+                    onValueChange = { inventoryId = it },
+                    icon = Icons.Default.Numbers,
+                    placeholder = "Stock-101"
                 )
                 
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -439,20 +507,22 @@ fun VehicleAddEditScreen(
                     placeholder = "0.00"
                 )
                 
-                CustomFormField(
-                    label = localizedUiString("Asking Price (%s)", currencyCode),
-                    value = askingPrice,
-                    onValueChange = { askingPrice = it.filter { c -> c.isDigit() || c == '.' } },
-                    icon = Icons.Default.Sell,
-                    keyboardType = KeyboardType.Decimal,
-                    placeholder = "0.00"
-                )
+                if (isEditing) {
+                    CustomFormField(
+                        label = localizedUiString("Asking Price (%s)", currencyCode),
+                        value = askingPrice,
+                        onValueChange = { askingPrice = it.filter { c -> c.isDigit() || c == '.' } },
+                        icon = Icons.Default.Sell,
+                        keyboardType = KeyboardType.Decimal,
+                        placeholder = "0.00"
+                    )
+                }
 
                 // Account Picker
                 PickerField(
                     label = "Paid From",
-                    value = selectedAccount?.accountType ?: localizedUiString("Select Account"),
-                    onClick = { showAccountPicker = true }
+                    value = selectedPurchaseAccount?.accountType ?: localizedUiString("Select Account"),
+                    onClick = { accountPickerTarget = VehicleAccountPickerTarget.PURCHASE }
                 )
 
                 // Purchase Date Picker
@@ -560,8 +630,8 @@ fun VehicleAddEditScreen(
                     HorizontalDivider(color = Color.Gray.copy(alpha = 0.2f))
                     PickerField(
                         label = "Deposit To",
-                        value = selectedAccount?.accountType ?: localizedUiString("Select Account"),
-                        onClick = { showAccountPicker = true },
+                        value = selectedSaleAccount?.accountType ?: localizedUiString("Select Account"),
+                        onClick = { accountPickerTarget = VehicleAccountPickerTarget.SALE },
                         enabled = !isDealDeskSale
                     )
                 }
@@ -614,9 +684,9 @@ fun VehicleAddEditScreen(
     }
 
     // Account Picker Dialog
-    if (showAccountPicker) {
+    accountPickerTarget?.let { target ->
         AlertDialog(
-            onDismissRequest = { showAccountPicker = false },
+            onDismissRequest = { accountPickerTarget = null },
             title = { Text(localizedUiString("Select Account")) },
             text = {
                 Column {
@@ -625,14 +695,23 @@ fun VehicleAddEditScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { 
-                                    selectedAccount = account
-                                    showAccountPicker = false
+                                    if (target == VehicleAccountPickerTarget.PURCHASE) {
+                                        selectedPurchaseAccount = account
+                                    } else {
+                                        selectedSaleAccount = account
+                                    }
+                                    accountPickerTarget = null
                                 }
                                 .padding(vertical = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(account.accountType)
+                            val selectedAccount = if (target == VehicleAccountPickerTarget.PURCHASE) {
+                                selectedPurchaseAccount
+                            } else {
+                                selectedSaleAccount
+                            }
                             if (selectedAccount?.id == account.id) {
                                 Icon(Icons.Default.Check, contentDescription = null, tint = EzcarGreen)
                             }
@@ -642,7 +721,7 @@ fun VehicleAddEditScreen(
             },
             confirmButton = {},
             dismissButton = {
-                TextButton(onClick = { showAccountPicker = false }) {
+                TextButton(onClick = { accountPickerTarget = null }) {
                     Text(localizedUiString("Cancel"))
                 }
             }
@@ -659,10 +738,10 @@ fun VehicleAddEditScreen(
                     tint = EzcarNavy
                 )
             },
-            title = { Text(localizedUiString("3-car free limit")) },
+            title = { Text(localizedUiString("2-car free limit")) },
             text = {
                 Text(
-                    localizedUiString("Free plan includes up to 3 vehicles. Upgrade to Pro to add unlimited inventory.")
+                    localizedUiString("Free plan includes up to 2 vehicles. Upgrade to Pro to add unlimited inventory.")
                 )
             },
             confirmButton = {
@@ -695,9 +774,9 @@ fun FormSection(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color.White)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .background(Color(0xFFF2F2F7))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -707,11 +786,11 @@ fun FormSection(
                 icon,
                 contentDescription = null,
                 tint = EzcarGreen,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(18.dp)
             )
             Text(
                 localizedUiString(title),
-                style = MaterialTheme.typography.titleSmall,
+                style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
         }
@@ -741,21 +820,30 @@ fun CustomFormField(
             value = value,
             onValueChange = onValueChange,
             enabled = enabled,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(localizedUiString(placeholder), color = Color.Gray.copy(alpha = 0.5f)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp),
+            textStyle = MaterialTheme.typography.bodyMedium,
+            placeholder = {
+                Text(
+                    localizedUiString(placeholder),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.Gray.copy(alpha = 0.5f)
+                )
+            },
             leadingIcon = {
                 Icon(
                     icon,
                     contentDescription = null,
                     tint = EzcarGreen.copy(alpha = 0.6f),
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(17.dp)
                 )
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = EzcarBackgroundLight,
-                unfocusedContainerColor = EzcarBackgroundLight,
+                focusedContainerColor = Color(0xFFF8F8FC),
+                unfocusedContainerColor = Color(0xFFF8F8FC),
                 focusedBorderColor = EzcarGreen,
                 unfocusedBorderColor = Color.Gray.copy(alpha = 0.2f)
             ),
@@ -782,10 +870,10 @@ fun PickerField(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp))
-                .background(EzcarBackgroundLight)
+                .background(Color(0xFFF8F8FC))
                 .border(1.dp, Color.Gray.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
                 .clickable(enabled = enabled, onClick = onClick)
-                .padding(horizontal = 12.dp, vertical = 14.dp),
+                .padding(horizontal = 12.dp, vertical = 12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

@@ -69,9 +69,11 @@ private struct DeleteAccountResponse: Decodable {
 }
 
 private struct AdminSignupAlertPayload: Encodable {
-    let event = "signup_completed"
+    let event: String
     let source = "ios"
     let platform = "iOS"
+    let authMode: String
+    let authMethod: String
     let referralCodePresent: Bool
     let teamInviteCodePresent: Bool
     let appVersion: String
@@ -89,6 +91,8 @@ private struct AdminSignupAlertPayload: Encodable {
         case event
         case source
         case platform
+        case authMode = "auth_mode"
+        case authMethod = "auth_method"
         case referralCodePresent = "referral_code_present"
         case teamInviteCodePresent = "team_invite_code_present"
         case appVersion = "app_version"
@@ -420,6 +424,7 @@ final class SessionStore: ObservableObject {
         do {
             let session = try await client.auth.signIn(email: email, password: password)
             completeSignIn(with: session)
+            notifyAuthCompleted(authMode: "sign_in", authMethod: "email", referralCode: nil, teamInviteCode: nil)
             errorMessage = nil
         } catch {
             errorMessage = localized(error)
@@ -441,7 +446,7 @@ final class SessionStore: ObservableObject {
                 // Link RevenueCat user
                 SubscriptionManager.shared.logIn(userId: session.user.id.uuidString)
                 cachePendingProfile(userId: session.user.id, phone: phone, email: session.user.email ?? email)
-                notifySignupCompleted(referralCode: referralCode, teamInviteCode: teamInviteCode)
+                notifyAuthCompleted(authMode: "sign_up", authMethod: "email", referralCode: referralCode, teamInviteCode: teamInviteCode)
                 errorMessage = nil
                 return
             }
@@ -463,7 +468,7 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    func signInWithGoogle() async throws {
+    func signInWithGoogle(authMode: String = "sign_in", referralCode: String? = nil, teamInviteCode: String? = nil) async throws {
         isAuthenticating = true
         defer { isAuthenticating = false }
         do {
@@ -475,6 +480,7 @@ final class SessionStore: ObservableObject {
                 authSession.prefersEphemeralWebBrowserSession = false
             }
             completeSignIn(with: session)
+            notifyAuthCompleted(authMode: authMode, authMethod: "google", referralCode: referralCode, teamInviteCode: teamInviteCode)
             errorMessage = nil
         } catch {
             handleSocialAuthError(error)
@@ -482,7 +488,7 @@ final class SessionStore: ObservableObject {
         }
     }
 
-    func signInWithApple(idToken: String, nonce: String, fullName: PersonNameComponents?) async throws {
+    func signInWithApple(idToken: String, nonce: String, fullName: PersonNameComponents?, authMode: String = "sign_in", referralCode: String? = nil, teamInviteCode: String? = nil) async throws {
         isAuthenticating = true
         defer { isAuthenticating = false }
         do {
@@ -495,6 +501,7 @@ final class SessionStore: ObservableObject {
             )
             completeSignIn(with: session)
             try? await updateAppleDisplayNameIfNeeded(fullName)
+            notifyAuthCompleted(authMode: authMode, authMethod: "apple", referralCode: referralCode, teamInviteCode: teamInviteCode)
             errorMessage = nil
         } catch {
             handleSocialAuthError(error)
@@ -541,9 +548,12 @@ final class SessionStore: ObservableObject {
         errorMessage = "social_sign_in_failed".localizedStringFallback
     }
 
-    private func notifySignupCompleted(referralCode: String?, teamInviteCode: String?) {
+    private func notifyAuthCompleted(authMode: String, authMethod: String, referralCode: String?, teamInviteCode: String?) {
         let regionSettings = RegionSettingsManager.shared
         let payload = AdminSignupAlertPayload(
+            event: "auth_completed",
+            authMode: authMode,
+            authMethod: authMethod,
             referralCodePresent: !(referralCode?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
             teamInviteCodePresent: !(teamInviteCode?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true),
             appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",

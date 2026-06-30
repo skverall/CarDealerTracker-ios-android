@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="l10n_welcome_to_car_dealer_tracker_252eab0535" formatted="false">Добро пожаловать в Car Dealer Tracker</string>
+    <string name="l10n_select_your_currency_5f5eb3f8a8" formatted="false">Выберите вашу валюту</string>
+    <string name="l10n_account_transactions_11823944ea" formatted="false">Операции по счету</string>
+    <string name="l10n_please_select_a_vehicle_before_saving_531cbc9364" formatted="false">Выберите автомобиль перед сохранением.</string>
+    <string name="l10n_new_expense_7c3ae05c17" formatted="false">Новый расход</string>
+    <string name="l10n_welcome_back_1c9089485a" formatted="false">С возвращением</string>
+    <string name="l10n_create_your_account_4046b58182" formatted="false">Создайте аккаунт</string>
     <string name="l10n_ideas_voting_71b73b7de3" formatted="false">Идеи и голосование</string>
     <string name="l10n_suggest_features_and_vote_on_requests_from_92183a931f" formatted="false">Предлагайте функции и голосуйте за запросы других дилеров</string>
     <string name="l10n_tell_us_what_to_build_next_2bee7e0189" formatted="false">Подскажите, что добавить дальше</string>
@@ -80,4 +87,156 @@
     <string name="l10n_they_owe_me_453c6f6dea" formatted="false">Мне должны</string>
     <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">Я должен</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">Южная Африка</string>
+    <string name="l10n_sale_details_be513b66e1" formatted="false">Детали продажи</string>
+    <string name="l10n_add_item_4dba3be550" formatted="false">Добавить позицию</string>
+    <string name="l10n_could_not_save_sale_af3013f57d" formatted="false">Не удалось сохранить продажу.</string>
+    <string name="l10n_not_enough_stock_for_some_items_0adb5f42f0" formatted="false">Недостаточно остатка для некоторых позиций.</string>
+    <string name="l10n_contacted_b5e4809ecb" formatted="false">Связались</string>
+    <string name="l10n_viewing_80862a89e6" formatted="false">Просмотр</string>
+    <string name="l10n_credit_card_69ed5aaf16" formatted="false">Кредитная карта</string>
+    <string name="l10n_account_type_ff69626f5c" formatted="false">Тип счета</string>
+    <string name="l10n_current_balance_61a6163ed3" formatted="false">Текущий баланс</string>
+    <string name="l10n_no_s_accounts_found_3885cef163">Счета типа «%1$s» не найдены</string>
+    <string name="l10n_tap_add_account_to_create_a_s_account_a57c17b101">Нажмите «Добавить счет», чтобы создать счет типа «%1$s».</string>
+    <string name="l10n_add_s_e4fb25be04">Добавить %1$s</string>
+    <string name="l10n_tap_an_account_to_view_transactions_2e1b5f5e27" formatted="false">Нажмите на счет, чтобы посмотреть транзакции.</string>
+    <string name="l10n_app_settings_09439e4249" formatted="false">Настройки приложения</string>
+    <string name="l10n_business_d6663dda5f" formatted="false">Бизнес</string>
+    <string name="l10n_reports_data_export_d6092d5e8f" formatted="false">Отчеты и экспорт данных</string>
+    <string name="l10n_sync_maintenance_045eef9b8c" formatted="false">Синхронизация и обслуживание</string>
+    <string name="l10n_snapshots_scheduled_reports_export_and_rec_ad94c9c3fa" formatted="false">Снимки, запланированные отчеты, экспорт и восстановление</string>
+    <string name="l10n_clean_up_duplicates_7fc0497c55" formatted="false">Очистить дубликаты</string>
+    <string name="l10n_duplicate_records_cleaned_up_successfully_0874e5af09" formatted="false">Дубликаты успешно очищены.</string>
+    <string name="l10n_cleaning_duplicates_9c61b0f95e" formatted="false">Очистка дубликатов...</string>
+    <string name="l10n_ok_9ce3bd4224" formatted="false">ОК</string>
+    <string name="l10n_account_error_8fb4a9b799" formatted="false">Ошибка счета</string>
+    <string name="l10n_account_name_is_required_1fb86fae61" formatted="false">Название счета обязательно.</string>
+    <string name="l10n_an_account_with_this_name_already_exists_ec5d7d5b5a" formatted="false">Счет с таким названием уже существует.</string>
+    <string name="l10n_inventory_id_b907283fdc" formatted="false">Инвентарный ID</string>
+    <string name="l10n_inventory_id_a5b07d67f5" formatted="false">Инвентарный ID:</string>
+    <string name="l10n_id_s_9dc9419586">ID: %1$s</string>
+    <string name="l10n_financial_summary_8cfc2d82a9" formatted="false">Финансовая сводка</string>
+    <string name="l10n_purchase_price_c36eef8a1e" formatted="false">Цена покупки</string>
+    <string name="l10n_projected_roi_ea3d2569b6" formatted="false">Прогноз ROI</string>
+    <string name="l10n_actual_roi_b44d191a81" formatted="false">Фактический ROI</string>
+    <string name="l10n_pricing_recommendations_094112c79a" formatted="false">Рекомендации по цене</string>
+    <string name="l10n_break_even_price_7c69f0726c" formatted="false">Цена безубыточности</string>
+    <string name="l10n_recommended_20_roi_7894099066" formatted="false">Рекомендовано (20% ROI)</string>
+    <string name="l10n_current_asking_price_b5d84f0957" formatted="false">Текущая цена продажи</string>
+    <string name="l10n_recommended_1_s_662d447b9d">Рекомендовано: %1$s</string>
+    <string name="l10n_inspection_report_8430a4e379" formatted="false">Отчёт осмотра</string>
+    <string name="l10n_view_report_52bc93f4eb" formatted="false">Открыть отчёт</string>
+    <string name="l10n_improvements_df66ef4f9f" formatted="false">Улучшения</string>
+    <string name="l10n_1_s_2_d_days_efa96e1d09">%1$s (%2$d дн.)</string>
+    <string name="l10n_1_s_above_recommended_e3024ddb06">%1$s выше рекомендации</string>
+    <string name="l10n_1_s_below_recommended_0fbc79d812">%1$s ниже рекомендации</string>
+    <string name="l10n_holding_cost_day_76cfe388d8" formatted="false">Стоимость хранения / день</string>
+    <string name="l10n_dashboard_car_838fae3233" formatted="false">Автомобиль на панели</string>
+    <string name="l10n_tap_to_pause_hold_to_park_fda407e713" formatted="false">Нажмите, чтобы остановить · удерживайте, чтобы убрать</string>
+    <string name="l10n_send_the_car_to_parking_9b4a9f0f62" formatted="false">Отправить автомобиль на парковку?</string>
+    <string name="l10n_send_to_parking_9956a87554" formatted="false">На парковку</string>
+    <string name="l10n_keep_driving_36c472938d" formatted="false">Оставить на дороге</string>
+    <string name="l10n_this_hides_the_dashboard_car_you_can_bring_9ff479a834" formatted="false">Это скроет автомобиль на панели. Его можно вернуть в любое время в настройках.</string>
+    <string name="l10n_search_vehicles_5780b5d6bf" formatted="false">Поиск автомобилей</string>
+    <string name="l10n_dashboard_tab_d5d9a84817" formatted="false">Главная</string>
+    <string name="l10n_expenses_tab_2b6b3b7ef2" formatted="false">Расходы</string>
+    <string name="l10n_vehicles_tab_75e325b56e" formatted="false">Авто</string>
+    <string name="l10n_parts_tab_6063ae5802" formatted="false">Запчасти</string>
+    <string name="l10n_sales_tab_23a45a3c28" formatted="false">Продажи</string>
+    <string name="l10n_clients_tab_2dc1a26fd0" formatted="false">Клиенты</string>
+    <string name="l10n_uzbekistan_db800e86e9" formatted="false">Узбекистан</string>
+    <string name="l10n_inventory_pulse_today_a4e6597155" formatted="false">Пульс склада · сегодня</string>
+    <string name="l10n_d_need_attention_08cfe92ef8">%1$d требуют внимания</string>
+    <string name="l10n_all_stock_healthy_7110af3c2c" formatted="false">Все автомобили в норме</string>
+    <string name="l10n_d_cars_avg_d_days_in_stock_820e9d8195">%1$d авто · в среднем %2$d дн. на складе</string>
+    <string name="l10n_avg_days_2f7f876e55" formatted="false">ср. дни</string>
+    <string name="l10n_account_balances_39fb72cd6f" formatted="false">Балансы счетов</string>
+    <string name="l10n_performance_profit_e812b8a075" formatted="false">Результаты и прибыль</string>
+    <string name="l10n_total_revenue_f3a8370f38" formatted="false">Общая выручка</string>
+    <string name="l10n_sales_profit_668d2b49c9" formatted="false">Прибыль с продаж</string>
+    <string name="l10n_operations_a1fdaa6b2a" formatted="false">Операции</string>
+    <string name="l10n_inventory_300d29fd5f" formatted="false">Склад</string>
+    <string name="l10n_vehicles_sold_e1b0e92bdf" formatted="false">Продано авто</string>
+    <string name="l10n_today_s_expenses_b11adc27ed" formatted="false">Расходы сегодня</string>
+    <string name="l10n_no_expenses_today_b928d4054b" formatted="false">Сегодня расходов нет</string>
+    <string name="l10n_add_expense_f53d122b20" formatted="false">Добавить расход</string>
+    <string name="l10n_total_spent_s_52404e25ac">Потрачено (%1$s)</string>
+    <string name="l10n_no_spending_data_for_this_period_2882770210" formatted="false">Нет данных о расходах за этот период</string>
+    <string name="l10n_recent_expenses_72acc98a05" formatted="false">Последние расходы</string>
+    <string name="l10n_see_all_8196e42428" formatted="false">Все</string>
+    <string name="l10n_crm_summary_394916621f" formatted="false">CRM-сводка</string>
+    <string name="l10n_new_leads_dda9a1b88a" formatted="false">Новые лиды</string>
+    <string name="l10n_calls_today_5b92102263" formatted="false">Звонки сегодня</string>
+    <string name="l10n_pipeline_32b1d5a784" formatted="false">Воронка</string>
+    <string name="l10n_conversion_9151f8433f" formatted="false">Конверсия</string>
+    <string name="l10n_inventory_summary_d629dc5380" formatted="false">Сводка склада</string>
+    <string name="l10n_vehicles_60261ed275" formatted="false">Авто</string>
+    <string name="l10n_avg_days_eaa4b580dc" formatted="false">Ср. дни</string>
+    <string name="l10n_90_days_9e155ebd73" formatted="false">90+ дней</string>
+    <string name="l10n_health_3703cd2168" formatted="false">Состояние</string>
+    <string name="l10n_view_funnel_4e0fb19942" formatted="false">Открыть воронку</string>
+    <string name="l10n_lead_funnel_1a4f54a31c" formatted="false">Воронка лидов</string>
+    <string name="l10n_lead_management_a32661e4fa" formatted="false">Управление лидами</string>
+    <string name="l10n_view_analytics_03b4fa3532" formatted="false">Открыть аналитику</string>
+    <string name="l10n_uae_26c1f8eb11" formatted="false">ОАЭ</string>
+    <string name="l10n_usa_18bc5956db" formatted="false">США</string>
+    <string name="l10n_canada_cd6a7b8768" formatted="false">Канада</string>
+    <string name="l10n_uk_7770d04c7b" formatted="false">Великобритания</string>
+    <string name="l10n_europe_576347ec82" formatted="false">Европа</string>
+    <string name="l10n_brazil_37497aa5a2" formatted="false">Бразилия</string>
+    <string name="l10n_indonesia_35536a41b2" formatted="false">Индонезия</string>
+    <string name="l10n_russia_6754fe3cd8" formatted="false">Россия</string>
+    <string name="l10n_turkey_d7153e6702" formatted="false">Турция</string>
+    <string name="l10n_japan_fcf29f6cad" formatted="false">Япония</string>
+    <string name="l10n_india_967ce367d8" formatted="false">Индия</string>
+    <string name="l10n_korea_4e8bd0474c" formatted="false">Корея</string>
+    <string name="l10n_2_car_free_limit_7c9efc1d56" formatted="false">Лимит 2 авто</string>
+    <string name="l10n_free_plan_includes_up_to_2_vehicles_upgrad_5acd35df01" formatted="false">Бесплатный план включает до 2 автомобилей. Перейдите на Pro, чтобы добавлять инвентарь без ограничений.</string>
+    <string name="l10n_ai_insights_38f991a383" formatted="false">AI-инсайты</string>
+    <string name="l10n_go_unlimited_1431864fac" formatted="false">Работайте без лимита</string>
+    <string name="l10n_ai_powered_reports_bbe4878162" formatted="false">AI-отчёты</string>
+    <string name="l10n_unlock_unlimited_inventory_profit_per_vehi_9d7305a3fd" formatted="false">Откройте безлимитный инвентарь, прибыль по каждой машине, облачную синхронизацию и отчеты.</string>
+    <string name="l10n_unlimited_inventory_profit_tracking_cloud__def0d61597" formatted="false">Безлимитный инвентарь, прибыль, облачная синхронизация, отчеты и AI.</string>
+    <string name="l10n_what_you_get_8ac7aa173f" formatted="false">Что входит</string>
+    <string name="l10n_choose_your_plan_12a7bc47d4" formatted="false">Выберите план</string>
+    <string name="l10n_unlimited_b8bef37b71" formatted="false">Без лимита</string>
+    <string name="l10n_cloud_sync_d997d8d3a9" formatted="false">Облачная синхронизация</string>
+    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">Синхронизация на всех устройствах</string>
+    <string name="l10n_pdf_reports_480784f9c8" formatted="false">Отчеты</string>
+    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">Экспорт профессиональных PDF-отчётов</string>
+    <string name="l10n_best_value_8173c2a946" formatted="false">Выгодно</string>
+    <string name="l10n_billed_yearly_a27b9b1a41" formatted="false">Оплата ежегодно</string>
+    <string name="l10n_billed_monthly_cad51bd438" formatted="false">Оплата ежемесячно</string>
+    <string name="l10n_billed_weekly_9308de9e56" formatted="false">Оплата еженедельно</string>
+    <string name="l10n_billed_quarterly_5e8cc7f1b2" formatted="false">Оплата ежеквартально</string>
+    <string name="l10n_billed_automatically_973d205477" formatted="false">Автоматическая оплата</string>
+    <string name="l10n_week_1d0b523139" formatted="false">/ неделю</string>
+    <string name="l10n_month_f7fa5df80f" formatted="false">/ месяц</string>
+    <string name="l10n_year_416b18b454" formatted="false">/ год</string>
+    <string name="l10n_3_months_3f937154ec" formatted="false">/ 3 месяца</string>
+    <string name="l10n_renews_at_s_cancel_anytime_c025047110">Продлевается за %s. Отменить можно в любое время.</string>
+    <string name="l10n_renews_at_s_year_cancel_anytime_da392a4f18">Продлевается за %s/год. Отменить можно в любое время.</string>
+    <string name="l10n_7_days_free_then_yearly_ae3f5de10c" formatted="false">7 дней бесплатно, затем годовой план</string>
+    <string name="l10n_pro_access_active_3d77e7d54a" formatted="false">Pro доступ активен</string>
+    <string name="l10n_you_re_all_set_058a813016" formatted="false">Всё готово!</string>
+    <string name="l10n_your_pro_subscription_is_active_enjoy_full_bf224961b4" formatted="false">Ваша подписка Pro активна. Все функции доступны.</string>
+    <string name="l10n_start_free_trial_22c637aa3f" formatted="false">Начать бесплатный период</string>
+    <string name="l10n_continue_2e02623966" formatted="false">Продолжить</string>
+    <string name="l10n_processing_272bc02ec5" formatted="false">Обработка...</string>
+    <string name="l10n_select_a_plan_c83a303956" formatted="false">Выберите план</string>
+    <string name="l10n_trial_5f7537cf06" formatted="false">Пробный период</string>
+    <string name="l10n_restore_purchases_2d5574135f" formatted="false">Восстановить покупки</string>
+    <string name="l10n_terms_of_use_97738411d6" formatted="false">Условия использования</string>
+    <string name="l10n_privacy_policy_9db108ba6b" formatted="false">Политика конфиденциальности</string>
+    <string name="l10n_unable_to_load_plans_12c3ee13be" formatted="false">Не удалось загрузить планы</string>
+    <string name="l10n_retry_9f5cd8a2e8" formatted="false">Повторить</string>
+    <string name="l10n_add_unlimited_cars_no_restrictions_b5571f0a46" formatted="false">Добавляйте машины без ограничений</string>
+    <string name="l10n_weekly_158f3da592" formatted="false">Недельный</string>
+    <string name="l10n_monthly_d31edb7b8a" formatted="false">Месячный</string>
+    <string name="l10n_yearly_7622eb5aa4" formatted="false">Годовой</string>
+    <string name="l10n_quarterly_8a34f70880" formatted="false">Квартальный</string>
+    <string name="l10n_unlock_full_potential_1c078f3769" formatted="false">Откройте все возможности</string>
+    <string name="l10n_upgrade_to_pro_24de9364ba" formatted="false">Перейдите на Pro</string>
+    <string name="l10n_cancel_anytime_no_hidden_fees_d8bea9fd42" formatted="false">Отмена в любое время. Без скрытых платежей.</string>
+    <string name="l10n_close_bbfa773e5a" formatted="false">Закрыть</string>
 </resources>

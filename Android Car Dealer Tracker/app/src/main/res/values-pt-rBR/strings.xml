@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="l10n_welcome_to_car_dealer_tracker_252eab0535" formatted="false">Bem-vindo ao Car Dealer Tracker</string>
+    <string name="l10n_select_your_currency_5f5eb3f8a8" formatted="false">Selecione sua moeda</string>
+    <string name="l10n_please_select_a_vehicle_before_saving_531cbc9364" formatted="false">Selecione um veículo antes de salvar.</string>
+    <string name="l10n_new_expense_7c3ae05c17" formatted="false">Nova despesa</string>
     <string name="app_name">Car Dealer Tracker</string>
     <string name="l10n_0_30_days_79c8f34c8d" formatted="false">0 a 30 dias</string>
     <string name="l10n_10_1df30ffd07" formatted="false">10%</string>
@@ -503,8 +507,6 @@
     <string name="l10n_batches_30925eece3" formatted="false">Lotes</string>
     <string name="l10n_no_stock_batches_recorded_yet_aca34dec1b" formatted="false">Nenhum lote de estoque registrado ainda</string>
     <string name="l10n_unnamed_batch_f0c334f4ce" formatted="false">Lote sem nome</string>
-    <string name="l10n_3_car_free_limit_5db2950cc0" formatted="false">Limite gratuito de 3 carros</string>
-    <string name="l10n_free_plan_includes_up_to_3_vehicles_upgrad_384f6af203" formatted="false">O plano gratuito inclui até 3 veículos. Atualize para Pro para adicionar estoque ilimitado.</string>
     <string name="l10n_not_now_e457149073" formatted="false">Agora não</string>
     <string name="l10n_team_management_f603b9592c" formatted="false">Gerenciamento de equipe</string>
     <string name="l10n_no_active_business_1a7c7a70d3" formatted="false">Nenhum negócio ativo</string>
@@ -576,11 +578,8 @@
     <string name="l10n_what_you_get_f31727ff20" formatted="false">O QUE VOCÊ RECEBE</string>
     <string name="l10n_ai_tips_c45d03315e" formatted="false">Dicas de IA</string>
     <string name="l10n_instant_insights_for_smarter_deals_d21846c08b" formatted="false">Insights instantâneos para negócios mais inteligentes</string>
-    <string name="l10n_unlimited_b8bef37b71" formatted="false">Ilimitado</string>
     <string name="l10n_add_unlimited_cars_no_restrictions_b5571f0a46" formatted="false">Adicione carros ilimitados, sem restrições</string>
-    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">Sincronizado em todos os seus dispositivos</string>
     <string name="l10n_reports_88bc3fe3da" formatted="false">Relatórios</string>
-    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">Exportar relatórios PDF profissionais</string>
     <string name="l10n_only_owners_and_admins_can_manage_email_re_dba756724c" formatted="false">Somente proprietários e administradores podem gerenciar relatórios por e-mail.</string>
     <string name="l10n_monthly_report_settings_saved_8d9bf71863" formatted="false">Configurações do relatório mensal salvas.</string>
     <string name="l10n_email_reports_are_available_to_owners_and__4f05c35dc3" formatted="false">Os relatórios por e-mail estão disponíveis apenas para proprietários e administradores.</string>
@@ -983,4 +982,109 @@
     <string name="l10n_they_owe_me_453c6f6dea" formatted="false">Devem para mim</string>
     <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">Eu devo</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">África do Sul</string>
+    <string name="l10n_add_item_4dba3be550" formatted="false">Adicionar item</string>
+    <string name="l10n_could_not_save_sale_af3013f57d" formatted="false">Não foi possível salvar a venda.</string>
+    <string name="l10n_not_enough_stock_for_some_items_0adb5f42f0" formatted="false">Estoque insuficiente para alguns itens.</string>
+    <string name="l10n_contacted_b5e4809ecb" formatted="false">Contatado</string>
+    <string name="l10n_viewing_80862a89e6" formatted="false">Visualizando</string>
+    <string name="l10n_credit_card_69ed5aaf16" formatted="false">Cartão de crédito</string>
+    <string name="l10n_account_type_ff69626f5c" formatted="false">Tipo de conta</string>
+    <string name="l10n_current_balance_61a6163ed3" formatted="false">Saldo atual</string>
+    <string name="l10n_no_s_accounts_found_3885cef163">Nenhuma conta %1$s encontrada</string>
+    <string name="l10n_tap_add_account_to_create_a_s_account_a57c17b101">Toque em Adicionar conta para criar uma conta %1$s.</string>
+    <string name="l10n_add_s_e4fb25be04">Adicionar %1$s</string>
+    <string name="l10n_tap_an_account_to_view_transactions_2e1b5f5e27" formatted="false">Toque em uma conta para ver as transações.</string>
+    <string name="l10n_app_settings_09439e4249" formatted="false">Configurações do app</string>
+    <string name="l10n_business_d6663dda5f" formatted="false">Negócio</string>
+    <string name="l10n_reports_data_export_d6092d5e8f" formatted="false">Relatórios e exportação de dados</string>
+    <string name="l10n_sync_maintenance_045eef9b8c" formatted="false">Sincronização e manutenção</string>
+    <string name="l10n_snapshots_scheduled_reports_export_and_rec_ad94c9c3fa" formatted="false">Snapshots, relatórios agendados, exportação e recuperação</string>
+    <string name="l10n_cleaning_duplicates_9c61b0f95e" formatted="false">Limpando duplicatas...</string>
+    <string name="l10n_account_error_8fb4a9b799" formatted="false">Erro da conta</string>
+    <string name="l10n_account_name_is_required_1fb86fae61" formatted="false">O nome da conta é obrigatório.</string>
+    <string name="l10n_an_account_with_this_name_already_exists_ec5d7d5b5a" formatted="false">Já existe uma conta com este nome.</string>
+    <string name="l10n_inventory_id_b907283fdc" formatted="false">ID do estoque</string>
+    <string name="l10n_inventory_id_a5b07d67f5" formatted="false">ID do estoque:</string>
+    <string name="l10n_id_s_9dc9419586">ID: %1$s</string>
+    <string name="l10n_financial_summary_8cfc2d82a9" formatted="false">Resumo financeiro</string>
+    <string name="l10n_purchase_price_c36eef8a1e" formatted="false">Preço de compra</string>
+    <string name="l10n_projected_roi_ea3d2569b6" formatted="false">ROI projetado</string>
+    <string name="l10n_actual_roi_b44d191a81" formatted="false">ROI real</string>
+    <string name="l10n_pricing_recommendations_094112c79a" formatted="false">Recomendações de preço</string>
+    <string name="l10n_break_even_price_7c69f0726c" formatted="false">Preço de equilíbrio</string>
+    <string name="l10n_recommended_20_roi_7894099066" formatted="false">Recomendado (ROI 20%)</string>
+    <string name="l10n_current_asking_price_b5d84f0957" formatted="false">Preço pedido atual</string>
+    <string name="l10n_recommended_1_s_662d447b9d">Recomendado: %1$s</string>
+    <string name="l10n_inspection_report_8430a4e379" formatted="false">Relatório de inspeção</string>
+    <string name="l10n_view_report_52bc93f4eb" formatted="false">Ver relatório</string>
+    <string name="l10n_improvements_df66ef4f9f" formatted="false">Melhorias</string>
+    <string name="l10n_1_s_2_d_days_efa96e1d09">%1$s (%2$d dias)</string>
+    <string name="l10n_1_s_above_recommended_e3024ddb06">%1$s acima do recomendado</string>
+    <string name="l10n_1_s_below_recommended_0fbc79d812">%1$s abaixo do recomendado</string>
+    <string name="l10n_holding_cost_day_76cfe388d8" formatted="false">Custo de retenção / dia</string>
+    <string name="l10n_dashboard_car_838fae3233" formatted="false">Carro do painel</string>
+    <string name="l10n_tap_to_pause_hold_to_park_fda407e713" formatted="false">Toque para pausar · segure para estacionar</string>
+    <string name="l10n_send_the_car_to_parking_9b4a9f0f62" formatted="false">Enviar o carro para o estacionamento?</string>
+    <string name="l10n_send_to_parking_9956a87554" formatted="false">Enviar para estacionamento</string>
+    <string name="l10n_keep_driving_36c472938d" formatted="false">Continuar dirigindo</string>
+    <string name="l10n_this_hides_the_dashboard_car_you_can_bring_9ff479a834" formatted="false">Isso oculta o carro do painel. Você pode trazê-lo de volta a qualquer momento nas Configurações.</string>
+    <string name="l10n_search_vehicles_5780b5d6bf" formatted="false">Pesquisar veículos</string>
+    <string name="l10n_dashboard_tab_d5d9a84817" formatted="false">Painel</string>
+    <string name="l10n_expenses_tab_2b6b3b7ef2" formatted="false">Despesas</string>
+    <string name="l10n_vehicles_tab_75e325b56e" formatted="false">Veículos</string>
+    <string name="l10n_parts_tab_6063ae5802" formatted="false">Peças</string>
+    <string name="l10n_sales_tab_23a45a3c28" formatted="false">Vendas</string>
+    <string name="l10n_clients_tab_2dc1a26fd0" formatted="false">Clientes</string>
+    <string name="l10n_uzbekistan_db800e86e9" formatted="false">Uzbequistão</string>
+    <string name="l10n_inventory_pulse_today_a4e6597155" formatted="false">Pulso do estoque · hoje</string>
+    <string name="l10n_d_need_attention_08cfe92ef8">%1$d precisam de atenção</string>
+    <string name="l10n_all_stock_healthy_7110af3c2c" formatted="false">Todo o estoque está saudável</string>
+    <string name="l10n_d_cars_avg_d_days_in_stock_820e9d8195">%1$d veículos · média de %2$d dias em estoque</string>
+    <string name="l10n_avg_days_2f7f876e55" formatted="false">dias médios</string>
+    <string name="l10n_account_balances_39fb72cd6f" formatted="false">Saldos das contas</string>
+    <string name="l10n_performance_profit_e812b8a075" formatted="false">Desempenho e lucro</string>
+    <string name="l10n_operations_a1fdaa6b2a" formatted="false">Operações</string>
+    <string name="l10n_uae_26c1f8eb11" formatted="false">EAU</string>
+    <string name="l10n_usa_18bc5956db" formatted="false">EUA</string>
+    <string name="l10n_canada_cd6a7b8768" formatted="false">Canadá</string>
+    <string name="l10n_uk_7770d04c7b" formatted="false">Reino Unido</string>
+    <string name="l10n_europe_576347ec82" formatted="false">Europa</string>
+    <string name="l10n_brazil_37497aa5a2" formatted="false">Brasil</string>
+    <string name="l10n_indonesia_35536a41b2" formatted="false">Indonésia</string>
+    <string name="l10n_russia_6754fe3cd8" formatted="false">Rússia</string>
+    <string name="l10n_turkey_d7153e6702" formatted="false">Turquia</string>
+    <string name="l10n_japan_fcf29f6cad" formatted="false">Japão</string>
+    <string name="l10n_india_967ce367d8" formatted="false">Índia</string>
+    <string name="l10n_korea_4e8bd0474c" formatted="false">Coreia</string>
+    <string name="l10n_2_car_free_limit_7c9efc1d56" formatted="false">Limite gratuito de 2 carros</string>
+    <string name="l10n_free_plan_includes_up_to_2_vehicles_upgrad_5acd35df01" formatted="false">O plano gratuito inclui até 2 veículos. Atualize para Pro para adicionar estoque ilimitado.</string>
+    <string name="l10n_ai_insights_38f991a383" formatted="false">Insights de IA</string>
+    <string name="l10n_go_unlimited_1431864fac" formatted="false">Use sem limites</string>
+    <string name="l10n_ai_powered_reports_bbe4878162" formatted="false">Relatórios com IA</string>
+    <string name="l10n_unlock_unlimited_inventory_profit_per_vehi_9d7305a3fd" formatted="false">Desbloqueie estoque ilimitado, lucro por veículo, sincronização na nuvem e relatórios.</string>
+    <string name="l10n_unlimited_inventory_profit_tracking_cloud__def0d61597" formatted="false">Estoque ilimitado, lucro por veículo, sincronização, relatórios e IA.</string>
+    <string name="l10n_what_you_get_8ac7aa173f" formatted="false">O que você recebe</string>
+    <string name="l10n_choose_your_plan_12a7bc47d4" formatted="false">Escolha seu plano</string>
+    <string name="l10n_unlimited_b8bef37b71" formatted="false">Ilimitado</string>
+    <string name="l10n_cloud_sync_d997d8d3a9" formatted="false">Sincronização na nuvem</string>
+    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">Sincronizado em todos os seus dispositivos</string>
+    <string name="l10n_pdf_reports_480784f9c8" formatted="false">Relatórios</string>
+    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">Exportar relatórios PDF profissionais</string>
+    <string name="l10n_best_value_8173c2a946" formatted="false">Melhor valor</string>
+    <string name="l10n_billed_yearly_a27b9b1a41" formatted="false">Cobrado anualmente</string>
+    <string name="l10n_billed_monthly_cad51bd438" formatted="false">Cobrado mensalmente</string>
+    <string name="l10n_billed_weekly_9308de9e56" formatted="false">Cobrado semanalmente</string>
+    <string name="l10n_billed_quarterly_5e8cc7f1b2" formatted="false">Cobrado trimestralmente</string>
+    <string name="l10n_billed_automatically_973d205477" formatted="false">Cobrado automaticamente</string>
+    <string name="l10n_week_1d0b523139" formatted="false">/ semana</string>
+    <string name="l10n_month_f7fa5df80f" formatted="false">/ mês</string>
+    <string name="l10n_year_416b18b454" formatted="false">/ ano</string>
+    <string name="l10n_3_months_3f937154ec" formatted="false">/ 3 meses</string>
+    <string name="l10n_renews_at_s_cancel_anytime_c025047110">Renova por %s. Cancele quando quiser.</string>
+    <string name="l10n_renews_at_s_year_cancel_anytime_da392a4f18">Renova por %s/ano. Cancele quando quiser.</string>
+    <string name="l10n_7_days_free_then_yearly_ae3f5de10c" formatted="false">7 dias grátis, depois plano anual</string>
+    <string name="l10n_pro_access_active_3d77e7d54a" formatted="false">Acesso Pro ativo</string>
+    <string name="l10n_weekly_158f3da592" formatted="false">Semanal</string>
+    <string name="l10n_yearly_7622eb5aa4" formatted="false">Anual</string>
+    <string name="l10n_quarterly_8a34f70880" formatted="false">Trimestral</string>
 </resources>

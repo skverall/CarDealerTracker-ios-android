@@ -11,7 +11,7 @@ class SubscriptionAccessTest {
             SubscriptionAccess.shouldGateVehicleCreation(
                 isProAccessActive = false,
                 isCheckingStatus = false,
-                vehicleCount = 2
+                vehicleCount = 1
             )
         )
 
@@ -19,7 +19,7 @@ class SubscriptionAccessTest {
             SubscriptionAccess.shouldGateVehicleCreation(
                 isProAccessActive = false,
                 isCheckingStatus = false,
-                vehicleCount = 3
+                vehicleCount = 2
             )
         )
     }

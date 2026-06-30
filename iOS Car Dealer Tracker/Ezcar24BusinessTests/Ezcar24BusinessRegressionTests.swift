@@ -509,6 +509,38 @@ final class Ezcar24BusinessRegressionTests: XCTestCase {
         XCTAssertTrue(manager.isProAccessActive)
     }
 
+    func testSubscriptionAccessPolicyGatesThirdFreeVehicle() {
+        XCTAssertEqual(SubscriptionAccessPolicy.freeVehicleLimit, 2)
+        XCTAssertFalse(
+            SubscriptionAccessPolicy.shouldGateVehicleCreation(
+                isProAccessActive: false,
+                isCheckingStatus: false,
+                vehicleCount: 1
+            )
+        )
+        XCTAssertTrue(
+            SubscriptionAccessPolicy.shouldGateVehicleCreation(
+                isProAccessActive: false,
+                isCheckingStatus: false,
+                vehicleCount: 2
+            )
+        )
+        XCTAssertFalse(
+            SubscriptionAccessPolicy.shouldGateVehicleCreation(
+                isProAccessActive: true,
+                isCheckingStatus: false,
+                vehicleCount: 20
+            )
+        )
+        XCTAssertFalse(
+            SubscriptionAccessPolicy.shouldGateVehicleCreation(
+                isProAccessActive: false,
+                isCheckingStatus: true,
+                vehicleCount: 20
+            )
+        )
+    }
+
     func testExpenseDateSortUsesCreationTimeForSameDayRecords() throws {
         let businessDate = Date(timeIntervalSince1970: 1_741_305_600)
         let earlierCreatedAt = businessDate.addingTimeInterval(43_680)

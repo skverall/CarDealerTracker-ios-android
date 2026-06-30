@@ -55,6 +55,10 @@ class SaleBalanceChangeTest {
             "Purchased 2024 Toyota Camry for 17500",
             saleClientInteractionDetail(vehicle, BigDecimal("17500.00"))
         )
+        assertEquals(
+            "Purchased 2024 Toyota Camry for $17,500.00",
+            saleClientInteractionDetail(vehicle, BigDecimal("17500.00")) { "$17,500.00" }
+        )
     }
 
     @Test

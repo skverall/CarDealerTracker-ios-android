@@ -13,6 +13,7 @@ import com.ezcar24.business.data.repository.PermissionRepository
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import com.ezcar24.business.util.PermissionKey
+import com.ezcar24.business.util.RegionSettingsManager
 import com.ezcar24.business.util.UserFacingErrorContext
 import com.ezcar24.business.util.UserFacingErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -65,6 +66,7 @@ class AddSaleViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
     private val dealDeskRepository: DealDeskRepository,
     private val permissionRepository: PermissionRepository,
+    private val regionSettingsManager: RegionSettingsManager,
     private val cloudSyncManager: CloudSyncManager
 ) : ViewModel() {
 
@@ -225,7 +227,9 @@ class AddSaleViewModel @Inject constructor(
             val closedWonInteraction = ClientInteraction(
                 id = UUID.randomUUID(),
                 title = "Vehicle Purchased",
-                detail = saleClientInteractionDetail(vehicle, amount),
+                detail = saleClientInteractionDetail(vehicle, amount) { value ->
+                    regionSettingsManager.formatCurrency(value)
+                },
                 occurredAt = date,
                 stage = LeadStage.closed_won.name,
                 value = amount,
@@ -359,8 +363,12 @@ internal fun saleClientPurchaseNote(vehicle: Vehicle): String {
     return "Purchased ${saleVehicleDisplayName(vehicle)}"
 }
 
-internal fun saleClientInteractionDetail(vehicle: Vehicle, saleAmount: BigDecimal): String {
-    return "Purchased ${saleVehicleDisplayName(vehicle)} for ${saleAmount.stripTrailingZeros().toPlainString()}"
+internal fun saleClientInteractionDetail(
+    vehicle: Vehicle,
+    saleAmount: BigDecimal,
+    formatCurrency: (BigDecimal) -> String = { it.stripTrailingZeros().toPlainString() }
+): String {
+    return "Purchased ${saleVehicleDisplayName(vehicle)} for ${formatCurrency(saleAmount)}"
 }
 
 private fun saleVehicleDisplayName(vehicle: Vehicle): String {

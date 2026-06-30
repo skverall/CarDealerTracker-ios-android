@@ -57,6 +57,8 @@ data class User(
 data class Vehicle(
     @PrimaryKey val id: UUID,
     val vin: String,
+    val inventoryId: String? = null,
+    val purchaseAccountId: UUID? = null,
     val make: String?,
     val model: String?,
     val year: Int?,

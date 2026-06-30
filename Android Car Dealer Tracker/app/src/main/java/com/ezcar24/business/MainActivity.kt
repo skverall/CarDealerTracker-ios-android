@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -34,6 +35,8 @@ import com.ezcar24.business.ui.main.MainScreen
 import com.ezcar24.business.ui.main.MainViewModel
 import com.ezcar24.business.ui.update.ForceUpdateScreen
 import com.ezcar24.business.util.AppTheme
+import com.ezcar24.business.util.FinancialAccountKind
+import com.ezcar24.business.util.LocalAppLanguage
 import com.ezcar24.business.util.PermissionKey
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -70,7 +73,8 @@ class MainActivity : ComponentActivity() {
             val regionSettingsManager = rememberRegionSettingsManager()
             val regionState by regionSettingsManager.state.collectAsState()
 
-            CarDealerTrackerAndroidTheme(darkTheme = regionState.selectedTheme == AppTheme.DARK) {
+            CompositionLocalProvider(LocalAppLanguage provides regionState.selectedLanguage) {
+                CarDealerTrackerAndroidTheme(darkTheme = regionState.selectedTheme == AppTheme.DARK) {
                 val isUpdateRequired by versionChecker.isUpdateRequired.collectAsState()
 
                 // Check for updates on launch (matching iOS)
@@ -189,8 +193,15 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToPaywall = {
                                             navController.navigate("paywall")
                                         },
-                                        onNavigateToAccounts = {
-                                            navController.navigate("financial_accounts")
+                                        onNavigateToVehicleLimitPaywall = {
+                                            navController.navigate("paywall/vehicle_limit")
+                                        },
+                                        onNavigateToAccounts = { kind ->
+                                            if (kind == null) {
+                                                navController.navigate("financial_accounts")
+                                            } else {
+                                                navController.navigate("financial_accounts/$kind")
+                                            }
                                         },
                                         onNavigateToDebts = {
                                             navController.navigate("debts")
@@ -239,11 +250,24 @@ class MainActivity : ComponentActivity() {
                                     com.ezcar24.business.ui.vehicle.VehicleAddEditScreen(
                                         vehicleId = if (vehicleId == "new") null else vehicleId,
                                         onBack = { navController.popBackStack() },
-                                        onNavigateToPaywall = { navController.navigate("paywall") }
+                                        onNavigateToPaywall = {
+                                            navController.popBackStack()
+                                            navController.navigate("paywall/vehicle_limit")
+                                        }
                                     )
                                 }
                                 composable("financial_accounts") {
                                     com.ezcar24.business.ui.finance.FinancialAccountListScreen(
+                                        onBack = { navController.popBackStack() }
+                                    )
+                                }
+                                composable(
+                                    route = "financial_accounts/{kind}",
+                                    arguments = listOf(androidx.navigation.navArgument("kind") { type = androidx.navigation.NavType.StringType })
+                                ) { backStackEntry ->
+                                    val kind = FinancialAccountKind.fromRoute(backStackEntry.arguments?.getString("kind"))
+                                    com.ezcar24.business.ui.finance.FinancialAccountListScreen(
+                                        filterKind = kind,
                                         onBack = { navController.popBackStack() }
                                     )
                                 }
@@ -337,7 +361,8 @@ class MainActivity : ComponentActivity() {
                                 }
                                 composable("data_health") {
                                     com.ezcar24.business.ui.settings.DataHealthScreen(
-                                        onBack = { navController.popBackStack() }
+                                        onBack = { navController.popBackStack() },
+                                        canCleanDuplicates = permissionState.can(PermissionKey.MANAGE_TEAM)
                                     )
                                 }
                                 composable("referral_stats") {
@@ -373,9 +398,33 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 }
+                                composable(
+                                    route = "paywall/{source}",
+                                    arguments = listOf(androidx.navigation.navArgument("source") { type = androidx.navigation.NavType.StringType })
+                                ) { backStackEntry ->
+                                    val subscriptionManager = remember {
+                                        (application as? com.ezcar24.business.Ezcar24Application)
+                                            ?.let { app ->
+                                                dagger.hilt.android.EntryPointAccessors.fromApplication(
+                                                    app,
+                                                    com.ezcar24.business.data.billing.SubscriptionManagerEntryPoint::class.java
+                                                ).subscriptionManager()
+                                            }
+                                    }
+                                    if (subscriptionManager != null) {
+                                        com.ezcar24.business.ui.settings.PaywallScreen(
+                                            subscriptionManager = subscriptionManager,
+                                            source = com.ezcar24.business.ui.settings.PaywallScreenSource.fromRoute(
+                                                backStackEntry.arguments?.getString("source")
+                                            ),
+                                            onDismiss = { navController.popBackStack() }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
+                }
                 }
             }
         }

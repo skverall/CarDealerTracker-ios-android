@@ -1,0 +1,11 @@
+[Unit]
+Description=Run EzCar24 Revenue Feedback Loop daily
+
+[Timer]
+OnCalendar=*-*-* 05:30:00 UTC
+Persistent=true
+Unit=ezcar24-feedback-loop.service
+
+[Install]
+WantedBy=timers.target
+

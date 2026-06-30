@@ -55,6 +55,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.ezcar24.business.ui.analytics.AnalyticsHubScreen
 import com.ezcar24.business.ui.client.ClientListScreen
+import com.ezcar24.business.ui.components.AutoResizingText
 import com.ezcar24.business.ui.crm.LeadFunnelScreen
 import com.ezcar24.business.ui.crm.LeadManagementScreen
 import com.ezcar24.business.ui.dashboard.DashboardScreen
@@ -81,15 +82,16 @@ import androidx.compose.foundation.BorderStroke
 private sealed class MainTab(
     val route: String,
     val title: String,
+    val tabTitle: String,
     val icon: ImageVector,
     val tint: Color
 ) {
-    data object Dashboard : MainTab("dashboard", "Dashboard", Icons.Filled.Home, EzcarNavy)
-    data object Expenses : MainTab("expenses", "Expenses", Icons.Filled.CreditCard, Color(0xFFE04F5F))
-    data object Vehicles : MainTab("vehicles", "Vehicles", Icons.Filled.DirectionsCar, EzcarPurple)
-    data object Parts : MainTab("parts", "Parts", Icons.Filled.Inventory2, EzcarOrange)
-    data object Sales : MainTab("sales", "Sales", Icons.Filled.AttachMoney, EzcarGreen)
-    data object Clients : MainTab("clients", "Clients", Icons.Filled.People, Color(0xFF4F6DE6))
+    data object Dashboard : MainTab("dashboard", "Dashboard", "Dashboard tab", Icons.Filled.Home, EzcarNavy)
+    data object Expenses : MainTab("expenses", "Expenses", "Expenses tab", Icons.Filled.CreditCard, Color(0xFFE04F5F))
+    data object Vehicles : MainTab("vehicles", "Vehicles", "Vehicles tab", Icons.Filled.DirectionsCar, EzcarPurple)
+    data object Parts : MainTab("parts", "Parts", "Parts tab", Icons.Filled.Inventory2, EzcarOrange)
+    data object Sales : MainTab("sales", "Sales", "Sales tab", Icons.Filled.AttachMoney, EzcarGreen)
+    data object Clients : MainTab("clients", "Clients", "Clients tab", Icons.Filled.People, Color(0xFF4F6DE6))
 }
 
 @Composable
@@ -100,7 +102,8 @@ fun MainScreen(
     onNavigateToVehicleDetail: (String) -> Unit,
     onNavigateToAddVehicle: () -> Unit,
     onNavigateToPaywall: () -> Unit,
-    onNavigateToAccounts: () -> Unit,
+    onNavigateToVehicleLimitPaywall: () -> Unit,
+    onNavigateToAccounts: (String?) -> Unit,
     onNavigateToDebts: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToDataHealth: () -> Unit,
@@ -158,10 +161,14 @@ fun MainScreen(
                     )
                 } else {
                     DashboardScreen(
-                        onNavigateToAccounts = onNavigateToAccounts,
+                        onNavigateToAccounts = { onNavigateToAccounts(null) },
+                        onNavigateToCashAccounts = { onNavigateToAccounts("cash") },
+                        onNavigateToBankAccounts = { onNavigateToAccounts("bank") },
+                        onNavigateToCreditAccounts = { onNavigateToAccounts("credit_card") },
                         onNavigateToDebts = onNavigateToDebts,
                         onNavigateToSettings = onNavigateToSettings,
                         onNavigateToSearch = { navController.navigate("search") },
+                        onNavigateToAddVehicle = onNavigateToAddVehicle,
                         onNavigateToVehicles = {
                             navController.navigate(MainTab.Vehicles.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
@@ -240,7 +247,7 @@ fun MainScreen(
                 ) {
                     VehicleListScreen(
                         onNavigateToAddVehicle = onNavigateToAddVehicle,
-                        onNavigateToPaywall = onNavigateToPaywall,
+                        onNavigateToPaywall = onNavigateToVehicleLimitPaywall,
                         onNavigateToDetail = onNavigateToVehicleDetail,
                         presetStatus = statusFilter?.takeIf { it.isNotEmpty() }
                     )
@@ -258,7 +265,7 @@ fun MainScreen(
                 ) {
                     VehicleListScreen(
                         onNavigateToAddVehicle = onNavigateToAddVehicle,
-                        onNavigateToPaywall = onNavigateToPaywall,
+                        onNavigateToPaywall = onNavigateToVehicleLimitPaywall,
                         onNavigateToDetail = onNavigateToVehicleDetail
                     )
                 }
@@ -300,8 +307,7 @@ fun MainScreen(
                     onGuestAccountRequested = onGuestAccountRequested
                 ) {
                     ClientListScreen(
-                        onNavigateToDetail = onNavigateToClientDetail,
-                        onNavigateToLeadManagement = { navController.navigate("lead_management") }
+                        onNavigateToDetail = onNavigateToClientDetail
                     )
                 }
             }
@@ -598,6 +604,7 @@ private fun MainTabBarItem(
     modifier: Modifier = Modifier
 ) {
     val title = localizedUiString(item.title)
+    val tabTitle = localizedUiString(item.tabTitle)
     val iconTint by animateColorAsState(
         targetValue = if (isSelected) item.tint else MaterialTheme.colorScheme.onSurfaceVariant,
         label = "tabIconTint"
@@ -630,14 +637,15 @@ private fun MainTabBarItem(
                 modifier = Modifier.size(22.dp)
             )
         }
-        Text(
-            text = title,
+        AutoResizingText(
+            text = tabTitle,
             style = MaterialTheme.typography.labelSmall,
-            fontSize = 9.sp,
+            modifier = Modifier.fillMaxWidth(),
+            minFontSize = 8.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             color = textColor,
             maxLines = 1,
-            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+            textAlign = TextAlign.Center
         )
     }
 }

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="l10n_welcome_to_car_dealer_tracker_252eab0535" formatted="false">Welcome to Car Dealer Tracker</string>
+    <string name="l10n_select_your_currency_5f5eb3f8a8" formatted="false">Select your currency</string>
+    <string name="l10n_please_select_a_vehicle_before_saving_531cbc9364" formatted="false">Please select a vehicle before saving.</string>
+    <string name="l10n_new_expense_7c3ae05c17" formatted="false">New Expense</string>
     <string name="app_name">Car Dealer Tracker</string>
     <string name="l10n_0_30_days_79c8f34c8d" formatted="false">0-30 days</string>
     <string name="l10n_10_1df30ffd07" formatted="false">10%</string>
@@ -503,8 +507,31 @@
     <string name="l10n_batches_30925eece3" formatted="false">Batches</string>
     <string name="l10n_no_stock_batches_recorded_yet_aca34dec1b" formatted="false">No stock batches recorded yet</string>
     <string name="l10n_unnamed_batch_f0c334f4ce" formatted="false">Unnamed batch</string>
-    <string name="l10n_3_car_free_limit_5db2950cc0" formatted="false">3-car free limit</string>
-    <string name="l10n_free_plan_includes_up_to_3_vehicles_upgrad_384f6af203" formatted="false">Free plan includes up to 3 vehicles. Upgrade to Pro to add unlimited inventory.</string>
+    <string name="l10n_2_car_free_limit_7c9efc1d56" formatted="false">2-car free limit</string>
+    <string name="l10n_free_plan_includes_up_to_2_vehicles_upgrad_5acd35df01" formatted="false">Free plan includes up to 2 vehicles. Upgrade to Pro to add unlimited inventory.</string>
+    <string name="l10n_ai_insights_38f991a383" formatted="false">AI Insights</string>
+    <string name="l10n_go_unlimited_1431864fac" formatted="false">Go unlimited</string>
+    <string name="l10n_ai_powered_reports_bbe4878162" formatted="false">AI-powered reports</string>
+    <string name="l10n_unlock_unlimited_inventory_profit_per_vehi_9d7305a3fd" formatted="false">Unlock unlimited inventory, profit per vehicle, cloud sync, and reports.</string>
+    <string name="l10n_unlimited_inventory_profit_tracking_cloud__def0d61597" formatted="false">Unlimited inventory, profit tracking, cloud sync, reports, and AI tools.</string>
+    <string name="l10n_what_you_get_8ac7aa173f" formatted="false">What you get</string>
+    <string name="l10n_choose_your_plan_12a7bc47d4" formatted="false">Choose your plan</string>
+    <string name="l10n_cloud_sync_d997d8d3a9" formatted="false">Cloud Sync</string>
+    <string name="l10n_pdf_reports_480784f9c8" formatted="false">PDF Reports</string>
+    <string name="l10n_best_value_8173c2a946" formatted="false">Best value</string>
+    <string name="l10n_billed_yearly_a27b9b1a41" formatted="false">Billed yearly</string>
+    <string name="l10n_billed_monthly_cad51bd438" formatted="false">Billed monthly</string>
+    <string name="l10n_billed_weekly_9308de9e56" formatted="false">Billed weekly</string>
+    <string name="l10n_billed_quarterly_5e8cc7f1b2" formatted="false">Billed quarterly</string>
+    <string name="l10n_billed_automatically_973d205477" formatted="false">Billed automatically</string>
+    <string name="l10n_week_1d0b523139" formatted="false">/ week</string>
+    <string name="l10n_month_f7fa5df80f" formatted="false">/ month</string>
+    <string name="l10n_year_416b18b454" formatted="false">/ year</string>
+    <string name="l10n_3_months_3f937154ec" formatted="false">/ 3 months</string>
+    <string name="l10n_renews_at_s_cancel_anytime_c025047110">Renews at %s. Cancel anytime.</string>
+    <string name="l10n_renews_at_s_year_cancel_anytime_da392a4f18">Renews at %s/year. Cancel anytime.</string>
+    <string name="l10n_7_days_free_then_yearly_ae3f5de10c" formatted="false">7 days free, then yearly</string>
+    <string name="l10n_pro_access_active_3d77e7d54a" formatted="false">Pro Access Active</string>
     <string name="l10n_not_now_e457149073" formatted="false">Not now</string>
     <string name="l10n_team_management_f603b9592c" formatted="false">Team Management</string>
     <string name="l10n_no_active_business_1a7c7a70d3" formatted="false">No active business</string>
@@ -994,4 +1021,91 @@
     <string name="l10n_they_owe_me_453c6f6dea" formatted="false">They Owe Me</string>
     <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">I Owe Them</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">South Africa</string>
+    <string name="l10n_add_item_4dba3be550" formatted="false">Add Item</string>
+    <string name="l10n_could_not_save_sale_af3013f57d" formatted="false">Could not save sale.</string>
+    <string name="l10n_not_enough_stock_for_some_items_0adb5f42f0" formatted="false">Not enough stock for some items.</string>
+    <string name="l10n_contacted_b5e4809ecb" formatted="false">Contacted</string>
+    <string name="l10n_viewing_80862a89e6" formatted="false">Viewing</string>
+    <string name="l10n_credit_card_69ed5aaf16" formatted="false">Credit Card</string>
+    <string name="l10n_account_type_ff69626f5c" formatted="false">Account Type</string>
+    <string name="l10n_current_balance_61a6163ed3" formatted="false">Current Balance</string>
+    <string name="l10n_no_s_accounts_found_3885cef163">No %1$s accounts found</string>
+    <string name="l10n_tap_add_account_to_create_a_s_account_a57c17b101">Tap Add Account to create a %1$s account.</string>
+    <string name="l10n_add_s_e4fb25be04">Add %1$s</string>
+    <string name="l10n_tap_an_account_to_view_transactions_2e1b5f5e27" formatted="false">Tap an account to view transactions.</string>
+    <string name="l10n_app_settings_09439e4249" formatted="false">App Settings</string>
+    <string name="l10n_business_d6663dda5f" formatted="false">Business</string>
+    <string name="l10n_reports_data_export_d6092d5e8f" formatted="false">Reports &amp; Data Export</string>
+    <string name="l10n_sync_maintenance_045eef9b8c" formatted="false">Sync &amp; Maintenance</string>
+    <string name="l10n_snapshots_scheduled_reports_export_and_rec_ad94c9c3fa" formatted="false">Snapshots, scheduled reports, export, and recovery</string>
+    <string name="l10n_cleaning_duplicates_9c61b0f95e" formatted="false">Cleaning duplicates...</string>
+    <string name="l10n_account_error_8fb4a9b799" formatted="false">Account Error</string>
+    <string name="l10n_account_name_is_required_1fb86fae61" formatted="false">Account name is required.</string>
+    <string name="l10n_an_account_with_this_name_already_exists_ec5d7d5b5a" formatted="false">An account with this name already exists.</string>
+    <string name="l10n_inventory_id_b907283fdc" formatted="false">Inventory ID</string>
+    <string name="l10n_inventory_id_a5b07d67f5" formatted="false">Inventory ID:</string>
+    <string name="l10n_id_s_9dc9419586">ID: %1$s</string>
+    <string name="l10n_financial_summary_8cfc2d82a9" formatted="false">Financial Summary</string>
+    <string name="l10n_purchase_price_c36eef8a1e" formatted="false">Purchase Price</string>
+    <string name="l10n_projected_roi_ea3d2569b6" formatted="false">Projected ROI</string>
+    <string name="l10n_actual_roi_b44d191a81" formatted="false">Actual ROI</string>
+    <string name="l10n_pricing_recommendations_094112c79a" formatted="false">Pricing Recommendations</string>
+    <string name="l10n_break_even_price_7c69f0726c" formatted="false">Break-even Price</string>
+    <string name="l10n_recommended_20_roi_7894099066" formatted="false">Recommended (20% ROI)</string>
+    <string name="l10n_current_asking_price_b5d84f0957" formatted="false">Current Asking Price</string>
+    <string name="l10n_recommended_1_s_662d447b9d">Recommended: %1$s</string>
+    <string name="l10n_inspection_report_8430a4e379" formatted="false">Inspection Report</string>
+    <string name="l10n_view_report_52bc93f4eb" formatted="false">View Report</string>
+    <string name="l10n_improvements_df66ef4f9f" formatted="false">Improvements</string>
+    <string name="l10n_1_s_2_d_days_efa96e1d09">%1$s (%2$d days)</string>
+    <string name="l10n_1_s_above_recommended_e3024ddb06">%1$s above recommended</string>
+    <string name="l10n_1_s_below_recommended_0fbc79d812">%1$s below recommended</string>
+    <string name="l10n_holding_cost_day_76cfe388d8" formatted="false">Holding Cost / Day</string>
+    <string name="l10n_dashboard_car_838fae3233" formatted="false">Dashboard car</string>
+    <string name="l10n_tap_to_pause_hold_to_park_fda407e713" formatted="false">Tap to pause · hold to park</string>
+    <string name="l10n_send_the_car_to_parking_9b4a9f0f62" formatted="false">Send the car to parking?</string>
+    <string name="l10n_send_to_parking_9956a87554" formatted="false">Send to Parking</string>
+    <string name="l10n_keep_driving_36c472938d" formatted="false">Keep Driving</string>
+    <string name="l10n_this_hides_the_dashboard_car_you_can_bring_9ff479a834" formatted="false">This hides the dashboard car. You can bring it back anytime from Settings.</string>
+    <string name="l10n_search_vehicles_5780b5d6bf" formatted="false">Search vehicles</string>
+    <string name="l10n_dashboard_tab_d5d9a84817" formatted="false">Dashboard</string>
+    <string name="l10n_expenses_tab_2b6b3b7ef2" formatted="false">Expenses</string>
+    <string name="l10n_vehicles_tab_75e325b56e" formatted="false">Vehicles</string>
+    <string name="l10n_parts_tab_6063ae5802" formatted="false">Parts</string>
+    <string name="l10n_sales_tab_23a45a3c28" formatted="false">Sales</string>
+    <string name="l10n_clients_tab_2dc1a26fd0" formatted="false">Clients</string>
+    <string name="l10n_uzbekistan_db800e86e9" formatted="false">Uzbekistan</string>
+    <string name="l10n_inventory_pulse_today_a4e6597155" formatted="false">Inventory pulse · today</string>
+    <string name="l10n_d_need_attention_08cfe92ef8">%1$d need attention</string>
+    <string name="l10n_all_stock_healthy_7110af3c2c" formatted="false">All stock healthy</string>
+    <string name="l10n_d_cars_avg_d_days_in_stock_820e9d8195">%1$d cars · avg %2$d days in stock</string>
+    <string name="l10n_avg_days_2f7f876e55" formatted="false">avg days</string>
+    <string name="l10n_account_balances_39fb72cd6f" formatted="false">Account Balances</string>
+    <string name="l10n_performance_profit_e812b8a075" formatted="false">Performance &amp; Profit</string>
+    <string name="l10n_operations_a1fdaa6b2a" formatted="false">Operations</string>
+    <string name="l10n_uae_26c1f8eb11" formatted="false">UAE</string>
+    <string name="l10n_usa_18bc5956db" formatted="false">USA</string>
+    <string name="l10n_canada_cd6a7b8768" formatted="false">Canada</string>
+    <string name="l10n_uk_7770d04c7b" formatted="false">UK</string>
+    <string name="l10n_europe_576347ec82" formatted="false">Europe</string>
+    <string name="l10n_brazil_37497aa5a2" formatted="false">Brazil</string>
+    <string name="l10n_indonesia_35536a41b2" formatted="false">Indonesia</string>
+    <string name="l10n_russia_6754fe3cd8" formatted="false">Russia</string>
+    <string name="l10n_turkey_d7153e6702" formatted="false">Turkey</string>
+    <string name="l10n_japan_fcf29f6cad" formatted="false">Japan</string>
+    <string name="l10n_india_967ce367d8" formatted="false">India</string>
+    <string name="l10n_korea_4e8bd0474c" formatted="false">Korea</string>
+    <string name="l10n_km_7a5f8e7779" formatted="false">km</string>
+    <string name="l10n_dashboard_d1b677924c" formatted="false">Dashboard</string>
+    <string name="l10n_expenses_334c4a4c42" formatted="false">Expenses</string>
+    <string name="l10n_parts_a1ef55f4b8" formatted="false">Parts</string>
+    <string name="l10n_sales_11ff9f68af" formatted="false">Sales</string>
+    <string name="l10n_clients_37f0c247a5" formatted="false">Clients</string>
+    <string name="l10n_cash_5b75340774" formatted="false">Cash</string>
+    <string name="l10n_bank_c7a925fc8d" formatted="false">Bank</string>
+    <string name="l10n_weekly_158f3da592" formatted="false">Weekly</string>
+    <string name="l10n_yearly_7622eb5aa4" formatted="false">Yearly</string>
+    <string name="l10n_quarterly_8a34f70880" formatted="false">Quarterly</string>
+    <string name="l10n_select_a_plan_c83a303956" formatted="false">Select a Plan</string>
+    <string name="l10n_trial_5f7537cf06" formatted="false">Trial</string>
 </resources>

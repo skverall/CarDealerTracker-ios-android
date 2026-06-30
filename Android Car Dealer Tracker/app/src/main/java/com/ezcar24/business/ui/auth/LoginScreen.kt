@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Lock
@@ -72,9 +73,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.analytics.OnboardingAnalytics
-import com.ezcar24.business.ui.components.AppBrandMark
 import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.ui.theme.EzcarSuccess
 import com.ezcar24.business.util.localizedUiString
@@ -139,17 +140,31 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.height(32.dp))
 
-            AppBrandMark(
-                size = 82.dp,
-                cornerRadius = 24.dp,
-                elevation = 14.dp
-            )
+            Surface(
+                modifier = Modifier.size(80.dp),
+                shape = CircleShape,
+                color = Color.White.copy(alpha = 0.82f),
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.DirectionsCar,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(42.dp)
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Car Dealer Tracker",
-                style = MaterialTheme.typography.headlineMedium,
+                text = localizedUiString("Car Dealer Tracker"),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 26.sp,
+                    lineHeight = 32.sp
+                ),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
             )
@@ -157,8 +172,11 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = if (uiState.mode == AuthMode.SIGN_IN) "Welcome Back" else "Create your account",
-                style = MaterialTheme.typography.bodyLarge,
+                text = localizedUiString(if (uiState.mode == AuthMode.SIGN_IN) "Welcome Back" else "Create your account"),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 16.sp,
+                    lineHeight = 22.sp
+                ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 

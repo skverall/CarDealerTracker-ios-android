@@ -16,6 +16,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -26,6 +27,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.filled.Subject
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.ripple.rememberRipple
 import androidx.compose.material3.*
@@ -99,18 +102,18 @@ fun AddExpenseSheet(
     var description by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("vehicle") }
     var date by remember { mutableStateOf(Date()) }
-    var expenseType by remember { mutableStateOf(ExpenseCategoryType.OPERATIONAL) }
+    val expenseType = ExpenseCategoryType.OPERATIONAL
 
     var selectedVehicle by remember { mutableStateOf<Vehicle?>(null) }
     var selectedUser by remember { mutableStateOf<User?>(null) }
     var selectedAccount by remember { mutableStateOf<FinancialAccount?>(null) }
+    var showVehicleSelectionError by remember { mutableStateOf(false) }
 
     var showVehicleSheet by remember { mutableStateOf(false) }
     var showUserSheet by remember { mutableStateOf(false) }
     var showAccountSheet by remember { mutableStateOf(false) }
     var showAddUserDialog by remember { mutableStateOf(false) }
     var showAddAccountDialog by remember { mutableStateOf(false) }
-    var showMoreMenu by remember { mutableStateOf(false) }
     var showTemplatesSheet by remember { mutableStateOf(false) }
     var showSaveTemplateDialog by remember { mutableStateOf(false) }
     var showReceiptActionsSheet by remember { mutableStateOf(false) }
@@ -123,6 +126,26 @@ fun AddExpenseSheet(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val isValid = amountStr.isNotEmpty() && (amountStr.toBigDecimalOrNull() ?: BigDecimal.ZERO) > BigDecimal.ZERO
+    val saveExpense = {
+        val amt = amountStr.toBigDecimalOrNull()
+        if (amt != null && amt > BigDecimal.ZERO) {
+            if (category == "vehicle" && selectedVehicle == null) {
+                showVehicleSelectionError = true
+            } else {
+                onSave(
+                    amt,
+                    date,
+                    description,
+                    category,
+                    selectedVehicle,
+                    selectedUser,
+                    selectedAccount,
+                    expenseType,
+                    receiptDraft
+                )
+            }
+        }
+    }
     val openReceiptPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -153,15 +176,16 @@ fun AddExpenseSheet(
         )
     }
 
-    val expenseTypes = listOf(
-        Triple(ExpenseCategoryType.HOLDING_COST, "Holding Cost", Icons.Default.Schedule),
-        Triple(ExpenseCategoryType.IMPROVEMENT, "Improvement", Icons.Default.Build),
-        Triple(ExpenseCategoryType.OPERATIONAL, "Operational", Icons.Default.TrendingUp)
-    )
-
     LaunchedEffect(category) {
         if (category != "vehicle") {
             selectedVehicle = null
+            showVehicleSelectionError = false
+        }
+    }
+
+    LaunchedEffect(selectedVehicle) {
+        if (selectedVehicle != null) {
+            showVehicleSelectionError = false
         }
     }
 
@@ -200,50 +224,28 @@ fun AddExpenseSheet(
                     }
 
                     Text(
-                        text = "New Expense",
+                        text = localizedUiString("New Expense"),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
 
-                    Box {
-                        IconButton(
-                            onClick = { showMoreMenu = true },
-                            modifier = Modifier
-                                .size(44.dp)
-                                .background(Color.White, CircleShape)
-                        ) {
-                            Icon(
-                                Icons.Default.MoreHoriz,
-                                contentDescription = localizedUiString("Menu"),
-                                tint = EzcarNavy,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = showMoreMenu,
-                            onDismissRequest = { showMoreMenu = false }
-                        ) {
-                            if (templates.isNotEmpty()) {
-                                DropdownMenuItem(
-                                    text = { Text(localizedUiString("Use Template")) },
-                                    leadingIcon = { Icon(Icons.Default.AutoAwesome, contentDescription = null) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        showTemplatesSheet = true
-                                    }
-                                )
-                            }
-                            DropdownMenuItem(
-                                text = { Text(localizedUiString("Save as Template")) },
-                                leadingIcon = { Icon(Icons.Default.BookmarkBorder, contentDescription = null) },
-                                onClick = {
-                                    templateName = description.trim().takeIf { it.isNotEmpty() } ?: "Template"
-                                    showMoreMenu = false
-                                    showSaveTemplateDialog = true
-                                }
-                            )
-                        }
+                    TextButton(
+                        onClick = saveExpense,
+                        enabled = isValid,
+                        modifier = Modifier
+                            .height(44.dp)
+                            .background(Color.White, CircleShape),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.onSurface,
+                            disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Text(
+                            localizedUiString("Save"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
                     }
                 }
 
@@ -305,7 +307,7 @@ fun AddExpenseSheet(
                         LazyRow(
                             contentPadding = PaddingValues(horizontal = 20.dp),
                             horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.padding(bottom = 24.dp)
+                            modifier = Modifier.padding(bottom = 12.dp)
                         ) {
                             items(categories) { (key, title, icon) ->
                                 CategoryItem(
@@ -315,6 +317,46 @@ fun AddExpenseSheet(
                                     onClick = {
                                         category = key
                                         focusManager.clearFocus()
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    item {
+                        LazyRow(
+                            contentPadding = PaddingValues(horizontal = 20.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        ) {
+                            if (templates.isNotEmpty()) {
+                                item {
+                                    AssistChip(
+                                        onClick = { showTemplatesSheet = true },
+                                        label = { Text(localizedUiString("Use Template")) },
+                                        leadingIcon = {
+                                            Icon(
+                                                Icons.Default.AutoAwesome,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                    )
+                                }
+                            }
+                            item {
+                                AssistChip(
+                                    onClick = {
+                                        templateName = description.trim().takeIf { it.isNotEmpty() } ?: "Template"
+                                        showSaveTemplateDialog = true
+                                    },
+                                    label = { Text(localizedUiString("Save as Template")) },
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.BookmarkBorder,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     }
                                 )
                             }
@@ -345,52 +387,6 @@ fun AddExpenseSheet(
                         Column(
                             modifier = Modifier
                                 .padding(horizontal = 20.dp)
-                                .padding(bottom = 16.dp)
-                        ) {
-                            Text(
-                                text = "Expense Type",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = Color.Gray,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                items(expenseTypes) { (type, title, icon) ->
-                                    val isSelected = expenseType == type
-                                    FilterChip(
-                                        selected = isSelected,
-                                        onClick = { expenseType = type },
-                                        label = { Text(localizedUiString(title)) },
-                                        leadingIcon = {
-                                            Icon(
-                                                imageVector = icon,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(18.dp)
-                                            )
-                                        },
-                                        colors = FilterChipDefaults.filterChipColors(
-                                            selectedContainerColor = EzcarNavy,
-                                            selectedLabelColor = Color.White,
-                                            selectedLeadingIconColor = Color.White
-                                        ),
-                                        border = if (!isSelected) {
-                                            FilterChipDefaults.filterChipBorder(
-                                                enabled = true,
-                                                selected = false
-                                            )
-                                        } else null
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .padding(horizontal = 20.dp)
                                 .shadow(4.dp, RoundedCornerShape(20.dp))
                                 .background(Color.White, RoundedCornerShape(20.dp))
                                 .clip(RoundedCornerShape(20.dp))
@@ -401,7 +397,7 @@ fun AddExpenseSheet(
                                     .padding(16.dp),
                                 verticalAlignment = Alignment.Top
                             ) {
-                                Icon(Icons.Default.Subject, contentDescription = null, tint = Color.Gray)
+                                Icon(Icons.AutoMirrored.Filled.Subject, contentDescription = null, tint = Color.Gray)
                                 Spacer(modifier = Modifier.width(16.dp))
                                 Box(modifier = Modifier.weight(1f)) {
                                     if (description.isEmpty()) {
@@ -422,7 +418,7 @@ fun AddExpenseSheet(
                                 }
                             }
 
-                            Divider(color = Color.LightGray.copy(alpha = 0.3f), modifier = Modifier.padding(start = 56.dp))
+                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f), modifier = Modifier.padding(start = 56.dp))
 
                             Row(
                                 modifier = Modifier
@@ -481,6 +477,8 @@ fun AddExpenseSheet(
                                     value = selectedVehicle?.let { "${it.year} ${it.make} ${it.model}" } ?: localizedUiString("Select Vehicle"),
                                     icon = Icons.Default.DirectionsCar,
                                     isActive = selectedVehicle != null,
+                                    showsError = showVehicleSelectionError,
+                                    errorMessage = localizedUiString("Please select a vehicle before saving."),
                                     onClick = { showVehicleSheet = true }
                                 )
                             }
@@ -502,9 +500,9 @@ fun AddExpenseSheet(
                             )
 
                             ContextSelectorButton(
-                                title = "Receipt",
-                                value = receiptDraft?.fileName ?: "Attach receipt",
-                                icon = Icons.Default.ReceiptLong,
+                                title = localizedUiString("Receipt"),
+                                value = receiptDraft?.fileName ?: localizedUiString("Attach receipt"),
+                                icon = Icons.AutoMirrored.Filled.ReceiptLong,
                                 isActive = receiptDraft != null,
                                 onClick = { showReceiptActionsSheet = true }
                             )
@@ -520,22 +518,7 @@ fun AddExpenseSheet(
                     .fillMaxWidth()
             ) {
                 Button(
-                    onClick = {
-                        val amt = amountStr.toBigDecimalOrNull()
-                        if (amt != null && amt > BigDecimal.ZERO) {
-                            onSave(
-                                amt,
-                                date,
-                                description,
-                                category,
-                                selectedVehicle,
-                                selectedUser,
-                                selectedAccount,
-                                expenseType,
-                                receiptDraft
-                            )
-                        }
-                    },
+                    onClick = saveExpense,
                     enabled = isValid,
                     colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy, disabledContainerColor = Color.Gray),
                     modifier = Modifier
@@ -902,39 +885,56 @@ fun ContextSelectorButton(
     value: String,
     icon: ImageVector,
     isActive: Boolean,
+    showsError: Boolean = false,
+    errorMessage: String? = null,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(2.dp, RoundedCornerShape(16.dp))
-            .background(Color.White, RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
             modifier = Modifier
-                .size(44.dp)
-                .background(if (isActive) EzcarNavy.copy(alpha = 0.1f) else EzcarBackgroundLight, CircleShape),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .shadow(2.dp, RoundedCornerShape(16.dp))
+                .background(Color.White, RoundedCornerShape(16.dp))
+                .border(
+                    width = if (showsError) 1.dp else 0.dp,
+                    color = if (showsError) EzcarDanger else Color.Transparent,
+                    shape = RoundedCornerShape(16.dp)
+                )
+                .clickable(onClick = onClick)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = if (isActive) EzcarNavy else Color.Gray,
-                modifier = Modifier.size(20.dp)
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(if (isActive) EzcarNavy.copy(alpha = 0.1f) else EzcarBackgroundLight, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = if (isActive) EzcarNavy else Color.Gray,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(localizedUiString(title), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1)
+            }
+
+            Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.LightGray)
+        }
+        if (showsError && errorMessage != null) {
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = EzcarDanger,
+                modifier = Modifier.padding(horizontal = 4.dp)
             )
         }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(localizedUiString(title), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
-            Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, maxLines = 1)
-        }
-
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.LightGray)
     }
 }
 
@@ -975,7 +975,7 @@ fun <T> SelectionListSheet(
                 ) {
                     Text(localizedUiString("None"), color = Color.Gray)
                 }
-                Divider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
+                HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
             }
 
             items(items) { item ->
@@ -988,7 +988,7 @@ fun <T> SelectionListSheet(
                 ) {
                     itemContent(item)
                 }
-                Divider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
+                HorizontalDivider(thickness = 0.5.dp, color = Color.LightGray.copy(alpha = 0.3f))
             }
         }
     }

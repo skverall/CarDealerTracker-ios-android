@@ -28,8 +28,7 @@ val EzcarTextSecondaryDark = Color(0xFFB4BAC7)
 
 fun vehicleStatusColor(status: String?): Color {
     return when (status?.lowercase()?.trim()) {
-        "reserved" -> EzcarSuccess
-        "on_sale", "available" -> EzcarBlueBright
+        "reserved", "owned", "on_sale", "available" -> EzcarBlueBright
         "sold" -> EzcarSuccess
         "in_transit" -> EzcarWarning
         "under_service" -> EzcarPurple

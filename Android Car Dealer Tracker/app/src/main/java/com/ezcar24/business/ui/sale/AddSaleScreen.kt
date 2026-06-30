@@ -1,8 +1,10 @@
 package com.ezcar24.business.ui.sale
 
 import android.app.DatePickerDialog
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.data.local.FinancialAccount
+import com.ezcar24.business.data.local.Part
+import com.ezcar24.business.data.local.PartBatch
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.repository.DealDeskLine
 import com.ezcar24.business.data.repository.DealDeskLineCalculationType
@@ -30,6 +34,8 @@ import com.ezcar24.business.data.repository.DealDeskSettings
 import com.ezcar24.business.data.repository.DealDeskSnapshot
 import com.ezcar24.business.data.repository.DealDeskTemplateCatalog
 import com.ezcar24.business.data.repository.DealDeskTotals
+import com.ezcar24.business.ui.parts.PartSaleLineDraft
+import com.ezcar24.business.ui.parts.PartSalesViewModel
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.util.*
 import java.math.BigDecimal
@@ -38,22 +44,32 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 import kotlin.math.pow
+import kotlinx.coroutines.launch
+
+private enum class SaleEntryKind {
+    VEHICLE,
+    PARTS
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddSaleScreen(
     onDismiss: () -> Unit,
     onSave: () -> Unit,
-    viewModel: AddSaleViewModel = hiltViewModel()
+    viewModel: AddSaleViewModel = hiltViewModel(),
+    partSalesViewModel: PartSalesViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val partSalesUiState by partSalesViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
     val paymentMethods = remember { listOf("Cash", "Bank Transfer", "Cheque", "Finance", "Other") }
 
+    var selectedSaleKind by remember { mutableStateOf(SaleEntryKind.VEHICLE) }
     var amountStr by remember { mutableStateOf("") }
     var buyerName by remember { mutableStateOf("") }
     var buyerPhone by remember { mutableStateOf("") }
@@ -81,6 +97,12 @@ fun AddSaleScreen(
         useDealDesk = selectedVehicle != null && uiState.dealDeskSettings?.isEnabled == true
     }
 
+    LaunchedEffect(regionState.isPartsEnabled) {
+        if (!regionState.isPartsEnabled && selectedSaleKind == SaleEntryKind.PARTS) {
+            selectedSaleKind = SaleEntryKind.VEHICLE
+        }
+    }
+
     ModalBottomSheet(onDismissRequest = onDismiss, modifier = Modifier.fillMaxHeight(0.9f)) {
         LazyColumn(
             modifier = Modifier
@@ -90,17 +112,93 @@ fun AddSaleScreen(
             contentPadding = PaddingValues(bottom = 32.dp)
         ) {
             item {
-                Text(
-                    localizedUiString("New Sale"),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = EzcarNavy
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .background(EzcarBackgroundLight, CircleShape)
+                            .clickable { onDismiss() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = localizedUiString("Close"),
+                            tint = Color.Gray
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    Text(
+                        localizedUiString("New Sale"),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = EzcarNavy
+                    )
+
+                    Spacer(modifier = Modifier.weight(1f))
+                    Spacer(modifier = Modifier.size(36.dp))
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
+
+                if (regionState.isPartsEnabled) {
+                    SaleTypePicker(
+                        selectedKind = selectedSaleKind,
+                        onSelected = { selectedSaleKind = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
             }
 
-            if (selectedVehicle == null) {
+            if (selectedSaleKind == SaleEntryKind.PARTS && regionState.isPartsEnabled) {
+                item {
+                    PartSaleFormContent(
+                        parts = partSalesUiState.parts,
+                        batches = partSalesUiState.batches,
+                        accounts = partSalesUiState.accounts,
+                        clients = partSalesUiState.clients,
+                        dateFormatter = dateFormatter,
+                        paymentMethods = paymentMethods,
+                        formatCurrency = regionSettingsManager::formatCurrency,
+                        onPickDate = { currentDate, onDateSelected ->
+                            val calendar = Calendar.getInstance()
+                            calendar.time = currentDate
+                            DatePickerDialog(
+                                context,
+                                { _, year, month, day ->
+                                    calendar.set(year, month, day)
+                                    onDateSelected(calendar.time)
+                                },
+                                calendar.get(Calendar.YEAR),
+                                calendar.get(Calendar.MONTH),
+                                calendar.get(Calendar.DAY_OF_MONTH)
+                            ).show()
+                        },
+                        onSavePartSale = { saleDate, accountId, lines, buyerNameValue, buyerPhoneValue, paymentMethodValue, notesValue, clientId ->
+                            partSalesViewModel.createSale(
+                                saleDate = saleDate,
+                                selectedAccountId = accountId,
+                                lineItems = lines,
+                                buyerName = buyerNameValue,
+                                buyerPhone = buyerPhoneValue,
+                                paymentMethod = paymentMethodValue,
+                                notes = notesValue,
+                                selectedClientId = clientId
+                            ).also { saved ->
+                                if (saved) {
+                                    onSave()
+                                }
+                            }
+                        }
+                    )
+                }
+            } else if (selectedVehicle == null) {
                 item {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = EzcarBackgroundLight),
@@ -532,6 +630,501 @@ private data class DealDeskSaleRequest(
     val client: Client?,
     val snapshot: DealDeskSnapshot
 )
+
+private data class PartSaleFormLine(
+    val partId: UUID? = null,
+    val quantityInput: String = "",
+    val unitPriceInput: String = ""
+)
+
+@Composable
+private fun SaleTypePicker(
+    selectedKind: SaleEntryKind,
+    onSelected: (SaleEntryKind) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        SaleTypePickerButton(
+            title = localizedUiString("Vehicle"),
+            selected = selectedKind == SaleEntryKind.VEHICLE,
+            onClick = { onSelected(SaleEntryKind.VEHICLE) },
+            modifier = Modifier.weight(1f)
+        )
+        SaleTypePickerButton(
+            title = localizedUiString("Parts"),
+            selected = selectedKind == SaleEntryKind.PARTS,
+            onClick = { onSelected(SaleEntryKind.PARTS) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun SaleTypePickerButton(
+    title: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(42.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (selected) EzcarNavy else EzcarBackgroundLight,
+            contentColor = if (selected) Color.White else EzcarNavy
+        ),
+        contentPadding = PaddingValues(horizontal = 10.dp)
+    ) {
+        Text(
+            text = title,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun PartSaleFormContent(
+    parts: List<Part>,
+    batches: List<PartBatch>,
+    accounts: List<FinancialAccount>,
+    clients: List<Client>,
+    dateFormatter: SimpleDateFormat,
+    paymentMethods: List<String>,
+    formatCurrency: (BigDecimal) -> String,
+    onPickDate: (Date, (Date) -> Unit) -> Unit,
+    onSavePartSale: suspend (
+        saleDate: Date,
+        accountId: UUID,
+        lines: List<PartSaleLineDraft>,
+        buyerName: String?,
+        buyerPhone: String?,
+        paymentMethod: String?,
+        notes: String?,
+        clientId: UUID?
+    ) -> Boolean
+) {
+    val coroutineScope = rememberCoroutineScope()
+    var saleDate by remember { mutableStateOf(Date()) }
+    var selectedAccountId by remember { mutableStateOf<UUID?>(null) }
+    var selectedClientId by remember { mutableStateOf<UUID?>(null) }
+    var paymentMethod by remember { mutableStateOf("Cash") }
+    var notes by remember { mutableStateOf("") }
+    var paymentMenuExpanded by remember { mutableStateOf(false) }
+    var clientMenuExpanded by remember { mutableStateOf(false) }
+    var accountMenuExpanded by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var lineItems by remember {
+        mutableStateOf(listOf(PartSaleFormLine()))
+    }
+
+    LaunchedEffect(accounts) {
+        val currentStillExists = accounts.any { it.id == selectedAccountId }
+        if (!currentStillExists) {
+            selectedAccountId = accounts.firstOrNull { it.accountType.contains("cash", ignoreCase = true) }?.id
+                ?: accounts.firstOrNull()?.id
+        }
+    }
+
+    LaunchedEffect(parts) {
+        if (lineItems.size == 1 && lineItems.first().partId == null && parts.isNotEmpty()) {
+            lineItems = listOf(lineItems.first().copy(partId = parts.first().id))
+        }
+    }
+
+    val selectedAccount = accounts.firstOrNull { it.id == selectedAccountId }
+    val selectedClient = clients.firstOrNull { it.id == selectedClientId }
+    val totalRevenue = lineItems.fold(BigDecimal.ZERO) { total, line ->
+        val quantity = decimalFromSaleInput(line.quantityInput)
+        val unitPrice = decimalFromSaleInput(line.unitPriceInput)
+        total.add(quantity.multiply(unitPrice))
+    }
+    val requestedByPart = lineItems
+        .filter { it.partId != null }
+        .groupBy { it.partId!! }
+        .mapValues { entry ->
+            entry.value.fold(BigDecimal.ZERO) { total, line ->
+                total.add(decimalFromSaleInput(line.quantityInput))
+            }
+        }
+    val hasStockShortage = requestedByPart.any { (partId, requested) ->
+        requested > partQuantityOnHand(partId, batches)
+    }
+    val validDrafts = lineItems.mapNotNull { line ->
+        val partId = line.partId ?: return@mapNotNull null
+        val quantity = decimalFromSaleInput(line.quantityInput)
+        val unitPrice = decimalFromSaleInput(line.unitPriceInput)
+        if (quantity > BigDecimal.ZERO && unitPrice > BigDecimal.ZERO) {
+            PartSaleLineDraft(partId = partId, quantity = quantity, unitPrice = unitPrice)
+        } else {
+            null
+        }
+    }
+    val canSave = selectedAccount != null &&
+        parts.isNotEmpty() &&
+        validDrafts.size == lineItems.size &&
+        !hasStockShortage &&
+        !isSaving
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        SaleSectionTitle("Sale Details")
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SaleSelectorButton(
+                    icon = Icons.Default.Today,
+                    label = localizedUiString("Sale Date"),
+                    value = dateFormatter.format(saleDate),
+                    onClick = { onPickDate(saleDate) { saleDate = it } }
+                )
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    SaleSelectorButton(
+                        icon = Icons.Default.Person,
+                        label = localizedUiString("Client"),
+                        value = selectedClient?.name ?: localizedUiString("Select Client"),
+                        onClick = { clientMenuExpanded = true }
+                    )
+                    DropdownMenu(
+                        expanded = clientMenuExpanded,
+                        onDismissRequest = { clientMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(localizedUiString("None")) },
+                            onClick = {
+                                selectedClientId = null
+                                clientMenuExpanded = false
+                            }
+                        )
+                        clients.forEach { client ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(client.name)
+                                        client.phone?.takeIf { it.isNotBlank() }?.let { phone ->
+                                            Text(phone, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                        }
+                                    }
+                                },
+                                onClick = {
+                                    selectedClientId = client.id
+                                    clientMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    SaleSelectorButton(
+                        icon = Icons.Default.CreditCard,
+                        label = localizedUiString("Payment Method"),
+                        value = localizedUiString(paymentMethod),
+                        onClick = { paymentMenuExpanded = true }
+                    )
+                    DropdownMenu(
+                        expanded = paymentMenuExpanded,
+                        onDismissRequest = { paymentMenuExpanded = false }
+                    ) {
+                        paymentMethods.forEach { method ->
+                            DropdownMenuItem(
+                                text = { Text(localizedUiString(method)) },
+                                onClick = {
+                                    paymentMethod = method
+                                    paymentMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    SaleSelectorButton(
+                        icon = Icons.Default.AccountBalance,
+                        label = localizedUiString("Deposit To"),
+                        value = selectedAccount?.accountType ?: localizedUiString("Select Account"),
+                        onClick = { accountMenuExpanded = true }
+                    )
+                    DropdownMenu(
+                        expanded = accountMenuExpanded,
+                        onDismissRequest = { accountMenuExpanded = false }
+                    ) {
+                        accounts.forEach { account ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(account.accountType)
+                                        Text(formatCurrency(account.balance), style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                    }
+                                },
+                                onClick = {
+                                    selectedAccountId = account.id
+                                    accountMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text(localizedUiString("Notes")) },
+                    minLines = 2,
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                localizedUiString("Line Items"),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = Color.Gray
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            TextButton(
+                onClick = {
+                    lineItems = lineItems + PartSaleFormLine(partId = parts.firstOrNull()?.id)
+                },
+                enabled = parts.isNotEmpty()
+            ) {
+                Icon(Icons.Default.AddCircle, contentDescription = null)
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(localizedUiString("Add Item"))
+            }
+        }
+
+        if (parts.isEmpty()) {
+            Text(
+                text = localizedUiString("No parts found"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.Gray,
+                modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            lineItems.forEachIndexed { index, line ->
+                PartSaleLineCard(
+                    line = line,
+                    parts = parts,
+                    batches = batches,
+                    canRemove = lineItems.size > 1,
+                    formatCurrency = formatCurrency,
+                    onLineChanged = { updated ->
+                        lineItems = lineItems.mapIndexed { itemIndex, item ->
+                            if (itemIndex == index) updated else item
+                        }
+                    },
+                    onRemove = {
+                        lineItems = lineItems.filterIndexed { itemIndex, _ -> itemIndex != index }
+                    }
+                )
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(localizedUiString("Total Revenue"), color = Color.Gray)
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(formatCurrency(totalRevenue), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                }
+
+                if (hasStockShortage) {
+                    Text(
+                        text = localizedUiString("Not enough stock for some items."),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                errorMessage?.let { message ->
+                    Text(
+                        text = localizedUiString(message),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        }
+
+        Button(
+            onClick = {
+                val accountId = selectedAccount?.id ?: return@Button
+                coroutineScope.launch {
+                    errorMessage = null
+                    isSaving = true
+                    val saved = onSavePartSale(
+                        saleDate,
+                        accountId,
+                        validDrafts,
+                        selectedClient?.name,
+                        selectedClient?.phone,
+                        paymentMethod,
+                        notes.ifBlank { null },
+                        selectedClientId
+                    )
+                    if (!saved) {
+                        isSaving = false
+                        errorMessage = "Could not save sale."
+                    }
+                }
+            },
+            enabled = canSave,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            if (isSaving) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+            Text(localizedUiString("Save"), fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun PartSaleLineCard(
+    line: PartSaleFormLine,
+    parts: List<Part>,
+    batches: List<PartBatch>,
+    canRemove: Boolean,
+    formatCurrency: (BigDecimal) -> String,
+    onLineChanged: (PartSaleFormLine) -> Unit,
+    onRemove: () -> Unit
+) {
+    var partMenuExpanded by remember { mutableStateOf(false) }
+    val selectedPart = parts.firstOrNull { it.id == line.partId }
+    val quantity = decimalFromSaleInput(line.quantityInput)
+    val unitPrice = decimalFromSaleInput(line.unitPriceInput)
+    val subtotal = quantity.multiply(unitPrice)
+    val available = selectedPart?.let { partQuantityOnHand(it.id, batches) } ?: BigDecimal.ZERO
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedButton(
+                        onClick = { partMenuExpanded = true },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                            Text(
+                                text = selectedPart?.name ?: localizedUiString("Select Part"),
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (selectedPart != null) {
+                                Text(
+                                    text = localizedUiString("Available: %s", formatPartQuantity(available)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (available > BigDecimal.ZERO) EzcarSuccess else MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                    }
+                    DropdownMenu(
+                        expanded = partMenuExpanded,
+                        onDismissRequest = { partMenuExpanded = false }
+                    ) {
+                        parts.forEach { part ->
+                            DropdownMenuItem(
+                                text = {
+                                    Column {
+                                        Text(part.name)
+                                        Text(
+                                            localizedUiString("Available: %s", formatPartQuantity(partQuantityOnHand(part.id, batches))),
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.Gray
+                                        )
+                                    }
+                                },
+                                onClick = {
+                                    onLineChanged(line.copy(partId = part.id))
+                                    partMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                if (canRemove) {
+                    IconButton(onClick = onRemove) {
+                        Icon(Icons.Default.Delete, contentDescription = localizedUiString("Remove"), tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            Row(
+                modifier = Modifier.padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = line.quantityInput,
+                    onValueChange = { onLineChanged(line.copy(quantityInput = sanitizeSaleDecimalInput(it))) },
+                    label = { Text(localizedUiString("Quantity")) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+                OutlinedTextField(
+                    value = line.unitPriceInput,
+                    onValueChange = { onLineChanged(line.copy(unitPriceInput = sanitizeSaleDecimalInput(it))) },
+                    label = { Text(localizedUiString("Unit Price")) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(localizedUiString("Total"), color = Color.Gray)
+                Spacer(modifier = Modifier.weight(1f))
+                Text(formatCurrency(subtotal), fontWeight = FontWeight.SemiBold, color = EzcarNavy)
+            }
+        }
+    }
+}
 
 @Composable
 private fun DealDeskModeCard(
@@ -1401,6 +1994,18 @@ private fun BigDecimal.coerceAtLeastZero(): BigDecimal {
 
 private fun BigDecimal.coerceAtMostValue(maximum: BigDecimal): BigDecimal {
     return if (this > maximum) maximum else this
+}
+
+private fun partQuantityOnHand(partId: UUID, batches: List<PartBatch>): BigDecimal {
+    return batches
+        .filter { it.partId == partId && it.deletedAt == null }
+        .fold(BigDecimal.ZERO) { total, batch ->
+            total.add(batch.quantityRemaining)
+        }
+}
+
+private fun formatPartQuantity(value: BigDecimal): String {
+    return value.stripTrailingZeros().toPlainString()
 }
 
 private fun monthlyPaymentEstimate(

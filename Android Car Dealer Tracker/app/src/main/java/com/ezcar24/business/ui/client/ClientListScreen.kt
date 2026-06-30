@@ -2,6 +2,7 @@ package com.ezcar24.business.ui.client
 
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,15 +24,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.ezcar24.business.data.local.Client
 import com.ezcar24.business.ui.theme.*
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import com.ezcar24.business.util.localizedUiString
@@ -40,7 +45,6 @@ import com.ezcar24.business.util.localizedUiString
 @Composable
 fun ClientListScreen(
     onNavigateToDetail: (String?) -> Unit,
-    onNavigateToLeadManagement: () -> Unit = {},
     viewModel: ClientViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -60,7 +64,6 @@ fun ClientListScreen(
         topBar = {
             ClientTopBar(
                 onFilterClick = { showFilters = !showFilters },
-                onLeadManagementClick = onNavigateToLeadManagement,
                 onAddClick = { onNavigateToDetail(null) }
             )
         }
@@ -104,6 +107,12 @@ fun ClientListScreen(
                             val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                             context.startActivity(intent)
                         }
+                    },
+                    onSmsClick = { client ->
+                        client.phone?.let { phone ->
+                            val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:$phone"))
+                            context.startActivity(intent)
+                        }
                     }
                 )
             } // else
@@ -122,7 +131,6 @@ fun ClientListScreen(
 @Composable
 fun ClientTopBar(
     onFilterClick: () -> Unit,
-    onLeadManagementClick: () -> Unit,
     onAddClick: () -> Unit
 ) {
     Row(
@@ -150,35 +158,17 @@ fun ClientTopBar(
             }
         }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+        IconButton(
+            onClick = onAddClick,
+            modifier = Modifier
+                .size(48.dp)
+                .background(EzcarNavy, CircleShape)
         ) {
-            IconButton(
-                onClick = onLeadManagementClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(EzcarBlueBright.copy(alpha = 0.12f), CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.PersonSearch,
-                    contentDescription = localizedUiString("Lead Management"),
-                    tint = EzcarBlueBright
-                )
-            }
-
-            IconButton(
-                onClick = onAddClick,
-                modifier = Modifier
-                    .size(48.dp)
-                    .background(EzcarNavy, CircleShape)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Add,
-                    contentDescription = localizedUiString("Add Client"),
-                    tint = Color.White
-                )
-            }
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = localizedUiString("Add Client"),
+                tint = Color.White
+            )
         }
     }
 }
@@ -244,10 +234,11 @@ fun ClientGroupedList(
     clients: List<Client>,
     onClientClick: (Client) -> Unit,
     onCallClick: (Client) -> Unit,
-    onWhatsAppClick: (Client) -> Unit
+    onWhatsAppClick: (Client) -> Unit,
+    onSmsClick: (Client) -> Unit
 ) {
     val grouped = clients.groupBy { clientStatusGroupKey(it.status) }
-    val statusOrder = listOf("new", "engaged", "negotiation", "sold", "lost")
+    val statusOrder = listOf("new", "contacted", "viewing", "negotiation", "sold")
 
     LazyColumn(
         contentPadding = PaddingValues(bottom = 80.dp)
@@ -263,7 +254,8 @@ fun ClientGroupedList(
                         client = client,
                         onClick = { onClientClick(client) },
                         onCall = { onCallClick(client) },
-                        onWhatsApp = { onWhatsAppClick(client) }
+                        onWhatsApp = { onWhatsAppClick(client) },
+                        onSms = { onSmsClick(client) }
                     )
                 }
             }
@@ -303,205 +295,200 @@ fun ClientRow(
     client: Client,
     onClick: () -> Unit,
     onCall: () -> Unit,
-    onWhatsApp: () -> Unit
+    onWhatsApp: () -> Unit,
+    onSms: () -> Unit
 ) {
-    val isNew = client.createdAt?.let { 
-        System.currentTimeMillis() - it.time < 24 * 60 * 60 * 1000 
-    } ?: false
-    
     val statusColor = when(clientStatusGroupKey(client.status)) {
-        "new" -> EzcarGreen
-        "engaged" -> EzcarBlueBright
-        "negotiation" -> EzcarOrange
+        "new" -> EzcarNavy
+        "contacted" -> EzcarOrange
+        "viewing" -> Color(0xFFFF9800)
+        "negotiation" -> EzcarBlueBright
         "sold" -> EzcarGreen
-        "lost" -> Color.Gray
-        else -> EzcarGreen
+        else -> EzcarNavy
     }
     
     val statusDisplayName = localizedUiString(clientStatusLabelSource(client.status))
+    val todayText = localizedUiString("Today")
+    val yesterdayText = localizedUiString("Yesterday")
+    val interestText = client.requestDetails?.takeIf { it.isNotBlank() }.orEmpty()
+    val activityText = remember(client.createdAt, todayText, yesterdayText) {
+        formatClientActivityDate(client.createdAt, todayText, yesterdayText)
+    }
+    val initials = remember(client.name) {
+        client.name
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .take(2)
+            .mapNotNull { it.firstOrNull()?.uppercaseChar()?.toString() }
+            .joinToString("")
+            .ifBlank { "?" }
+    }
     
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.65f))
     ) {
-        Column {
-            // Main Content
-            Row(
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
                 modifier = Modifier
-                    .padding(12.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.Top
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(EzcarNavy, EzcarBlueBright))),
+                contentAlignment = Alignment.Center
             ) {
-                // Avatar
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(EzcarGreen.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
+                Text(
+                    text = initials,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 1
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.Top
                 ) {
                     Text(
-                        text = client.name?.firstOrNull()?.uppercase() ?: "?",
-                        color = EzcarGreen,
+                        text = client.name.ifBlank { localizedUiString("Unknown Client") },
+                        style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
                         fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
                     )
+                    if (activityText.isNotBlank()) {
+                        Text(
+                            text = activityText,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+                    }
                 }
 
-                Spacer(modifier = Modifier.width(12.dp))
-
-                // Info Column
-                Column(modifier = Modifier.weight(1f)) {
-                    // Name + Status Badge row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = client.name ?: localizedUiString("Unknown Client"),
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        
-                        // Status Badge
-                        if (isNew) {
-                            Text(
-                                text = localizedUiString("New"),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = EzcarGreen,
-                                modifier = Modifier
-                                    .background(
-                                        color = EzcarGreen.copy(alpha = 0.1f),
-                                        shape = RoundedCornerShape(50)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        } else {
-                            Text(
-                                text = statusDisplayName,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = statusColor,
-                                modifier = Modifier
-                                    .background(
-                                        color = statusColor.copy(alpha = 0.1f),
-                                        shape = RoundedCornerShape(50)
-                                    )
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(2.dp))
-                    
-                    // Request details / Vehicle info
-                    if (!client.requestDetails.isNullOrBlank()) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DirectionsCar,
-                                contentDescription = null,
-                                tint = Color.Gray,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = client.requestDetails!!,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
-                                maxLines = 1
-                            )
-                        }
-                    }
-                    
-                    // Date
+                if (interestText.isNotBlank()) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CalendarToday,
+                            imageVector = Icons.Default.DirectionsCar,
                             contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(10.dp)
+                            tint = EzcarNavy,
+                            modifier = Modifier.size(13.dp)
                         )
                         Text(
-                            text = localizedUiString(
-                                "Added on %s",
-                                SimpleDateFormat("d MMM", Locale.getDefault()).format(client.createdAt ?: Date())
-                            ),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+                            text = interestText,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-            }
-            
-            // Action Buttons (Compact) - only show if phone exists
-            if (!client.phone.isNullOrBlank()) {
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant, thickness = 0.5.dp)
-                
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        .padding(top = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Call Button
-                    Button(
-                        onClick = onCall,
+                    Text(
+                        text = statusDisplayName,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = statusColor,
                         modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Phone,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(localizedUiString("Call"), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-                    }
-                    
-                    // WhatsApp Button
-                    Button(
-                        onClick = onWhatsApp,
-                        modifier = Modifier
-                            .weight(1f)
-                            .heightIn(min = 48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = EzcarGreen.copy(alpha = 0.1f),
-                            contentColor = EzcarGreen
-                        ),
-                        contentPadding = PaddingValues(vertical = 8.dp),
-                        shape = RoundedCornerShape(10.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Message,
-                            contentDescription = null,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(localizedUiString("WhatsApp"), fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                            .background(
+                                color = statusColor.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (!client.phone.isNullOrBlank()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            ClientCircleActionButton(
+                                icon = Icons.Default.Phone,
+                                background = Brush.verticalGradient(listOf(EzcarNavy, EzcarNavy.copy(alpha = 0.85f))),
+                                contentDescription = localizedUiString("Call"),
+                                onClick = onCall
+                            )
+                            ClientCircleActionButton(
+                                icon = Icons.AutoMirrored.Filled.Message,
+                                background = Brush.verticalGradient(listOf(Color(0xFF1DB954), Color(0xFF0A942F))),
+                                contentDescription = localizedUiString("WhatsApp"),
+                                onClick = onWhatsApp
+                            )
+                            ClientCircleActionButton(
+                                icon = Icons.AutoMirrored.Filled.Message,
+                                background = Brush.verticalGradient(listOf(EzcarBlueBright, EzcarBlueBright.copy(alpha = 0.85f))),
+                                contentDescription = localizedUiString("SMS"),
+                                onClick = onSms
+                            )
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ClientCircleActionButton(
+    icon: ImageVector,
+    background: Brush,
+    contentDescription: String,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(background)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size(14.dp)
+        )
+    }
+}
+
+private fun formatClientActivityDate(date: Date, todayText: String, yesterdayText: String): String {
+    val calendar = Calendar.getInstance().apply { time = date }
+    val now = Calendar.getInstance()
+    return when {
+        calendar.get(Calendar.YEAR) == now.get(Calendar.YEAR) &&
+            calendar.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR) -> {
+            "$todayText ${SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)}"
+        }
+        calendar.get(Calendar.YEAR) == now.get(Calendar.YEAR) &&
+            calendar.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR) - 1 -> yesterdayText
+        else -> SimpleDateFormat("d MMM", Locale.getDefault()).format(date)
     }
 }
 
@@ -546,29 +533,31 @@ private fun DateFilterType.labelSource(): String {
 private fun clientStatusLabelSource(status: String?): String {
     return when (clientStatusGroupKey(status)) {
         "new" -> "New"
-        "engaged" -> "Engaged"
+        "contacted" -> "Contacted"
+        "viewing" -> "Viewing"
         "negotiation" -> "Negotiation"
         "sold" -> "Sold"
-        "lost" -> "Lost"
         else -> "New"
     }
 }
 
 private fun clientStatusSectionLabelSource(status: String): String {
     return when (clientStatusGroupKey(status)) {
-        "new" -> "New Leads"
-        "engaged" -> "Engaged"
+        "new" -> "New"
+        "contacted" -> "Contacted"
+        "viewing" -> "Viewing"
         "negotiation" -> "Negotiation"
         "sold" -> "Sold"
-        "lost" -> "Lost"
-        else -> status
+        else -> "New"
     }
 }
 
 private fun clientStatusGroupKey(status: String?): String {
     return when (status) {
-        "purchased" -> "sold"
-        null -> "new"
-        else -> status
+        "contacted", "engaged", "in_progress" -> "contacted"
+        "viewing" -> "viewing"
+        "negotiation", "completed" -> "negotiation"
+        "sold", "purchased" -> "sold"
+        else -> "new"
     }
 }

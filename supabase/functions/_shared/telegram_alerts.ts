@@ -1,6 +1,8 @@
 export type AdminAlert = {
   title: string
   lines?: Array<string | null | undefined>
+  details?: Array<string | null | undefined>
+  replyMarkup?: Record<string, unknown>
 }
 
 export async function sendAdminAlert(alert: AdminAlert): Promise<boolean> {
@@ -29,7 +31,9 @@ export async function sendAdminAlert(alert: AdminAlert): Promise<boolean> {
       body: JSON.stringify({
         chat_id: chatId,
         text,
+        parse_mode: "HTML",
         disable_web_page_preview: true,
+        ...(alert.replyMarkup ? { reply_markup: alert.replyMarkup } : {}),
       }),
     })
 
@@ -160,7 +164,21 @@ function buildMessage(alert: AdminAlert): string {
     .map((line) => cleanValue(line))
     .filter((line): line is string => Boolean(line))
 
-  return [title, ...lines].join("\n").slice(0, 4000)
+  const details = (alert.details ?? [])
+    .map((line) => cleanValue(line))
+    .filter((line): line is string => Boolean(line))
+
+  const visible = [
+    `<b>${escapeHtml(title)}</b>`,
+    ...lines.map(escapeHtml),
+  ]
+
+  if (details.length > 0) {
+    visible.push("")
+    visible.push(`<tg-spoiler>${escapeHtml(details.join("\n"))}</tg-spoiler>`)
+  }
+
+  return visible.join("\n").slice(0, 4000)
 }
 
 function envFlag(name: string, fallback: boolean): boolean {
@@ -178,4 +196,11 @@ function flagEmoji(countryCode: string): string | null {
   if (!/^[A-Z]{2}$/.test(countryCode)) return null
   const base = 127397
   return String.fromCodePoint(...[...countryCode].map((char) => base + char.charCodeAt(0)))
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
 }

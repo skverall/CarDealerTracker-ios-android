@@ -3,29 +3,40 @@ package com.ezcar24.business.util
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import java.security.MessageDigest
 import java.util.Locale
 
+val LocalAppLanguage = staticCompositionLocalOf<AppLanguage?> { null }
+
 @Composable
 fun localizedUiString(source: String): String {
     val context = LocalContext.current
-    val resourceId = remember(source, context) {
-        context.localizedUiStringResourceId(source)
+    val appLanguage = LocalAppLanguage.current
+    val stringContext = remember(context, appLanguage) {
+        appLanguage?.let { context.withAppLanguage(it) } ?: context
     }
-    return if (resourceId == 0) source else context.getString(resourceId)
+    val resourceId = remember(source, stringContext) {
+        stringContext.localizedUiStringResourceId(source)
+    }
+    return if (resourceId == 0) source else stringContext.getString(resourceId)
 }
 
 @Composable
 fun localizedUiString(source: String, vararg formatArgs: Any): String {
     val context = LocalContext.current
-    val resourceId = remember(source, context) {
-        context.localizedUiStringResourceId(source)
+    val appLanguage = LocalAppLanguage.current
+    val stringContext = remember(context, appLanguage) {
+        appLanguage?.let { context.withAppLanguage(it) } ?: context
+    }
+    val resourceId = remember(source, stringContext) {
+        stringContext.localizedUiStringResourceId(source)
     }
     return if (resourceId == 0) {
         String.format(Locale.getDefault(), source, *formatArgs)
     } else {
-        context.getString(resourceId, *formatArgs)
+        stringContext.getString(resourceId, *formatArgs)
     }
 }
 

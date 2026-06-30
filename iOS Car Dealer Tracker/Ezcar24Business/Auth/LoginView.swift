@@ -514,7 +514,11 @@ struct LoginView: View {
         sessionStore.resetError()
         Task {
             do {
-                try await sessionStore.signInWithGoogle()
+                try await sessionStore.signInWithGoogle(
+                    authMode: appSessionState.mode.analyticsName,
+                    referralCode: appSessionState.mode == .signUp ? trimmedReferralCode : nil,
+                    teamInviteCode: trimmedTeamInviteCode.isEmpty ? nil : trimmedTeamInviteCode
+                )
                 appSessionState.isGuestMode = false
                 trackSocialAuthCompleted(properties: properties)
                 clearSocialSensitiveFields()
@@ -550,7 +554,14 @@ struct LoginView: View {
 
             Task {
                 do {
-                    try await sessionStore.signInWithApple(idToken: idToken, nonce: nonce, fullName: credential.fullName)
+                    try await sessionStore.signInWithApple(
+                        idToken: idToken,
+                        nonce: nonce,
+                        fullName: credential.fullName,
+                        authMode: appSessionState.mode.analyticsName,
+                        referralCode: appSessionState.mode == .signUp ? trimmedReferralCode : nil,
+                        teamInviteCode: trimmedTeamInviteCode.isEmpty ? nil : trimmedTeamInviteCode
+                    )
                     appSessionState.isGuestMode = false
                     trackSocialAuthCompleted(properties: properties)
                     clearSocialSensitiveFields()

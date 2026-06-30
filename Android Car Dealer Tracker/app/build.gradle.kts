@@ -17,6 +17,12 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
 
+val localPropertiesFile = rootProject.file("local.properties")
+val localProperties = Properties()
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 fun String.asBuildConfigString(): String = "\"${replace("\\", "\\\\").replace("\"", "\\\"")}\""
 
 val supabaseUrl = providers.gradleProperty("SUPABASE_URL")
@@ -38,11 +44,19 @@ val googleWebClientId = providers.gradleProperty("GOOGLE_WEB_CLIENT_ID")
 val postHogProjectToken = providers.gradleProperty("POSTHOG_PROJECT_TOKEN")
     .orElse(providers.environmentVariable("POSTHOG_PROJECT_TOKEN"))
     .orElse(providers.environmentVariable("POSTHOG_API_KEY"))
-    .getOrElse((keystoreProperties["postHogProjectToken"] as? String).orEmpty())
+    .getOrElse(
+        (localProperties["postHogProjectToken"] as? String)
+            ?: (keystoreProperties["postHogProjectToken"] as? String)
+            ?: ""
+    )
 
 val postHogHost = providers.gradleProperty("POSTHOG_HOST")
     .orElse(providers.environmentVariable("POSTHOG_HOST"))
-    .getOrElse((keystoreProperties["postHogHost"] as? String) ?: "https://us.i.posthog.com")
+    .getOrElse(
+        (localProperties["postHogHost"] as? String)
+            ?: (keystoreProperties["postHogHost"] as? String)
+            ?: "https://us.i.posthog.com"
+    )
 
 val postHogDebug = providers.gradleProperty("POSTHOG_DEBUG")
     .orElse(providers.environmentVariable("POSTHOG_DEBUG"))
@@ -113,6 +127,13 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
+            buildConfigField("boolean", "CHECK_PLAY_STORE_VERSION", "false")
+        }
+        create("billingDebug") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ""
+            versionNameSuffix = "-billing-debug"
+            matchingFallbacks += listOf("debug")
             buildConfigField("boolean", "CHECK_PLAY_STORE_VERSION", "false")
         }
         release {

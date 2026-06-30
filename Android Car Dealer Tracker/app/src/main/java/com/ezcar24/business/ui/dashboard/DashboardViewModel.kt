@@ -20,6 +20,8 @@ import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import com.ezcar24.business.data.sync.CloudSyncManager
 import com.ezcar24.business.util.calculator.DashboardMetricsCalculator
+import com.ezcar24.business.util.FinancialAccountKind
+import com.ezcar24.business.util.financialAccountKindFor
 import com.ezcar24.business.util.UserFacingErrorContext
 import com.ezcar24.business.util.UserFacingErrorMapper
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -46,25 +48,21 @@ enum class DashboardTimeRange(val displayLabel: String, val periodValue: String)
     SIX_MONTHS("6M", "sixMonths"),
     ALL_TIME("All", "all");
 
-    fun getStartDate(): Date {
+    fun getStartDate(): Date? {
         val cal = Calendar.getInstance()
-        // Reset to end of today effectively for comparisons if needed, 
-        // but typically we just want the start point to filter >=
-        // For range exclusions we might need more logic, but let's stick to start date for now.
-        
         cal.set(Calendar.HOUR_OF_DAY, 0)
         cal.set(Calendar.MINUTE, 0)
         cal.set(Calendar.SECOND, 0)
         cal.set(Calendar.MILLISECOND, 0)
 
         return when (this) {
-            ONE_DAY -> cal.time // Today 00:00
+            ONE_DAY -> cal.time
             ONE_WEEK -> {
-                cal.add(Calendar.DAY_OF_YEAR, -7)
+                cal.add(Calendar.DAY_OF_YEAR, -6)
                 cal.time
             }
             ONE_MONTH -> {
-                cal.add(Calendar.MONTH, -1)
+                cal.add(Calendar.DAY_OF_YEAR, -30)
                 cal.time
             }
             THREE_MONTHS -> {
@@ -75,10 +73,23 @@ enum class DashboardTimeRange(val displayLabel: String, val periodValue: String)
                 cal.add(Calendar.MONTH, -6)
                 cal.time
             }
-            ALL_TIME -> {
-                cal.time = Date(0) // Epoch
+            ALL_TIME -> null
+        }
+    }
+
+    fun getEndDate(): Date? {
+        val cal = Calendar.getInstance()
+        return when (this) {
+            ONE_DAY -> {
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                cal.add(Calendar.DAY_OF_YEAR, 1)
                 cal.time
             }
+            ONE_WEEK, ONE_MONTH, THREE_MONTHS, SIX_MONTHS -> Date()
+            ALL_TIME -> null
         }
     }
 }
@@ -208,9 +219,11 @@ class DashboardViewModel @Inject constructor(
                 val partSaleLineItems = partSaleData.second
                 val selectedRange = _uiState.value.selectedRange
                 val rangeStartDate = selectedRange.getStartDate()
+                val rangeEndDate = selectedRange.getEndDate()
 
-                // Filter expenses by selected range
-                val filteredExpenses = allExpenses.filter { it.date >= rangeStartDate }
+                val filteredExpenses = allExpenses.filter { expense ->
+                    isInDashboardRange(expense.date, rangeStartDate, rangeEndDate)
+                }
                 
                 // Calculate Vehicle Value - EXCLUDE sold vehicles (matching iOS logic)
                 val totalVehicleValue = vehicles
@@ -229,10 +242,13 @@ class DashboardViewModel @Inject constructor(
                 
                 // Calculate account balances
                 val totalCash = accounts
-                    .filter { it.accountType.lowercase() == "cash" }
+                    .filter { financialAccountKindFor(it.accountType) == FinancialAccountKind.CASH }
                     .sumOf { it.balance }
                 val totalBank = accounts
-                    .filter { it.accountType.lowercase() == "bank" }
+                    .filter { financialAccountKindFor(it.accountType) == FinancialAccountKind.BANK }
+                    .sumOf { it.balance }
+                val totalCredit = accounts
+                    .filter { financialAccountKindFor(it.accountType) == FinancialAccountKind.CREDIT_CARD }
                     .sumOf { it.balance }
                 
                 val totalAssets = totalCash + totalBank + totalVehicleValue
@@ -293,83 +309,20 @@ class DashboardViewModel @Inject constructor(
                     }
                     .sortedByDescending { it.amount }
 
-                // 2. Trend Points (Cumulative with Fill)
-                val points = mutableListOf<TrendPoint>()
-                var runningTotal = BigDecimal.ZERO
-                val cal = Calendar.getInstance()
-                
-                if (selectedRange == DashboardTimeRange.ONE_DAY) {
-                    // Hourly buckets for Today
-                    val hourlyTotals = filteredExpenses
-                        .groupBy { 
-                            cal.time = it.date
-                            cal.get(Calendar.HOUR_OF_DAY)
-                        }
-                        .mapValues { (_, expenses) -> expenses.sumOf { it.amount } }
-                    
-                    cal.time = rangeStartDate
-                    for (hour in 0..23) {
-                        val dailySum = hourlyTotals[hour] ?: BigDecimal.ZERO
-                        runningTotal = runningTotal.add(dailySum)
-                        
-                        cal.set(Calendar.HOUR_OF_DAY, hour)
-                        cal.set(Calendar.MINUTE, 0)
-                        points.add(TrendPoint(cal.time, runningTotal.toFloat()))
-                    }
-                } else {
-                    // Daily buckets for Week/Month
-                    val dailyTotals = filteredExpenses
-                        .groupBy { 
-                            cal.time = it.date
-                            cal.set(Calendar.HOUR_OF_DAY, 0)
-                            cal.set(Calendar.MINUTE, 0)
-                            cal.set(Calendar.SECOND, 0)
-                            cal.set(Calendar.MILLISECOND, 0)
-                            cal.timeInMillis
-                        }
-                        .mapValues { (_, expenses) -> expenses.sumOf { it.amount } }
-                    
-                    cal.time = rangeStartDate
-                    // Loop until today/tomorrow
-                    val endCal = Calendar.getInstance()
-                     // Reset endCal to start of day to avoid partial matches
-                    endCal.set(Calendar.HOUR_OF_DAY, 0)
-                    endCal.set(Calendar.MINUTE, 0)
-                    endCal.set(Calendar.SECOND, 0)
-                    endCal.set(Calendar.MILLISECOND, 0)
-                    val endDate = endCal.time
-                    
-                    while (!cal.time.after(endDate)) {
-                        // Reset cal to start of day for key matching
-                        val currentKey = cal.apply {
-                            set(Calendar.HOUR_OF_DAY, 0)
-                            set(Calendar.MINUTE, 0)
-                            set(Calendar.SECOND, 0)
-                            set(Calendar.MILLISECOND, 0)
-                        }.timeInMillis
-                        
-                        val dailySum = dailyTotals[currentKey] ?: BigDecimal.ZERO
-                        runningTotal = runningTotal.add(dailySum)
-                        
-                        points.add(TrendPoint(Date(currentKey), runningTotal.toFloat()))
-                        cal.add(Calendar.DAY_OF_YEAR, 1)
-                    }
-                }
-                val trendPoints = points
+                val trendPoints = buildExpenseTrendPoints(filteredExpenses, selectedRange)
 
-                // 3. Period Change Percent
-                // Calculate previous period expenses
-                val (prevStart, prevEnd) = getPreviousPeriod(selectedRange)
-                val prevExpenses = allExpenses.filter { it.date >= prevStart && it.date < prevEnd }
-                val prevTotal = prevExpenses.sumOf { it.amount }
+                val previousPeriod = getPreviousPeriod(selectedRange, rangeStartDate, rangeEndDate)
+                val prevTotal = previousPeriod?.let { (prevStart, prevEnd) ->
+                    allExpenses
+                        .filter { it.date >= prevStart && it.date < prevEnd }
+                        .sumOf { it.amount }
+                } ?: BigDecimal.ZERO
                 
                 val periodChangePercent = if (prevTotal > BigDecimal.ZERO) {
                     val diff = totalExpensesInPeriod.subtract(prevTotal)
                     diff.toDouble() / prevTotal.toDouble() * 100.0
-                } else if (totalExpensesInPeriod > BigDecimal.ZERO) {
-                    100.0 // 0 -> something is 100% increase
                 } else {
-                    null // 0 -> 0 is no change, or undefined
+                    null
                 }
 
                 // Calculate CRM metrics
@@ -425,6 +378,7 @@ class DashboardViewModel @Inject constructor(
                         totalVehicleValue = totalVehicleValue,
                         totalCash = totalCash,
                         totalBank = totalBank,
+                        totalCredit = totalCredit,
                         totalRevenue = totalRevenue,
                         netProfit = netProfit,
                         soldCount = soldCount,
@@ -566,21 +520,158 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun getPreviousPeriod(range: DashboardTimeRange): Pair<Date, Date> {
+    private fun isInDashboardRange(date: Date, start: Date?, end: Date?): Boolean {
+        return (start == null || date >= start) && (end == null || date < end)
+    }
+
+    private fun getPreviousPeriod(range: DashboardTimeRange, currentStart: Date?, currentEnd: Date?): Pair<Date, Date>? {
+        if (range == DashboardTimeRange.ALL_TIME || currentStart == null) return null
+        val end = currentEnd ?: Date()
+        val lengthMs = (end.time - currentStart.time).coerceAtLeast(0L)
+        return Pair(Date(currentStart.time - lengthMs), currentStart)
+    }
+
+    private fun startOfDay(date: Date): Date {
         val cal = Calendar.getInstance()
-        val end = range.getStartDate() 
-        
-        cal.time = end
+        cal.time = date
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.time
+    }
+
+    private fun startOfMonth(date: Date): Date {
+        val cal = Calendar.getInstance()
+        cal.time = date
+        cal.set(Calendar.DAY_OF_MONTH, 1)
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.time
+    }
+
+    private fun alignedWeekStart(date: Date): Date {
+        val cal = Calendar.getInstance()
+        cal.time = startOfDay(date)
+        val daysToSubtract = (cal.get(Calendar.DAY_OF_WEEK) - cal.firstDayOfWeek + 7) % 7
+        cal.add(Calendar.DAY_OF_YEAR, -daysToSubtract)
+        return cal.time
+    }
+
+    private fun trimTrailingZeroDeltas(points: List<Pair<TrendPoint, BigDecimal>>): List<TrendPoint> {
+        val lastNonZero = points.indexOfLast { it.second.compareTo(BigDecimal.ZERO) != 0 }
+        if (lastNonZero < 0) return emptyList()
+        return points.take(lastNonZero + 1).map { it.first }
+    }
+
+    private fun buildExpenseTrendPoints(expenses: List<Expense>, range: DashboardTimeRange): List<TrendPoint> {
+        if (expenses.isEmpty()) return emptyList()
+
+        val cal = Calendar.getInstance()
+        var runningTotal = BigDecimal.ZERO
+        val points = mutableListOf<Pair<TrendPoint, BigDecimal>>()
+
         when (range) {
-            DashboardTimeRange.ONE_DAY -> cal.add(Calendar.DAY_OF_YEAR, -1)
-            DashboardTimeRange.ONE_WEEK -> cal.add(Calendar.DAY_OF_YEAR, -7)
-            DashboardTimeRange.ONE_MONTH -> cal.add(Calendar.MONTH, -1)
-            DashboardTimeRange.THREE_MONTHS -> cal.add(Calendar.MONTH, -3)
-            DashboardTimeRange.SIX_MONTHS -> cal.add(Calendar.MONTH, -6)
-            DashboardTimeRange.ALL_TIME -> cal.add(Calendar.YEAR, -100) // Arbitrary long time
+            DashboardTimeRange.ONE_DAY -> {
+                val today = startOfDay(Date())
+                val buckets = expenses
+                    .filter { it.date >= today }
+                    .groupBy {
+                        cal.time = it.createdAt
+                        cal.get(Calendar.HOUR_OF_DAY)
+                    }
+                    .mapValues { (_, items) -> items.sumOf { it.amount } }
+
+                for (hour in 0..23) {
+                    cal.time = today
+                    cal.set(Calendar.HOUR_OF_DAY, hour)
+                    val delta = buckets[hour] ?: BigDecimal.ZERO
+                    runningTotal = runningTotal.add(delta)
+                    points.add(TrendPoint(cal.time, runningTotal.toFloat()) to delta)
+                }
+            }
+            DashboardTimeRange.ONE_WEEK -> {
+                val today = startOfDay(Date())
+                cal.time = today
+                cal.add(Calendar.DAY_OF_YEAR, -6)
+                val start = cal.time
+                val buckets = expenses
+                    .filter { it.date >= start }
+                    .groupBy { startOfDay(it.date).time }
+                    .mapValues { (_, items) -> items.sumOf { it.amount } }
+
+                for (day in 0..6) {
+                    cal.time = start
+                    cal.add(Calendar.DAY_OF_YEAR, day)
+                    val key = cal.time.time
+                    val delta = buckets[key] ?: BigDecimal.ZERO
+                    runningTotal = runningTotal.add(delta)
+                    points.add(TrendPoint(Date(key), runningTotal.toFloat()) to delta)
+                }
+            }
+            DashboardTimeRange.ONE_MONTH -> {
+                val today = startOfDay(Date())
+                cal.time = today
+                cal.add(Calendar.DAY_OF_YEAR, -29)
+                val start = cal.time
+                val buckets = expenses
+                    .filter { it.date >= start }
+                    .groupBy { startOfDay(it.date).time }
+                    .mapValues { (_, items) -> items.sumOf { it.amount } }
+
+                for (day in 0..29) {
+                    cal.time = start
+                    cal.add(Calendar.DAY_OF_YEAR, day)
+                    val key = cal.time.time
+                    val delta = buckets[key] ?: BigDecimal.ZERO
+                    runningTotal = runningTotal.add(delta)
+                    points.add(TrendPoint(Date(key), runningTotal.toFloat()) to delta)
+                }
+            }
+            DashboardTimeRange.THREE_MONTHS,
+            DashboardTimeRange.SIX_MONTHS -> {
+                val today = startOfDay(Date())
+                cal.time = today
+                cal.add(Calendar.MONTH, if (range == DashboardTimeRange.THREE_MONTHS) -3 else -6)
+                val start = alignedWeekStart(cal.time)
+                val buckets = expenses
+                    .filter { it.date >= start }
+                    .groupBy { alignedWeekStart(it.date).time }
+                    .mapValues { (_, items) -> items.sumOf { it.amount } }
+
+                cal.time = start
+                while (!cal.time.after(today)) {
+                    val key = cal.time.time
+                    val delta = buckets[key] ?: BigDecimal.ZERO
+                    runningTotal = runningTotal.add(delta)
+                    points.add(TrendPoint(Date(key), runningTotal.toFloat()) to delta)
+                    cal.add(Calendar.WEEK_OF_YEAR, 1)
+                }
+            }
+            DashboardTimeRange.ALL_TIME -> {
+                val today = startOfDay(Date())
+                cal.time = today
+                cal.add(Calendar.MONTH, -11)
+                val start = startOfMonth(cal.time)
+                val buckets = expenses
+                    .filter { it.date >= start }
+                    .groupBy { startOfMonth(it.date).time }
+                    .mapValues { (_, items) -> items.sumOf { it.amount } }
+
+                for (month in 0..11) {
+                    cal.time = start
+                    cal.add(Calendar.MONTH, month)
+                    val key = cal.time.time
+                    val delta = buckets[key] ?: BigDecimal.ZERO
+                    runningTotal = runningTotal.add(delta)
+                    points.add(TrendPoint(Date(key), runningTotal.toFloat()) to delta)
+                }
+            }
         }
-        val start = cal.time
-        return Pair(start, end)
+
+        return trimTrailingZeroDeltas(points)
     }
 }
 
@@ -610,6 +701,7 @@ data class DashboardUiState(
     val totalVehicleValue: BigDecimal = BigDecimal.ZERO,
     val totalCash: BigDecimal = BigDecimal.ZERO,
     val totalBank: BigDecimal = BigDecimal.ZERO,
+    val totalCredit: BigDecimal = BigDecimal.ZERO,
     val totalRevenue: BigDecimal = BigDecimal.ZERO,
     val netProfit: BigDecimal = BigDecimal.ZERO,
     val soldCount: Int = 0,

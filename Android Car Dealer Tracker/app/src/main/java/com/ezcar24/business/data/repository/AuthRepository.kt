@@ -88,10 +88,12 @@ private data class DeleteAccountResponse(
 )
 
 @Serializable
-private data class AdminSignupAlertRequest(
-    val event: String = "signup_completed",
+private data class AdminAuthAlertRequest(
+    val event: String,
     val source: String = "android",
     val platform: String = "Android",
+    @SerialName("auth_mode") val authMode: String,
+    @SerialName("auth_method") val authMethod: String,
     @SerialName("referral_code_present") val referralCodePresent: Boolean,
     @SerialName("team_invite_code_present") val teamInviteCodePresent: Boolean,
     @SerialName("app_version") val appVersion: String,
@@ -165,6 +167,20 @@ class AuthRepository @Inject constructor(
     suspend fun notifySignupCompleted(
         referralCode: String?,
         teamInviteCode: String?
+    ) {
+        notifyAuthCompleted(
+            authMode = "sign_up",
+            authMethod = "email",
+            referralCode = referralCode,
+            teamInviteCode = teamInviteCode
+        )
+    }
+
+    suspend fun notifyAuthCompleted(
+        authMode: String,
+        authMethod: String,
+        referralCode: String?,
+        teamInviteCode: String?
     ) = withContext(Dispatchers.IO) {
         val accessToken = client.auth.currentAccessTokenOrNull()
         if (accessToken.isNullOrBlank()) {
@@ -172,7 +188,10 @@ class AuthRepository @Inject constructor(
         }
 
         val regionState = regionSettingsManager.state.value
-        val request = AdminSignupAlertRequest(
+        val request = AdminAuthAlertRequest(
+            event = "auth_completed",
+            authMode = authMode,
+            authMethod = authMethod,
             referralCodePresent = !referralCode.isNullOrBlank(),
             teamInviteCodePresent = !teamInviteCode.isNullOrBlank(),
             appVersion = BuildConfig.VERSION_NAME,

@@ -58480,55 +58480,55 @@
         "ar" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3- حد حر للمركبة"
+            "value" : "حد مجاني لمركبتين"
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3-car free limit"
+            "value" : "2-car free limit"
           }
         },
         "hi" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3-कार मुक्त सीमा"
+            "value" : "2-कार मुक्त सीमा"
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Batas bebas 3 mobil"
+            "value" : "Batas bebas 2 mobil"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "3台までの無料枠"
+            "value" : "2台までの無料枠"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "무료 3대 제한"
+            "value" : "무료 2대 제한"
           }
         },
         "pt-BR" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Limite gratuito de 3 carros"
+            "value" : "Limite gratuito de 2 carros"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Лимит 3 авто"
+            "value" : "Лимит 2 авто"
           }
         },
         "uz" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Bepul tarifda 3 ta avtomobil limiti"
+            "value" : "Bepul tarifda 2 ta avtomobil limiti"
           }
         }
       }

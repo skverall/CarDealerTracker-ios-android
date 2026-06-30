@@ -69,6 +69,7 @@ import com.ezcar24.business.ui.theme.EzcarBlueBright
 import com.ezcar24.business.ui.theme.EzcarDanger
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarOrange
+import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.ui.theme.EzcarTextSecondaryLight
 import java.text.SimpleDateFormat
 import java.util.Locale
@@ -79,6 +80,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun DataHealthScreen(
     onBack: () -> Unit,
+    canCleanDuplicates: Boolean = false,
     viewModel: DataHealthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -129,8 +131,10 @@ fun DataHealthScreen(
             item {
                 DiagnosticsControls(
                     uiState = uiState,
+                    canCleanDuplicates = canCleanDuplicates,
                     onRunDiagnostics = viewModel::runDiagnostics,
                     onForceRefresh = viewModel::runFullRefresh,
+                    onCleanDuplicates = viewModel::cleanUpDuplicates,
                     copied = copied,
                     onCopyReport = {
                         val reportText = uiState.report?.let { diagnosticsExportText(context, it, formatter) }
@@ -154,7 +158,13 @@ fun DataHealthScreen(
 
             if (uiState.errorMessage != null) {
                 item {
-                    DataHealthMessageCard(message = uiState.errorMessage ?: "")
+                    DataHealthMessageCard(message = uiState.errorMessage ?: "", color = EzcarDanger)
+                }
+            }
+
+            if (uiState.statusMessage != null) {
+                item {
+                    DataHealthMessageCard(message = uiState.statusMessage ?: "", color = EzcarGreen)
                 }
             }
 
@@ -185,13 +195,15 @@ fun DataHealthScreen(
 @Composable
 private fun DiagnosticsControls(
     uiState: DataHealthUiState,
+    canCleanDuplicates: Boolean,
     onRunDiagnostics: () -> Unit,
     onForceRefresh: () -> Unit,
+    onCleanDuplicates: () -> Unit,
     copied: Boolean,
     onCopyReport: () -> Unit,
     onShareReport: () -> Unit
 ) {
-    val isBusy = uiState.isRunning || uiState.isRefreshing
+    val isBusy = uiState.isRunning || uiState.isRefreshing || uiState.isDeduplicating
 
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -245,6 +257,17 @@ private fun DiagnosticsControls(
                 enabled = !isBusy,
                 onClick = onForceRefresh
             )
+            if (canCleanDuplicates) {
+                DiagnosticsButton(
+                    text = if (uiState.isDeduplicating) "Cleaning duplicates..." else "Clean Up Duplicates",
+                    icon = Icons.Default.Check,
+                    color = EzcarPurple.copy(alpha = if (uiState.isDeduplicating) 0.35f else 0.12f),
+                    contentColor = EzcarPurple,
+                    isLoading = uiState.isDeduplicating,
+                    enabled = !isBusy,
+                    onClick = onCleanDuplicates
+                )
+            }
             if (uiState.report != null) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -459,7 +482,7 @@ private fun EntityCountsList(items: List<SyncEntityCount>) {
 }
 
 @Composable
-private fun DataHealthMessageCard(message: String) {
+private fun DataHealthMessageCard(message: String, color: Color) {
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(12.dp),
@@ -467,7 +490,7 @@ private fun DataHealthMessageCard(message: String) {
     ) {
         Text(
             text = localizedUiString(message),
-            color = EzcarDanger,
+            color = color,
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(14.dp)
         )

@@ -13,14 +13,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -33,6 +38,13 @@ import com.ezcar24.business.ui.theme.EzcarBlueBright
 import com.ezcar24.business.ui.theme.EzcarGreen
 import com.ezcar24.business.ui.theme.EzcarBackground
 import com.ezcar24.business.ui.theme.EzcarDanger
+import com.ezcar24.business.util.FinancialAccountKind
+import com.ezcar24.business.util.composeFinancialAccountType
+import com.ezcar24.business.util.financialAccountDisplayTitle
+import com.ezcar24.business.util.financialAccountKindFor
+import com.ezcar24.business.util.financialAccountShortTitle
+import com.ezcar24.business.util.financialAccountSubtitleTitle
+import com.ezcar24.business.util.parseFinancialAccountType
 import com.ezcar24.business.util.rememberRegionSettingsManager
 import java.math.BigDecimal
 import java.text.SimpleDateFormat
@@ -45,13 +57,29 @@ import com.ezcar24.business.util.localizedUiString
 @Composable
 fun FinancialAccountListScreen(
     onBack: () -> Unit,
+    filterKind: FinancialAccountKind? = null,
     viewModel: FinancialAccountViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val regionSettingsManager = rememberRegionSettingsManager()
-    val regionState by regionSettingsManager.state.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
     var editingAccount by remember { mutableStateOf<FinancialAccount?>(null) }
+    val accountGroups = remember(uiState.accounts, filterKind) {
+        groupedFinancialAccounts(uiState.accounts, filterKind)
+    }
+    val screenTitle = filterKind?.titleSource ?: "Financial Accounts"
+
+    if (uiState.errorMessage != null) {
+        AlertDialog(
+            onDismissRequest = viewModel::clearErrorMessage,
+            title = { Text(localizedUiString("Account Error")) },
+            text = { Text(localizedUiString(uiState.errorMessage ?: "")) },
+            confirmButton = {
+                TextButton(onClick = viewModel::clearErrorMessage) {
+                    Text(localizedUiString("OK"))
+                }
+            }
+        )
+    }
 
     if (uiState.selectedAccount != null) {
         FinancialAccountDetailScreen(
@@ -64,8 +92,13 @@ fun FinancialAccountListScreen(
             onDeleteTransaction = { transaction ->
                 viewModel.deleteTransaction(transaction)
             },
-            onUpdateAccount = { name ->
-                viewModel.saveAccount(uiState.selectedAccount!!.id.toString(), name, uiState.selectedAccount!!.balance)
+            onUpdateAccount = { name, onSaved ->
+                viewModel.saveAccount(
+                    uiState.selectedAccount!!.id.toString(),
+                    name,
+                    uiState.selectedAccount!!.balance,
+                    onSaved
+                )
             }
         )
         return
@@ -74,23 +107,25 @@ fun FinancialAccountListScreen(
     if (showAddDialog || editingAccount != null) {
         AccountDialog(
             account = editingAccount,
-            onDismiss = { 
+            preselectedKind = filterKind,
+            onDismiss = {
                 showAddDialog = false
                 editingAccount = null
             },
             onSave = { name, balance ->
-                viewModel.saveAccount(editingAccount?.id?.toString(), name, balance)
-                showAddDialog = false
-                editingAccount = null
+                viewModel.saveAccount(editingAccount?.id?.toString(), name, balance) {
+                    showAddDialog = false
+                    editingAccount = null
+                }
             }
         )
     }
 
     Scaffold(
-        containerColor = EzcarBackground, // Light gray background
+        containerColor = EzcarBackground,
         topBar = {
             TopAppBar(
-                title = { Text(localizedUiString("Financial Accounts"), fontWeight = FontWeight.Bold) },
+                title = { Text(localizedUiString(screenTitle), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
@@ -111,60 +146,43 @@ fun FinancialAccountListScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
-            // Total Balance Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = EzcarBlueBright),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(4.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Total Balance",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = regionSettingsManager.formatCurrency(uiState.totalBalance),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "ACCOUNTS",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.Gray,
-                modifier = Modifier.padding(start = 4.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (uiState.accounts.isEmpty()) {
+            if (accountGroups.isEmpty()) {
                 EmptyAccountsState(
+                    filterKind = filterKind,
                     onCreateDefaults = { viewModel.createDefaultAccounts() },
                     onAddAccount = { showAddDialog = true }
                 )
             } else {
                 LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    items(uiState.accounts) { account ->
-                        AccountItem(
-                            account = account,
-                            onClick = { viewModel.selectAccount(account) },
-                            onDelete = { viewModel.deleteAccount(account.id) }
-                        )
+                    accountGroups.forEach { group ->
+                        item(key = "header-${group.kind.routeValue}") {
+                            Text(
+                                text = localizedUiString(group.kind.titleSource).uppercase(Locale.getDefault()),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                            )
+                        }
+                        items(group.accounts, key = { it.id }) { account ->
+                            AccountItem(
+                                account = account,
+                                onClick = { viewModel.selectAccount(account) }
+                            )
+                        }
+                        item(key = "footer-${group.kind.routeValue}") {
+                            Text(
+                                text = localizedUiString("Tap an account to view transactions."),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -172,11 +190,50 @@ fun FinancialAccountListScreen(
     }
 }
 
+private data class FinancialAccountGroup(
+    val kind: FinancialAccountKind,
+    val accounts: List<FinancialAccount>
+)
+
+private fun groupedFinancialAccounts(
+    accounts: List<FinancialAccount>,
+    filterKind: FinancialAccountKind?
+): List<FinancialAccountGroup> {
+    val grouped = accounts.groupBy { financialAccountKindFor(it.accountType) }
+    val kindsToShow = filterKind?.let { listOf(it) } ?: FinancialAccountKind.entries
+    return kindsToShow.mapNotNull { kind ->
+        val sortedAccounts = grouped[kind]
+            ?.sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { financialAccountDisplayTitle(it.accountType) })
+            .orEmpty()
+        if (sortedAccounts.isEmpty()) null else FinancialAccountGroup(kind, sortedAccounts)
+    }
+}
+
+private fun accountKindIcon(kind: FinancialAccountKind): ImageVector {
+    return when (kind) {
+        FinancialAccountKind.CASH -> Icons.Default.AttachMoney
+        FinancialAccountKind.BANK -> Icons.Default.AccountBalance
+        FinancialAccountKind.CREDIT_CARD -> Icons.Default.CreditCard
+        FinancialAccountKind.OTHER -> Icons.Default.MoreHoriz
+    }
+}
+
+private fun accountKindColor(kind: FinancialAccountKind): Color {
+    return when (kind) {
+        FinancialAccountKind.CASH -> EzcarGreen
+        FinancialAccountKind.BANK -> EzcarBlueBright
+        FinancialAccountKind.CREDIT_CARD -> Color(0xFF856EF2)
+        FinancialAccountKind.OTHER -> Color.Gray
+    }
+}
+
 @Composable
 fun EmptyAccountsState(
+    filterKind: FinancialAccountKind?,
     onCreateDefaults: () -> Unit,
     onAddAccount: () -> Unit
 ) {
+    val kindTitle = filterKind?.let { localizedUiString(it.titleSource) }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -195,37 +252,41 @@ fun EmptyAccountsState(
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.AccountBalance,
+                    imageVector = accountKindIcon(filterKind ?: FinancialAccountKind.BANK),
                     contentDescription = null,
-                    tint = EzcarBlueBright,
+                    tint = accountKindColor(filterKind ?: FinancialAccountKind.BANK),
                     modifier = Modifier.size(28.dp)
                 )
             }
             Text(
-                text = localizedUiString("No Accounts Found"),
+                text = kindTitle?.let { localizedUiString("No %s accounts found", it) }
+                    ?: localizedUiString("No Accounts Found"),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
             )
             Text(
-                text = localizedUiString("Create accounts to track cash, bank balances and every transaction."),
+                text = kindTitle?.let { localizedUiString("Tap Add Account to create a %s account.", it.lowercase(Locale.getDefault())) }
+                    ?: localizedUiString("Create accounts to track cash, bank balances and every transaction."),
                 style = MaterialTheme.typography.bodyMedium,
                 color = Color.Gray
             )
-            Button(
-                onClick = onCreateDefaults,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright),
-                shape = RoundedCornerShape(14.dp)
-            ) {
-                Text(localizedUiString("Create Cash + Bank"))
+            if (filterKind == null) {
+                Button(
+                    onClick = onCreateDefaults,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright),
+                    shape = RoundedCornerShape(14.dp)
+                ) {
+                    Text(localizedUiString("Create Cash + Bank"))
+                }
             }
             OutlinedButton(
                 onClick = onAddAccount,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp)
             ) {
-                Text(localizedUiString("Add Custom Account"))
+                Text(kindTitle?.let { localizedUiString("Add %s", it) } ?: localizedUiString("Add Custom Account"))
             }
         }
     }
@@ -234,47 +295,91 @@ fun EmptyAccountsState(
 @Composable
 fun AccountItem(
     account: FinancialAccount,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
+    onClick: () -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
+    val kind = financialAccountKindFor(account.accountType)
+    val subtitle = financialAccountSubtitleTitle(account.accountType)
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(horizontal = 16.dp, vertical = 14.dp)
                 .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = account.accountType,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.Black
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(accountKindColor(kind).copy(alpha = 0.12f), RoundedCornerShape(20.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = accountKindIcon(kind),
+                    contentDescription = null,
+                    tint = accountKindColor(kind),
+                    modifier = Modifier.size(21.dp)
                 )
             }
-            
-            Row(verticalAlignment = Alignment.CenterVertically) {
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text(
-                    text = regionSettingsManager.formatCurrency(account.balance),
+                    text = localizedUiString(financialAccountShortTitle(account.accountType)),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = EzcarGreen,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black,
+                    maxLines = 1
                 )
-                if (account.accountType.lowercase() != "cash") { 
-                     IconButton(onClick = onDelete) {
-                         Icon(Icons.Default.Delete, contentDescription = localizedUiString("Delete"), tint = Color.Gray.copy(alpha=0.5f), modifier = Modifier.size(20.dp))
-                     }
+                if (subtitle != null) {
+                    Text(
+                        text = localizedUiString(subtitle),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.Gray,
+                        maxLines = 1
+                    )
                 }
             }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(
+                    text = regionSettingsManager.formatCurrency(account.balance),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = Color.Black,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
+                Text(
+                    text = localizedUiString("Current Balance"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.Gray,
+                    maxLines = 1
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = Color.Gray.copy(alpha = 0.55f),
+                modifier = Modifier.size(18.dp)
+            )
         }
     }
 }
@@ -287,11 +392,10 @@ fun FinancialAccountDetailScreen(
     onBack: () -> Unit,
     onAddTransaction: (BigDecimal, String, Date, String) -> Unit,
     onDeleteTransaction: (AccountTransaction) -> Unit,
-    onUpdateAccount: (String) -> Unit
+    onUpdateAccount: (String, () -> Unit) -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
-    val regionState by regionSettingsManager.state.collectAsState()
-    var showTransactionDialog by remember { mutableStateOf<String?>(null) } // "deposit" or "withdrawal"
+    var showTransactionDialog by remember { mutableStateOf<String?>(null) }
     var transactionPendingDelete by remember { mutableStateOf<AccountTransaction?>(null) }
     var showEditAccountDialog by remember { mutableStateOf(false) }
 
@@ -300,8 +404,9 @@ fun FinancialAccountDetailScreen(
             account = account,
             onDismiss = { showEditAccountDialog = false },
             onSave = { name, _ ->
-                onUpdateAccount(name)
-                showEditAccountDialog = false
+                onUpdateAccount(name) {
+                    showEditAccountDialog = false
+                }
             }
         )
     }
@@ -344,7 +449,7 @@ fun FinancialAccountDetailScreen(
         containerColor = EzcarBackground,
         topBar = {
             TopAppBar(
-                title = { Text(account.accountType, fontWeight = FontWeight.Bold) },
+                title = { Text(localizedUiString("Account Transactions"), fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = localizedUiString("Back"))
@@ -366,7 +471,6 @@ fun FinancialAccountDetailScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Balance Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = EzcarBlueBright),
@@ -391,7 +495,6 @@ fun FinancialAccountDetailScreen(
                 }
             }
 
-            // Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -409,10 +512,9 @@ fun FinancialAccountDetailScreen(
                 Button(
                     onClick = { showTransactionDialog = "withdrawal" },
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = EzcarDanger), // Need to ensure EzcarDanger is available or use Red
+                    colors = ButtonDefaults.buttonColors(containerColor = EzcarDanger),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                     // Icon minus?
                     Text(localizedUiString("Withdraw"))
                 }
             }
@@ -596,17 +698,31 @@ fun TransactionDialog(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountDialog(
     account: FinancialAccount?,
+    preselectedKind: FinancialAccountKind? = null,
     onDismiss: () -> Unit,
     onSave: (String, BigDecimal) -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
-    var name by remember { mutableStateOf(account?.accountType ?: "") }
+    val parsedAccountType = remember(account) { parseFinancialAccountType(account?.accountType) }
+    val initialKind = account?.let { parsedAccountType.kind } ?: preselectedKind ?: FinancialAccountKind.BANK
+    var selectedKind by remember(account, preselectedKind) { mutableStateOf(initialKind) }
+    var kindMenuExpanded by remember { mutableStateOf(false) }
+    var name by remember(account) { mutableStateOf(accountNameForEdit(account)) }
     var balance by remember { mutableStateOf(account?.balance?.toPlainString() ?: "") }
     val isEditing = account != null
+    val availableKinds = remember(isEditing, preselectedKind) {
+        when {
+            preselectedKind != null -> listOf(preselectedKind)
+            isEditing -> FinancialAccountKind.entries
+            else -> listOf(FinancialAccountKind.CASH, FinancialAccountKind.BANK, FinancialAccountKind.CREDIT_CARD)
+        }
+    }
+    val requiresName = selectedKind == FinancialAccountKind.BANK || selectedKind == FinancialAccountKind.CREDIT_CARD
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -625,11 +741,58 @@ fun AccountDialog(
                     fontWeight = FontWeight.Bold
                 )
 
+                if (preselectedKind == null) {
+                    ExposedDropdownMenuBox(
+                        expanded = kindMenuExpanded,
+                        onExpandedChange = { kindMenuExpanded = it }
+                    ) {
+                        OutlinedTextField(
+                            value = localizedUiString(selectedKind.titleSource),
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text(localizedUiString("Account Type")) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = kindMenuExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                        )
+                        ExposedDropdownMenu(
+                            expanded = kindMenuExpanded,
+                            onDismissRequest = { kindMenuExpanded = false }
+                        ) {
+                            availableKinds.forEach { kind ->
+                                DropdownMenuItem(
+                                    text = { Text(localizedUiString(kind.titleSource)) },
+                                    onClick = {
+                                        selectedKind = kind
+                                        kindMenuExpanded = false
+                                    },
+                                    leadingIcon = {
+                                        Icon(
+                                            imageVector = accountKindIcon(kind),
+                                            contentDescription = null,
+                                            tint = accountKindColor(kind)
+                                        )
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text(localizedUiString("Account Name")) },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = {
+                        Icon(
+                            imageVector = accountKindIcon(selectedKind),
+                            contentDescription = null,
+                            tint = Color.Gray
+                        )
+                    }
                 )
 
                 if (isEditing) {
@@ -661,9 +824,9 @@ fun AccountDialog(
                     Button(
                         onClick = {
                             val bal = balance.toBigDecimalOrNull() ?: BigDecimal.ZERO
-                            onSave(name, bal)
+                            onSave(composeFinancialAccountType(selectedKind, name), bal)
                         },
-                        enabled = name.isNotBlank(),
+                        enabled = !requiresName || name.isNotBlank(),
                         colors = ButtonDefaults.buttonColors(containerColor = EzcarBlueBright)
                     ) {
                         Text(localizedUiString("Save"))
@@ -672,4 +835,10 @@ fun AccountDialog(
             }
         }
     }
+}
+
+private fun accountNameForEdit(account: FinancialAccount?): String {
+    if (account == null) return ""
+    val parsed = parseFinancialAccountType(account.accountType)
+    return parsed.name ?: if (parsed.kind == FinancialAccountKind.OTHER) account.accountType.trim() else ""
 }

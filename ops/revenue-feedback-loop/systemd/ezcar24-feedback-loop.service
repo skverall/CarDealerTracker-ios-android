@@ -1,0 +1,16 @@
+[Unit]
+Description=EzCar24 Revenue Feedback Loop
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ezcar24
+Group=ezcar24
+WorkingDirectory=/opt/ezcar24-feedback-loop
+EnvironmentFile=/etc/ezcar24-feedback-loop.env
+Environment=STATE_DIR=/var/lib/ezcar24-feedback-loop/state
+Environment=REPORT_DIR=/var/lib/ezcar24-feedback-loop/reports
+Environment=APPLE_ADS_CSV_DIR=/var/lib/ezcar24-feedback-loop/data/apple-ads
+ExecStart=/usr/bin/npm run run -- --env /etc/ezcar24-feedback-loop.env
+

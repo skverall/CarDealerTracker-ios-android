@@ -88,11 +88,7 @@ class ClientDetailViewModel @Inject constructor(
             val normalizedEmail = email.trim().takeIf { it.isNotBlank() }
             val normalizedNotes = notes.trim().takeIf { it.isNotBlank() }
             val normalizedRequestDetails = requestDetails.trim().takeIf { it.isNotBlank() }
-            val normalizedStatus = when (status) {
-                "purchased" -> "sold"
-                null -> "new"
-                else -> status
-            }
+            val normalizedStatus = normalizeClientStatusForIos(status)
             
             val currentClient = if (clientIdString != null && clientIdString != "new") clientDao.getById(id) else null
 
@@ -398,6 +394,16 @@ class ClientDetailViewModel @Inject constructor(
             clientDao.upsert(client)
             UserFacingErrorMapper.map(e, context)
         }
+    }
+}
+
+private fun normalizeClientStatusForIos(status: String?): String {
+    return when (status) {
+        "contacted", "engaged", "in_progress" -> "contacted"
+        "viewing" -> "viewing"
+        "negotiation", "completed" -> "negotiation"
+        "sold", "purchased" -> "sold"
+        else -> "new"
     }
 }
 

@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="l10n_welcome_to_car_dealer_tracker_252eab0535" formatted="false">مرحبا بكم في تعقب معرض المركبات</string>
+    <string name="l10n_select_your_currency_5f5eb3f8a8" formatted="false">اختر العملة الخاصة بك</string>
+    <string name="l10n_please_select_a_vehicle_before_saving_531cbc9364" formatted="false">يرجى اختيار المركبة قبل الحفظ.</string>
+    <string name="l10n_new_expense_7c3ae05c17" formatted="false">حساب جديد</string>
     <string name="app_name">Car Dealer Tracker</string>
     <string name="l10n_0_30_days_79c8f34c8d" formatted="false">0-30 يوما</string>
     <string name="l10n_10_1df30ffd07" formatted="false">10%</string>
@@ -503,8 +507,6 @@
     <string name="l10n_batches_30925eece3" formatted="false">الدُفعات</string>
     <string name="l10n_no_stock_batches_recorded_yet_aca34dec1b" formatted="false">لم يتم تسجيل دفعات مخزون بعد</string>
     <string name="l10n_unnamed_batch_f0c334f4ce" formatted="false">دفعة بدون اسم</string>
-    <string name="l10n_3_car_free_limit_5db2950cc0" formatted="false">حد الخطة المجانية: 3 مركبات</string>
-    <string name="l10n_free_plan_includes_up_to_3_vehicles_upgrad_384f6af203" formatted="false">تتضمن الخطة المجانية ما يصل إلى 3 مركبات. قم بالترقية إلى Pro لإضافة مخزون غير محدود.</string>
     <string name="l10n_not_now_e457149073" formatted="false">ليس الآن</string>
     <string name="l10n_team_management_f603b9592c" formatted="false">إدارة الفريق</string>
     <string name="l10n_no_active_business_1a7c7a70d3" formatted="false">لا يوجد نشاط تجاري نشط</string>
@@ -576,11 +578,8 @@
     <string name="l10n_what_you_get_f31727ff20" formatted="false">ما الذي تحصل عليه</string>
     <string name="l10n_ai_tips_c45d03315e" formatted="false">نصائح AI</string>
     <string name="l10n_instant_insights_for_smarter_deals_d21846c08b" formatted="false">رؤى فورية لصفقات أذكى</string>
-    <string name="l10n_unlimited_b8bef37b71" formatted="false">غير محدود</string>
     <string name="l10n_add_unlimited_cars_no_restrictions_b5571f0a46" formatted="false">أضف سيارات بلا حدود ولا قيود</string>
-    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">متزامن على جميع أجهزتك</string>
     <string name="l10n_reports_88bc3fe3da" formatted="false">التقارير</string>
-    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">تصدير تقارير PDF احترافية</string>
     <string name="l10n_only_owners_and_admins_can_manage_email_re_dba756724c" formatted="false">يمكن للمالكين والمديرين فقط إدارة تقارير البريد الإلكتروني.</string>
     <string name="l10n_monthly_report_settings_saved_8d9bf71863" formatted="false">تم حفظ إعدادات التقرير الشهري.</string>
     <string name="l10n_email_reports_are_available_to_owners_and__4f05c35dc3" formatted="false">تقارير البريد الإلكتروني متاحة للمالكين والمديرين فقط.</string>
@@ -970,4 +969,111 @@
     <string name="l10n_they_owe_me_453c6f6dea" formatted="false">هم مدينون لي</string>
     <string name="l10n_i_owe_them_d0f55c16d0" formatted="false">أنا مدين لهم</string>
     <string name="l10n_south_africa_35fda17ff0" formatted="false">جنوب أفريقيا</string>
+    <string name="l10n_add_item_4dba3be550" formatted="false">إضافة عنصر</string>
+    <string name="l10n_could_not_save_sale_af3013f57d" formatted="false">لا يمكن حفظ البيع.</string>
+    <string name="l10n_not_enough_stock_for_some_items_0adb5f42f0" formatted="false">لا يوجد مخزون كاف لبعض العناصر.</string>
+    <string name="l10n_contacted_b5e4809ecb" formatted="false">تم الاتصال به</string>
+    <string name="l10n_viewing_80862a89e6" formatted="false">المشاهدة</string>
+    <string name="l10n_credit_card_69ed5aaf16" formatted="false">بطاقة ائتمان</string>
+    <string name="l10n_account_type_ff69626f5c" formatted="false">نوع الحساب</string>
+    <string name="l10n_current_balance_61a6163ed3" formatted="false">الرصيد الحالي</string>
+    <string name="l10n_no_s_accounts_found_3885cef163">لم يتم العثور على حسابات %1$s</string>
+    <string name="l10n_tap_add_account_to_create_a_s_account_a57c17b101">اضغط على إضافة حساب لإنشاء حساب %1$s.</string>
+    <string name="l10n_add_s_e4fb25be04">إضافة %1$s</string>
+    <string name="l10n_tap_an_account_to_view_transactions_2e1b5f5e27" formatted="false">اضغط على حساب لعرض المعاملات.</string>
+    <string name="l10n_app_settings_09439e4249" formatted="false">إعدادات التطبيق</string>
+    <string name="l10n_business_d6663dda5f" formatted="false">الأعمال</string>
+    <string name="l10n_reports_data_export_d6092d5e8f" formatted="false">التقارير وتصدير البيانات</string>
+    <string name="l10n_sync_maintenance_045eef9b8c" formatted="false">المزامنة والصيانة</string>
+    <string name="l10n_snapshots_scheduled_reports_export_and_rec_ad94c9c3fa" formatted="false">اللقطات والتقارير المجدولة والتصدير والاسترداد</string>
+    <string name="l10n_cleaning_duplicates_9c61b0f95e" formatted="false">جارٍ تنظيف التكرارات...</string>
+    <string name="l10n_account_error_8fb4a9b799" formatted="false">خطأ في الحساب</string>
+    <string name="l10n_account_name_is_required_1fb86fae61" formatted="false">اسم الحساب مطلوب.</string>
+    <string name="l10n_an_account_with_this_name_already_exists_ec5d7d5b5a" formatted="false">يوجد حساب بهذا الاسم بالفعل.</string>
+    <string name="l10n_inventory_id_b907283fdc" formatted="false">معرّف المخزون</string>
+    <string name="l10n_inventory_id_a5b07d67f5" formatted="false">معرّف المخزون:</string>
+    <string name="l10n_id_s_9dc9419586">المعرّف: %1$s</string>
+    <string name="l10n_financial_summary_8cfc2d82a9" formatted="false">ملخص مالي</string>
+    <string name="l10n_purchase_price_c36eef8a1e" formatted="false">سعر الشراء</string>
+    <string name="l10n_projected_roi_ea3d2569b6" formatted="false">العائد المتوقع</string>
+    <string name="l10n_actual_roi_b44d191a81" formatted="false">العائد الفعلي</string>
+    <string name="l10n_pricing_recommendations_094112c79a" formatted="false">توصيات التسعير</string>
+    <string name="l10n_break_even_price_7c69f0726c" formatted="false">سعر التعادل</string>
+    <string name="l10n_recommended_20_roi_7894099066" formatted="false">موصى به (عائد 20%)</string>
+    <string name="l10n_current_asking_price_b5d84f0957" formatted="false">سعر الطلب الحالي</string>
+    <string name="l10n_recommended_1_s_662d447b9d">الموصى به: %1$s</string>
+    <string name="l10n_inspection_report_8430a4e379" formatted="false">تقرير الفحص</string>
+    <string name="l10n_view_report_52bc93f4eb" formatted="false">عرض التقرير</string>
+    <string name="l10n_improvements_df66ef4f9f" formatted="false">التحسينات</string>
+    <string name="l10n_1_s_2_d_days_efa96e1d09">%1$s (%2$d يوم)</string>
+    <string name="l10n_1_s_above_recommended_e3024ddb06">%1$s أعلى من الموصى به</string>
+    <string name="l10n_1_s_below_recommended_0fbc79d812">%1$s أقل من الموصى به</string>
+    <string name="l10n_holding_cost_day_76cfe388d8" formatted="false">تكلفة الاحتفاظ / يوم</string>
+    <string name="l10n_dashboard_car_838fae3233" formatted="false">سيارة لوحة التحكم</string>
+    <string name="l10n_tap_to_pause_hold_to_park_fda407e713" formatted="false">انقر للإيقاف المؤقت · اضغط مطولًا للإيقاف</string>
+    <string name="l10n_send_the_car_to_parking_9b4a9f0f62" formatted="false">إرسال السيارة إلى الموقف؟</string>
+    <string name="l10n_send_to_parking_9956a87554" formatted="false">إرسال إلى الموقف</string>
+    <string name="l10n_keep_driving_36c472938d" formatted="false">متابعة القيادة</string>
+    <string name="l10n_this_hides_the_dashboard_car_you_can_bring_9ff479a834" formatted="false">سيؤدي هذا إلى إخفاء سيارة لوحة التحكم. يمكنك إعادتها في أي وقت من الإعدادات.</string>
+    <string name="l10n_search_vehicles_5780b5d6bf" formatted="false">بحث السيارات</string>
+    <string name="l10n_dashboard_tab_d5d9a84817" formatted="false">الرئيسية</string>
+    <string name="l10n_expenses_tab_2b6b3b7ef2" formatted="false">المصروفات</string>
+    <string name="l10n_vehicles_tab_75e325b56e" formatted="false">السيارات</string>
+    <string name="l10n_parts_tab_6063ae5802" formatted="false">القطع</string>
+    <string name="l10n_sales_tab_23a45a3c28" formatted="false">المبيعات</string>
+    <string name="l10n_clients_tab_2dc1a26fd0" formatted="false">العملاء</string>
+    <string name="l10n_uzbekistan_db800e86e9" formatted="false">أوزبكستان</string>
+    <string name="l10n_inventory_pulse_today_a4e6597155" formatted="false">نبض المخزون · اليوم</string>
+    <string name="l10n_d_need_attention_08cfe92ef8">%1$d تحتاج إلى اهتمام</string>
+    <string name="l10n_all_stock_healthy_7110af3c2c" formatted="false">كل المخزون بحالة جيدة</string>
+    <string name="l10n_d_cars_avg_d_days_in_stock_820e9d8195">%1$d سيارة · متوسط %2$d يومًا في المخزون</string>
+    <string name="l10n_avg_days_2f7f876e55" formatted="false">متوسط الأيام</string>
+    <string name="l10n_account_balances_39fb72cd6f" formatted="false">أرصدة الحسابات</string>
+    <string name="l10n_performance_profit_e812b8a075" formatted="false">الأداء والربح</string>
+    <string name="l10n_sales_profit_668d2b49c9" formatted="false">ربح المبيعات</string>
+    <string name="l10n_operations_a1fdaa6b2a" formatted="false">العمليات</string>
+    <string name="l10n_vehicles_sold_e1b0e92bdf" formatted="false">السيارات المباعة</string>
+    <string name="l10n_uae_26c1f8eb11" formatted="false">الإمارات</string>
+    <string name="l10n_usa_18bc5956db" formatted="false">الولايات المتحدة</string>
+    <string name="l10n_canada_cd6a7b8768" formatted="false">كندا</string>
+    <string name="l10n_uk_7770d04c7b" formatted="false">المملكة المتحدة</string>
+    <string name="l10n_europe_576347ec82" formatted="false">أوروبا</string>
+    <string name="l10n_brazil_37497aa5a2" formatted="false">البرازيل</string>
+    <string name="l10n_indonesia_35536a41b2" formatted="false">إندونيسيا</string>
+    <string name="l10n_russia_6754fe3cd8" formatted="false">روسيا</string>
+    <string name="l10n_turkey_d7153e6702" formatted="false">تركيا</string>
+    <string name="l10n_japan_fcf29f6cad" formatted="false">اليابان</string>
+    <string name="l10n_india_967ce367d8" formatted="false">الهند</string>
+    <string name="l10n_korea_4e8bd0474c" formatted="false">كوريا</string>
+    <string name="l10n_2_car_free_limit_7c9efc1d56" formatted="false">حد الخطة المجانية: مركبتان</string>
+    <string name="l10n_free_plan_includes_up_to_2_vehicles_upgrad_5acd35df01" formatted="false">تتضمن الخطة المجانية ما يصل إلى مركبتين. قم بالترقية إلى Pro لإضافة مخزون غير محدود.</string>
+    <string name="l10n_ai_insights_38f991a383" formatted="false">رؤى AI</string>
+    <string name="l10n_go_unlimited_1431864fac" formatted="false">انتقل إلى غير محدود</string>
+    <string name="l10n_ai_powered_reports_bbe4878162" formatted="false">تقارير مدعومة بالذكاء الاصطناعي</string>
+    <string name="l10n_unlock_unlimited_inventory_profit_per_vehi_9d7305a3fd" formatted="false">فتح مخزون غير محدود، والربح لكل مركبة، والمزامنة السحابية، والتقارير.</string>
+    <string name="l10n_unlimited_inventory_profit_tracking_cloud__def0d61597" formatted="false">مخزون غير محدود، تتبع الربح، مزامنة سحابية، تقارير وأدوات AI.</string>
+    <string name="l10n_what_you_get_8ac7aa173f" formatted="false">ما الذي تحصل عليه</string>
+    <string name="l10n_choose_your_plan_12a7bc47d4" formatted="false">اختر خطتك</string>
+    <string name="l10n_unlimited_b8bef37b71" formatted="false">غير محدود</string>
+    <string name="l10n_cloud_sync_d997d8d3a9" formatted="false">المزامنة السحابية</string>
+    <string name="l10n_synced_across_all_your_devices_7aed5b5ffb" formatted="false">متزامن على جميع أجهزتك</string>
+    <string name="l10n_pdf_reports_480784f9c8" formatted="false">التقارير</string>
+    <string name="l10n_export_professional_pdf_reports_53a1af49da" formatted="false">تصدير تقارير PDF احترافية</string>
+    <string name="l10n_best_value_8173c2a946" formatted="false">أفضل قيمة</string>
+    <string name="l10n_billed_yearly_a27b9b1a41" formatted="false">يتم إصدار الفاتورة سنويًا</string>
+    <string name="l10n_billed_monthly_cad51bd438" formatted="false">تدفع شهريا</string>
+    <string name="l10n_billed_weekly_9308de9e56" formatted="false">تتم الفاتورة أسبوعيًا</string>
+    <string name="l10n_billed_quarterly_5e8cc7f1b2" formatted="false">يتم إصدار الفاتورة بشكل ربع سنوي</string>
+    <string name="l10n_billed_automatically_973d205477" formatted="false">يتم إصدار الفاتورة تلقائيًا</string>
+    <string name="l10n_week_1d0b523139" formatted="false">/ أسبوع</string>
+    <string name="l10n_month_f7fa5df80f" formatted="false">/ شهر</string>
+    <string name="l10n_year_416b18b454" formatted="false">/ سنة</string>
+    <string name="l10n_3_months_3f937154ec" formatted="false">/ 3 أشهر</string>
+    <string name="l10n_renews_at_s_cancel_anytime_c025047110">يتجدد بسعر %s. يمكنك الإلغاء في أي وقت.</string>
+    <string name="l10n_renews_at_s_year_cancel_anytime_da392a4f18">يتجدد بسعر %s/سنة. يمكنك الإلغاء في أي وقت.</string>
+    <string name="l10n_7_days_free_then_yearly_ae3f5de10c" formatted="false">7 أيام مجانًا، ثم الخطة السنوية</string>
+    <string name="l10n_pro_access_active_3d77e7d54a" formatted="false">وصول Pro نشط</string>
+    <string name="l10n_weekly_158f3da592" formatted="false">أسبوعي</string>
+    <string name="l10n_yearly_7622eb5aa4" formatted="false">سنوي</string>
+    <string name="l10n_quarterly_8a34f70880" formatted="false">ربع سنوي</string>
 </resources>

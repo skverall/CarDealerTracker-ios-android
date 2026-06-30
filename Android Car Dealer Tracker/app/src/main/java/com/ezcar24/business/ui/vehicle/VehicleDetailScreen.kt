@@ -55,6 +55,7 @@ import coil.compose.SubcomposeAsyncImage
 import com.ezcar24.business.util.ImageUtils
 import com.ezcar24.business.util.expenseDisplayDateTime
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import com.ezcar24.business.util.vehicleStatusLabelSource
 import com.ezcar24.business.ui.expense.ExpenseDetailBottomSheet
 import com.ezcar24.business.ui.expense.ExpenseViewModel
 import com.ezcar24.business.ui.theme.*
@@ -213,11 +214,10 @@ fun VehicleDetailScreen(
                         projectedROI = detailState.financialSummary.projectedROI,
                         actualROI = detailState.financialSummary.actualROI,
                         daysInInventory = detailState.inventoryStats?.daysInInventory ?: 0,
-                        agingBucket = detailState.inventoryStats?.agingBucket ?: "0-30"
-                    ),
-                    onEditAskingPrice = if (vehicle.status != "sold") {
-                        { viewModel.updateAskingPrice(detailState.financialSummary.recommendedPrice) }
-                    } else null
+                        agingBucket = detailState.inventoryStats?.agingBucket ?: "0-30",
+                        dailyHoldingCost = detailState.financialSummary.dailyHoldingCost,
+                        reportUrl = vehicle.reportURL
+                    )
                 )
 
                 if (vehicle.status == "sold") {
@@ -230,26 +230,6 @@ fun VehicleDetailScreen(
                         accountName = detailState.saleAccount?.accountType,
                         isDealDeskSale = detailState.sale?.isDealDeskSale == true
                     )
-                }
-
-                if (vehicle.status != "sold") {
-                    RecommendedPricingCard(
-                        breakEvenPrice = detailState.financialSummary.breakEvenPrice,
-                        recommendedPrice = detailState.financialSummary.recommendedPrice,
-                        currentAskingPrice = vehicle.askingPrice,
-                        onUpdateAskingPrice = { newPrice ->
-                            viewModel.updateAskingPrice(newPrice)
-                        }
-                    )
-
-                    if (detailState.financialSummary.holdingCost > BigDecimal.ZERO) {
-                        HoldingCostCard(
-                            holdingCost = detailState.financialSummary.holdingCost,
-                            totalCost = detailState.financialSummary.totalCost,
-                            dailyRate = detailState.financialSummary.dailyHoldingCost,
-                            daysInInventory = detailState.inventoryStats?.daysInInventory ?: 0
-                        )
-                    }
                 }
 
                 ExpensesSection(
@@ -649,7 +629,7 @@ private fun PhotoManagerSheet(
                                 val position = coordinates.positionInParent()
                                 itemBounds[photo.id] = Rect(position, coordinates.size.toSize())
                             }
-                            .animateItemPlacement()
+                            .animateItem()
                             .offset { IntOffset(offset.x.roundToInt(), offset.y.roundToInt()) }
                             .zIndex(if (isDragging) 1f else 0f)
                             .pointerInput(photo.id, workingPhotos) {
@@ -1102,13 +1082,19 @@ private fun VehicleHeaderCard(
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     VehicleStatusBadge(status = vehicle.status)
-                    detailState.inventoryStats?.let { stats ->
-                        AgingBucketBadge(daysInInventory = stats.daysInInventory)
-                    }
                 }
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color(0xFFE5E5EA))
+
+            vehicle.inventoryId?.takeIf { it.isNotBlank() }?.let { inventoryId ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(localizedUiString("Inventory ID:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
+                    Text(inventoryId, fontWeight = FontWeight.Medium)
+                }
+
+                Spacer(modifier = Modifier.height(4.dp))
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(localizedUiString("VIN:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
@@ -1123,34 +1109,6 @@ private fun VehicleHeaderCard(
                     SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(vehicle.purchaseDate),
                     fontWeight = FontWeight.Medium
                 )
-            }
-
-            if (vehicle.mileage > 0) {
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(localizedUiString("Mileage:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        regionSettingsManager.formatMileage(vehicle.mileage),
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-
-            detailState.inventoryStats?.let { stats ->
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(localizedUiString("Days in Inventory:"), color = Color.Gray, style = MaterialTheme.typography.bodyMedium)
-                    Text(
-                        localizedUiString("%1\$d days (%2\$s)", stats.daysInInventory, stats.agingBucket),
-                        fontWeight = FontWeight.Medium,
-                        color = when (stats.agingBucket) {
-                            "0-30" -> EzcarGreen
-                            "31-60" -> EzcarWarning
-                            "61-90" -> EzcarOrange
-                            else -> EzcarDanger
-                        }
-                    )
-                }
             }
 
             if (!vehicle.notes.isNullOrBlank()) {
@@ -1364,17 +1322,16 @@ private fun ExpenseRow(
 
 @Composable
 fun VehicleStatusBadge(status: String) {
-    val (text, color) = when (status) {
-        "owned" -> "Owned" to Color.Gray
-        "on_sale" -> "On Sale" to EzcarGreen
-        "in_transit" -> "In Transit" to EzcarPurple
-        "under_service" -> "Under Service" to EzcarOrange
-        "sold" -> "Sold" to EzcarBlueBright
-        else -> status.replaceFirstChar { it.uppercase() } to EzcarGreen
+    val color = when (status) {
+        "owned", "reserved", "on_sale", "available" -> EzcarBlueBright
+        "in_transit" -> EzcarPurple
+        "under_service" -> EzcarOrange
+        "sold" -> EzcarBlueBright
+        else -> EzcarGreen
     }
 
     Text(
-        text = localizedUiString(text),
+        text = localizedUiString(vehicleStatusLabelSource(status)),
         fontSize = 11.sp,
         fontWeight = FontWeight.Bold,
         color = color,

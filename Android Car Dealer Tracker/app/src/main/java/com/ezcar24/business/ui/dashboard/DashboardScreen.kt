@@ -1,5 +1,4 @@
 package com.ezcar24.business.ui.dashboard
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
@@ -20,6 +19,9 @@ import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material3.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,12 +31,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontStyle
@@ -61,6 +65,7 @@ import com.ezcar24.business.ui.expense.ExpenseViewModel
 import com.ezcar24.business.data.sync.SyncState
 import com.ezcar24.business.util.expenseDisplayDateTime
 import com.ezcar24.business.util.rememberRegionSettingsManager
+import com.ezcar24.business.util.DashboardPreferences
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -68,8 +73,12 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.ui.text.style.TextOverflow
 import com.ezcar24.business.util.localizedUiString
@@ -82,9 +91,13 @@ fun DashboardScreen(
     viewModel: DashboardViewModel = hiltViewModel(),
     expenseViewModel: ExpenseViewModel = hiltViewModel(),
     onNavigateToAccounts: () -> Unit,
+    onNavigateToCashAccounts: () -> Unit = onNavigateToAccounts,
+    onNavigateToBankAccounts: () -> Unit = onNavigateToAccounts,
+    onNavigateToCreditAccounts: () -> Unit = onNavigateToAccounts,
     onNavigateToDebts: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToSearch: () -> Unit,
+    onNavigateToAddVehicle: () -> Unit = {},
     onNavigateToVehicles: () -> Unit = {},
     onNavigateToSoldVehicles: () -> Unit = {},
     onNavigateToSales: () -> Unit = {},
@@ -143,7 +156,8 @@ fun DashboardScreen(
                     onSelectOrganization = viewModel::switchOrganization,
                     onCreateBusiness = { showCreateBusinessDialog = true },
                     onProfileClick = onNavigateToSettings,
-                    onAddClick = { showAddExpenseSheet = true },
+                    onAddExpenseClick = { showAddExpenseSheet = true },
+                    onAddVehicleClick = onNavigateToAddVehicle,
                     onSearchClick = onNavigateToSearch
                 )
             }
@@ -168,15 +182,19 @@ fun DashboardScreen(
                 }
             }
 
-            // --- Sync Status Card ---
-            item {
-                SyncStatusCard(
-                    syncState = uiState.syncState,
-                    lastSyncTime = uiState.lastSyncTime,
-                    queueCount = uiState.queueCount,
-                    onSyncClick = { viewModel.triggerSync() },
-                    onDataHealthClick = onNavigateToDataHealth
-                )
+            if (uiState.syncState is SyncState.Syncing ||
+                uiState.syncState is SyncState.Failure ||
+                uiState.queueCount > 0
+            ) {
+                item {
+                    SyncStatusCard(
+                        syncState = uiState.syncState,
+                        lastSyncTime = uiState.lastSyncTime,
+                        queueCount = uiState.queueCount,
+                        onSyncClick = { viewModel.triggerSync() },
+                        onDataHealthClick = onNavigateToDataHealth
+                    )
+                }
             }
 
             // --- Time Range Picker ---
@@ -187,11 +205,29 @@ fun DashboardScreen(
                 )
             }
 
+            item {
+                DashboardCarLane(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)
+                )
+            }
+
+            item {
+                InventoryPulseCard(
+                    totalVehicles = uiState.totalVehiclesInInventory,
+                    averageDays = uiState.averageDaysInInventory,
+                    vehiclesOver90Days = uiState.vehiclesOver90Days,
+                    healthScore = uiState.inventoryHealthScore,
+                    onClick = onNavigateToInventoryAnalytics
+                )
+            }
+
             // --- Financial Overview ---
             item {
                 FinancialOverviewSection(
                     uiState = uiState,
-                    onNavigateToAccounts = onNavigateToAccounts,
+                    onNavigateToCashAccounts = onNavigateToCashAccounts,
+                    onNavigateToBankAccounts = onNavigateToBankAccounts,
+                    onNavigateToCreditAccounts = onNavigateToCreditAccounts,
                     onNavigateToAssets = onNavigateToVehicles,
                     onNavigateToSold = onNavigateToSoldVehicles,
                     onNavigateToSales = onNavigateToSales
@@ -319,6 +355,154 @@ fun DashboardScreen(
 }
 
 @Composable
+private fun DashboardCarLane(
+    modifier: Modifier = Modifier,
+    laneHeight: androidx.compose.ui.unit.Dp = 20.dp,
+    durationMillis: Int = 6500
+) {
+    val context = LocalContext.current
+    val prefs = remember(context) { DashboardPreferences.preferences(context) }
+    var enabled by remember { mutableStateOf(prefs.getBoolean(DashboardPreferences.CAR_ENABLED_KEY, true)) }
+    var moving by remember { mutableStateOf(prefs.getBoolean(DashboardPreferences.CAR_MOVING_KEY, false)) }
+    var showingParkingDialog by remember { mutableStateOf(false) }
+    val transition = rememberInfiniteTransition(label = "dashboard-car")
+    val animatedProgress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = durationMillis, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "dashboard-car-progress"
+    )
+    val progress = if (moving) animatedProgress else 0.5f
+
+    if (!enabled) {
+        Spacer(modifier = modifier.fillMaxWidth().height(6.dp))
+    } else {
+        Canvas(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(laneHeight)
+                .pointerInput(moving) {
+                    detectTapGestures(
+                        onTap = {
+                            moving = !moving
+                            prefs.edit().putBoolean(DashboardPreferences.CAR_MOVING_KEY, moving).apply()
+                        },
+                        onLongPress = { showingParkingDialog = true }
+                    )
+                }
+        ) {
+            val carHeight = (size.height - 2f).coerceAtLeast(10f)
+            val carWidth = carHeight * 112f / 72f
+            val x = -carWidth + progress * (size.width + carWidth * 2f)
+            drawDashboardCar(x = x, carWidth = carWidth, carHeight = carHeight, moving = moving)
+        }
+    }
+
+    if (showingParkingDialog) {
+        AlertDialog(
+            onDismissRequest = { showingParkingDialog = false },
+            title = { Text(localizedUiString("Send the car to parking?")) },
+            text = { Text(localizedUiString("This hides the dashboard car. You can bring it back anytime from Settings.")) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        enabled = false
+                        moving = false
+                        prefs.edit()
+                            .putBoolean(DashboardPreferences.CAR_ENABLED_KEY, false)
+                            .putBoolean(DashboardPreferences.CAR_MOVING_KEY, false)
+                            .apply()
+                        showingParkingDialog = false
+                    }
+                ) {
+                    Text(localizedUiString("Send to Parking"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showingParkingDialog = false }) {
+                    Text(localizedUiString("Keep Driving"))
+                }
+            }
+        )
+    }
+}
+
+private fun DrawScope.drawDashboardCar(
+    x: Float,
+    carWidth: Float,
+    carHeight: Float,
+    moving: Boolean
+) {
+    val top = (size.height - carHeight) / 2f
+    fun px(value: Float) = x + value / 112f * carWidth
+    fun py(value: Float) = top + value / 72f * carHeight
+    val strokeWidth = (carHeight / 72f * 2.2f).coerceAtLeast(1f)
+    val outline = Color(0xFF121B2F)
+    val glass = Color(0xFFD1EBFF)
+
+    drawOval(
+        color = Color.Black.copy(alpha = 0.10f),
+        topLeft = Offset(px(14f), py(65f)),
+        size = Size(carWidth * 0.72f, carHeight * 0.11f)
+    )
+
+    if (moving) {
+        listOf(26f, 40f, 52f).forEach { y ->
+            drawRoundRect(
+                color = EzcarBlueBright.copy(alpha = 0.40f),
+                topLeft = Offset(px(0f), py(y - 1.2f)),
+                size = Size(carWidth * 0.11f, carHeight * 0.03f),
+                cornerRadius = CornerRadius(carHeight * 0.02f, carHeight * 0.02f)
+            )
+        }
+    }
+
+    val bodyPath = Path().apply {
+        moveTo(px(16f), py(57f))
+        lineTo(px(16f), py(42f))
+        quadraticTo(px(16f), py(24f), px(40f), py(18f))
+        quadraticTo(px(57f), py(11f), px(74f), py(18f))
+        quadraticTo(px(99f), py(21f), px(98f), py(40f))
+        lineTo(px(98f), py(50f))
+        quadraticTo(px(98f), py(56f), px(90f), py(57f))
+        close()
+    }
+    drawPath(
+        path = bodyPath,
+        brush = Brush.linearGradient(
+            colors = listOf(EzcarBlueBright, EzcarNavy),
+            start = Offset(px(0f), py(16f)),
+            end = Offset(px(0f), py(58f))
+        )
+    )
+    drawPath(path = bodyPath, color = outline, style = Stroke(width = strokeWidth))
+
+    drawRoundRect(
+        color = glass,
+        topLeft = Offset(px(38f), py(24f)),
+        size = Size(carWidth * 0.15f, carHeight * 0.17f),
+        cornerRadius = CornerRadius(carHeight * 0.07f, carHeight * 0.07f)
+    )
+    drawRoundRect(
+        color = glass,
+        topLeft = Offset(px(60f), py(24f)),
+        size = Size(carWidth * 0.13f, carHeight * 0.17f),
+        cornerRadius = CornerRadius(carHeight * 0.07f, carHeight * 0.07f)
+    )
+    drawCircle(color = Color(0xFFFFF2B2), radius = carHeight * 0.065f, center = Offset(px(92f), py(44f)))
+    drawLine(color = EzcarNavy.copy(alpha = 0.85f), start = Offset(px(57f), py(36f)), end = Offset(px(57f), py(56f)), strokeWidth = strokeWidth * 0.7f)
+
+    listOf(32f, 84f).forEach { wheelX ->
+        drawCircle(color = Color(0xFF25252B), radius = carHeight * 0.15f, center = Offset(px(wheelX), py(56f)))
+        drawCircle(color = Color(0xFFDDE1EA), radius = carHeight * 0.075f, center = Offset(px(wheelX), py(56f)))
+        drawCircle(color = outline, radius = carHeight * 0.025f, center = Offset(px(wheelX), py(56f)))
+    }
+}
+
+@Composable
 fun DashboardTopBar(
     syncState: SyncState,
     activeOrganization: OrganizationMembership?,
@@ -327,15 +511,18 @@ fun DashboardTopBar(
     onSelectOrganization: (UUID) -> Unit,
     onCreateBusiness: () -> Unit,
     onProfileClick: () -> Unit,
-    onAddClick: () -> Unit,
+    onAddExpenseClick: () -> Unit,
+    onAddVehicleClick: () -> Unit,
     onSearchClick: () -> Unit
 ) {
+    var showAddMenu by remember { mutableStateOf(false) }
+
     Column(
-        modifier = Modifier
+            modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
-            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .padding(horizontal = 20.dp, vertical = 8.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -355,7 +542,7 @@ fun DashboardTopBar(
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = localizedUiString("Dashboard"),
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.headlineMedium.copy(fontSize = 29.sp, lineHeight = 32.sp),
                     fontWeight = FontWeight.Black,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -414,10 +601,10 @@ fun DashboardTopBar(
                         .background(
                             Brush.linearGradient(
                                 colors = listOf(EzcarBlueBright, EzcarNavy)
-                            ),
-                            shape = CircleShape
-                        )
-                        .clickable(onClick = onAddClick),
+                        ),
+                        shape = CircleShape
+                    )
+                        .clickable { showAddMenu = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -426,6 +613,31 @@ fun DashboardTopBar(
                         tint = Color.White,
                         modifier = Modifier.size(16.dp)
                     )
+                    DropdownMenu(
+                        expanded = showAddMenu,
+                        onDismissRequest = { showAddMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(localizedUiString("Add Expense")) },
+                            onClick = {
+                                showAddMenu = false
+                                onAddExpenseClick()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.CreditCard, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(localizedUiString("Add Vehicle")) },
+                            onClick = {
+                                showAddMenu = false
+                                onAddVehicleClick()
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.DirectionsCar, contentDescription = null)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -654,7 +866,7 @@ fun TimeRangePicker(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(scrollState)
-            .padding(horizontal = 20.dp, vertical = 2.dp),
+            .padding(horizontal = 20.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         ranges.forEach { range ->
@@ -665,13 +877,14 @@ fun TimeRangePicker(
                     .clip(RoundedCornerShape(50))
                     .background(if (isSelected) EzcarNavy else MaterialTheme.colorScheme.surface)
                     .clickable { onRangeSelected(range) }
-                    .heightIn(min = 48.dp)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                    .height(34.dp)
+                    .widthIn(min = 52.dp)
+                    .padding(horizontal = 14.dp, vertical = 6.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = localizedUiString(range.displayLabel),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
                     fontWeight = FontWeight.Bold,
                     color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
                 )
@@ -681,52 +894,187 @@ fun TimeRangePicker(
 }
 
 @Composable
+private fun InventoryPulseCard(
+    totalVehicles: Int,
+    averageDays: Int,
+    vehiclesOver90Days: Int,
+    healthScore: Int,
+    onClick: () -> Unit
+) {
+    val isUrgent = vehiclesOver90Days > 0
+    val isWatch = !isUrgent && (averageDays >= 31 || healthScore < 80)
+    val attentionCount = if (isUrgent) vehiclesOver90Days else totalVehicles
+    val headline = if (isUrgent) {
+        localizedUiString("%d need attention", vehiclesOver90Days)
+    } else if (isWatch) {
+        localizedUiString("%d need attention", attentionCount)
+    } else {
+        localizedUiString("All stock healthy")
+    }
+    val subline = localizedUiString("%d cars · avg %d days in stock", totalVehicles, averageDays)
+    val gradientColors = when {
+        isUrgent -> listOf(Color(0xFF3B140F), EzcarDanger)
+        isWatch -> listOf(EzcarNavy, EzcarOrange)
+        else -> listOf(EzcarNavy, EzcarBlueBright)
+    }
+    val pulseColor = if (isUrgent || isWatch) EzcarWarning else Color.White
+    val fraction = (averageDays.toDouble() / 120.0).toFloat().coerceIn(0.0f, 1f)
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+            .heightIn(min = 148.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(28.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+        colors = CardDefaults.cardColors(containerColor = gradientColors.first())
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        colors = gradientColors,
+                        start = Offset.Zero,
+                        end = Offset.Infinite
+                    )
+                )
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        text = localizedUiString("Inventory pulse · today").uppercase(Locale.getDefault()),
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White.copy(alpha = 0.72f),
+                        letterSpacing = 1.2.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    AutoResizingText(
+                        text = headline,
+                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp, lineHeight = 25.sp),
+                        fontWeight = FontWeight.Black,
+                        color = Color.White,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    AutoResizingText(
+                        text = subline,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 14.sp),
+                        color = Color.White.copy(alpha = 0.82f),
+                        minFontSize = 10.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(14.dp))
+
+                Box(
+                    modifier = Modifier.size(82.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.24f),
+                            style = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                        drawArc(
+                            color = pulseColor.copy(alpha = 0.88f),
+                            startAngle = -90f,
+                            sweepAngle = 360f * fraction,
+                            useCenter = false,
+                            style = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round)
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = averageDays.toString(),
+                            style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                        Text(
+                            text = localizedUiString("avg days").uppercase(Locale.getDefault()),
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 8.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.72f),
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun FinancialOverviewSection(
     uiState: DashboardUiState,
-    onNavigateToAccounts: () -> Unit,
+    onNavigateToCashAccounts: () -> Unit,
+    onNavigateToBankAccounts: () -> Unit,
+    onNavigateToCreditAccounts: () -> Unit,
     onNavigateToAssets: () -> Unit,
     onNavigateToSold: () -> Unit,
     onNavigateToSales: () -> Unit
 ) {
     val regionSettingsManager = rememberRegionSettingsManager()
 
-    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
         // --- 1. Account Balances ---
         Text(
             text = localizedUiString("Account Balances"),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp, lineHeight = 24.sp),
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             AccountBalanceCard(
                 title = localizedUiString("Cash"),
                 amount = uiState.totalCash,
                 icon = Icons.Default.AttachMoney,
-                color = EzcarGreen,
+                color = Color(0xFF33BF8C),
                 modifier = Modifier.weight(1f),
-                onClick = onNavigateToAccounts
+                onClick = onNavigateToCashAccounts
             )
             AccountBalanceCard(
                 title = localizedUiString("Bank"),
                 amount = uiState.totalBank,
                 icon = Icons.Default.CreditCard,
-                color = EzcarPurple,
+                color = Color(0xFF4073E6),
                 modifier = Modifier.weight(1f),
-                onClick = onNavigateToAccounts
+                onClick = onNavigateToBankAccounts
+            )
+            AccountBalanceCard(
+                title = localizedUiString("Credit Card"),
+                amount = uiState.totalCredit,
+                icon = Icons.Default.CreditCard,
+                color = Color(0xFFF28C40),
+                modifier = Modifier.weight(1f),
+                onClick = onNavigateToCreditAccounts
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(22.dp))
 
         // --- 2. Performance & Profit ---
         Text(
             text = localizedUiString("Performance & Profit"),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp, lineHeight = 24.sp),
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -754,12 +1102,12 @@ fun FinancialOverviewSection(
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(22.dp))
 
         // --- 3. Operations ---
         Text(
             text = localizedUiString("Operations"),
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleMedium.copy(fontSize = 20.sp, lineHeight = 24.sp),
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier.padding(bottom = 8.dp)
@@ -885,8 +1233,8 @@ fun AccountBalanceCard(
     val displayValue = regionSettingsManager.formatCurrencyCompact(amount)
 
     Card(
-        modifier = modifier.height(108.dp),
-        shape = RoundedCornerShape(17.dp),
+        modifier = modifier.height(88.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -897,13 +1245,13 @@ fun AccountBalanceCard(
             modifier = Modifier
                 .fillMaxSize()
                 .clickable(enabled = onClick != null, onClick = onClick ?: {})
-                .padding(horizontal = 12.dp, vertical = 14.dp),
+                .padding(horizontal = 10.dp, vertical = 11.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             // Icon Circle
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(30.dp)
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(color.copy(alpha = 0.8f), color)
@@ -916,7 +1264,7 @@ fun AccountBalanceCard(
                     imageVector = icon,
                     contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
             }
 
@@ -924,7 +1272,7 @@ fun AccountBalanceCard(
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
                     maxLines = 1,
@@ -932,7 +1280,7 @@ fun AccountBalanceCard(
                 )
                 AutoResizingText(
                     text = displayValue,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 14.sp, lineHeight = 16.sp),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
@@ -956,8 +1304,8 @@ fun PerformanceCard(
     val displayValue = regionSettingsManager.formatCurrencyCompact(amount)
 
     Card(
-        modifier = modifier.height(108.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.height(82.dp),
+        shape = RoundedCornerShape(18.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(
@@ -969,7 +1317,7 @@ fun PerformanceCard(
                     )
                 )
                 .clickable(enabled = onClick != null, onClick = onClick ?: {})
-                .padding(horizontal = 14.dp, vertical = 14.dp)
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -982,7 +1330,7 @@ fun PerformanceCard(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                         fontWeight = FontWeight.Medium,
                         color = Color.White.copy(alpha = 0.7f),
                         maxLines = 1,
@@ -990,7 +1338,7 @@ fun PerformanceCard(
                     )
                     AutoResizingText(
                         text = displayValue,
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp, lineHeight = 20.sp),
                         fontWeight = FontWeight.Bold,
                         color = Color.White,
                         maxLines = 1,
@@ -1000,7 +1348,7 @@ fun PerformanceCard(
 
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
+                        .size(30.dp)
                         .border(BorderStroke(2.dp, color.copy(alpha = 0.5f)), shape = CircleShape)
                         .background(color.copy(alpha = 0.2f), shape = CircleShape),
                     contentAlignment = Alignment.Center
@@ -1009,7 +1357,7 @@ fun PerformanceCard(
                         imageVector = icon,
                         contentDescription = null,
                         tint = color,
-                        modifier = Modifier.size(12.dp)
+                        modifier = Modifier.size(13.dp)
                     )
                 }
             }

@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.CardGiftcard
@@ -109,6 +110,7 @@ import com.ezcar24.business.ui.theme.EzcarNavy
 import com.ezcar24.business.ui.theme.EzcarOrange
 import com.ezcar24.business.ui.theme.EzcarPurple
 import com.ezcar24.business.util.AppTheme
+import com.ezcar24.business.util.DashboardPreferences
 import com.ezcar24.business.util.PermissionAccessState
 import com.ezcar24.business.util.PermissionKey
 import com.ezcar24.business.util.TeamPermissionCatalog
@@ -148,8 +150,14 @@ fun SettingsScreen(
     val feedbackPromptPrefs = remember(context) {
         context.getSharedPreferences("ezcar24_feedback", Context.MODE_PRIVATE)
     }
+    val dashboardPrefs = remember(context) {
+        DashboardPreferences.preferences(context)
+    }
     var showFeedbackPrompt by remember {
         mutableStateOf(!feedbackPromptPrefs.getBoolean("board_prompt_dismissed", false))
+    }
+    var dashboardCarEnabled by remember {
+        mutableStateOf(dashboardPrefs.getBoolean(DashboardPreferences.CAR_ENABLED_KEY, true))
     }
     val activeRole = permissionState.role
         .ifBlank { uiState.activeOrganization?.role.orEmpty() }
@@ -167,12 +175,12 @@ fun SettingsScreen(
     }
     val canViewFinancials = canAccess(PermissionKey.VIEW_FINANCIALS)
     val canManageTeam = canAccess(PermissionKey.MANAGE_TEAM)
+    val canUseDealDesk = canAccess(PermissionKey.CREATE_SALE) || activeRole in setOf("owner", "admin")
     val canManageFinancialAccounts = activeRole in setOf("owner", "admin")
-    val canManageMonthlyReports = activeRole in setOf("owner", "admin")
     val canManageBackups = activeRole == "owner"
-    val canCleanDuplicates = canManageTeam
     val canDeleteAccount = activeRole == "owner"
-    val hasManagementTools = canManageTeam || canManageMonthlyReports || canManageBackups
+    val hasBusinessSettings = canViewFinancials || canUseDealDesk || canManageFinancialAccounts
+    val hasManagementTools = canManageTeam || canManageBackups
     val appVersion = remember(context) {
         runCatching {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.0.0"
@@ -331,10 +339,10 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsSection(title = "General") {
+                SettingsSection(title = "App Settings") {
                     SettingsRow(
                         title = "Region & Language",
-                        subtitle = "${regionState.selectedRegion.displayName} • ${regionState.selectedLanguage.nativeName}",
+                        subtitle = "${localizedUiString(regionState.selectedRegion.displayName)} • ${regionState.selectedLanguage.nativeName}",
                         icon = Icons.Default.Public,
                         color = EzcarBlueBright,
                         onClick = onNavigateToRegionSettings
@@ -351,6 +359,18 @@ fun SettingsScreen(
                     )
                     SectionDivider()
                     SwitchRow(
+                        title = "Dashboard car",
+                        subtitle = "Tap to pause · hold to park",
+                        icon = Icons.Default.DirectionsCar,
+                        color = EzcarBlueBright,
+                        checked = dashboardCarEnabled,
+                        onCheckedChange = { enabled ->
+                            dashboardCarEnabled = enabled
+                            dashboardPrefs.edit().putBoolean(DashboardPreferences.CAR_ENABLED_KEY, enabled).apply()
+                        }
+                    )
+                    SectionDivider()
+                    SwitchRow(
                         title = "Inventory & Parts",
                         subtitle = "Enable parts tracking module",
                         icon = Icons.Default.Inventory2,
@@ -358,39 +378,55 @@ fun SettingsScreen(
                         checked = regionState.isPartsEnabled,
                         onCheckedChange = { regionSettingsManager.updatePartsEnabled(it) }
                     )
-                    if (canViewFinancials) {
-                        SectionDivider()
-                        SettingsRow(
-                            title = "Holding Cost Settings",
-                            subtitle = "Align inventory carrying cost with iOS analytics",
-                            icon = Icons.Default.Calculate,
-                            color = EzcarOrange,
-                            onClick = onNavigateToHoldingCostSettings
-                        )
-                    }
-                    if (canManageFinancialAccounts) {
-                        SectionDivider()
-                        SettingsRow(
-                            title = "Deal Desk",
-                            subtitle = "Tax and fee templates for vehicle sales",
-                            icon = Icons.Default.Calculate,
-                            color = EzcarBlueBright,
-                            onClick = onNavigateToDealDesk
-                        )
-                        SectionDivider()
-                        SettingsRow(
-                            title = "Financial Accounts",
-                            subtitle = "Cash, bank and account movement",
-                            icon = Icons.Default.AccountBalance,
-                            color = EzcarGreen,
-                            onClick = onNavigateToFinancialAccounts
-                        )
+                }
+            }
+
+            if (hasBusinessSettings) {
+                item {
+                    SettingsSection(title = "Business") {
+                        var hasPreviousBusinessRow = false
+                        if (canViewFinancials) {
+                            SettingsRow(
+                                title = "Holding Cost Settings",
+                                subtitle = "Align inventory carrying cost with iOS analytics",
+                                icon = Icons.Default.Calculate,
+                                color = EzcarOrange,
+                                onClick = onNavigateToHoldingCostSettings
+                            )
+                            hasPreviousBusinessRow = true
+                        }
+                        if (canUseDealDesk) {
+                            if (hasPreviousBusinessRow) {
+                                SectionDivider()
+                            }
+                            SettingsRow(
+                                title = "Deal Desk",
+                                subtitle = "Tax and fee templates for vehicle sales",
+                                icon = Icons.Default.Description,
+                                color = EzcarBlueBright,
+                                onClick = onNavigateToDealDesk
+                            )
+                            hasPreviousBusinessRow = true
+                        }
+                        if (canManageFinancialAccounts) {
+                            if (hasPreviousBusinessRow) {
+                                SectionDivider()
+                            }
+                            SettingsRow(
+                                title = "Financial Accounts",
+                                subtitle = "Cash, bank and account movement",
+                                icon = Icons.Default.AccountBalance,
+                                color = EzcarGreen,
+                                onClick = onNavigateToFinancialAccounts
+                            )
+                        }
                     }
                 }
             }
 
             item {
                 SettingsSection(title = if (hasManagementTools) "Management" else "Sync") {
+                    var hasPreviousManagementRow = false
                     if (canManageTeam) {
                         SettingsRow(
                             title = "Team Members",
@@ -401,52 +437,31 @@ fun SettingsScreen(
                             color = EzcarBlueBright,
                             onClick = onNavigateToTeamMembers
                         )
-                    }
-                    if (canManageMonthlyReports) {
-                        if (canManageTeam) {
-                            SectionDivider()
-                        }
-                        SettingsRow(
-                            title = "Email Reports",
-                            subtitle = "Monthly finance snapshot, preview and test delivery",
-                            icon = Icons.Default.Email,
-                            color = EzcarBlueBright,
-                            onClick = onNavigateToMonthlyReports
-                        )
+                        hasPreviousManagementRow = true
                     }
                     if (canManageBackups) {
-                        if (canManageTeam || canManageMonthlyReports) {
+                        if (hasPreviousManagementRow) {
                             SectionDivider()
                         }
                         SettingsRow(
-                            title = "Backup & Export",
-                            subtitle = "Snapshots, export, and recovery",
+                            title = "Reports & Data Export",
+                            subtitle = "Snapshots, scheduled reports, export, and recovery",
                             icon = Icons.Default.CloudUpload,
                             color = EzcarOrange,
                             onClick = onNavigateToBackupCenter
                         )
+                        hasPreviousManagementRow = true
                     }
-                    if (hasManagementTools) {
+                    if (hasPreviousManagementRow) {
                         SectionDivider()
                     }
                     SettingsRow(
-                        title = "Data Health",
+                        title = "Sync & Maintenance",
                         subtitle = "Duplicates, sync state and diagnostics",
                         icon = Icons.Default.MonitorHeart,
                         color = Color(0xFF22A6A1),
                         onClick = onNavigateToDataHealth
                     )
-                    if (canCleanDuplicates) {
-                        SectionDivider()
-                        SettingsRow(
-                            title = "Clean Up Duplicates",
-                            subtitle = "Merge duplicate vehicles, clients, users and accounts",
-                            icon = Icons.Default.Verified,
-                            color = EzcarPurple,
-                            isLoading = uiState.isDeduplicating,
-                            onClick = viewModel::cleanUpDuplicates
-                        )
-                    }
                     SectionDivider()
                     SettingsRow(
                         title = "Sync Now",

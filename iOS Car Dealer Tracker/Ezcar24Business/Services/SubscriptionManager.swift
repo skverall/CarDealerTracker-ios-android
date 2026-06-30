@@ -441,3 +441,13 @@ enum SubscriptionPackageCatalog {
         }
     }
 }
+
+enum SubscriptionAccessPolicy {
+    static let freeVehicleLimit = 2
+
+    static func shouldGateVehicleCreation(isProAccessActive: Bool, isCheckingStatus: Bool, vehicleCount: Int) -> Bool {
+        !isProAccessActive &&
+            !isCheckingStatus &&
+            vehicleCount >= freeVehicleLimit
+    }
+}

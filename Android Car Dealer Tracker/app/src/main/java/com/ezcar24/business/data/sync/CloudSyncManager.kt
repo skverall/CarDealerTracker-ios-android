@@ -1388,6 +1388,8 @@ class CloudSyncManager @Inject constructor(
             val newVehicle = Vehicle(
                 id = remoteId,
                 vin = remote.vin,
+                inventoryId = remote.inventoryId,
+                purchaseAccountId = remote.purchaseAccountId?.toUUID(),
                 make = remote.make,
                 model = remote.model,
                 year = remote.year,
@@ -3552,6 +3554,8 @@ fun Vehicle.toRemote(dealerId: String) = RemoteVehicle(
     id = id.toString(),
     dealerId = dealerId,
     vin = vin,
+    inventoryId = inventoryId,
+    purchaseAccountId = purchaseAccountId?.toString(),
     make = make,
     model = model,
     year = year,

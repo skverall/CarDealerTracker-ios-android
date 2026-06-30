@@ -86,9 +86,11 @@ struct DashboardView: View {
     private func handleAddVehicleTap() {
         vehicleEntryViewModel.fetchVehicles()
 
-        if !subscriptionManager.isProAccessActive &&
-            !subscriptionManager.isCheckingStatus &&
-            vehicleEntryViewModel.vehicles.count >= 3 {
+        if SubscriptionAccessPolicy.shouldGateVehicleCreation(
+            isProAccessActive: subscriptionManager.isProAccessActive,
+            isCheckingStatus: subscriptionManager.isCheckingStatus,
+            vehicleCount: vehicleEntryViewModel.vehicles.count
+        ) {
             handleVehicleLimitGate()
         } else {
             showingAddVehicle = true
@@ -98,7 +100,7 @@ struct DashboardView: View {
     private func handleVehicleLimitGate() {
         if isSignedIn {
             paywallVehicleCount = vehicleEntryViewModel.vehicles.count
-            PaywallAnalytics.logVehicleLimitGate(vehicleCount: vehicleEntryViewModel.vehicles.count, freeLimit: 3, entryPoint: "dashboard_quick_add")
+            PaywallAnalytics.logVehicleLimitGate(vehicleCount: vehicleEntryViewModel.vehicles.count, freeLimit: SubscriptionAccessPolicy.freeVehicleLimit, entryPoint: "dashboard_quick_add")
             showingVehicleLimitPaywall = true
         } else {
             appSessionState.exitGuestModeForLogin()
@@ -139,7 +141,7 @@ struct DashboardView: View {
                 .environment(\.managedObjectContext, viewContext)
         }
         .sheet(isPresented: $showingVehicleLimitPaywall) {
-            PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: 3)
+            PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: SubscriptionAccessPolicy.freeVehicleLimit)
         }
         .sheet(item: $selectedExpense) { expense in
             ExpenseDetailSheet(expense: expense)

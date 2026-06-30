@@ -185,7 +185,13 @@ private fun VehicleSearchRow(vehicle: Vehicle, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-            Text("${vehicle.make ?: ""} ${vehicle.model ?: ""}".trim(), fontWeight = FontWeight.Bold)
+            Text(
+                "${vehicle.make ?: ""} ${vehicle.model ?: ""}".trim().ifEmpty { localizedUiString("Vehicle") },
+                fontWeight = FontWeight.Bold
+            )
+            vehicle.inventoryId?.takeIf { it.isNotBlank() }?.let { inventoryId ->
+                Text(localizedUiString("ID: %s", inventoryId), style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
             Text(vehicle.vin, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
         }
         TextButtonInline(text = "Open", onClick = onClick)
