@@ -13,6 +13,7 @@ struct AuthGateView: View {
     @EnvironmentObject private var appSessionState: AppSessionState
     @EnvironmentObject private var networkMonitor: NetworkMonitor
     @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @ObservedObject private var notificationManager = LocalNotificationManager.shared
     @State private var periodicSyncTask: Task<Void, Never>?
     @State private var initialSyncUserId: UUID?
     @State private var lastAutoSyncAt: Date?
@@ -90,18 +91,21 @@ struct AuthGateView: View {
                     lastAutoSyncAt = nil
                 }
                 triggerInitialSyncIfNeeded(for: user)
+                handlePendingNotificationDeepLink()
             } else {
                 initialSyncUserId = nil
                 lastAutoSyncAt = nil
             }
             refreshPeriodicSync()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .openFeedbackBoardFromNotification)) { _ in
-            guard case .signedIn = sessionStore.status else {
-                appSessionState.isGuestMode = false
-                return
-            }
-            showingFeedbackBoardFromNotification = true
+        // Covers a notification tapped while the app (and this view) is already running.
+        .onChange(of: notificationManager.pendingDeepLinkDestination) { _, _ in
+            handlePendingNotificationDeepLink()
+        }
+        // Covers a cold launch from a notification tap: the deep link may already be pending
+        // by the time this view first appears, so check once up front too.
+        .task {
+            handlePendingNotificationDeepLink()
         }
         .sheet(isPresented: $showingFeedbackBoardFromNotification) {
             NavigationStack {
@@ -115,6 +119,21 @@ struct AuthGateView: View {
                     }
             }
         }
+    }
+
+    private func handlePendingNotificationDeepLink() {
+        guard notificationManager.pendingDeepLinkDestination == NotificationDestination.feedbackBoard else { return }
+
+        guard case .signedIn = sessionStore.status else {
+            // Not ready yet (still restoring the session, or signed out/guest). Leave the
+            // pending flag set — `.onChange(of: sessionStore.status)` retries this once the
+            // user is actually signed in, so the tap isn't silently dropped.
+            appSessionState.isGuestMode = false
+            return
+        }
+
+        showingFeedbackBoardFromNotification = true
+        notificationManager.clearPendingDeepLink()
     }
 
     private func triggerForegroundSyncIfNeeded() {

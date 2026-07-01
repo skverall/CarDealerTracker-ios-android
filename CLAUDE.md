@@ -111,7 +111,7 @@ Edge functions: `accept_invite`, `delete_account`, `invite_member`, `monthly_rep
 - Swift: `struct` for views, `class` for ViewModels, force-unwrap `!` only when guaranteed non-nil
 - Both platforms: soft deletes via `deletedAt` field, ISO 8601 for dates
 - Android uses `fallbackToDestructiveMigration()` (development convenience)
-- Supabase credentials currently hardcoded in `AppModule.kt` — should move to BuildConfig
+- Supabase credentials are read from `BuildConfig.SUPABASE_URL` / `BuildConfig.SUPABASE_ANON_KEY` in `AppModule.kt`, not hardcoded
 
 ## Key Dependencies
 

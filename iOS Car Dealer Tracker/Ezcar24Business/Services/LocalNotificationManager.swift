@@ -3,10 +3,6 @@ import Foundation
 import UIKit
 import UserNotifications
 
-extension Notification.Name {
-    static let openFeedbackBoardFromNotification = Notification.Name("openFeedbackBoardFromNotification")
-}
-
 enum NotificationPreference {
     static let enabledKey = "notificationsEnabled"
     static let inventoryStaleThresholdKey = "inventoryStaleThresholdDays"
@@ -88,8 +84,15 @@ enum NotificationPreference {
     }
 }
 
-final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate {
+final class LocalNotificationManager: NSObject, ObservableObject, UNUserNotificationCenterDelegate {
     static let shared = LocalNotificationManager()
+
+    /// Set when a notification is tapped and cleared once the deep link is consumed. Unlike a
+    /// one-shot `NotificationCenter.default.post`, a `@Published` value keeps its current state
+    /// for late subscribers — so a cold launch (where the view that would navigate hasn't
+    /// mounted, or the session hasn't finished restoring, at the moment the tap is delivered)
+    /// still gets picked up once the app is actually ready.
+    @Published private(set) var pendingDeepLinkDestination: String?
 
     private let center = UNUserNotificationCenter.current()
 
@@ -206,6 +209,11 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
     }
 
     @MainActor
+    func clearPendingDeepLink() {
+        pendingDeepLinkDestination = nil
+    }
+
+    @MainActor
     func openSystemSettings() {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
@@ -231,7 +239,7 @@ final class LocalNotificationManager: NSObject, UNUserNotificationCenterDelegate
 
         await MainActor.run {
             recordFeedbackBoardOpened()
-            NotificationCenter.default.post(name: .openFeedbackBoardFromNotification, object: nil)
+            pendingDeepLinkDestination = NotificationDestination.feedbackBoard
         }
     }
 

@@ -32,6 +32,7 @@ class FeedbackBoardViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FeedbackBoardUiState())
     val uiState: StateFlow<FeedbackBoardUiState> = _uiState.asStateFlow()
+    private val viewedRequestIds = mutableSetOf<UUID>()
 
     init {
         notificationPreferences.recordFeedbackBoardOpened()
@@ -189,6 +190,24 @@ class FeedbackBoardViewModel @Inject constructor(
 
     fun clearComposerError() {
         _uiState.update { it.copy(composerError = null) }
+    }
+
+    fun recordViewIfNeeded(requestId: UUID) {
+        if (!viewedRequestIds.add(requestId)) return
+        _uiState.update { state ->
+            state.copy(
+                requests = state.requests.map { request ->
+                    if (request.id == requestId) {
+                        request.copy(viewCount = request.viewCount + 1)
+                    } else {
+                        request
+                    }
+                }
+            )
+        }
+        viewModelScope.launch {
+            runCatching { repository.recordView(requestId) }
+        }
     }
 }
 

@@ -24,6 +24,7 @@ data class AppFeedbackRequest(
     val details: String?,
     val status: String,
     val voteCount: Int,
+    val viewCount: Int,
     val hasVoted: Boolean,
     val isMine: Boolean,
     val canDelete: Boolean,
@@ -96,6 +97,15 @@ class FeedbackRepository @Inject constructor(
             ?.toModel()
     }
 
+    suspend fun recordView(requestId: UUID) = withContext(Dispatchers.IO) {
+        requireSignedIn()
+        val params = buildJsonObject {
+            put("p_request_id", requestId.toString())
+        }
+        client.postgrest.rpc("record_app_feedback_view", params)
+        Unit
+    }
+
     suspend fun deleteRequest(requestId: UUID) = withContext(Dispatchers.IO) {
         requireSignedIn()
         val params = buildJsonObject {
@@ -130,6 +140,7 @@ private data class AppFeedbackRequestDto(
     val details: String? = null,
     val status: String = "open",
     @SerialName("vote_count") val voteCount: Int = 0,
+    @SerialName("view_count") val viewCount: Int = 0,
     @SerialName("has_voted") val hasVoted: Boolean = false,
     @SerialName("is_mine") val isMine: Boolean = false,
     @SerialName("can_delete") val canDelete: Boolean = false,
@@ -144,6 +155,7 @@ private data class AppFeedbackRequestDto(
             details = details,
             status = status,
             voteCount = voteCount,
+            viewCount = viewCount,
             hasVoted = hasVoted,
             isMine = isMine,
             canDelete = canDelete,

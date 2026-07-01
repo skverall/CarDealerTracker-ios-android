@@ -18,6 +18,7 @@ struct AppFeedbackRequest: Identifiable, Codable, Equatable {
     let details: String?
     var status: String
     var voteCount: Int
+    var viewCount: Int
     var hasVoted: Bool
     let isMine: Bool
     let canDelete: Bool
@@ -31,6 +32,7 @@ struct AppFeedbackRequest: Identifiable, Codable, Equatable {
         case details
         case status
         case voteCount = "vote_count"
+        case viewCount = "view_count"
         case hasVoted = "has_voted"
         case isMine = "is_mine"
         case canDelete = "can_delete"
@@ -982,6 +984,19 @@ final class SessionStore: ObservableObject {
             .execute()
             .value
         return rows.first
+    }
+
+    /// Records a unique view for a feedback idea. Best-effort: the DB de-dupes per viewer,
+    /// and callers should ignore failures here since this is a background engagement signal,
+    /// not a user-facing action.
+    func recordAppFeedbackView(requestId: UUID) async throws {
+        guard case .signedIn = status else { return }
+        let params: [String: AnyJSON] = [
+            "p_request_id": .string(requestId.uuidString)
+        ]
+        _ = try await client
+            .rpc("record_app_feedback_view", params: params)
+            .execute()
     }
 
     func deleteAppFeedbackRequest(requestId: UUID) async throws {

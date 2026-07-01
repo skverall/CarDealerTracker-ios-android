@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -187,6 +188,9 @@ fun FeedbackBoardScreen(
                 }
             } else {
                 items(uiState.requests, key = { it.id }) { request ->
+                    LaunchedEffect(request.id) {
+                        viewModel.recordViewIfNeeded(request.id)
+                    }
                     FeedbackRequestCard(
                         request = request,
                         isTogglingVote = uiState.togglingVotes.contains(request.id),
@@ -385,11 +389,32 @@ private fun FeedbackRequestCard(
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = formatFeedbackDate(request.createdAt),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = formatFeedbackDate(request.createdAt),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Visibility,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = request.viewCount.toString(),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
                 if (request.canDelete || (request.canAdmin && request.status != "shipped") || request.status == "shipped") {
                     Spacer(modifier = Modifier.height(12.dp))
                     Row(

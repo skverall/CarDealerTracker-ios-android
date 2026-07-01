@@ -441,13 +441,14 @@ struct AccountView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 14) {
                     ZStack {
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(ColorTheme.accent.opacity(0.14))
+                        Circle()
+                            .fill(ColorTheme.accent)
                             .frame(width: 48, height: 48)
+                            .shadow(color: ColorTheme.accent.opacity(0.35), radius: 8, x: 0, y: 4)
 
-                        Image(systemName: "lightbulb.fill")
-                            .font(.title3.weight(.semibold))
-                            .foregroundColor(ColorTheme.accent)
+                        Image(systemName: "lightbulb.max.fill")
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.white)
                     }
 
                     VStack(alignment: .leading, spacing: 5) {
@@ -457,13 +458,17 @@ struct AccountView: View {
                                 .foregroundColor(ColorTheme.primaryText)
                                 .fixedSize(horizontal: false, vertical: true)
 
-                            Text("new_badge".localizedString)
-                                .font(.caption2.weight(.bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(ColorTheme.accent)
-                                .clipShape(Capsule())
+                            HStack(spacing: 3) {
+                                Image(systemName: "sparkle")
+                                    .font(.system(size: 8, weight: .black))
+                                Text("new_badge".localizedString)
+                                    .font(.caption2.weight(.bold))
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(ColorTheme.accent)
+                            .clipShape(Capsule())
                         }
 
                         Text("feedback_board_prompt_subtitle".localizedString)
@@ -475,23 +480,36 @@ struct AccountView: View {
                     Spacer(minLength: 0)
                 }
 
-                HStack {
+                // A solid pill button, not a footer link, so the CTA reads as
+                // something to tap right now rather than a secondary detail.
+                HStack(spacing: 8) {
                     Text("feedback_board_open".localizedString)
                         .font(.subheadline.weight(.bold))
-                    Spacer()
                     Image(systemName: "arrow.right")
                         .font(.subheadline.weight(.bold))
                 }
-                .foregroundColor(ColorTheme.primary)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(ColorTheme.accent)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .shadow(color: ColorTheme.accent.opacity(0.30), radius: 8, x: 0, y: 4)
             }
             .padding(18)
+            .background(
+                LinearGradient(
+                    colors: [ColorTheme.accent.opacity(0.14), ColorTheme.accent.opacity(0.03)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
             .background(ColorTheme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(ColorTheme.accent.opacity(0.22), lineWidth: 1)
+                    .stroke(ColorTheme.accent.opacity(0.30), lineWidth: 1.2)
             )
-            .shadow(color: Color.black.opacity(0.06), radius: 10, x: 0, y: 5)
+            .shadow(color: ColorTheme.accent.opacity(0.12), radius: 14, x: 0, y: 8)
             .contentShape(Rectangle())
         }
         .buttonStyle(.hapticScale)
@@ -1328,6 +1346,7 @@ struct FeedbackBoardView: View {
     @State private var deletingRequests: Set<UUID> = []
     @State private var updatingStatuses: Set<UUID> = []
     @State private var requestPendingDeletion: AppFeedbackRequest?
+    @State private var viewedRequestIds: Set<UUID> = []
 
     var body: some View {
         ZStack {
@@ -1361,17 +1380,15 @@ struct FeedbackBoardView: View {
             }
         }
         .task {
+            if isSignedIn {
+                LocalNotificationManager.shared.recordFeedbackBoardOpened()
+            }
             if isSignedIn, requests.isEmpty {
                 await loadFeedback()
             }
         }
-        .onAppear {
-            if isSignedIn {
-                LocalNotificationManager.shared.recordFeedbackBoardOpened()
-            }
-        }
         .onChange(of: sessionStore.status) { _, _ in
-            if isSignedIn {
+            if isSignedIn, requests.isEmpty {
                 LocalNotificationManager.shared.recordFeedbackBoardOpened()
                 Task { await loadFeedback() }
             }
@@ -1509,6 +1526,9 @@ struct FeedbackBoardView: View {
                                 },
                                 onMarkDone: {
                                     Task { await markDone(request.id) }
+                                },
+                                onAppearOnce: {
+                                    recordViewIfNeeded(request.id)
                                 }
                             )
                         }
@@ -1537,6 +1557,9 @@ struct FeedbackBoardView: View {
                                 },
                                 onMarkDone: {
                                     Task { await markDone(request.id) }
+                                },
+                                onAppearOnce: {
+                                    recordViewIfNeeded(request.id)
                                 }
                             )
                         }
@@ -1603,15 +1626,39 @@ struct FeedbackBoardView: View {
         .shadow(color: Color.black.opacity(0.04), radius: 12, x: 0, y: 6)
     }
 
+    /// SwiftUI cancels `.task` work when a pushed view is mid-transition or re-created; that
+    /// surfaces as `CancellationError`/`URLError.cancelled`, not a real load failure, so it
+    /// must never be shown to the user as "Could not load ideas".
+    private func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        return (error as NSError).code == NSURLErrorCancelled
+    }
+
+    /// Fires once per idea per screen session; the server also de-dupes per viewer so a
+    /// re-appearing card (e.g. after scrolling away and back) never inflates the count.
+    @MainActor
+    private func recordViewIfNeeded(_ requestId: UUID) {
+        guard viewedRequestIds.insert(requestId).inserted else { return }
+        if let index = requests.firstIndex(where: { $0.id == requestId }) {
+            requests[index].viewCount += 1
+        }
+        Task {
+            try? await sessionStore.recordAppFeedbackView(requestId: requestId)
+        }
+    }
+
     @MainActor
     private func loadFeedback() async {
-        guard isSignedIn else { return }
+        guard isSignedIn, !isLoading else { return }
         isLoading = true
         errorMessage = nil
         do {
             requests = try await sessionStore.fetchAppFeedbackRequests(limit: 100)
         } catch {
-            errorMessage = error.localizedDescription
+            if !isCancellation(error) {
+                errorMessage = error.localizedDescription
+            }
         }
         isLoading = false
     }
@@ -1630,7 +1677,9 @@ struct FeedbackBoardView: View {
             showingComposer = false
             await loadFeedback()
         } catch {
-            composerError = error.localizedDescription
+            if !isCancellation(error) {
+                composerError = error.localizedDescription
+            }
         }
         isSubmittingFeedback = false
     }
@@ -1647,7 +1696,9 @@ struct FeedbackBoardView: View {
                 requests.sort(by: feedbackRequestSort)
             }
         } catch {
-            errorMessage = error.localizedDescription
+            if !isCancellation(error) {
+                errorMessage = error.localizedDescription
+            }
         }
         togglingVotes.remove(requestId)
     }
@@ -1660,7 +1711,9 @@ struct FeedbackBoardView: View {
             try await sessionStore.deleteAppFeedbackRequest(requestId: requestId)
             requests.removeAll { $0.id == requestId }
         } catch {
-            errorMessage = error.localizedDescription
+            if !isCancellation(error) {
+                errorMessage = error.localizedDescription
+            }
         }
         deletingRequests.remove(requestId)
     }
@@ -1677,7 +1730,9 @@ struct FeedbackBoardView: View {
                 requests.sort(by: feedbackRequestSort)
             }
         } catch {
-            errorMessage = error.localizedDescription
+            if !isCancellation(error) {
+                errorMessage = error.localizedDescription
+            }
         }
         updatingStatuses.remove(requestId)
     }
@@ -1853,6 +1908,7 @@ private struct FeedbackRequestCard: View {
     let onVote: () -> Void
     let onDelete: () -> Void
     let onMarkDone: () -> Void
+    let onAppearOnce: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1882,6 +1938,7 @@ private struct FeedbackRequestCard: View {
         )
         .shadow(color: Color.black.opacity(isCompleted ? 0.03 : 0.04), radius: 8, x: 0, y: 4)
         .opacity(isCompleted ? 0.95 : 1)
+        .onAppear(perform: onAppearOnce)
     }
 
     private var isCompleted: Bool {
@@ -1899,53 +1956,64 @@ private struct FeedbackRequestCard: View {
             : AnyShapeStyle(ColorTheme.cardBackground)
     }
 
-    private var voteTint: Color {
-        request.hasVoted ? ColorTheme.primary : ColorTheme.secondaryText
-    }
-
+    /// A Reddit/Product Hunt–style vote widget: an outlined, dashed-border "you can tap this"
+    /// state when idle, and a solid filled state once voted — so the affordance to tap and
+    /// stack votes is legible without relying on color alone.
     private var votePill: some View {
         Button(action: onVote) {
-            HStack(spacing: 5) {
+            VStack(spacing: 3) {
                 voteIcon
 
                 Text(String(request.voteCount))
-                    .font(.subheadline.weight(.heavy))
+                    .font(.system(size: 15, weight: .heavy, design: .rounded))
                     .monospacedDigit()
                     .contentTransition(.numericText(value: Double(request.voteCount)))
             }
-            .foregroundColor(voteTint)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(voteTint.opacity(request.hasVoted ? 0.13 : 0.09))
-            .clipShape(Capsule())
+            .foregroundColor(request.hasVoted ? .white : ColorTheme.primary)
+            .frame(width: 46)
+            .padding(.vertical, 10)
+            .background(voteBackground)
+            .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
             .overlay(
-                Capsule()
-                    .stroke(voteTint.opacity(request.hasVoted ? 0.20 : 0.12), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .strokeBorder(
+                        ColorTheme.primary.opacity(request.hasVoted ? 0 : 0.45),
+                        style: StrokeStyle(lineWidth: 1.4, dash: request.hasVoted ? [] : [4, 3])
+                    )
             )
+            .shadow(color: request.hasVoted ? ColorTheme.primary.opacity(0.32) : .clear, radius: 7, x: 0, y: 3)
         }
         .buttonStyle(.hapticScale)
         .disabled(isTogglingVote)
         .accessibilityLabel(request.hasVoted ? "feedback_remove_vote".localizedString : "feedback_vote".localizedString)
     }
 
+    private var voteBackground: some ShapeStyle {
+        request.hasVoted ? AnyShapeStyle(ColorTheme.primary) : AnyShapeStyle(ColorTheme.primary.opacity(0.08))
+    }
+
+    /// Deliberately not button-shaped (circle stamp, no border/capsule) so a finished idea
+    /// never reads as another tappable proposal like `votePill` does.
     private var shippedSeal: some View {
-        HStack(spacing: 5) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 13, weight: .bold))
+        VStack(spacing: 4) {
+            ZStack {
+                Circle()
+                    .fill(ColorTheme.success)
+                    .frame(width: 28, height: 28)
+
+                Image(systemName: "checkmark")
+                    .font(.system(size: 13, weight: .black))
+                    .foregroundColor(.white)
+            }
 
             Text(String(request.voteCount))
-                .font(.subheadline.weight(.heavy))
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .monospacedDigit()
+                .foregroundColor(ColorTheme.secondaryText)
         }
-        .foregroundColor(ColorTheme.success)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(ColorTheme.success.opacity(0.12))
-        .clipShape(Capsule())
-        .overlay(
-            Capsule()
-                .stroke(ColorTheme.success.opacity(0.20), lineWidth: 1)
-        )
+        .frame(width: 46)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("feedback_status_shipped".localizedString)
     }
 
     @ViewBuilder
@@ -1953,9 +2021,10 @@ private struct FeedbackRequestCard: View {
         if isTogglingVote {
             ProgressView()
                 .controlSize(.small)
+                .tint(request.hasVoted ? .white : ColorTheme.primary)
         } else {
-            Image(systemName: request.hasVoted ? "hand.thumbsup.fill" : "hand.thumbsup")
-                .font(.system(size: 13, weight: .bold))
+            Image(systemName: request.hasVoted ? "arrowtriangle.up.fill" : "arrowtriangle.up")
+                .font(.system(size: 15, weight: .heavy))
         }
     }
 
@@ -1983,9 +2052,16 @@ private struct FeedbackRequestCard: View {
                     .lineLimit(3)
             }
 
-            Label(request.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
-                .font(.caption2.weight(.medium))
-                .foregroundColor(ColorTheme.tertiaryText)
+            HStack(spacing: 10) {
+                Label(request.createdAt.formatted(date: .abbreviated, time: .omitted), systemImage: "calendar")
+
+                Label(String(request.viewCount), systemImage: "eye")
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(request.viewCount)))
+                    .accessibilityLabel(String(format: "feedback_view_count".localizedString, request.viewCount))
+            }
+            .font(.caption2.weight(.medium))
+            .foregroundColor(ColorTheme.tertiaryText)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -2078,17 +2154,36 @@ private struct FeedbackStatusBadge: View {
     let status: String
 
     var body: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
+        if status == "shipped" {
+            // Solid "stamp" style, distinct from the dot-indicator pills used by every
+            // still-open status, so DONE reads as finished rather than another live tag.
+            HStack(spacing: 4) {
+                Image(systemName: "checkmark")
+                    .font(.system(size: 9, weight: .black))
+                Text(title)
+                    .font(.system(size: 11, weight: .bold))
+                    .tracking(0.6)
+                    .textCase(.uppercase)
+                    .lineLimit(1)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(ColorTheme.success)
+            .clipShape(Capsule())
+        } else {
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 6, height: 6)
 
-            Text(title)
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(0.6)
-                .foregroundColor(color)
-                .textCase(.uppercase)
-                .lineLimit(1)
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(0.6)
+                    .foregroundColor(color)
+                    .textCase(.uppercase)
+                    .lineLimit(1)
+            }
         }
     }
 
