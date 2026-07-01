@@ -239,7 +239,9 @@ class MainActivity : ComponentActivity() {
                                     com.ezcar24.business.ui.vehicle.VehicleDetailScreen(
                                         vehicleId = vehicleId,
                                         onBack = { navController.popBackStack() },
-                                        onEdit = { id -> navController.navigate("vehicle_form/$id") }
+                                        onEdit = { id -> navController.navigate("vehicle_form/$id") },
+                                        canViewFinancials = permissionState.can(PermissionKey.VIEW_FINANCIALS),
+                                        canDeleteRecords = permissionState.can(PermissionKey.DELETE_RECORDS)
                                     )
                                 }
                                 composable(

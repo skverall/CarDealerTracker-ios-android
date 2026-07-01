@@ -26,6 +26,7 @@
         <relationship name="clients" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Client" inverseName="vehicle" inverseEntity="Client" />
         <relationship name="expenseTemplates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="ExpenseTemplate" inverseName="vehicle" inverseEntity="ExpenseTemplate" />
         <relationship name="sales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sale" inverseName="vehicle" inverseEntity="Sale" />
+        <relationship name="incomeEntries" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="VehicleIncome" inverseName="vehicle" inverseEntity="VehicleIncome" />
     </entity>
     <entity name="Expense" representedClassName="Expense" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
@@ -68,6 +69,7 @@
         <relationship name="transactions" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="AccountTransaction" inverseName="account" inverseEntity="AccountTransaction" />
         <relationship name="sales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Sale" inverseName="account" inverseEntity="Sale" />
         <relationship name="partSales" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="PartSale" inverseName="account" inverseEntity="PartSale" />
+        <relationship name="vehicleIncomeEntries" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="VehicleIncome" inverseName="account" inverseEntity="VehicleIncome" />
     </entity>
     <entity name="ExpenseTemplate" representedClassName="ExpenseTemplate" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
@@ -193,6 +195,20 @@
         <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
         <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
         <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="transactions" inverseEntity="FinancialAccount" />
+    </entity>
+    <entity name="VehicleIncome" representedClassName="VehicleIncome" syncable="YES" codeGenerationType="class">
+        <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />
+        <attribute name="amount" optional="NO" attributeType="Decimal" defaultValueString="0.0" />
+        <attribute name="date" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="incomeType" optional="NO" attributeType="String" defaultValueString="rental" />
+        <attribute name="payerName" optional="YES" attributeType="String" />
+        <attribute name="paymentMethod" optional="YES" attributeType="String" />
+        <attribute name="notes" optional="YES" attributeType="String" />
+        <attribute name="createdAt" optional="NO" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="updatedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <attribute name="deletedAt" optional="YES" attributeType="Date" usesScalarValueType="NO" />
+        <relationship name="vehicle" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Vehicle" inverseName="incomeEntries" inverseEntity="Vehicle" />
+        <relationship name="account" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="FinancialAccount" inverseName="vehicleIncomeEntries" inverseEntity="FinancialAccount" />
     </entity>
     <entity name="Part" representedClassName="Part" syncable="YES" codeGenerationType="class">
         <attribute name="id" optional="NO" attributeType="UUID" usesScalarValueType="NO" />

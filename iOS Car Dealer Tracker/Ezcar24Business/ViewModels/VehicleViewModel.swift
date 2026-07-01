@@ -362,25 +362,24 @@ class VehicleViewModel: ObservableObject {
     }
 
 
-    func duplicateVehicle(_ original: Vehicle) {
+    @discardableResult
+    func duplicateVehicle(_ original: Vehicle) -> Vehicle {
         let new = Vehicle(context: context)
         new.id = UUID()
-        new.vin = "" // avoid VIN duplicates
-        new.inventoryID = original.inventoryID
+        new.vin = ""
+        new.inventoryID = nil
         new.make = original.make
         new.model = original.model
         new.year = original.year
         new.purchasePrice = original.purchasePrice
         new.purchaseDate = original.purchaseDate
-        new.status = original.status
+        new.status = original.status == "sold" ? "on_sale" : (original.status ?? "on_sale")
         new.notes = original.notes
         new.createdAt = Date()
         new.updatedAt = new.createdAt
-        // Do not copy sale details by default
         new.salePrice = nil
         new.saleDate = nil
         saveContext()
-        // Copy photo if exists
         let dealerId = CloudSyncEnvironment.currentDealerId
         if let oldID = original.id, let newID = new.id, ImageStore.shared.hasImage(id: oldID, dealerId: dealerId) {
             let url = ImageStore.shared.imageURL(for: oldID, dealerId: dealerId)
@@ -389,6 +388,7 @@ class VehicleViewModel: ObservableObject {
             }
         }
         fetchVehicles()
+        return new
     }
 
     func totalCost(for vehicle: Vehicle) -> Decimal {

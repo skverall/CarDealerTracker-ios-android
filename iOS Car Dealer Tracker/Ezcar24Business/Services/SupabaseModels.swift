@@ -743,6 +743,38 @@ struct RemoteAccountTransaction: Codable {
     }
 }
 
+struct RemoteVehicleIncome: Codable {
+    let id: UUID
+    let dealerId: UUID
+    let vehicleId: UUID?
+    let accountId: UUID?
+    let amount: Decimal
+    let date: String
+    let incomeType: String
+    let payerName: String?
+    let paymentMethod: String?
+    let notes: String?
+    let createdAt: Date
+    let updatedAt: Date
+    let deletedAt: Date?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case dealerId = "dealer_id"
+        case vehicleId = "vehicle_id"
+        case accountId = "account_id"
+        case amount
+        case date
+        case incomeType = "income_type"
+        case payerName = "payer_name"
+        case paymentMethod = "payment_method"
+        case notes
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case deletedAt = "deleted_at"
+    }
+}
+
 struct RemoteClient: Codable {
     let id: UUID
     let dealerId: UUID
@@ -957,6 +989,7 @@ struct RemoteSnapshot: Decodable {
     let users: [RemoteDealerUser]
     let accounts: [RemoteFinancialAccount]
     let accountTransactions: [RemoteAccountTransaction]
+    let vehicleIncomeEntries: [RemoteVehicleIncome]
     let vehicles: [RemoteVehicle]
     let templates: [RemoteExpenseTemplate]
     let expenses: [RemoteExpense]
@@ -976,6 +1009,7 @@ struct RemoteSnapshot: Decodable {
         case users
         case accounts
         case accountTransactions = "account_transactions"
+        case vehicleIncomeEntries = "vehicle_income_entries"
         case vehicles
         case templates
         case expenses
@@ -996,6 +1030,7 @@ struct RemoteSnapshot: Decodable {
         users: [RemoteDealerUser],
         accounts: [RemoteFinancialAccount],
         accountTransactions: [RemoteAccountTransaction],
+        vehicleIncomeEntries: [RemoteVehicleIncome] = [],
         vehicles: [RemoteVehicle],
         templates: [RemoteExpenseTemplate],
         expenses: [RemoteExpense],
@@ -1014,6 +1049,7 @@ struct RemoteSnapshot: Decodable {
         self.users = users
         self.accounts = accounts
         self.accountTransactions = accountTransactions
+        self.vehicleIncomeEntries = vehicleIncomeEntries
         self.vehicles = vehicles
         self.templates = templates
         self.expenses = expenses
@@ -1035,6 +1071,7 @@ struct RemoteSnapshot: Decodable {
         users = try container.decodeIfPresent([RemoteDealerUser].self, forKey: .users) ?? []
         accounts = try container.decodeIfPresent([RemoteFinancialAccount].self, forKey: .accounts) ?? []
         accountTransactions = try container.decodeIfPresent([RemoteAccountTransaction].self, forKey: .accountTransactions) ?? []
+        vehicleIncomeEntries = try container.decodeIfPresent([RemoteVehicleIncome].self, forKey: .vehicleIncomeEntries) ?? []
         vehicles = try container.decodeIfPresent([RemoteVehicle].self, forKey: .vehicles) ?? []
         templates = try container.decodeIfPresent([RemoteExpenseTemplate].self, forKey: .templates) ?? []
         expenses = try container.decodeIfPresent([RemoteExpense].self, forKey: .expenses) ?? []

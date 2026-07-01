@@ -132,7 +132,7 @@ struct VehicleListView: View {
             .sheet(isPresented: $showingPaywall) {
                 PaywallView(source: .vehicleLimit, vehicleCount: paywallVehicleCount, freeLimit: SubscriptionAccessPolicy.freeVehicleLimit)
             }
-            .sheet(item: $editingVehicle) { v in
+            .navigationDestination(item: $editingVehicle) { v in
                 VehicleDetailView(vehicle: v, startEditing: true)
             }
             .alert(Text("delete".localizedString) + Text("".localizedString) + Text("vehicle_section_title".localizedString) + Text("?"), isPresented: $showDeleteAlert, presenting: vehicleToDelete) { v in
@@ -1631,7 +1631,7 @@ extension VehicleListView {
     private func vehicleContextMenu(for vehicle: Vehicle) -> some View {
         if permissionService.can(.viewInventory) {
             Button { editingVehicle = vehicle } label: { Label("edit".localizedString, systemImage: "pencil") }
-            Button { viewModel.duplicateVehicle(vehicle) } label: { Label("duplicate".localizedString, systemImage: "doc.on.doc") }
+            Button { duplicateVehicleFromContext(vehicle) } label: { Label("duplicate".localizedString, systemImage: "doc.on.doc") }
             if vehicle.status != "sold", permissionService.can(.createSale) {
                 Button {
                     prepareQuickSale(for: vehicle)
@@ -1659,6 +1659,22 @@ extension VehicleListView {
         buyerPhone = ""
         paymentMethod = "Cash"
         sellAccount = nil
+    }
+
+    private func duplicateVehicleFromContext(_ vehicle: Vehicle) {
+        let duplicated = viewModel.duplicateVehicle(vehicle)
+        guard case .signedIn(let user) = sessionStore.status else { return }
+        let dealerId = CloudSyncEnvironment.currentDealerId ?? user.id
+        Task {
+            await cloudSyncManager.upsertVehicle(duplicated, dealerId: dealerId)
+            if let id = duplicated.id,
+               ImageStore.shared.hasImage(id: id, dealerId: dealerId) {
+                let url = ImageStore.shared.imageURL(for: id, dealerId: dealerId)
+                if let data = try? Data(contentsOf: url) {
+                    await cloudSyncManager.uploadVehicleImage(vehicleId: id, dealerId: dealerId, imageData: data)
+                }
+            }
+        }
     }
 
     private var selectedStatusTitle: String {

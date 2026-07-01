@@ -249,6 +249,23 @@ data class RemoteAccountTransaction(
 )
 
 @Serializable
+data class RemoteVehicleIncome(
+    val id: String,
+    @SerialName("dealer_id") val dealerId: String,
+    @SerialName("vehicle_id") val vehicleId: String? = null,
+    @SerialName("account_id") val accountId: String? = null,
+    @Serializable(with = BigDecimalSerializer::class) val amount: BigDecimal,
+    val date: String,
+    @SerialName("income_type") val incomeType: String = "rental",
+    @SerialName("payer_name") val payerName: String? = null,
+    @SerialName("payment_method") val paymentMethod: String? = null,
+    val notes: String? = null,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("deleted_at") val deletedAt: String? = null
+)
+
+@Serializable
 data class RemoteExpenseTemplate(
     val id: String,
     @SerialName("dealer_id") val dealerId: String,
@@ -338,6 +355,7 @@ data class RemoteSnapshot(
     val users: List<RemoteDealerUser>,
     val accounts: List<RemoteFinancialAccount>,
     @SerialName("account_transactions") val accountTransactions: List<RemoteAccountTransaction>,
+    @SerialName("vehicle_income_entries") val vehicleIncomeEntries: List<RemoteVehicleIncome> = emptyList(),
     val vehicles: List<RemoteVehicle>,
     val templates: List<RemoteExpenseTemplate>,
     val expenses: List<RemoteExpense>,

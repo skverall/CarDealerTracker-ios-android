@@ -322,6 +322,7 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.USER to db.userDao().count(),
             SyncEntityType.ACCOUNT to db.financialAccountDao().countAll(),
             SyncEntityType.ACCOUNT_TRANSACTION to db.accountTransactionDao().getAllIncludingDeleted().count { it.deletedAt == null },
+            SyncEntityType.VEHICLE_INCOME to db.vehicleIncomeDao().count(),
             SyncEntityType.TEMPLATE to db.expenseTemplateDao().getAllIncludingDeleted().count { it.deletedAt == null },
             SyncEntityType.CLIENT_INTERACTION to db.clientInteractionDao().getAllIncludingDeleted().count { it.deletedAt == null },
             SyncEntityType.CLIENT_REMINDER to db.clientReminderDao().getAllIncludingDeleted().size,
@@ -345,6 +346,7 @@ class CloudSyncManager @Inject constructor(
                 SyncEntityType.USER to snapshot.users.count { it.deletedAt == null },
                 SyncEntityType.ACCOUNT to snapshot.accounts.count { it.deletedAt == null },
                 SyncEntityType.ACCOUNT_TRANSACTION to snapshot.accountTransactions.count { it.deletedAt == null },
+                SyncEntityType.VEHICLE_INCOME to snapshot.vehicleIncomeEntries.count { it.deletedAt == null },
                 SyncEntityType.TEMPLATE to snapshot.templates.count { it.deletedAt == null },
                 SyncEntityType.CLIENT_INTERACTION to snapshot.clientInteractions.count { it.deletedAt == null },
                 SyncEntityType.CLIENT_REMINDER to snapshot.clientReminders.count { it.deletedAt == null },
@@ -429,6 +431,7 @@ class CloudSyncManager @Inject constructor(
             snapshot.users.isNotEmpty() ||
             snapshot.accounts.isNotEmpty() ||
             snapshot.accountTransactions.isNotEmpty() ||
+            snapshot.vehicleIncomeEntries.isNotEmpty() ||
             snapshot.templates.isNotEmpty() ||
             snapshot.clientInteractions.isNotEmpty() ||
             snapshot.clientReminders.isNotEmpty() ||
@@ -446,7 +449,7 @@ class CloudSyncManager @Inject constructor(
         return "counts vehicles=${snapshot.vehicles.size} expenses=${snapshot.expenses.size} sales=${snapshot.sales.size} " +
             "debts=${snapshot.debts.size} debtPayments=${snapshot.debtPayments.size} clients=${snapshot.clients.size} " +
             "users=${snapshot.users.size} accounts=${snapshot.accounts.size} accountTransactions=${snapshot.accountTransactions.size} " +
-            "templates=${snapshot.templates.size} clientInteractions=${snapshot.clientInteractions.size} clientReminders=${snapshot.clientReminders.size} parts=${snapshot.parts.size} partBatches=${snapshot.partBatches.size} " +
+            "vehicleIncome=${snapshot.vehicleIncomeEntries.size} templates=${snapshot.templates.size} clientInteractions=${snapshot.clientInteractions.size} clientReminders=${snapshot.clientReminders.size} parts=${snapshot.parts.size} partBatches=${snapshot.partBatches.size} " +
             "partSales=${snapshot.partSales.size} partSaleLineItems=${snapshot.partSaleLineItems.size}"
     }
 
@@ -461,6 +464,7 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.USER to snapshot.users.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.ACCOUNT to snapshot.accounts.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.ACCOUNT_TRANSACTION to snapshot.accountTransactions.mapNotNull { it.id.toUUID() }.toSet(),
+            SyncEntityType.VEHICLE_INCOME to snapshot.vehicleIncomeEntries.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.TEMPLATE to snapshot.templates.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.CLIENT_INTERACTION to snapshot.clientInteractions.mapNotNull { it.id.toUUID() }.toSet(),
             SyncEntityType.CLIENT_REMINDER to snapshot.clientReminders.mapNotNull { it.id.toUUID() }.toSet(),
@@ -785,6 +789,7 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.USER -> "sync_users"
             SyncEntityType.ACCOUNT -> "sync_accounts"
             SyncEntityType.ACCOUNT_TRANSACTION -> "sync_account_transactions"
+            SyncEntityType.VEHICLE_INCOME -> "sync_vehicle_income_entries"
             SyncEntityType.TEMPLATE -> "sync_templates"
             SyncEntityType.DEBT -> "sync_debts"
             SyncEntityType.DEBT_PAYMENT -> "sync_debt_payments"
@@ -807,6 +812,7 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.USER -> "delete_crm_dealer_users"
             SyncEntityType.ACCOUNT -> "delete_crm_financial_accounts"
             SyncEntityType.ACCOUNT_TRANSACTION -> "delete_crm_account_transactions"
+            SyncEntityType.VEHICLE_INCOME -> "delete_crm_vehicle_income_entries"
             SyncEntityType.TEMPLATE -> "delete_crm_expense_templates"
             SyncEntityType.DEBT -> "delete_crm_debts"
             SyncEntityType.DEBT_PAYMENT -> "delete_crm_debt_payments"
@@ -849,6 +855,10 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.ACCOUNT_TRANSACTION -> {
                 val remote = json.decodeFromString(RemoteAccountTransaction.serializer(), payload)
                 client.postgrest.rpc("sync_account_transactions", payloadParams(listOf(remote)))
+            }
+            SyncEntityType.VEHICLE_INCOME -> {
+                val remote = json.decodeFromString(RemoteVehicleIncome.serializer(), payload)
+                client.postgrest.rpc("sync_vehicle_income_entries", payloadParams(listOf(remote)))
             }
             SyncEntityType.TEMPLATE -> {
                 val remote = json.decodeFromString(RemoteExpenseTemplate.serializer(), payload)
@@ -907,6 +917,7 @@ class CloudSyncManager @Inject constructor(
             SyncEntityType.USER -> db.userDao().getById(id)?.let { deleteUser(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.ACCOUNT -> db.financialAccountDao().getById(id)?.let { deleteFinancialAccount(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.ACCOUNT_TRANSACTION -> db.accountTransactionDao().getById(id)?.let { deleteAccountTransaction(it) } ?: performDeleteRpc(entityType, id, dealerId)
+            SyncEntityType.VEHICLE_INCOME -> db.vehicleIncomeDao().getById(id)?.let { deleteVehicleIncome(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.TEMPLATE -> db.expenseTemplateDao().getById(id)?.let { deleteTemplate(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.DEBT -> db.debtDao().getById(id)?.let { deleteDebt(it) } ?: performDeleteRpc(entityType, id, dealerId)
             SyncEntityType.DEBT_PAYMENT -> db.debtPaymentDao().getById(id)?.let { deleteDebtPayment(it) } ?: performDeleteRpc(entityType, id, dealerId)
@@ -997,6 +1008,7 @@ class CloudSyncManager @Inject constructor(
                 SyncEntityType.USER -> json.decodeFromString(RemoteDealerUser.serializer(), payload).id.toUUID()
                 SyncEntityType.ACCOUNT -> json.decodeFromString(RemoteFinancialAccount.serializer(), payload).id.toUUID()
                 SyncEntityType.ACCOUNT_TRANSACTION -> json.decodeFromString(RemoteAccountTransaction.serializer(), payload).id.toUUID()
+                SyncEntityType.VEHICLE_INCOME -> json.decodeFromString(RemoteVehicleIncome.serializer(), payload).id.toUUID()
                 SyncEntityType.TEMPLATE -> json.decodeFromString(RemoteExpenseTemplate.serializer(), payload).id.toUUID()
                 SyncEntityType.DEBT -> json.decodeFromString(RemoteDebt.serializer(), payload).id.toUUID()
                 SyncEntityType.DEBT_PAYMENT -> json.decodeFromString(RemoteDebtPayment.serializer(), payload).id.toUUID()
@@ -1028,6 +1040,7 @@ class CloudSyncManager @Inject constructor(
         val userIds = skippingIds[SyncEntityType.USER] ?: emptySet()
         val accountIds = skippingIds[SyncEntityType.ACCOUNT] ?: emptySet()
         val accountTransactionIds = skippingIds[SyncEntityType.ACCOUNT_TRANSACTION] ?: emptySet()
+        val vehicleIncomeIds = skippingIds[SyncEntityType.VEHICLE_INCOME] ?: emptySet()
         val templateIds = skippingIds[SyncEntityType.TEMPLATE] ?: emptySet()
         val clientInteractionIds = skippingIds[SyncEntityType.CLIENT_INTERACTION] ?: emptySet()
         val clientReminderIds = skippingIds[SyncEntityType.CLIENT_REMINDER] ?: emptySet()
@@ -1112,6 +1125,16 @@ class CloudSyncManager @Inject constructor(
             true
         }
 
+        val filteredVehicleIncomeEntries = snapshot.vehicleIncomeEntries.filter { income ->
+            val id = income.id.toUUID()
+            if (id != null && vehicleIncomeIds.contains(id)) return@filter false
+            val vehicleId = income.vehicleId?.toUUID()
+            if (vehicleId != null && vehicleIds.contains(vehicleId)) return@filter false
+            val accountId = income.accountId?.toUUID()
+            if (accountId != null && accountIds.contains(accountId)) return@filter false
+            true
+        }
+
         val filteredTemplates = snapshot.templates.filter { t ->
             val id = t.id.toUUID()
             id == null || !templateIds.contains(id)
@@ -1156,6 +1179,7 @@ class CloudSyncManager @Inject constructor(
             users = filteredUsers,
             accounts = filteredAccounts,
             accountTransactions = filteredAccountTransactions,
+            vehicleIncomeEntries = filteredVehicleIncomeEntries,
             vehicles = filteredVehicles,
             templates = filteredTemplates,
             expenses = filteredExpenses,
@@ -1242,6 +1266,7 @@ class CloudSyncManager @Inject constructor(
             mergeDebts(snapshot.debts)
             mergeDebtPayments(snapshot.debtPayments)
             mergeAccountTransactions(snapshot.accountTransactions)
+            mergeVehicleIncomeEntries(snapshot.vehicleIncomeEntries)
             mergeParts(snapshot.parts)
             mergePartBatches(snapshot.partBatches)
             mergePartSales(snapshot.partSales)
@@ -1358,6 +1383,7 @@ class CloudSyncManager @Inject constructor(
         db.saleDao().updateAccountId(oldId, newId)
         db.debtPaymentDao().updateAccountId(oldId, newId)
         db.accountTransactionDao().updateAccountId(oldId, newId)
+        db.vehicleIncomeDao().updateAccountId(oldId, newId)
         db.expenseTemplateDao().updateAccountId(oldId, newId)
         db.partBatchDao().updateAccountId(oldId, newId)
         db.partSaleDao().updateAccountId(oldId, newId)
@@ -1721,6 +1747,50 @@ class CloudSyncManager @Inject constructor(
         }
     }
 
+    private suspend fun mergeVehicleIncomeEntries(remoteIncomeEntries: List<RemoteVehicleIncome>) {
+        if (remoteIncomeEntries.isEmpty()) return
+        val existing = db.vehicleIncomeDao().getAllIncludingDeleted().associateBy { it.id }
+        val vehicleIds = db.vehicleDao().getAllIncludingDeleted().map { it.id }.toSet()
+        val accountIds = db.financialAccountDao().getAllIncludingDeleted().map { it.id }.toSet()
+
+        for (remote in remoteIncomeEntries) {
+            val remoteId = remote.id.toUUID() ?: continue
+            val local = existing[remoteId]
+
+            if (remote.deletedAt != null) {
+                if (local != null) db.vehicleIncomeDao().delete(local)
+                continue
+            }
+
+            val remoteUpdated = DateUtils.parseDateAndTime(remote.updatedAt) ?: Date()
+            if (local != null && (local.updatedAt ?: Date(0)) >= remoteUpdated) continue
+
+            val incomeDate = DateUtils.parseRemoteDateOnly(remote.date)
+                ?: DateUtils.parseDateAndTime(remote.date)
+                ?: DateUtils.parseDateAndTime(remote.createdAt)
+                ?: Date()
+            val createdAt = DateUtils.parseDateAndTime(remote.createdAt) ?: incomeDate
+            val vehicleId = remote.vehicleId?.toUUID()?.takeIf { it in vehicleIds }
+            val accountId = remote.accountId?.toUUID()?.takeIf { it in accountIds }
+
+            val income = VehicleIncome(
+                id = remoteId,
+                amount = remote.amount,
+                date = incomeDate,
+                incomeType = remote.incomeType,
+                payerName = remote.payerName,
+                paymentMethod = remote.paymentMethod,
+                notes = remote.notes,
+                createdAt = createdAt,
+                updatedAt = remoteUpdated,
+                deletedAt = null,
+                vehicleId = vehicleId,
+                accountId = accountId
+            )
+            db.vehicleIncomeDao().upsert(income)
+        }
+    }
+
     private suspend fun mergeParts(remoteParts: List<RemotePart>) {
         if (remoteParts.isEmpty()) return
         val existing = db.partDao().getAllIncludingDeleted().associateBy { it.id }
@@ -2024,6 +2094,16 @@ class CloudSyncManager @Inject constructor(
             }
         }
 
+        val protectedVehicleIncome = cleanup.protectedIds[SyncEntityType.VEHICLE_INCOME].orEmpty()
+        db.vehicleIncomeDao().getAllIncludingDeleted().forEach { income ->
+            val remoteIds = cleanup.remoteIds[SyncEntityType.VEHICLE_INCOME].orEmpty()
+            if (!remoteIds.contains(income.id) && !protectedVehicleIncome.contains(income.id)) {
+                if (shouldDelete(income.id, income.updatedAt, income.createdAt)) {
+                    db.vehicleIncomeDao().delete(income)
+                }
+            }
+        }
+
         val protectedDebts = cleanup.protectedIds[SyncEntityType.DEBT].orEmpty()
         db.debtDao().getAllIncludingDeleted().forEach { debt ->
             val remoteIds = cleanup.remoteIds[SyncEntityType.DEBT].orEmpty()
@@ -2157,6 +2237,10 @@ class CloudSyncManager @Inject constructor(
         val users = db.userDao().getAllIncludingDeleted()
         val accounts = db.financialAccountDao().getAllIncludingDeleted()
         val accountTransactions = db.accountTransactionDao().getAllIncludingDeleted()
+        val vehicleIncomeEntries = db.vehicleIncomeDao().getAllIncludingDeleted().filter { income ->
+            val vId = income.vehicleId
+            vId == null || !skippingVehicleIds.contains(vId)
+        }
         val vehicles = db.vehicleDao().getAllIncludingDeleted().filter { !skippingVehicleIds.contains(it.id) }
         val expenses = db.expenseDao().getAllIncludingDeleted().filter { expense ->
             val vId = expense.vehicleId
@@ -2201,6 +2285,7 @@ class CloudSyncManager @Inject constructor(
 
         val remoteAccounts = accountsByType.values.map { it.toRemote(dealerId.toString()) }
         val remoteAccountTransactions = accountTransactions.mapNotNull { it.toRemote(dealerId.toString()) }
+        val remoteVehicleIncomeEntries = vehicleIncomeEntries.map { it.toRemote(dealerId.toString()) }
         val remoteVehicles = vehicles.map { it.toRemote(dealerId.toString()) }
         val remoteExpenses = expenses.map { it.toRemote(dealerId.toString()) }
         val remoteSales = sales.mapNotNull { it.toRemote(dealerId.toString()) }
@@ -2223,6 +2308,9 @@ class CloudSyncManager @Inject constructor(
         }
         if (remoteAccountTransactions.isNotEmpty()) {
             client.postgrest.rpc("sync_account_transactions", payloadParams(remoteAccountTransactions))
+        }
+        if (remoteVehicleIncomeEntries.isNotEmpty()) {
+            client.postgrest.rpc("sync_vehicle_income_entries", payloadParams(remoteVehicleIncomeEntries))
         }
         if (remoteVehicles.isNotEmpty()) {
             client.postgrest.rpc("sync_vehicles", payloadParams(remoteVehicles))
@@ -2792,6 +2880,46 @@ class CloudSyncManager @Inject constructor(
                 error = e
             )
             enqueueUpsert(SyncEntityType.ACCOUNT_TRANSACTION, remote, dealerId)
+        }
+    }
+
+    suspend fun upsertVehicleIncome(income: VehicleIncome) {
+        db.vehicleIncomeDao().upsert(income)
+        val dealerId = getCurrentDealerId()
+        val remote = income.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_vehicle_income_entries", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_vehicle_income_entries",
+                dealerId = dealerId,
+                entityType = SyncEntityType.VEHICLE_INCOME,
+                payloadId = income.id,
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.VEHICLE_INCOME, remote, dealerId)
+        }
+    }
+
+    suspend fun deleteVehicleIncome(income: VehicleIncome) {
+        val deleted = income.copy(deletedAt = Date(), updatedAt = Date())
+        db.vehicleIncomeDao().upsert(deleted)
+        val dealerId = getCurrentDealerId()
+        val remote = deleted.toRemote(dealerId.toString())
+        try {
+            client.postgrest.rpc("sync_vehicle_income_entries", payloadParams(listOf(remote)))
+            processOfflineQueue(dealerId)
+        } catch (e: Exception) {
+            logSyncError(
+                rpc = "sync_vehicle_income_entries",
+                dealerId = dealerId,
+                entityType = SyncEntityType.VEHICLE_INCOME,
+                payloadId = income.id,
+                extraContext = mapOf("operation" to "delete"),
+                error = e
+            )
+            enqueueUpsert(SyncEntityType.VEHICLE_INCOME, remote, dealerId)
         }
     }
 
@@ -3388,14 +3516,15 @@ enum class SyncEntityType(val rawValue: String, val displayName: String, val sor
     USER("user", "Users", 6),
     ACCOUNT("account", "Accounts", 7),
     ACCOUNT_TRANSACTION("accountTransaction", "Account Transactions", 8),
-    TEMPLATE("template", "Expense Templates", 9),
-    PART("part", "Parts", 10),
-    PART_BATCH("partBatch", "Part Batches", 11),
-    PART_SALE("partSale", "Part Sales", 12),
-    PART_SALE_LINE_ITEM("partSaleLineItem", "Part Sale Line Items", 13),
-    HOLDING_COST_SETTINGS("holdingCostSettings", "Holding Cost Settings", 14),
-    CLIENT_INTERACTION("clientInteraction", "Client Interactions", 15),
-    CLIENT_REMINDER("clientReminder", "Client Reminders", 16);
+    VEHICLE_INCOME("vehicleIncome", "Vehicle Income", 9),
+    TEMPLATE("template", "Expense Templates", 10),
+    PART("part", "Parts", 11),
+    PART_BATCH("partBatch", "Part Batches", 12),
+    PART_SALE("partSale", "Part Sales", 13),
+    PART_SALE_LINE_ITEM("partSaleLineItem", "Part Sale Line Items", 14),
+    HOLDING_COST_SETTINGS("holdingCostSettings", "Holding Cost Settings", 15),
+    CLIENT_INTERACTION("clientInteraction", "Client Interactions", 16),
+    CLIENT_REMINDER("clientReminder", "Client Reminders", 17);
 
     companion object {
         fun fromRaw(value: String): SyncEntityType? {
@@ -3410,6 +3539,7 @@ enum class SyncEntityType(val rawValue: String, val displayName: String, val sor
                 "account" -> ACCOUNT
                 "financialAccount" -> ACCOUNT
                 "accountTransaction" -> ACCOUNT_TRANSACTION
+                "vehicleIncome" -> VEHICLE_INCOME
                 "template" -> TEMPLATE
                 "expenseTemplate" -> TEMPLATE
                 "part" -> PART
@@ -3647,6 +3777,22 @@ fun AccountTransaction.toRemote(dealerId: String): RemoteAccountTransaction? {
         deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
     )
 }
+
+fun VehicleIncome.toRemote(dealerId: String) = RemoteVehicleIncome(
+    id = id.toString(),
+    dealerId = dealerId,
+    vehicleId = vehicleId?.toString(),
+    accountId = accountId?.toString(),
+    amount = amount,
+    date = DateUtils.formatDateOnly(date),
+    incomeType = incomeType,
+    payerName = payerName,
+    paymentMethod = paymentMethod,
+    notes = notes,
+    createdAt = DateUtils.formatDateAndTime(createdAt),
+    updatedAt = updatedAt?.let { DateUtils.formatDateAndTime(it) } ?: DateUtils.formatDateAndTime(Date()),
+    deletedAt = deletedAt?.let { DateUtils.formatDateAndTime(it) }
+)
 
 fun ExpenseTemplate.toRemote(dealerId: String) = RemoteExpenseTemplate(
     id = id.toString(),

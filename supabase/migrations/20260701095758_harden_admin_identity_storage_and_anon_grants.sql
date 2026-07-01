@@ -530,6 +530,9 @@ BEGIN
                 ('app_private', 'admin_bot_alert_deliveries')
         ) AS t(schema_name, table_name)
     LOOP
+        IF to_regclass(format('%I.%I', r.schema_name, r.table_name)) IS NULL THEN
+            CONTINUE;
+        END IF;
         EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', 'No direct API access', r.schema_name, r.table_name);
         EXECUTE format(
             'CREATE POLICY %I ON %I.%I FOR ALL TO anon, authenticated USING (false) WITH CHECK (false)',
@@ -540,70 +543,46 @@ BEGIN
     END LOOP;
 END $$;
 
-REVOKE EXECUTE ON FUNCTION public.assert_crm_access(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.assert_crm_access(uuid) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.assert_crm_permission(uuid, text[]) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.assert_crm_permission(uuid, text[]) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.claim_dealer_referral(text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.claim_dealer_referral(text) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.create_organization(text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.create_organization(text) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.create_vehicle_share_link(uuid, uuid, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.create_vehicle_share_link(uuid, uuid, text, text) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.crm_can_access(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.crm_can_access(uuid) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.crm_effective_any_permission(uuid, text[]) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.crm_effective_any_permission(uuid, text[]) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.crm_effective_permission(uuid, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.crm_effective_permission(uuid, text) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.ensure_deal_desk_read_access(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.ensure_deal_desk_read_access(uuid) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.ensure_deal_desk_write_access(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.ensure_deal_desk_write_access(uuid) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.ensure_personal_organization() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.ensure_personal_organization() TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.get_my_organizations() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_my_organizations() TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.get_my_permissions(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_my_permissions(uuid) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.get_my_role(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_my_role(uuid) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.get_or_create_dealer_referral_code(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_or_create_dealer_referral_code(uuid) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.get_referral_stats() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_referral_stats() TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.get_team_members_secure() FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_team_members_secure() TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.get_team_members_secure(uuid) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.get_team_members_secure(uuid) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.has_permission(uuid, uuid, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.has_permission(uuid, uuid, text) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.process_referral_reward(uuid, text, text, text) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.process_referral_reward(uuid, text, text, text) TO service_role;
-
-REVOKE EXECUTE ON FUNCTION public.update_team_invite_access(uuid, uuid, public.app_role, jsonb) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.update_team_invite_access(uuid, uuid, public.app_role, jsonb) TO authenticated, service_role;
-
-REVOKE EXECUTE ON FUNCTION public.update_team_member_access(uuid, uuid, public.app_role, jsonb) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.update_team_member_access(uuid, uuid, public.app_role, jsonb) TO authenticated, service_role;
+DO $$
+DECLARE
+    r record;
+    v_function regprocedure;
+BEGIN
+    FOR r IN
+        SELECT *
+        FROM (
+            VALUES
+                ('public.assert_crm_access(uuid)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.assert_crm_permission(uuid, text[])', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.claim_dealer_referral(text)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.create_organization(text)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.create_vehicle_share_link(uuid, uuid, text, text)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.crm_can_access(uuid)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.crm_effective_any_permission(uuid, text[])', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.crm_effective_permission(uuid, text)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.ensure_deal_desk_read_access(uuid)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.ensure_deal_desk_write_access(uuid)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.ensure_personal_organization()', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.get_my_organizations()', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.get_my_permissions(uuid)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.get_my_role(uuid)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.get_or_create_dealer_referral_code(uuid)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.get_referral_stats()', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.get_team_members_secure()', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.get_team_members_secure(uuid)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.has_permission(uuid, uuid, text)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.process_referral_reward(uuid, text, text, text)', 'PUBLIC, anon, authenticated', 'service_role'),
+                ('public.update_team_invite_access(uuid, uuid, public.app_role, jsonb)', 'PUBLIC, anon', 'authenticated, service_role'),
+                ('public.update_team_member_access(uuid, uuid, public.app_role, jsonb)', 'PUBLIC, anon', 'authenticated, service_role')
+        ) AS t(function_signature, revoke_roles, grant_roles)
+    LOOP
+        v_function := to_regprocedure(r.function_signature);
+        IF v_function IS NULL THEN
+            CONTINUE;
+        END IF;
+        EXECUTE format('REVOKE EXECUTE ON FUNCTION %s FROM %s', v_function, r.revoke_roles);
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO %s', v_function, r.grant_roles);
+    END LOOP;
+END $$;
 
 NOTIFY pgrst, 'reload schema';

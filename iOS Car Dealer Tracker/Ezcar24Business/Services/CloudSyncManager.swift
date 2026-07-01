@@ -34,6 +34,7 @@ extension RemoteSale: PushAnchorTimestamped {}
 extension RemoteDebt: PushAnchorTimestamped {}
 extension RemoteDebtPayment: PushAnchorTimestamped {}
 extension RemoteAccountTransaction: PushAnchorTimestamped {}
+extension RemoteVehicleIncome: PushAnchorTimestamped {}
 extension RemoteClient: PushAnchorTimestamped {}
 extension RemoteClientInteraction: PushAnchorTimestamped {}
 extension RemoteClientReminder: PushAnchorTimestamped {}
@@ -73,6 +74,7 @@ final class CloudSyncManager: ObservableObject {
         let users: [RemoteDealerUser]
         let accounts: [RemoteFinancialAccount]
         let accountTransactions: [RemoteAccountTransaction]
+        let vehicleIncomeEntries: [RemoteVehicleIncome]
         let vehicles: [RemoteVehicle]
         let expenses: [RemoteExpense]
         let sales: [RemoteSale]
@@ -91,6 +93,7 @@ final class CloudSyncManager: ObservableObject {
             users.isEmpty &&
             accounts.isEmpty &&
             accountTransactions.isEmpty &&
+            vehicleIncomeEntries.isEmpty &&
             vehicles.isEmpty &&
             expenses.isEmpty &&
             sales.isEmpty &&
@@ -225,6 +228,7 @@ final class CloudSyncManager: ObservableObject {
                 users: filteredSnapshot.users,
                 accounts: accountsForMerge,
                 accountTransactions: filteredSnapshot.accountTransactions,
+                vehicleIncomeEntries: filteredSnapshot.vehicleIncomeEntries,
                 vehicles: filteredSnapshot.vehicles,
                 templates: filteredSnapshot.templates,
                 expenses: filteredSnapshot.expenses,
@@ -406,6 +410,12 @@ final class CloudSyncManager: ObservableObject {
                 } else if let remote = try? decoder.decode(RemoteAccountTransaction.self, from: item.payload) {
                     protect(.accountTransaction, id: remote.id)
                 }
+            case .vehicleIncome:
+                if item.operation == .delete {
+                    if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.vehicleIncome, id: id) }
+                } else if let remote = try? decoder.decode(RemoteVehicleIncome.self, from: item.payload) {
+                    protect(.vehicleIncome, id: remote.id)
+                }
             case .template:
                 if item.operation == .delete {
                     if let id = try? decoder.decode(UUID.self, from: item.payload) { protect(.template, id: id) }
@@ -468,7 +478,8 @@ final class CloudSyncManager: ObservableObject {
                             !snapshot.debtPayments.isEmpty || !snapshot.clients.isEmpty ||
                             !snapshot.clientInteractions.isEmpty || !snapshot.clientReminders.isEmpty ||
                             !snapshot.users.isEmpty || !snapshot.accounts.isEmpty ||
-                            !snapshot.accountTransactions.isEmpty || !snapshot.templates.isEmpty ||
+                            !snapshot.accountTransactions.isEmpty || !snapshot.vehicleIncomeEntries.isEmpty ||
+                            !snapshot.templates.isEmpty ||
                             !snapshot.parts.isEmpty || !snapshot.partBatches.isEmpty ||
                             !snapshot.partSales.isEmpty || !snapshot.partSaleLineItems.isEmpty
 
@@ -494,6 +505,7 @@ final class CloudSyncManager: ObservableObject {
                     .user: Set(snapshot.users.map { $0.id }),
                     .account: Set(snapshot.accounts.map { $0.id }),
                     .accountTransaction: Set(snapshot.accountTransactions.map { $0.id }),
+                    .vehicleIncome: Set(snapshot.vehicleIncomeEntries.map { $0.id }),
                     .template: Set(snapshot.templates.map { $0.id }),
                     .part: Set(snapshot.parts.map { $0.id }),
                     .partBatch: Set(snapshot.partBatches.map { $0.id }),
@@ -618,6 +630,7 @@ final class CloudSyncManager: ObservableObject {
                 .user: count("User"),
                 .account: count("FinancialAccount"),
                 .accountTransaction: count("AccountTransaction"),
+                .vehicleIncome: count("VehicleIncome"),
                 .template: count("ExpenseTemplate")
             ]
         }
@@ -650,6 +663,7 @@ final class CloudSyncManager: ObservableObject {
                 },
                 .account: countActive(snapshot.accounts) { $0.deletedAt },
                 .accountTransaction: countActive(snapshot.accountTransactions) { $0.deletedAt },
+                .vehicleIncome: countActive(snapshot.vehicleIncomeEntries) { $0.deletedAt },
                 .template: countActive(snapshot.templates) { $0.deletedAt }
             ]
         } catch {
@@ -786,6 +800,8 @@ final class CloudSyncManager: ObservableObject {
             return (try? decoder.decode(RemoteFinancialAccount.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
         case .accountTransaction:
             return (try? decoder.decode(RemoteAccountTransaction.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
+        case .vehicleIncome:
+            return (try? decoder.decode(RemoteVehicleIncome.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
         case .template:
             return (try? decoder.decode(RemoteExpenseTemplate.self, from: item.payload)).flatMap(Self.pushAnchorCandidate(for:))
         case .debt:
@@ -1149,6 +1165,7 @@ final class CloudSyncManager: ObservableObject {
                         case .user: return "sync_users"
                         case .account: return "sync_accounts"
                         case .accountTransaction: return "sync_account_transactions"
+                        case .vehicleIncome: return "sync_vehicle_income_entries"
                         case .template: return "sync_templates"
                         case .debt: return "sync_debts"
                         case .debtPayment: return "sync_debt_payments"
@@ -1168,6 +1185,7 @@ final class CloudSyncManager: ObservableObject {
                         case .user: return "delete_crm_dealer_users"
                         case .account: return "delete_crm_financial_accounts"
                         case .accountTransaction: return "delete_crm_account_transactions"
+                        case .vehicleIncome: return "delete_crm_vehicle_income_entries"
                         case .template: return "delete_crm_expense_templates"
                         case .debt: return "delete_crm_debts"
                         case .debtPayment: return "delete_crm_debt_payments"
@@ -1238,6 +1256,8 @@ final class CloudSyncManager: ObservableObject {
             rpcName = "delete_crm_financial_accounts"
         case .accountTransaction:
             rpcName = "delete_crm_account_transactions"
+        case .vehicleIncome:
+            rpcName = "delete_crm_vehicle_income_entries"
         case .template:
             rpcName = "delete_crm_expense_templates"
         case .debt:
@@ -1317,6 +1337,11 @@ final class CloudSyncManager: ObservableObject {
         case .accountTransaction:
             if let transaction = fetchLocalEntity(AccountTransaction.self, id: id) {
                 await deleteAccountTransaction(transaction, dealerId: dealerId)
+                return
+            }
+        case .vehicleIncome:
+            if let income = fetchLocalEntity(VehicleIncome.self, id: id) {
+                await deleteVehicleIncome(income, dealerId: dealerId)
                 return
             }
         case .template:
@@ -1409,6 +1434,9 @@ final class CloudSyncManager: ObservableObject {
         case .accountTransaction:
             let remote = try decoder.decode(RemoteAccountTransaction.self, from: item.payload)
             try await writeClient.rpc("sync_account_transactions", params: ["payload": [remote]]).execute()
+        case .vehicleIncome:
+            let remote = try decoder.decode(RemoteVehicleIncome.self, from: item.payload)
+            try await writeClient.rpc("sync_vehicle_income_entries", params: ["payload": [remote]]).execute()
         case .template:
              let remote = try decoder.decode(RemoteExpenseTemplate.self, from: item.payload)
              try await writeClient.rpc("sync_templates", params: ["payload": [remote]]).execute()
@@ -1597,6 +1625,53 @@ final class CloudSyncManager: ObservableObject {
                 error: error
             )
             await enqueueUpsertPayload(remote, entityType: .expense, recordId: remote.id, dealerId: dealerId)
+        }
+    }
+
+    func upsertVehicleIncome(_ income: VehicleIncome, dealerId: UUID) async {
+        guard let remote = makeRemoteVehicleIncome(from: income, dealerId: dealerId) else { return }
+
+        Task {
+            do {
+                try await writeClient
+                    .rpc("sync_vehicle_income_entries", params: SyncPayload<RemoteVehicleIncome>(payload: [remote]))
+                    .execute()
+                await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
+            } catch {
+                print("CloudSyncManager upsertVehicleIncome error: \(error)")
+                await logSyncError(
+                    rpc: "sync_vehicle_income_entries",
+                    dealerId: dealerId,
+                    entityType: .vehicleIncome,
+                    payloadId: remote.id,
+                    error: error
+                )
+                showError(savedLocallySyncFailureMessage(for: error))
+                await enqueueUpsertPayload(remote, entityType: .vehicleIncome, recordId: remote.id, dealerId: dealerId)
+            }
+        }
+    }
+
+    func deleteVehicleIncome(_ income: VehicleIncome, dealerId: UUID) async {
+        income.deletedAt = Date()
+        income.updatedAt = Date()
+        guard let remote = makeRemoteVehicleIncome(from: income, dealerId: dealerId) else { return }
+
+        do {
+            try await writeClient
+                .rpc("sync_vehicle_income_entries", params: SyncPayload<RemoteVehicleIncome>(payload: [remote]))
+                .execute()
+            await processSuccessfulDelivery(anchor: Self.pushAnchorCandidate(for: remote), dealerId: dealerId)
+        } catch {
+            await logSyncError(
+                rpc: "sync_vehicle_income_entries",
+                dealerId: dealerId,
+                entityType: .vehicleIncome,
+                payloadId: remote.id,
+                extraContext: ["operation": "delete"],
+                error: error
+            )
+            await enqueueUpsertPayload(remote, entityType: .vehicleIncome, recordId: remote.id, dealerId: dealerId)
         }
     }
     
@@ -2921,6 +2996,7 @@ final class CloudSyncManager: ObservableObject {
         let userIds = skippingIds[.user] ?? []
         let accountIds = skippingIds[.account] ?? []
         let accountTransactionIds = skippingIds[.accountTransaction] ?? []
+        let vehicleIncomeIds = skippingIds[.vehicleIncome] ?? []
         let templateIds = skippingIds[.template] ?? []
         let partIds = skippingIds[.part] ?? []
         let partBatchIds = skippingIds[.partBatch] ?? []
@@ -2975,6 +3051,12 @@ final class CloudSyncManager: ObservableObject {
             if accountIds.contains(tx.accountId) { return false }
             return true
         }
+        let filteredVehicleIncomeEntries = snapshot.vehicleIncomeEntries.filter { income in
+            if vehicleIncomeIds.contains(income.id) { return false }
+            if let vId = income.vehicleId, vehicleIds.contains(vId) { return false }
+            if let aId = income.accountId, accountIds.contains(aId) { return false }
+            return true
+        }
         let filteredTemplates = snapshot.templates.filter { !templateIds.contains($0.id) }
 
         let filteredParts = snapshot.parts.filter { !partIds.contains($0.id) }
@@ -2996,6 +3078,7 @@ final class CloudSyncManager: ObservableObject {
             users: filteredUsers,
             accounts: filteredAccounts,
             accountTransactions: filteredAccountTransactions,
+            vehicleIncomeEntries: filteredVehicleIncomeEntries,
             vehicles: filteredVehicles,
             templates: filteredTemplates,
             expenses: filteredExpenses,
@@ -3788,6 +3871,36 @@ final class CloudSyncManager: ObservableObject {
                 obj.deletedAt = nil
             }
 
+            let vehicleIncomeIds = snapshot.vehicleIncomeEntries.map { $0.id }
+            let existingVehicleIncomeEntries: [UUID: VehicleIncome] = fetchExisting(entityName: "VehicleIncome", ids: vehicleIncomeIds)
+            for income in snapshot.vehicleIncomeEntries {
+                let obj = existingVehicleIncomeEntries[income.id] ?? VehicleIncome(context: context)
+
+                if income.deletedAt != nil {
+                    context.delete(obj)
+                    continue
+                }
+
+                if let localUpdated = obj.updatedAt, localUpdated > income.updatedAt {
+                    continue
+                }
+
+                obj.id = income.id
+                obj.amount = NSDecimalNumber(decimal: income.amount)
+                if let parsed = CloudSyncManager.parseRemoteDateOnly(income.date) {
+                    obj.date = parsed
+                } else {
+                    obj.date = income.createdAt
+                }
+                obj.incomeType = income.incomeType
+                obj.payerName = income.payerName
+                obj.paymentMethod = income.paymentMethod
+                obj.notes = income.notes
+                obj.createdAt = income.createdAt
+                obj.updatedAt = income.updatedAt
+                obj.deletedAt = nil
+            }
+
             // 14. Debts
             let debtIds = snapshot.debts.map { $0.id }
             let existingDebts: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: debtIds)
@@ -3872,10 +3985,10 @@ final class CloudSyncManager: ObservableObject {
             // Actually, since we are in the same context block, we can just fetch relationships by ID.
             
             // Re-fetch maps to include newly created objects
-            let allVehicles: [UUID: Vehicle] = fetchExisting(entityName: "Vehicle", ids: snapshot.vehicles.map { $0.id } + snapshot.clients.compactMap { $0.vehicleId } + snapshot.sales.map { $0.vehicleId } + snapshot.expenses.compactMap { $0.vehicleId })
+            let allVehicles: [UUID: Vehicle] = fetchExisting(entityName: "Vehicle", ids: snapshot.vehicles.map { $0.id } + snapshot.clients.compactMap { $0.vehicleId } + snapshot.sales.map { $0.vehicleId } + snapshot.expenses.compactMap { $0.vehicleId } + snapshot.vehicleIncomeEntries.compactMap { $0.vehicleId })
             let allClients: [UUID: Client] = fetchExisting(entityName: "Client", ids: snapshot.clients.map { $0.id } + snapshot.clientInteractions.map { $0.clientId } + snapshot.clientReminders.map { $0.clientId } + snapshot.partSales.compactMap { $0.clientId })
             let allUsers: [UUID: User] = fetchExisting(entityName: "User", ids: snapshot.users.map { $0.id } + snapshot.expenses.compactMap { $0.userId })
-            let allAccounts: [UUID: FinancialAccount] = fetchExisting(entityName: "FinancialAccount", ids: snapshot.accounts.map { $0.id } + snapshot.expenses.compactMap { $0.accountId } + snapshot.debtPayments.compactMap { $0.accountId } + snapshot.accountTransactions.map { $0.accountId } + snapshot.sales.compactMap { $0.accountId } + snapshot.partSales.compactMap { $0.accountId })
+            let allAccounts: [UUID: FinancialAccount] = fetchExisting(entityName: "FinancialAccount", ids: snapshot.accounts.map { $0.id } + snapshot.expenses.compactMap { $0.accountId } + snapshot.debtPayments.compactMap { $0.accountId } + snapshot.accountTransactions.map { $0.accountId } + snapshot.vehicleIncomeEntries.compactMap { $0.accountId } + snapshot.sales.compactMap { $0.accountId } + snapshot.partSales.compactMap { $0.accountId })
             let allDebts: [UUID: Debt] = fetchExisting(entityName: "Debt", ids: snapshot.debts.map { $0.id } + snapshot.debtPayments.map { $0.debtId })
             let allParts: [UUID: Part] = fetchExisting(entityName: "Part", ids: snapshot.parts.map { $0.id } + snapshot.partBatches.map { $0.partId } + snapshot.partSaleLineItems.map { $0.partId })
             let allPartBatches: [UUID: PartBatch] = fetchExisting(entityName: "PartBatch", ids: snapshot.partBatches.map { $0.id } + snapshot.partSaleLineItems.map { $0.batchId })
@@ -3957,6 +4070,21 @@ final class CloudSyncManager: ObservableObject {
                 }
             }
 
+            for income in snapshot.vehicleIncomeEntries {
+                if let localIncome = existingVehicleIncomeEntries[income.id] ?? (try? context.fetch(VehicleIncome.fetchRequest()).first(where: { $0.id == income.id })) {
+                    if let vId = income.vehicleId {
+                        localIncome.vehicle = allVehicles[vId]
+                    } else {
+                        localIncome.vehicle = nil
+                    }
+                    if let aId = income.accountId {
+                        localIncome.account = allAccounts[aId]
+                    } else {
+                        localIncome.account = nil
+                    }
+                }
+            }
+
             // Link Debt Payments -> Debt, Account
             for p in snapshot.debtPayments {
                 if let payment = existingDebtPayments[p.id] ?? (try? context.fetch(DebtPayment.fetchRequest()).first(where: { $0.id == p.id })) {
@@ -3996,6 +4124,7 @@ final class CloudSyncManager: ObservableObject {
                 cleanupEntity(entityName: "Expense", type: .expense)
                 cleanupEntity(entityName: "Sale", type: .sale)
                 cleanupEntity(entityName: "AccountTransaction", type: .accountTransaction)
+                cleanupEntity(entityName: "VehicleIncome", type: .vehicleIncome)
                 cleanupEntity(entityName: "Debt", type: .debt)
                 cleanupEntity(entityName: "DebtPayment", type: .debtPayment)
                 cleanupEntity(entityName: "Client", type: .client)
@@ -4197,6 +4326,8 @@ final class CloudSyncManager: ObservableObject {
             applyWindow(accountRequest)
             let accountTransactionRequest: NSFetchRequest<AccountTransaction> = AccountTransaction.fetchRequest()
             applyWindow(accountTransactionRequest)
+            let vehicleIncomeRequest: NSFetchRequest<VehicleIncome> = VehicleIncome.fetchRequest()
+            applyWindow(vehicleIncomeRequest)
             let vehicleRequest: NSFetchRequest<Vehicle> = Vehicle.fetchRequest()
             applyWindow(vehicleRequest)
             let expenseRequest: NSFetchRequest<Expense> = Expense.fetchRequest()
@@ -4227,6 +4358,12 @@ final class CloudSyncManager: ObservableObject {
             let users = try context.fetch(userRequest)
             let accounts = try context.fetch(accountRequest)
             let accountTransactions = try context.fetch(accountTransactionRequest)
+            let vehicleIncomeEntries = try context
+                .fetch(vehicleIncomeRequest)
+                .filter { income in
+                    guard let vId = income.vehicle?.id else { return true }
+                    return !skippingVehicleIds.contains(vId)
+                }
             let vehicles = try context
                 .fetch(vehicleRequest)
                 .filter { vehicle in
@@ -4307,6 +4444,7 @@ final class CloudSyncManager: ObservableObject {
                 users: remoteUsers,
                 accounts: accountsByType.values.compactMap { self.makeRemoteFinancialAccount(from: $0, dealerId: dealerId) },
                 accountTransactions: accountTransactions.compactMap { self.makeRemoteAccountTransaction(from: $0, dealerId: dealerId) },
+                vehicleIncomeEntries: vehicleIncomeEntries.compactMap { self.makeRemoteVehicleIncome(from: $0, dealerId: dealerId) },
                 vehicles: vehicles.compactMap { self.makeRemoteVehicle(from: $0, dealerId: dealerId) },
                 expenses: expenses.compactMap { self.makeRemoteExpense(from: $0, dealerId: dealerId) },
                 sales: sales.compactMap { self.makeRemoteSale(from: $0, dealerId: dealerId) },
@@ -4358,6 +4496,12 @@ final class CloudSyncManager: ObservableObject {
         if !payload.accountTransactions.isEmpty {
             try await writeClient
                 .rpc("sync_account_transactions", params: SyncPayload<RemoteAccountTransaction>(payload: payload.accountTransactions))
+                .execute()
+        }
+
+        if !payload.vehicleIncomeEntries.isEmpty {
+            try await writeClient
+                .rpc("sync_vehicle_income_entries", params: SyncPayload<RemoteVehicleIncome>(payload: payload.vehicleIncomeEntries))
                 .execute()
         }
 
@@ -4523,6 +4667,25 @@ final class CloudSyncManager: ObservableObject {
             createdAt: transaction.createdAt ?? Date(),
             updatedAt: transaction.updatedAt ?? Date(),
             deletedAt: transaction.deletedAt
+        )
+    }
+
+    nonisolated private func makeRemoteVehicleIncome(from income: VehicleIncome, dealerId: UUID) -> RemoteVehicleIncome? {
+        guard let id = income.id else { return nil }
+        return RemoteVehicleIncome(
+            id: id,
+            dealerId: dealerId,
+            vehicleId: income.vehicle?.id,
+            accountId: income.account?.id,
+            amount: income.amount?.decimalValue ?? 0,
+            date: CloudSyncManager.formatDateOnly(income.date ?? Date()),
+            incomeType: income.incomeType ?? "rental",
+            payerName: income.payerName,
+            paymentMethod: income.paymentMethod,
+            notes: income.notes,
+            createdAt: income.createdAt ?? Date(),
+            updatedAt: income.updatedAt ?? Date(),
+            deletedAt: income.deletedAt
         )
     }
 
@@ -5089,6 +5252,7 @@ enum SyncEntityType: String, Codable, CaseIterable, Hashable {
     case user
     case account
     case accountTransaction
+    case vehicleIncome
     case template
     case part
     case partBatch
@@ -5126,6 +5290,7 @@ extension SyncEntityType {
         case .user: return "Users"
         case .account: return "Accounts"
         case .accountTransaction: return "Account Transactions"
+        case .vehicleIncome: return "Vehicle Income"
         case .template: return "Expense Templates"
         case .part: return "Parts"
         case .partBatch: return "Part Batches"
@@ -5147,11 +5312,12 @@ extension SyncEntityType {
         case .user: return 8
         case .account: return 9
         case .accountTransaction: return 10
-        case .template: return 11
-        case .part: return 12
-        case .partBatch: return 13
-        case .partSale: return 14
-        case .partSaleLineItem: return 15
+        case .vehicleIncome: return 11
+        case .template: return 12
+        case .part: return 13
+        case .partBatch: return 14
+        case .partSale: return 15
+        case .partSaleLineItem: return 16
         }
     }
 }
@@ -5356,6 +5522,7 @@ private extension SyncQueueItem {
             case .user: return (try? decoder.decode(RemoteDealerUser.self, from: payload))?.id
             case .account: return (try? decoder.decode(RemoteFinancialAccount.self, from: payload))?.id
             case .accountTransaction: return (try? decoder.decode(RemoteAccountTransaction.self, from: payload))?.id
+            case .vehicleIncome: return (try? decoder.decode(RemoteVehicleIncome.self, from: payload))?.id
             case .template: return (try? decoder.decode(RemoteExpenseTemplate.self, from: payload))?.id
             case .debt: return (try? decoder.decode(RemoteDebt.self, from: payload))?.id
             case .debtPayment: return (try? decoder.decode(RemoteDebtPayment.self, from: payload))?.id

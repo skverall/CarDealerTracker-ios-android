@@ -18,6 +18,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -41,6 +42,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +62,8 @@ import com.ezcar24.business.ui.expense.ExpenseDetailBottomSheet
 import com.ezcar24.business.ui.expense.ExpenseViewModel
 import com.ezcar24.business.ui.theme.*
 import com.ezcar24.business.ui.components.*
+import com.ezcar24.business.data.local.FinancialAccount
+import com.ezcar24.business.data.local.VehicleIncome
 import com.ezcar24.business.data.sync.CloudSyncEnvironment
 import android.net.Uri
 import java.math.BigDecimal
@@ -79,6 +83,8 @@ fun VehicleDetailScreen(
     vehicleId: String,
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
+    canViewFinancials: Boolean = true,
+    canDeleteRecords: Boolean = false,
     viewModel: VehicleViewModel = hiltViewModel(),
     expenseViewModel: ExpenseViewModel = hiltViewModel()
 ) {
@@ -95,6 +101,8 @@ fun VehicleDetailScreen(
     val regionSettingsManager = rememberRegionSettingsManager()
     val regionState by regionSettingsManager.state.collectAsState()
     var selectedExpense by remember { mutableStateOf<com.ezcar24.business.data.local.Expense?>(null) }
+    var showIncomeSheet by remember { mutableStateOf(false) }
+    var incomePendingDelete by remember { mutableStateOf<VehicleIncome?>(null) }
 
     var showPhotoManager by remember { mutableStateOf(false) }
     var showPhotoViewer by remember { mutableStateOf(false) }
@@ -185,6 +193,7 @@ fun VehicleDetailScreen(
                     vehicleId = vehicle.id,
                     photoItems = detailState.photoItems,
                     coverVersion = coverVersion,
+                    onAddPhotos = { photoPickerLauncher.launch("image/*") },
                     onOpenViewer = { index ->
                         viewerIndex = index
                         showPhotoViewer = true
@@ -219,6 +228,16 @@ fun VehicleDetailScreen(
                         reportUrl = vehicle.reportURL
                     )
                 )
+
+                if (canViewFinancials) {
+                    VehicleIncomeSection(
+                        incomeEntries = detailState.vehicleIncomeEntries,
+                        totalIncome = detailState.totalVehicleIncome,
+                        canDeleteRecords = canDeleteRecords,
+                        onAddIncome = { showIncomeSheet = true },
+                        onDeleteIncome = { incomePendingDelete = it }
+                    )
+                }
 
                 if (vehicle.status == "sold") {
                     SaleDetailsCard(
@@ -274,6 +293,49 @@ fun VehicleDetailScreen(
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text(localizedUiString("Cancel"))
                 }
+            }
+        )
+    }
+
+    incomePendingDelete?.let { income ->
+        AlertDialog(
+            onDismissRequest = { incomePendingDelete = null },
+            title = { Text(localizedUiString("Delete income?")) },
+            text = { Text(localizedUiString("This will remove the income and subtract it from its account.")) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteVehicleIncome(income)
+                        incomePendingDelete = null
+                    }
+                ) {
+                    Text(localizedUiString("Delete"), color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { incomePendingDelete = null }) {
+                    Text(localizedUiString("Cancel"))
+                }
+            }
+        )
+    }
+
+    if (showIncomeSheet && vehicle != null) {
+        AddVehicleIncomeSheet(
+            accounts = uiState.accounts,
+            onDismiss = { showIncomeSheet = false },
+            onSave = { amount, date, type, payer, paymentMethod, notes, account ->
+                viewModel.addVehicleIncome(
+                    vehicleId = vehicle.id,
+                    amount = amount,
+                    date = date,
+                    incomeType = type,
+                    payerName = payer,
+                    paymentMethod = paymentMethod,
+                    notes = notes,
+                    accountId = account.id
+                )
+                showIncomeSheet = false
             }
         )
     }
@@ -379,6 +441,7 @@ private fun VehiclePhotoSection(
     vehicleId: java.util.UUID,
     photoItems: List<VehiclePhotoItem>,
     coverVersion: Long,
+    onAddPhotos: () -> Unit,
     onOpenViewer: (Int) -> Unit
 ) {
     val coverUrl = CloudSyncEnvironment.vehicleImageUrl(vehicleId)?.let { "$it?ts=$coverVersion" }
@@ -391,10 +454,14 @@ private fun VehiclePhotoSection(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(200.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFFE0E0E0))
-                .clickable(enabled = hasViewerContent) {
-                    onOpenViewer(0)
+                .clip(RoundedCornerShape(20.dp))
+                .background(if (primaryUrl != null) Color(0xFFE0E0E0) else EzcarSurfaceLight)
+                .clickable(enabled = primaryUrl != null || !hasViewerContent) {
+                    if (primaryUrl != null) {
+                        onOpenViewer(0)
+                    } else {
+                        onAddPhotos()
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {
@@ -438,13 +505,23 @@ private fun VehiclePhotoSection(
             } else {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
-                        Icons.Default.DirectionsCar,
+                        Icons.Default.AddCircle,
                         contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = Color.Gray
+                        modifier = Modifier.size(52.dp),
+                        tint = EzcarGreen
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text(localizedUiString("Tap Edit to add photo"), color = Color.Gray)
+                    Text(
+                        localizedUiString("Add Photos"),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = EzcarNavy
+                    )
+                    Text(
+                        localizedUiString("Choose photos for this vehicle"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = EzcarTextSecondaryLight
+                    )
                 }
             }
         }
@@ -489,21 +566,22 @@ private fun PhotoActionRow(
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         Button(
             onClick = onAddPhotos,
-            modifier = Modifier.weight(1f),
+            modifier = if (hasPhotos) Modifier.weight(1f) else Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(containerColor = EzcarGreen)
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text(localizedUiString("Add Photos"))
         }
-        OutlinedButton(
-            onClick = onManagePhotos,
-            modifier = Modifier.weight(1f),
-            enabled = hasPhotos
-        ) {
-            Icon(Icons.Default.GridOn, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(localizedUiString("Manage"))
+        if (hasPhotos) {
+            OutlinedButton(
+                onClick = onManagePhotos,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.GridOn, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(localizedUiString("Manage"))
+            }
         }
     }
 }
@@ -1119,6 +1197,452 @@ private fun VehicleHeaderCard(
             }
         }
     }
+}
+
+@Composable
+private fun VehicleIncomeSection(
+    incomeEntries: List<VehicleIncome>,
+    totalIncome: BigDecimal,
+    canDeleteRecords: Boolean,
+    onAddIncome: () -> Unit,
+    onDeleteIncome: (VehicleIncome) -> Unit
+) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(EzcarGreen.copy(alpha = 0.12f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.AttachMoney,
+                            contentDescription = null,
+                            tint = EzcarGreen,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(
+                            localizedUiString("Vehicle income"),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = EzcarTextPrimaryLight
+                        )
+                        Text(
+                            localizedUiString("Rentals, storage, service, and other income."),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = EzcarTextSecondaryLight
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = EzcarGreen.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        incomeEntries.size.toString(),
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 5.dp),
+                        color = EzcarGreen,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Text(
+                regionSettingsManager.formatCurrency(totalIncome),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = EzcarGreen
+            )
+
+            Button(
+                onClick = onAddIncome,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = EzcarNavy),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(localizedUiString("Add income"), fontWeight = FontWeight.SemiBold)
+            }
+
+            if (incomeEntries.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = EzcarSurfaceMutedLight
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = null,
+                            tint = EzcarTextSecondaryLight,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            localizedUiString("No income recorded"),
+                            color = EzcarTextSecondaryLight,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
+            } else {
+                incomeEntries.forEachIndexed { index, income ->
+                    VehicleIncomeRow(
+                        income = income,
+                        canDelete = canDeleteRecords,
+                        onDelete = { onDeleteIncome(income) }
+                    )
+                    if (index < incomeEntries.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 8.dp),
+                            color = Color(0xFFE5E5EA)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VehicleIncomeRow(
+    income: VehicleIncome,
+    canDelete: Boolean,
+    onDelete: () -> Unit
+) {
+    val regionSettingsManager = rememberRegionSettingsManager()
+    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Icon(
+                imageVector = vehicleIncomeIcon(income.incomeType),
+                contentDescription = null,
+                tint = EzcarGreen,
+                modifier = Modifier.size(22.dp)
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    localizedUiString(vehicleIncomeTitle(income.incomeType)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                income.payerName?.takeIf { it.isNotBlank() }?.let { payer ->
+                    Text(payer, style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                }
+                income.notes?.takeIf { it.isNotBlank() }?.let { notes ->
+                    Text(notes, style = MaterialTheme.typography.bodySmall, color = Color.Gray, maxLines = 2)
+                }
+                Text(
+                    listOfNotNull(
+                        dateFormatter.format(income.date),
+                        income.paymentMethod?.takeIf { it.isNotBlank() }
+                    ).joinToString(" - "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
+                )
+            }
+        }
+
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                regionSettingsManager.formatCurrency(income.amount),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = EzcarGreen
+            )
+            if (canDelete) {
+                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = localizedUiString("Delete income"),
+                        tint = Color.Red,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddVehicleIncomeSheet(
+    accounts: List<FinancialAccount>,
+    onDismiss: () -> Unit,
+    onSave: (BigDecimal, Date, String, String?, String?, String?, FinancialAccount) -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val regionSettingsManager = rememberRegionSettingsManager()
+    var amountText by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf("rental") }
+    var selectedAccount by remember(accounts) {
+        mutableStateOf(
+            accounts.firstOrNull { it.accountType.equals("cash", ignoreCase = true) }
+                ?: accounts.firstOrNull()
+        )
+    }
+    var selectedPaymentMethod by remember { mutableStateOf("Cash") }
+    var payerName by remember { mutableStateOf("") }
+    var notes by remember { mutableStateOf("") }
+    var selectedDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    var showDatePicker by remember { mutableStateOf(false) }
+    var typeMenuExpanded by remember { mutableStateOf(false) }
+    var accountMenuExpanded by remember { mutableStateOf(false) }
+    var paymentMenuExpanded by remember { mutableStateOf(false) }
+    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val selectedDate = remember(selectedDateMillis) { Date(selectedDateMillis) }
+    val parsedAmount = remember(amountText) {
+        runCatching { BigDecimal(amountText.replace(",", ".").trim()) }.getOrNull()
+    }
+    val canSave = parsedAmount != null && parsedAmount > BigDecimal.ZERO && selectedAccount != null
+    val incomeTypes = remember { listOf("rental", "storage", "service", "other") }
+    val paymentMethods = remember { listOf("Cash", "Bank Transfer", "Cheque", "Finance", "Other") }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = Color.White
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                localizedUiString("Add vehicle income"),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            OutlinedTextField(
+                value = amountText,
+                onValueChange = { value ->
+                    amountText = value.filter { it.isDigit() || it == '.' || it == ',' }
+                },
+                label = { Text(localizedUiString("Amount")) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            DropdownField(
+                label = localizedUiString("Type"),
+                value = localizedUiString(vehicleIncomeTitle(selectedType)),
+                expanded = typeMenuExpanded,
+                onExpandedChange = { typeMenuExpanded = it }
+            ) {
+                incomeTypes.forEach { type ->
+                    DropdownMenuItem(
+                        text = { Text(localizedUiString(vehicleIncomeTitle(type))) },
+                        leadingIcon = { Icon(vehicleIncomeIcon(type), contentDescription = null) },
+                        onClick = {
+                            selectedType = type
+                            typeMenuExpanded = false
+                        }
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = dateFormatter.format(selectedDate),
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(localizedUiString("Date")) },
+                trailingIcon = { Icon(Icons.Default.DateRange, contentDescription = null) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showDatePicker = true }
+            )
+
+            DropdownField(
+                label = localizedUiString("Account"),
+                value = selectedAccount?.let {
+                    "${it.accountType} - ${regionSettingsManager.formatCurrency(it.balance)}"
+                } ?: localizedUiString("Select account"),
+                expanded = accountMenuExpanded,
+                onExpandedChange = { accountMenuExpanded = it }
+            ) {
+                accounts.forEach { account ->
+                    DropdownMenuItem(
+                        text = { Text("${account.accountType} - ${regionSettingsManager.formatCurrency(account.balance)}") },
+                        onClick = {
+                            selectedAccount = account
+                            accountMenuExpanded = false
+                        }
+                    )
+                }
+            }
+
+            DropdownField(
+                label = localizedUiString("Payment"),
+                value = localizedUiString(selectedPaymentMethod),
+                expanded = paymentMenuExpanded,
+                onExpandedChange = { paymentMenuExpanded = it }
+            ) {
+                paymentMethods.forEach { method ->
+                    DropdownMenuItem(
+                        text = { Text(localizedUiString(method)) },
+                        onClick = {
+                            selectedPaymentMethod = method
+                            paymentMenuExpanded = false
+                        }
+                    )
+                }
+            }
+
+            OutlinedTextField(
+                value = payerName,
+                onValueChange = { payerName = it },
+                label = { Text(localizedUiString("Payer name")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                label = { Text(localizedUiString("Notes")) },
+                minLines = 2,
+                maxLines = 4,
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Button(
+                onClick = {
+                    val amount = parsedAmount ?: return@Button
+                    val account = selectedAccount ?: return@Button
+                    onSave(
+                        amount,
+                        selectedDate,
+                        selectedType,
+                        payerName.takeIf { it.isNotBlank() },
+                        selectedPaymentMethod,
+                        notes.takeIf { it.isNotBlank() },
+                        account
+                    )
+                },
+                enabled = canSave,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = EzcarGreen)
+            ) {
+                Icon(Icons.Default.Check, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(localizedUiString("Save"))
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+    }
+
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState(initialSelectedDateMillis = selectedDateMillis)
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { selectedDateMillis = it }
+                        showDatePicker = false
+                    }
+                ) {
+                    Text(localizedUiString("OK"))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text(localizedUiString("Cancel"))
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
+    }
+}
+
+@Composable
+private fun DropdownField(
+    label: String,
+    value: String,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            trailingIcon = {
+                Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onExpandedChange(true) }
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { onExpandedChange(false) },
+            modifier = Modifier.fillMaxWidth(0.9f),
+            content = content
+        )
+    }
+}
+
+private fun vehicleIncomeTitle(type: String): String {
+    return when (type) {
+        "storage" -> "Storage"
+        "service" -> "Service"
+        "other" -> "Other"
+        else -> "Rental"
+    }
+}
+
+private fun vehicleIncomeIcon(type: String) = when (type) {
+    "storage" -> Icons.Default.Inventory2
+    "service" -> Icons.Default.Build
+    "other" -> Icons.Default.AddCircle
+    else -> Icons.Default.AttachMoney
 }
 
 @Composable

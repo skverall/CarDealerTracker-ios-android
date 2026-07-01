@@ -51,6 +51,17 @@ struct VehicleDetailView: View {
 
     @State private var editPaymentMethod: String = "Cash"
     @State private var selectedAccount: FinancialAccount? = nil
+    @State private var showAddIncomeSheet: Bool = false
+    @State private var incomeAmount: String = ""
+    @State private var incomeDate: Date = Date()
+    @State private var incomeType: String = "rental"
+    @State private var incomePayerName: String = ""
+    @State private var incomePaymentMethod: String = "Cash"
+    @State private var incomeNotes: String = ""
+    @State private var incomeSelectedAccount: FinancialAccount? = nil
+    @State private var incomeError: String? = nil
+    @State private var incomePendingDelete: VehicleIncome? = nil
+    @State private var showIncomeDeleteDialog: Bool = false
     
     // New Feature Fields
     @State private var editAskingPrice: String = ""
@@ -75,6 +86,12 @@ struct VehicleDetailView: View {
     @State private var showPhotoDeleteDialog: Bool = false
 
     let paymentMethods = ["Cash", "Bank Transfer", "Cheque", "Finance", "Other"]
+    private let incomeTypeOptions = [
+        VehicleIncomeTypeOption(code: "rental", title: "Rental", iconName: "key.fill"),
+        VehicleIncomeTypeOption(code: "storage", title: "Storage", iconName: "shippingbox.fill"),
+        VehicleIncomeTypeOption(code: "service", title: "Service", iconName: "wrench.adjustable.fill"),
+        VehicleIncomeTypeOption(code: "other", title: "Other", iconName: "plus.circle.fill")
+    ]
 
     @State private var isEditing: Bool = false
 
@@ -117,8 +134,7 @@ struct VehicleDetailView: View {
     }
 
     private func normalizedStatus(_ status: String?) -> String {
-        let value = status ?? "owned"
-        return value == "reserved" ? "owned" : value
+        status ?? "owned"
     }
 
     private func sanitizedDecimal(from s: String) -> Decimal? {
@@ -130,6 +146,7 @@ struct VehicleDetailView: View {
 
 
     @FetchRequest var expenses: FetchedResults<Expense>
+    @FetchRequest var vehicleIncomeEntries: FetchedResults<VehicleIncome>
     
     @FetchRequest(
         sortDescriptors: [NSSortDescriptor(keyPath: \FinancialAccount.accountType, ascending: true)],
@@ -146,10 +163,24 @@ struct VehicleDetailView: View {
             predicate: NSPredicate(format: "vehicle == %@ AND deletedAt == nil", vehicle),
             animation: .default
         )
+        _vehicleIncomeEntries = FetchRequest(
+            sortDescriptors: [NSSortDescriptor(keyPath: \VehicleIncome.date, ascending: false)],
+            predicate: NSPredicate(format: "vehicle == %@ AND deletedAt == nil", vehicle),
+            animation: .default
+        )
     }
 
     var totalExpenses: Decimal {
         expenses.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
+    }
+
+    var totalVehicleIncome: Decimal {
+        vehicleIncomeEntries.reduce(0) { $0 + ($1.amount?.decimalValue ?? 0) }
+    }
+
+    private var canSaveVehicleIncome: Bool {
+        guard let amount = sanitizedDecimal(from: incomeAmount), amount > 0 else { return false }
+        return (incomeSelectedAccount ?? defaultSaleAccount()) != nil
     }
 
     var profit: Decimal? {
@@ -205,6 +236,17 @@ struct VehicleDetailView: View {
         )
     }
 
+    private func preparePendingPhotos(_ pending: [PendingVehiclePhoto]) {
+        pendingPhotos = pending
+        if let id = vehicle.id {
+            let dealerId = CloudSyncEnvironment.currentDealerId
+            replaceCoverOnUpload = !ImageStore.shared.hasImage(id: id, dealerId: dealerId)
+        } else {
+            replaceCoverOnUpload = false
+        }
+        showPhotoUploadSheet = !pending.isEmpty
+    }
+
     private func preparePendingPhotos(items: [PhotosPickerItem]) async {
         var pending: [PendingVehiclePhoto] = []
         for item in items {
@@ -214,15 +256,8 @@ struct VehicleDetailView: View {
             }
         }
         await MainActor.run {
-            pendingPhotos = pending
             selectedPhotos = []
-            if let id = vehicle.id {
-                let dealerId = CloudSyncEnvironment.currentDealerId
-                replaceCoverOnUpload = !ImageStore.shared.hasImage(id: id, dealerId: dealerId)
-            } else {
-                replaceCoverOnUpload = false
-            }
-            showPhotoUploadSheet = !pending.isEmpty
+            preparePendingPhotos(pending)
         }
     }
 
@@ -518,6 +553,7 @@ struct VehicleDetailView: View {
             selectedAccount = existingSale.account
         }
         applyDefaultSaleAccountIfNeeded()
+        applyDefaultIncomeAccountIfNeeded()
     }
 
     private func ensureShareContactIsReady(
@@ -665,14 +701,14 @@ struct VehicleDetailView: View {
     private var detailScreen: some View {
         detailScrollContent
             .toolbar { detailToolbar }
+            .sheet(isPresented: $showPhotoUploadSheet) {
+                photoUploadSheetContent
+            }
             .onChange(of: selectedPhotos) { _, items in
                 guard !items.isEmpty else { return }
                 Task {
                     await preparePendingPhotos(items: items)
                 }
-            }
-            .sheet(isPresented: $showPhotoUploadSheet) {
-                photoUploadSheetContent
             }
             .sheet(isPresented: $showShareContactSheet) {
                 shareContactSheetContent
@@ -689,6 +725,9 @@ struct VehicleDetailView: View {
             .sheet(isPresented: $showPhotoManager) {
                 photoManagerSheetContent
             }
+            .sheet(isPresented: $showAddIncomeSheet) {
+                addVehicleIncomeSheet
+            }
             .fullScreenCover(isPresented: $showPhotoViewer) {
                 photoViewerContent
             }
@@ -703,12 +742,24 @@ struct VehicleDetailView: View {
                     photoPendingDelete = nil
                 }
             }
+            .confirmationDialog("Delete income?".localizedString, isPresented: $showIncomeDeleteDialog) {
+                Button("Delete income".localizedString, role: .destructive) {
+                    if let income = incomePendingDelete {
+                        deleteVehicleIncome(income)
+                    }
+                    incomePendingDelete = nil
+                }
+                Button("cancel".localizedString, role: .cancel) {
+                    incomePendingDelete = nil
+                }
+            }
             .alert(photoOrderAlertText, isPresented: photoOrderAlertBinding) {
                 Button("OK".localizedString, role: .cancel, action: dismissPhotoOrderAlert)
             }
             .onAppear(perform: handleViewAppear)
             .onChange(of: accounts.count) { _, _ in
                 applyDefaultSaleAccountIfNeeded()
+                applyDefaultIncomeAccountIfNeeded()
             }
             .background(ColorTheme.secondaryBackground)
             .navigationTitle("vehicle_details".localizedString)
@@ -906,6 +957,214 @@ struct VehicleDetailView: View {
         }
     }
 
+    private var addVehicleIncomeSheet: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "banknote.fill")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(ColorTheme.success)
+                            .frame(width: 44, height: 44)
+                            .background(ColorTheme.success.opacity(0.12), in: Circle())
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Vehicle income".localizedString)
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(ColorTheme.primaryText)
+                            Text("Rental, storage, service, or other money earned by this vehicle.".localizedString)
+                                .font(.subheadline)
+                                .foregroundColor(ColorTheme.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Amount".localizedString)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .textCase(.uppercase)
+
+                        HStack(spacing: 10) {
+                            Image(systemName: "plus.forwardslash.minus")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundColor(ColorTheme.success)
+
+                            TextField("0.00", text: $incomeAmount)
+                                .keyboardType(.decimalPad)
+                                .font(.system(size: 34, weight: .bold, design: .rounded))
+                                .foregroundColor(ColorTheme.primaryText)
+                                .onChange(of: incomeAmount) { _, new in
+                                    let filtered = filterAmountInput(new)
+                                    if filtered != new { incomeAmount = filtered }
+                                }
+                        }
+                    }
+                    .padding(16)
+                    .background(ColorTheme.cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(ColorTheme.success.opacity(0.16), lineWidth: 1)
+                    )
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Type".localizedString)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .textCase(.uppercase)
+
+                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                            ForEach(incomeTypeOptions) { option in
+                                Button {
+                                    incomeType = option.code
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: option.iconName)
+                                            .font(.system(size: 15, weight: .bold))
+                                        Text(option.title.localizedString)
+                                            .font(.subheadline.weight(.semibold))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.8)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 12)
+                                    .foregroundColor(incomeType == option.code ? .white : ColorTheme.primaryText)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                            .fill(incomeType == option.code ? ColorTheme.primary : ColorTheme.secondaryBackground)
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 15, style: .continuous)
+                                            .stroke(incomeType == option.code ? Color.clear : Color.black.opacity(0.06), lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.hapticScale)
+                            }
+                        }
+                    }
+
+                    VStack(spacing: 0) {
+                        incomeFormDateRow
+                        Divider().padding(.leading, 16)
+                        incomeFormAccountRow
+                        Divider().padding(.leading, 16)
+                        incomeFormPaymentRow
+                    }
+                    .background(ColorTheme.cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                    )
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Details".localizedString)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .textCase(.uppercase)
+
+                        VStack(spacing: 0) {
+                            TextField("Payer name".localizedString, text: $incomePayerName)
+                                .padding(16)
+                            Divider().padding(.leading, 16)
+                            TextField("Notes".localizedString, text: $incomeNotes, axis: .vertical)
+                                .lineLimit(2...4)
+                                .padding(16)
+                        }
+                        .background(ColorTheme.cardBackground, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                .stroke(Color.black.opacity(0.05), lineWidth: 1)
+                        )
+                    }
+
+                    if let incomeError {
+                        Label(incomeError, systemImage: "exclamationmark.triangle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(ColorTheme.danger)
+                            .padding(12)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(ColorTheme.danger.opacity(0.1), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+
+                    Button {
+                        addVehicleIncome()
+                    } label: {
+                        Label("save".localizedString, systemImage: "checkmark.circle.fill")
+                            .font(.headline.weight(.bold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 15)
+                            .foregroundColor(.white)
+                            .background(canSaveVehicleIncome ? ColorTheme.primary : ColorTheme.secondaryText.opacity(0.45), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+                    .buttonStyle(.hapticScale)
+                    .disabled(!canSaveVehicleIncome)
+                }
+                .padding(20)
+                .padding(.bottom, 10)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .background(ColorTheme.background)
+            .navigationTitle("Add income".localizedString)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("cancel".localizedString) {
+                        showAddIncomeSheet = false
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("save".localizedString) {
+                        addVehicleIncome()
+                    }
+                    .disabled(!canSaveVehicleIncome)
+                }
+            }
+        }
+        .presentationDetents([.large])
+    }
+
+    private var incomeFormDateRow: some View {
+        HStack {
+            Label("Date".localizedString, systemImage: "calendar")
+                .foregroundColor(ColorTheme.primaryText)
+            Spacer()
+            DatePicker("", selection: $incomeDate, displayedComponents: .date)
+                .labelsHidden()
+        }
+        .padding(16)
+    }
+
+    private var incomeFormAccountRow: some View {
+        HStack {
+            Label("Account".localizedString, systemImage: "wallet.pass")
+                .foregroundColor(ColorTheme.primaryText)
+            Spacer()
+            Picker("", selection: $incomeSelectedAccount) {
+                Text("select_account".localizedString).tag(nil as FinancialAccount?)
+                ForEach(accounts) { account in
+                    Text(account.displayTitle).tag(account as FinancialAccount?)
+                }
+            }
+            .labelsHidden()
+        }
+        .padding(16)
+    }
+
+    private var incomeFormPaymentRow: some View {
+        HStack {
+            Label("Payment".localizedString, systemImage: "creditcard")
+                .foregroundColor(ColorTheme.primaryText)
+            Spacer()
+            Picker("", selection: $incomePaymentMethod) {
+                ForEach(paymentMethods, id: \.self) { method in
+                    Text(method.localizedString).tag(method)
+                }
+            }
+            .labelsHidden()
+        }
+        .padding(16)
+    }
+
     @ViewBuilder
     private var saveStateBanner: some View {
         VStack {
@@ -940,60 +1199,74 @@ struct VehicleDetailView: View {
             let dealerId = CloudSyncEnvironment.currentDealerId
             let hasImage = ImageStore.shared.hasImage(id: id, dealerId: dealerId)
             let addPhotosText = "add_photos".localizedString
+            let choosePhotosText = "Choose photos for this vehicle".localizedString
+            let noPhotosText = "No photos yet".localizedString
+            let editToAddPhotosText = "Edit vehicle to add photos".localizedString
+
             VStack(spacing: 12) {
-                ZStack(alignment: .bottomLeading) {
-                    if hasImage {
-                        VehicleLargeImageView(vehicleID: id)
-                            .id(refreshID)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 260)
-                            .clipped()
-                    } else {
-                        RoundedRectangle(cornerRadius: 0)
-                            .fill(ColorTheme.secondaryBackground)
-                            .frame(height: 200)
-                            .overlay(
-                                VStack(spacing: 12) {
-                                    Image(systemName: "camera.fill")
-                                        .font(.system(size: 32))
-                                        .foregroundColor(ColorTheme.secondary)
-                                    Text(addPhotosText)
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(ColorTheme.secondary)
-                                }
+                if hasImage {
+                    photoHeroContainer(shouldOpenViewer: true) {
+                        ZStack(alignment: .bottomLeading) {
+                            VehicleLargeImageView(vehicleID: id)
+                                .id(refreshID)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 260)
+                                .clipped()
+
+                            LinearGradient(
+                                colors: [.clear, .black.opacity(0.55)],
+                                startPoint: .center,
+                                endPoint: .bottom
                             )
-                    }
+                            .frame(height: 110)
+                            .allowsHitTesting(false)
 
-                    LinearGradient(
-                        colors: [.clear, .black.opacity(0.55)],
-                        startPoint: .center,
-                        endPoint: .bottom
-                    )
-                    .frame(height: 110)
-                    .allowsHitTesting(false)
-
-                    if hasImage {
-                        HStack(spacing: 8) {
-                            if vehicle.status != "sold", detailDaysInInventory > 0 {
-                                FloatingInfoPill(text: String(format: "detail_days_badge".localizedString, detailDaysInInventory), color: detailAgeAccentColor)
+                            HStack(spacing: 8) {
+                                if vehicle.status != "sold", detailDaysInInventory > 0 {
+                                    FloatingInfoPill(text: String(format: "detail_days_badge".localizedString, detailDaysInInventory), color: detailAgeAccentColor)
+                                }
+                                StatusBadge(status: vehicle.status ?? "")
                             }
-                            StatusBadge(status: vehicle.status ?? "")
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 14)
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 14)
                     }
-                }
-                .frame(maxWidth: .infinity)
-                .onTapGesture {
-                    if hasImage || !vehiclePhotos.isEmpty {
-                        openPhotoViewer(startingAt: 0)
+                    .frame(maxWidth: .infinity)
+                } else if isEditing {
+                    PhotosPicker(
+                        selection: $selectedPhotos,
+                        maxSelectionCount: 20,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        emptyPhotoPlaceholder(
+                            title: addPhotosText,
+                            subtitle: choosePhotosText,
+                            iconName: "photo.badge.plus",
+                            isAction: true
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isUploadingPhotos)
+                } else {
+                    photoHeroContainer(shouldOpenViewer: !vehiclePhotos.isEmpty) {
+                        emptyPhotoPlaceholder(
+                            title: noPhotosText,
+                            subtitle: editToAddPhotosText,
+                            iconName: "photo",
+                            isAction: false
+                        )
                     }
                 }
 
-                if isEditing {
+                if isEditing && (hasImage || !vehiclePhotos.isEmpty) {
                     HStack(spacing: 12) {
-                        PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 20, matching: .images) {
+                        PhotosPicker(
+                            selection: $selectedPhotos,
+                            maxSelectionCount: 20,
+                            matching: .images,
+                            photoLibrary: .shared()
+                        ) {
                             Label(addPhotosText, systemImage: "photo.on.rectangle.angled")
                                 .font(.subheadline.weight(.semibold))
                                 .padding(.horizontal, 12)
@@ -1003,7 +1276,9 @@ struct VehicleDetailView: View {
                                 .foregroundColor(ColorTheme.primary)
                                 .cornerRadius(12)
                         }
+                        .buttonStyle(.plain)
                         .disabled(isUploadingPhotos)
+
                         Button {
                             showPhotoManager = true
                         } label: {
@@ -1016,7 +1291,7 @@ struct VehicleDetailView: View {
                                 .foregroundColor(ColorTheme.primaryText)
                                 .cornerRadius(12)
                         }
-                        .disabled(isUploadingPhotos || (!hasImage && vehiclePhotos.isEmpty))
+                        .disabled(isUploadingPhotos)
                     }
                     .padding(.horizontal)
                 }
@@ -1048,6 +1323,57 @@ struct VehicleDetailView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func photoHeroContainer<Content: View>(shouldOpenViewer: Bool, @ViewBuilder content: () -> Content) -> some View {
+        if shouldOpenViewer {
+            content()
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    openPhotoViewer(startingAt: 0)
+                }
+        } else {
+            content()
+        }
+    }
+
+    private func emptyPhotoPlaceholder(title: String, subtitle: String, iconName: String, isAction: Bool) -> some View {
+        VStack(spacing: 12) {
+            Image(systemName: iconName)
+                .font(.system(size: 34, weight: .semibold))
+                .foregroundColor(isAction ? ColorTheme.primary : ColorTheme.secondaryText)
+                .frame(width: 62, height: 62)
+                .background(
+                    Circle()
+                        .fill(isAction ? ColorTheme.primary.opacity(0.12) : ColorTheme.secondaryBackground)
+                )
+
+            VStack(spacing: 4) {
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundColor(isAction ? ColorTheme.primary : ColorTheme.primaryText)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundColor(ColorTheme.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 220)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(ColorTheme.cardBackground)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(
+                    isAction ? ColorTheme.primary.opacity(0.18) : Color.black.opacity(0.06),
+                    style: StrokeStyle(lineWidth: 1.2, dash: isAction ? [7, 6] : [])
+                )
+        )
+        .padding(.horizontal)
+        .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
     @ViewBuilder
@@ -1117,11 +1443,12 @@ struct VehicleDetailView: View {
                         Text("status".localizedString)
                             .foregroundColor(ColorTheme.primaryText)
                         Spacer()
-                        Picker("Status".localizedString, selection: $editStatus) {
-                            Text("status_owned".localizedString).tag("owned")
-                            Text("on_sale".localizedString).tag("on_sale")
-                            Text("in_transit".localizedString).tag("in_transit")
-                            Text("under_service".localizedString).tag("under_service")
+	                    Picker("Status".localizedString, selection: $editStatus) {
+	                        Text("status_owned".localizedString).tag("owned")
+	                        Text("status_reserved".localizedString).tag("reserved")
+	                        Text("on_sale".localizedString).tag("on_sale")
+	                        Text("in_transit".localizedString).tag("in_transit")
+	                        Text("under_service".localizedString).tag("under_service")
                             Text("sold".localizedString).tag("sold")
                         }
                         .pickerStyle(.menu)
@@ -1231,15 +1558,42 @@ struct VehicleDetailView: View {
     }
 
     private func editRow(label: String, text: Binding<String>, placeholder: String, keyboardType: UIKeyboardType = .default, autocapitalization: TextInputAutocapitalization = .sentences, disabled: Bool = false) -> some View {
-        HStack {
+        HStack(spacing: 14) {
             Text(label)
                 .foregroundColor(ColorTheme.primaryText)
-            Spacer()
-            TextField(placeholder, text: text)
-                .keyboardType(keyboardType)
-                .textInputAutocapitalization(autocapitalization)
-                .multilineTextAlignment(.trailing)
-                .disabled(disabled)
+                .font(.body.weight(.medium))
+                .lineLimit(1)
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 8) {
+                TextField(placeholder, text: text)
+                    .keyboardType(keyboardType)
+                    .textInputAutocapitalization(autocapitalization)
+                    .multilineTextAlignment(.trailing)
+                    .textFieldStyle(.plain)
+                    .font(.body.weight(.semibold))
+                    .foregroundColor(disabled ? ColorTheme.secondaryText : ColorTheme.primaryText)
+                    .disabled(disabled)
+                    .submitLabel(.done)
+
+                if !disabled {
+                    Image(systemName: "pencil")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(ColorTheme.primary.opacity(0.72))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 9)
+            .frame(minWidth: 132, maxWidth: 240)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(disabled ? ColorTheme.secondaryBackground.opacity(0.55) : ColorTheme.primary.opacity(0.07))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .stroke(disabled ? Color.clear : ColorTheme.primary.opacity(0.16), lineWidth: 1)
+            )
         }
         .padding()
     }
@@ -1256,6 +1610,9 @@ struct VehicleDetailView: View {
     @ViewBuilder
     private var displayModeView: some View {
         displayHeaderView
+        if permissionService.can(.viewFinancials) {
+            displayVehicleIncomeView
+        }
         displayFinancialsView
         if permissionService.canViewVehicleCost() {
             displayExpensesView
@@ -1376,11 +1733,12 @@ struct VehicleDetailView: View {
                     Text("status".localizedString)
                         .foregroundColor(ColorTheme.secondaryText)
                     Spacer()
-                    Picker("Status".localizedString, selection: $editStatus) {
-                        Text("status_owned".localizedString).tag("owned")
-                        Text("on_sale".localizedString).tag("on_sale")
-                        Text("in_transit".localizedString).tag("in_transit")
-                        Text("under_service".localizedString).tag("under_service")
+	                    Picker("Status".localizedString, selection: $editStatus) {
+	                        Text("status_owned".localizedString).tag("owned")
+	                        Text("status_reserved".localizedString).tag("reserved")
+	                        Text("on_sale".localizedString).tag("on_sale")
+	                        Text("in_transit".localizedString).tag("in_transit")
+	                        Text("under_service".localizedString).tag("under_service")
                         Text("sold".localizedString).tag("sold")
                     }
                     .pickerStyle(.menu)
@@ -1751,6 +2109,101 @@ struct VehicleDetailView: View {
             .cardStyle()
             .padding(.horizontal)
         }
+    }
+
+    private var displayVehicleIncomeView: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "banknote.fill")
+                    .font(.system(size: 19, weight: .bold))
+                    .foregroundColor(ColorTheme.success)
+                    .frame(width: 44, height: 44)
+                    .background(ColorTheme.success.opacity(0.12), in: Circle())
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Vehicle income".localizedString)
+                        .font(.headline.weight(.bold))
+                        .foregroundColor(ColorTheme.primaryText)
+                    Text("Rentals, storage, service, and other income.".localizedString)
+                        .font(.subheadline)
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(totalVehicleIncome.asCurrency())
+                        .font(.title3.weight(.bold))
+                        .foregroundColor(ColorTheme.success)
+                        .monospacedDigit()
+                    Text(String(format: "%d", vehicleIncomeEntries.count))
+                        .font(.caption2.weight(.bold))
+                        .foregroundColor(ColorTheme.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(ColorTheme.primary.opacity(0.1), in: Capsule())
+                }
+            }
+
+            if vehicleIncomeEntries.isEmpty {
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkle.magnifyingglass")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(ColorTheme.accent)
+                    Text("No income recorded".localizedString)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(ColorTheme.secondaryText)
+                    Spacer()
+                }
+                .padding(12)
+                .background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(vehicleIncomeEntries, id: \.id) { income in
+                        VehicleIncomeRow(
+                            income: income,
+                            typeTitle: incomeTypeTitle(for: income.incomeType),
+                            canDelete: canDeleteRecords,
+                            onDelete: {
+                                incomePendingDelete = income
+                                showIncomeDeleteDialog = true
+                            }
+                        )
+                    }
+                }
+                .padding(12)
+                .background(ColorTheme.secondaryBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+
+            Button {
+                presentAddVehicleIncome()
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 18, weight: .bold))
+                    Text("Add income".localizedString)
+                        .font(.headline.weight(.bold))
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .bold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(ColorTheme.primary, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
+            .buttonStyle(.hapticScale)
+            .accessibilityLabel("Add vehicle income".localizedString)
+        }
+        .padding(16)
+        .background(ColorTheme.cardBackground, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(ColorTheme.success.opacity(0.14), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.04), radius: 12, y: 6)
+        .padding(.horizontal)
     }
 
     private var displayExpensesView: some View {
@@ -2340,6 +2793,107 @@ struct VehicleDetailView: View {
     private func applyDefaultSaleAccountIfNeeded() {
         if selectedAccount == nil {
             selectedAccount = defaultSaleAccount()
+        }
+    }
+
+    private func applyDefaultIncomeAccountIfNeeded() {
+        if incomeSelectedAccount == nil {
+            incomeSelectedAccount = defaultSaleAccount()
+        }
+    }
+
+    private func presentAddVehicleIncome() {
+        createDefaultAccountsIfNeeded()
+        resetVehicleIncomeForm()
+        showAddIncomeSheet = true
+    }
+
+    private func resetVehicleIncomeForm() {
+        incomeAmount = ""
+        incomeDate = Date()
+        incomeType = "rental"
+        incomePayerName = ""
+        incomePaymentMethod = "Cash"
+        incomeNotes = ""
+        incomeSelectedAccount = defaultSaleAccount()
+        incomeError = nil
+    }
+
+    private func incomeTypeTitle(for code: String?) -> String {
+        let normalized = code ?? "rental"
+        return (incomeTypeOptions.first { $0.code == normalized }?.title ?? normalized.capitalized).localizedString
+    }
+
+    private func addVehicleIncome() {
+        incomeError = nil
+        guard let amount = sanitizedDecimal(from: incomeAmount), amount > 0 else {
+            incomeError = "Enter an income amount.".localizedString
+            return
+        }
+        guard let account = incomeSelectedAccount ?? defaultSaleAccount() else {
+            incomeError = "Choose the account that received the money.".localizedString
+            return
+        }
+
+        let now = Date()
+        let income = VehicleIncome(context: viewContext)
+        income.id = UUID()
+        income.amount = NSDecimalNumber(decimal: amount)
+        income.date = Calendar.current.startOfDay(for: incomeDate)
+        income.incomeType = incomeType
+        income.payerName = incomePayerName.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        income.paymentMethod = incomePaymentMethod
+        income.notes = incomeNotes.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        income.createdAt = now
+        income.updatedAt = now
+        income.deletedAt = nil
+        income.vehicle = vehicle
+        income.account = account
+
+        let currentBalance = account.balance?.decimalValue ?? 0
+        account.balance = NSDecimalNumber(decimal: currentBalance + amount)
+        account.updatedAt = now
+
+        do {
+            try viewContext.save()
+            showAddIncomeSheet = false
+            resetVehicleIncomeForm()
+            guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+            Task {
+                await CloudSyncManager.shared?.upsertVehicleIncome(income, dealerId: dealerId)
+                await CloudSyncManager.shared?.upsertFinancialAccount(account, dealerId: dealerId)
+            }
+        } catch {
+            viewContext.rollback()
+            incomeError = "Couldn't save income. Please try again.".localizedString
+        }
+    }
+
+    private func deleteVehicleIncome(_ income: VehicleIncome) {
+        guard canDeleteRecords else { return }
+        let now = Date()
+        let amount = income.amount?.decimalValue ?? 0
+        let account = income.account
+        income.deletedAt = now
+        income.updatedAt = now
+        if let account {
+            let currentBalance = account.balance?.decimalValue ?? 0
+            account.balance = NSDecimalNumber(decimal: currentBalance - amount)
+            account.updatedAt = now
+        }
+
+        do {
+            try viewContext.save()
+            guard let dealerId = CloudSyncEnvironment.currentDealerId else { return }
+            Task {
+                await CloudSyncManager.shared?.deleteVehicleIncome(income, dealerId: dealerId)
+                if let account {
+                    await CloudSyncManager.shared?.upsertFinancialAccount(account, dealerId: dealerId)
+                }
+            }
+        } catch {
+            viewContext.rollback()
+            saveError = "Couldn't delete income. Please try again.".localizedString
         }
     }
     
@@ -3814,6 +4368,108 @@ enum VehicleSaleEditMutationResolver {
             deletedSaleId: deletedSaleId,
             accountsToSync: accountsToSync
         )
+    }
+}
+
+private struct VehicleIncomeTypeOption: Identifiable {
+    let code: String
+    let title: String
+    let iconName: String
+
+    var id: String { code }
+}
+
+struct VehicleIncomeRow: View {
+    @ObservedObject var income: VehicleIncome
+    let typeTitle: String
+    let canDelete: Bool
+    let onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: iconName)
+                    .font(.subheadline)
+                    .foregroundColor(ColorTheme.success)
+                    .frame(width: 22, height: 22)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(typeTitle)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+
+                    if let payer = income.payerName, !payer.isEmpty {
+                        Text(payer)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                    }
+
+                    if let notes = income.notes, !notes.isEmpty {
+                        Text(notes)
+                            .font(.caption)
+                            .foregroundColor(ColorTheme.secondaryText)
+                            .lineLimit(2)
+                    }
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 8) {
+                    Text((income.amount?.decimalValue ?? 0).asCurrency())
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(ColorTheme.success)
+
+                    if canDelete {
+                        Button(action: onDelete) {
+                            Image(systemName: "trash")
+                                .font(.caption)
+                                .foregroundColor(ColorTheme.danger)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Delete income".localizedString)
+                    }
+                }
+            }
+
+            HStack(spacing: 8) {
+                Text(income.date ?? Date(), style: .date)
+                    .font(.caption)
+                    .foregroundColor(ColorTheme.secondaryText)
+
+                if let account = income.account {
+                    Text("-")
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText.opacity(0.6))
+                    Text(account.displayTitle)
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText)
+                        .lineLimit(1)
+                }
+
+                if let method = income.paymentMethod, !method.isEmpty {
+                    Text("-")
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText.opacity(0.6))
+                    Text(method.localizedString)
+                        .font(.caption)
+                        .foregroundColor(ColorTheme.secondaryText)
+                }
+            }
+        }
+    }
+
+    private var iconName: String {
+        switch income.incomeType {
+        case "storage":
+            return "shippingbox.fill"
+        case "service":
+            return "wrench.adjustable.fill"
+        case "other":
+            return "plus.circle.fill"
+        default:
+            return "key.fill"
+        }
     }
 }
 

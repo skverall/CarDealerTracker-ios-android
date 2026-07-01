@@ -251,6 +251,35 @@ class ActiveAccountTransactionDao @Inject constructor(
 }
 
 @Singleton
+class ActiveVehicleIncomeDao @Inject constructor(
+    provider: ActiveDatabaseProvider
+) : ActiveDaoSupport(provider), VehicleIncomeDao {
+    override suspend fun upsert(entity: VehicleIncome) = currentDatabase().vehicleIncomeDao().upsert(entity)
+
+    override suspend fun upsertAll(entities: List<VehicleIncome>) {
+        currentDatabase().vehicleIncomeDao().upsertAll(entities)
+    }
+
+    override suspend fun delete(entity: VehicleIncome) = currentDatabase().vehicleIncomeDao().delete(entity)
+
+    override fun getByVehicleId(vehicleId: UUID): Flow<List<VehicleIncome>> {
+        return flow { it.vehicleIncomeDao().getByVehicleId(vehicleId) }
+    }
+
+    override suspend fun getById(id: UUID): VehicleIncome? = currentDatabase().vehicleIncomeDao().getById(id)
+
+    override suspend fun getAllIncludingDeleted(): List<VehicleIncome> {
+        return currentDatabase().vehicleIncomeDao().getAllIncludingDeleted()
+    }
+
+    override suspend fun count(): Int = currentDatabase().vehicleIncomeDao().count()
+
+    override suspend fun updateAccountId(oldId: UUID, newId: UUID) {
+        currentDatabase().vehicleIncomeDao().updateAccountId(oldId, newId)
+    }
+}
+
+@Singleton
 class ActiveExpenseTemplateDao @Inject constructor(
     provider: ActiveDatabaseProvider
 ) : ActiveDaoSupport(provider), ExpenseTemplateDao {

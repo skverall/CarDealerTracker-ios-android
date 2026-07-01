@@ -20,6 +20,7 @@ import com.ezcar24.business.data.local.ActiveSaleDao
 import com.ezcar24.business.data.local.ActiveSyncQueueDao
 import com.ezcar24.business.data.local.ActiveUserDao
 import com.ezcar24.business.data.local.ActiveVehicleDao
+import com.ezcar24.business.data.local.ActiveVehicleIncomeDao
 import com.ezcar24.business.data.local.ActiveVehicleInventoryStatsDao
 import com.ezcar24.business.data.local.ClientDao
 import com.ezcar24.business.data.local.ClientInteractionDao
@@ -39,6 +40,7 @@ import com.ezcar24.business.data.local.SaleDao
 import com.ezcar24.business.data.local.SyncQueueDao
 import com.ezcar24.business.data.local.UserDao
 import com.ezcar24.business.data.local.VehicleDao
+import com.ezcar24.business.data.local.VehicleIncomeDao
 import com.ezcar24.business.data.local.VehicleInventoryStatsDao
 import dagger.Binds
 import dagger.Module
@@ -88,6 +90,10 @@ abstract class DatabaseRoutingModule {
     @Binds
     @Singleton
     abstract fun bindAccountTransactionDao(dao: ActiveAccountTransactionDao): AccountTransactionDao
+
+    @Binds
+    @Singleton
+    abstract fun bindVehicleIncomeDao(dao: ActiveVehicleIncomeDao): VehicleIncomeDao
 
     @Binds
     @Singleton

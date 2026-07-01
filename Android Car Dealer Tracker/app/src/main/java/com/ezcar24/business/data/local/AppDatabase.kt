@@ -274,6 +274,24 @@ interface AccountTransactionDao : BaseDao<AccountTransaction> {
 }
 
 @Dao
+interface VehicleIncomeDao : BaseDao<VehicleIncome> {
+    @Query("SELECT * FROM vehicle_income_entries WHERE vehicleId = :vehicleId AND deletedAt IS NULL ORDER BY date DESC")
+    fun getByVehicleId(vehicleId: UUID): Flow<List<VehicleIncome>>
+
+    @Query("SELECT * FROM vehicle_income_entries WHERE id = :id")
+    suspend fun getById(id: UUID): VehicleIncome?
+
+    @Query("SELECT * FROM vehicle_income_entries")
+    suspend fun getAllIncludingDeleted(): List<VehicleIncome>
+
+    @Query("SELECT COUNT(*) FROM vehicle_income_entries WHERE deletedAt IS NULL")
+    suspend fun count(): Int
+
+    @Query("UPDATE vehicle_income_entries SET accountId = :newId WHERE accountId = :oldId")
+    suspend fun updateAccountId(oldId: UUID, newId: UUID)
+}
+
+@Dao
 interface ExpenseTemplateDao : BaseDao<ExpenseTemplate> {
     @Query("SELECT * FROM expense_templates WHERE deletedAt IS NULL ORDER BY name ASC")
     fun getAllActive(): Flow<List<ExpenseTemplate>>
@@ -472,13 +490,13 @@ interface InventoryAlertDao : BaseDao<InventoryAlert> {
     entities = [
         User::class, Vehicle::class, Expense::class, Sale::class, 
         Client::class, ClientInteraction::class, ClientReminder::class,
-        FinancialAccount::class, AccountTransaction::class,
+        FinancialAccount::class, AccountTransaction::class, VehicleIncome::class,
         Debt::class, DebtPayment::class, ExpenseTemplate::class,
         Part::class, PartBatch::class, PartSale::class, PartSaleLineItem::class,
         SyncQueueItem::class, HoldingCostSettings::class,
         VehicleInventoryStats::class, InventoryAlert::class
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -493,6 +511,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun debtDao(): DebtDao
     abstract fun debtPaymentDao(): DebtPaymentDao
     abstract fun accountTransactionDao(): AccountTransactionDao
+    abstract fun vehicleIncomeDao(): VehicleIncomeDao
     abstract fun expenseTemplateDao(): ExpenseTemplateDao
     abstract fun clientInteractionDao(): ClientInteractionDao
     abstract fun clientReminderDao(): ClientReminderDao
@@ -732,6 +751,35 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_12_13 = object : androidx.room.migration.Migration(12, 13) {
             override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE vehicles ADD COLUMN purchaseAccountId TEXT")
+            }
+        }
+
+        val MIGRATION_13_14 = object : androidx.room.migration.Migration(13, 14) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `vehicle_income_entries` (
+                        `id` TEXT NOT NULL,
+                        `amount` TEXT NOT NULL,
+                        `date` INTEGER NOT NULL,
+                        `incomeType` TEXT NOT NULL,
+                        `payerName` TEXT,
+                        `paymentMethod` TEXT,
+                        `notes` TEXT,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER,
+                        `deletedAt` INTEGER,
+                        `vehicleId` TEXT,
+                        `accountId` TEXT,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`vehicleId`) REFERENCES `vehicles`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL,
+                        FOREIGN KEY(`accountId`) REFERENCES `financial_accounts`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_income_entries_vehicleId` ON `vehicle_income_entries` (`vehicleId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_income_entries_accountId` ON `vehicle_income_entries` (`accountId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_vehicle_income_entries_vehicleId_deletedAt_date` ON `vehicle_income_entries` (`vehicleId`, `deletedAt`, `date`)")
             }
         }
     }

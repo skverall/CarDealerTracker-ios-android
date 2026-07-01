@@ -21,6 +21,8 @@ import com.ezcar24.business.data.local.Sale
 import com.ezcar24.business.data.local.SaleDao
 import com.ezcar24.business.data.local.Vehicle
 import com.ezcar24.business.data.local.VehicleDao
+import com.ezcar24.business.data.local.VehicleIncome
+import com.ezcar24.business.data.local.VehicleIncomeDao
 import com.ezcar24.business.data.local.VehicleInventoryStats
 import com.ezcar24.business.data.local.VehicleInventoryStatsDao
 import com.ezcar24.business.data.local.VehicleWithFinancials
@@ -73,6 +75,8 @@ data class VehicleDetailUiState(
     val sale: Sale? = null,
     val saleAccount: FinancialAccount? = null,
     val expenses: List<Expense> = emptyList(),
+    val vehicleIncomeEntries: List<VehicleIncome> = emptyList(),
+    val totalVehicleIncome: BigDecimal = BigDecimal.ZERO,
     val financialSummary: VehicleFinancialSummary = VehicleFinancialSummary(),
     val inventoryStats: VehicleInventoryStats? = null,
     val alerts: List<InventoryAlert> = emptyList(),
@@ -80,6 +84,13 @@ data class VehicleDetailUiState(
     val photoUrls: List<String> = emptyList(),
     val photoItems: List<VehiclePhotoItem> = emptyList(),
     val isLoading: Boolean = false
+)
+
+private data class VehicleDetailInputs(
+    val vehicle: Vehicle?,
+    val expenses: List<Expense>,
+    val holdingCostSettings: HoldingCostSettings?,
+    val vehicleIncomeEntries: List<VehicleIncome>
 )
 
 data class VehicleUiState(
@@ -105,6 +116,7 @@ class VehicleViewModel @Inject constructor(
     private val clientInteractionDao: ClientInteractionDao,
     private val financialAccountDao: FinancialAccountDao,
     private val expenseDao: ExpenseDao,
+    private val vehicleIncomeDao: VehicleIncomeDao,
     private val holdingCostSettingsDao: HoldingCostSettingsDao,
     private val inventoryAlertDao: InventoryAlertDao,
     private val vehicleInventoryStatsDao: VehicleInventoryStatsDao,
@@ -200,6 +212,69 @@ class VehicleViewModel @Inject constructor(
                     updatedAt = Date()
                 )
             )
+        }
+    }
+
+    fun addVehicleIncome(
+        vehicleId: UUID,
+        amount: BigDecimal,
+        date: Date,
+        incomeType: String,
+        payerName: String?,
+        paymentMethod: String?,
+        notes: String?,
+        accountId: UUID
+    ) {
+        viewModelScope.launch {
+            runCatching {
+                require(amount > BigDecimal.ZERO) { "Income amount must be greater than zero." }
+                val vehicle = vehicleDao.getById(vehicleId) ?: error("Vehicle not found.")
+                val account = financialAccountDao.getById(accountId) ?: error("Financial account not found.")
+                val now = Date()
+                val income = VehicleIncome(
+                    id = UUID.randomUUID(),
+                    amount = amount,
+                    date = date,
+                    incomeType = incomeType,
+                    payerName = payerName?.trim()?.takeIf { it.isNotEmpty() },
+                    paymentMethod = paymentMethod?.trim()?.takeIf { it.isNotEmpty() } ?: "Cash",
+                    notes = notes?.trim()?.takeIf { it.isNotEmpty() },
+                    createdAt = now,
+                    updatedAt = now,
+                    deletedAt = null,
+                    vehicleId = vehicle.id,
+                    accountId = account.id
+                )
+                val updatedAccount = account.copy(
+                    balance = account.balance.add(amount),
+                    updatedAt = now
+                )
+                cloudSyncManager.upsertVehicleIncome(income)
+                cloudSyncManager.upsertFinancialAccount(updatedAccount)
+            }.onFailure { error ->
+                Log.e(tag, "Failed to add vehicle income: ${error.message}", error)
+            }
+        }
+    }
+
+    fun deleteVehicleIncome(income: VehicleIncome) {
+        viewModelScope.launch {
+            runCatching {
+                val current = vehicleIncomeDao.getById(income.id) ?: return@runCatching
+                val now = Date()
+                val account = current.accountId?.let { financialAccountDao.getById(it) }
+                cloudSyncManager.deleteVehicleIncome(current.copy(updatedAt = now))
+                if (account != null) {
+                    cloudSyncManager.upsertFinancialAccount(
+                        account.copy(
+                            balance = account.balance.subtract(current.amount),
+                            updatedAt = now
+                        )
+                    )
+                }
+            }.onFailure { error ->
+                Log.e(tag, "Failed to delete vehicle income: ${error.message}", error)
+            }
         }
     }
 
@@ -394,10 +469,15 @@ class VehicleViewModel @Inject constructor(
                 combine(
                     flow { emit(vehicleDao.getById(uuid)) },
                     expenseDao.getByVehicleId(uuid),
-                    holdingCostSettingsDao.getSettings()
-                ) { vehicle, expenses, settings ->
-                    Triple(vehicle, expenses, settings)
-                }.collect { (vehicle, expenses, settings) ->
+                    holdingCostSettingsDao.getSettings(),
+                    vehicleIncomeDao.getByVehicleId(uuid)
+                ) { vehicle, expenses, settings, incomeEntries ->
+                    VehicleDetailInputs(vehicle, expenses, settings, incomeEntries)
+                }.collect { detailInputs ->
+                    val vehicle = detailInputs.vehicle
+                    val expenses = detailInputs.expenses
+                    val settings = detailInputs.holdingCostSettings
+                    val incomeEntries = detailInputs.vehicleIncomeEntries
                     if (vehicle != null) {
                         val sale = saleDao.getByVehicleId(vehicle.id)
                         val saleAccount = sale?.accountId?.let { financialAccountDao.getById(it) }
@@ -427,6 +507,11 @@ class VehicleViewModel @Inject constructor(
                         )
 
                         val totalExpenses = expenses
+                            .filter { it.deletedAt == null }
+                            .map { it.amount }
+                            .fold(BigDecimal.ZERO) { acc, amount -> acc.add(amount) }
+
+                        val totalVehicleIncome = incomeEntries
                             .filter { it.deletedAt == null }
                             .map { it.amount }
                             .fold(BigDecimal.ZERO) { acc, amount -> acc.add(amount) }
@@ -483,6 +568,8 @@ class VehicleViewModel @Inject constructor(
                                 sale = sale,
                                 saleAccount = saleAccount,
                                 expenses = expenses,
+                                vehicleIncomeEntries = incomeEntries,
+                                totalVehicleIncome = totalVehicleIncome,
                                 financialSummary = financialSummary,
                                 inventoryStats = inventoryStats,
                                 alerts = alerts,
@@ -499,6 +586,8 @@ class VehicleViewModel @Inject constructor(
                                 vehicle = null,
                                 sale = null,
                                 saleAccount = null,
+                                vehicleIncomeEntries = emptyList(),
+                                totalVehicleIncome = BigDecimal.ZERO,
                                 photoUrls = emptyList(),
                                 isLoading = false
                             )

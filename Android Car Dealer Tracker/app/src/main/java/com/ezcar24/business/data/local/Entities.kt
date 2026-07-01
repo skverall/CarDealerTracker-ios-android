@@ -380,6 +380,33 @@ data class AccountTransaction(
     val accountId: UUID?
 )
 
+@Entity(
+    tableName = "vehicle_income_entries",
+    foreignKeys = [
+        ForeignKey(entity = Vehicle::class, parentColumns = ["id"], childColumns = ["vehicleId"], onDelete = ForeignKey.SET_NULL),
+        ForeignKey(entity = FinancialAccount::class, parentColumns = ["id"], childColumns = ["accountId"], onDelete = ForeignKey.SET_NULL)
+    ],
+    indices = [
+        Index("vehicleId"),
+        Index("accountId"),
+        Index(value = ["vehicleId", "deletedAt", "date"], name = "index_vehicle_income_entries_vehicleId_deletedAt_date")
+    ]
+)
+data class VehicleIncome(
+    @PrimaryKey val id: UUID,
+    val amount: BigDecimal = BigDecimal.ZERO,
+    val date: Date,
+    val incomeType: String = "rental",
+    val payerName: String? = null,
+    val paymentMethod: String? = null,
+    val notes: String? = null,
+    val createdAt: Date,
+    val updatedAt: Date?,
+    val deletedAt: Date? = null,
+    val vehicleId: UUID?,
+    val accountId: UUID?
+)
+
 @Entity(tableName = "sync_queue")
 data class SyncQueueItem(
     @PrimaryKey val id: UUID,
